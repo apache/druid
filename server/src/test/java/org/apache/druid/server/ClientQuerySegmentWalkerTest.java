@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.client.DirectDruidClient;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -92,7 +91,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -1520,7 +1518,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1546,7 +1544,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1706,7 +1704,6 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
-                new GroupByQueryConfig(),
                 injector
             ),
             ClusterOrLocal.CLUSTER
@@ -1858,7 +1855,6 @@ public class ClientQuerySegmentWalkerTest
         SHARD_SPEC.createChunk(
             ReferenceCountingSegment.wrapSegment(
                 new RowBasedSegment<>(
-                    SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC.getPartitionNum()),
                     Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),
                     dataSource.getRowSignature()

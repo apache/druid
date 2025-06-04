@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
@@ -85,7 +84,7 @@ public class HllSketchBuildUtil
       @Nullable final String value
   )
   {
-    if (NullHandling.isNullOrEquivalent(value)) {
+    if (value == null) {
       return;
     }
 

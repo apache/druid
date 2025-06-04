@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -29,8 +28,9 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -38,9 +38,7 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
 
-  public UnionDataSourceQueryRunner(
-      QueryRunner<T> baseRunner
-  )
+  public UnionDataSourceQueryRunner(QueryRunner<T> baseRunner)
   {
     this.baseRunner = baseRunner;
   }
@@ -50,23 +48,23 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
 
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    DataSource baseDataSource = ev.getBaseDataSource();
 
-    if (analysis.isConcreteAndTableBased() && analysis.getBaseUnionDataSource().isPresent()) {
+    if (ev.isProcessable() && ev.isTableBased() && baseDataSource instanceof UnionDataSource) {
       // Union of tables.
+      final UnionDataSource unionDataSource = (UnionDataSource) baseDataSource;
 
-      final UnionDataSource unionDataSource = analysis.getBaseUnionDataSource().get();
-
-      if (unionDataSource.getDataSourcesAsTableDataSources().isEmpty()) {
+      if (unionDataSource.getChildren().isEmpty()) {
         // Shouldn't happen, because UnionDataSource doesn't allow empty unions.
         throw new ISE("Unexpectedly received empty union");
-      } else if (unionDataSource.getDataSourcesAsTableDataSources().size() == 1) {
+      } else if (unionDataSource.getChildren().size() == 1) {
         // Single table. Run as a normal query.
         return baseRunner.run(
             queryPlus.withQuery(
                 Queries.withBaseDataSource(
                     query,
-                    Iterables.getOnlyElement(unionDataSource.getDataSourcesAsTableDataSources())
+                    Iterables.getOnlyElement(unionDataSource.getChildren())
                 )
             ),
             responseContext
@@ -77,26 +75,25 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
             query.getResultOrdering(),
             Sequences.simple(
                 Lists.transform(
-                    IntStream.range(0, unionDataSource.getDataSourcesAsTableDataSources().size())
-                             .mapToObj(i -> new Pair<>(unionDataSource.getDataSourcesAsTableDataSources().get(i), i + 1))
+                    IntStream.range(0, unionDataSource.getChildren().size())
+                             .mapToObj(i -> new Pair<>(unionDataSource.getChildren().get(i), i + 1))
                              .collect(Collectors.toList()),
-                    (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
-                        baseRunner.run(
+                    singleSourceWithIndex ->
+                        (Sequence<T>) baseRunner.run(
                             queryPlus.withQuery(
-                                Queries.withBaseDataSource(query, singleSourceWithIndex.lhs)
-                                       // assign the subqueryId. this will be used to validate that every query servers
-                                       // have responded per subquery in RetryQueryRunner
-                                       .withSubQueryId(generateSubqueryId(
-                                           query.getSubQueryId(),
-                                           singleSourceWithIndex.lhs.getName(),
-                                           singleSourceWithIndex.rhs
-                                       ))
+                                ev.buildQueryWithBaseDataSource(singleSourceWithIndex.lhs)
+                                  // assign the subqueryId. this will be used to validate that every query servers
+                                  // have responded per subquery in RetryQueryRunner
+                                  .withSubQueryId(generateSubqueryId(
+                                      query.getSubQueryId(),
+                                      singleSourceWithIndex.lhs.getTableNames(),
+                                      singleSourceWithIndex.rhs
+                                  ))
                             ),
                             responseContext
                         )
                 )
             )
-
         );
       }
     } else {
@@ -109,14 +106,14 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
    * Appends and returns the name and the position of the individual datasource in the union with the parent query id
    * if preseent
    *
-   * @param parentSubqueryId The subquery Id of the parent query which is generating this subquery
-   * @param dataSourceName   Name of the datasource for which the UnionRunner is running
+   * @param parentSubqueryId The subquery id of the parent query which is generating this subquery
+   * @param tableNames       Table names of the child datasource, must contain exactly one table name.
    * @param dataSourceIndex  Position of the datasource for which the UnionRunner is running
-   * @return Subquery Id which needs to be populated
+   * @return Subquery id which needs to be populated
    */
-  private String generateSubqueryId(String parentSubqueryId, String dataSourceName, int dataSourceIndex)
+  private String generateSubqueryId(String parentSubqueryId, Set<String> tableNames, int dataSourceIndex)
   {
-    String dataSourceNameIndex = dataSourceName + "." + dataSourceIndex;
+    String dataSourceNameIndex = Iterables.getOnlyElement(tableNames) + "." + dataSourceIndex;
     if (StringUtils.isEmpty(parentSubqueryId)) {
       return dataSourceNameIndex;
     }

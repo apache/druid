@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>32.0.0-SNAPSHOT</version>
+        <version>34.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -263,10 +263,6 @@
             <artifactId>guice</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
@@ -428,7 +424,12 @@
             <type>test-jar</type>
             <version>${project.parent.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <type>test-jar</type>
+            <version>${project.parent.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
@@ -518,6 +519,10 @@
             <artifactId>hamcrest-core</artifactId>
             <scope>compile</scope>
         </dependency>
+	    <dependency>
+	      <groupId>org.mockito</groupId>
+	      <artifactId>mockito-core</artifactId>
+	    </dependency>
     </dependencies>
 
     <build>

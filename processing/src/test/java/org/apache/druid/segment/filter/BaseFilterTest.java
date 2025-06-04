@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -108,7 +107,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -116,8 +114,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -414,11 +410,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   protected final boolean optimize;
   protected final String testName;
 
-  // 'rowBasedWithoutTypeSignature' does not handle numeric null default values correctly, is equivalent to
-  // druid.generic.useDefaultValueForNull being set to false, regardless of how it is actually set.
-  // In other words, numeric null values will be treated as nulls instead of the default value
-  protected final boolean canTestNumericNullsAsDefaultValues;
-
   protected CursorFactory cursorFactory;
 
   protected VirtualColumns virtualColumns;
@@ -445,8 +436,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     this.finisher = finisher;
     this.cnf = cnf;
     this.optimize = optimize;
-    this.canTestNumericNullsAsDefaultValues =
-        NullHandling.replaceWithDefault() && !testName.contains("finisher[rowBasedWithoutTypeSignature]");
   }
 
   @Before
@@ -631,37 +620,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         }
                     )
                     .put(
-                        "mmappedWithSqlCompatibleNulls",
-                        input -> {
-                          // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
-                          Assume.assumeTrue(NullHandling.replaceWithDefault());
-                          final File file;
-                          try {
-                            NullHandling.initializeForTestsWithValues(false, null);
-                            Assert.assertTrue(NullHandling.sqlCompatible());
-                            file = input.buildMMappedIndexFile();
-                          }
-                          finally {
-                            NullHandling.initializeForTests();
-                          }
-
-                          Assert.assertTrue(NullHandling.replaceWithDefault());
-                          try {
-                            final QueryableIndex index = input.getIndexIO().loadIndex(file);
-                            return Pair.of(new QueryableIndexCursorFactory(index), index);
-                          }
-                          catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }
-                    )
-                    .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       // remove variant type columns from row frames since they aren't currently supported
@@ -685,7 +649,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .put("frame (columnar)", input -> {
                       // remove array type columns from columnar frames since they aren't currently supported
@@ -709,7 +673,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .build();
 
@@ -768,6 +732,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return false;
   }
 
+  protected boolean hasTypeInformation()
+  {
+    return !testName.contains("rowBasedWithoutTypeSignature");
+  }
+
   protected boolean canTestArrayColumns()
   {
     if (testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature")) {
@@ -782,7 +751,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       return null;
     }
 
-    final DimFilter maybeOptimized = optimize ? dimFilter.optimize(false) : dimFilter;
+    final DimFilter maybeOptimized = maybeOptimize(dimFilter);
     final Filter filter = maybeOptimized.toFilter();
     try {
       return cnf ? Filters.toCnf(filter) : filter;
@@ -841,6 +810,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
@@ -955,6 +930,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
         values.add(selector.lookupName(row.get(0)));
         cursor.advance();
       }
@@ -1013,6 +994,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> values = new ArrayList<>();
 
       while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
           values.add(selector.lookupName(rowVector[i]));
@@ -1037,6 +1022,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {

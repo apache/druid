@@ -26,11 +26,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -88,10 +93,11 @@ public class DataSegmentPlusTest
                 new DimensionsSpec(
                     DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
                 ),
-                ImmutableList.of(ImmutableMap.of("type", "count", "name", "count")),
-                ImmutableMap.of("filter", ImmutableMap.of("type", "selector", "dimension", "dim1", "value", "foo")),
-                ImmutableMap.of(),
-                ImmutableMap.of()
+                ImmutableList.of(new CountAggregatorFactory("cnt")),
+                new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                null
             ),
             TEST_VERSION,
             1

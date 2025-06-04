@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
@@ -35,10 +34,10 @@ public final class LongBloomFilterAggregator extends BaseBloomFilterAggregator<B
   @Override
   public void bufferAdd(ByteBuffer buf)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addLong(buf, selector.getLong());
-    } else {
+    if (selector.isNull()) {
       BloomKFilter.addBytes(buf, null, 0, 0);
+    } else {
+      BloomKFilter.addLong(buf, selector.getLong());
     }
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -30,9 +29,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver.SegmentsForSequence;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -42,11 +43,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -81,10 +84,6 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   private BatchAppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Before
   public void setup()
@@ -204,7 +203,19 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, schema) -> SegmentPublishResult.ok(ImmutableSet.of());
+    return new TransactionalSegmentPublisher()
+    {
+      @Override
+      public SegmentPublishResult publishAnnotatedSegments(
+          @Nullable Set<DataSegment> segmentsToBeOverwritten,
+          Set<DataSegment> segmentsToPublish,
+          @Nullable Object commitMetadata,
+          @Nullable SegmentSchemaMapping segmentSchemaMapping
+      )
+      {
+        return SegmentPublishResult.ok(Set.of());
+      }
+    };
   }
 
   static class TestSegmentAllocator implements SegmentAllocator

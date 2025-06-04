@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
@@ -82,10 +81,6 @@ public class DelimitedInputFormatBenchmark
           "deleted",
           "delta"
       );
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Param({"false", "true"})
   private boolean fromHeader;

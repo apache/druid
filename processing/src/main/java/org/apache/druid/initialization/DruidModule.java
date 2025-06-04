@@ -20,6 +20,10 @@
 package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.Module;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import java.util.Collections;
@@ -36,6 +40,35 @@ import java.util.List;
 @ExtensionPoint
 public interface DruidModule extends com.google.inject.Module
 {
+  static DruidModule override(com.google.inject.Module baseModule, com.google.inject.Module overrideGuiceModule)
+  {
+    return new DruidModule()
+    {
+      @SuppressWarnings("unused")
+      @Inject
+      public void injectMe(Injector injector)
+      {
+        injector.injectMembers(baseModule);
+        injector.injectMembers(overrideGuiceModule);
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        binder.install(Modules.override(baseModule).with(overrideGuiceModule));
+      }
+
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        if (baseModule instanceof DruidModule) {
+          return ((DruidModule) baseModule).getJacksonModules();
+        }
+        return Collections.emptyList();
+      }
+    };
+  }
+
   default List<? extends Module> getJacksonModules()
   {
     return Collections.emptyList();

@@ -125,7 +125,7 @@ public class RunRules implements CoordinatorDuty
   {
     segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {
       final Stopwatch stopwatch = Stopwatch.createStarted();
-      int numUpdatedSegments = deleteHandler.markSegmentsAsUnused(segmentIds);
+      int numUpdatedSegments = deleteHandler.markSegmentsAsUnused(datasource, segmentIds);
 
       RowKey rowKey = RowKey.of(Dimension.DATASOURCE, datasource);
       runStats.add(Stats.Segments.DELETED, rowKey, numUpdatedSegments);

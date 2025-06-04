@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -282,7 +281,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(row.longValue(), vectorValueSelector.getLongVector()[0]);
         Assert.assertEquals(row.floatValue(), vectorValueSelector.getFloatVector()[0], 0.0);
         boolean[] nullVector = vectorValueSelector.getNullVector();
-        if (NullHandling.sqlCompatible() && nullVector != null) {
+        if (nullVector != null) {
           Assert.assertFalse(nullVector[0]);
         } else {
           Assert.assertNull(nullVector);
@@ -306,34 +305,14 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
 
       } else {
-        if (NullHandling.sqlCompatible()) {
-          Assert.assertNull(valueSelector.getObject());
-          Assert.assertTrue(valueSelector.isNull());
-          Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
-          Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                          .computeBitmapResult(resultFactory, false)
-                                          .get(i));
-        } else {
-          Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
-          Assert.assertFalse(valueSelector.isNull());
-          Assert.assertEquals(NullHandling.defaultDoubleValue(), vectorValueSelector.getDoubleVector()[0], 0.0);
-          Assert.assertNull(vectorValueSelector.getNullVector());
-
-          Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                          .computeBitmapResult(resultFactory, false)
-                                          .get(i));
-          final String defaultString = String.valueOf(NullHandling.defaultDoubleValue());
-          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(defaultString))
-                                          .computeBitmapResult(resultFactory, false)
-                                          .get(i));
-        }
-
-
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
+        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                        .computeBitmapResult(resultFactory, false)
+                                        .get(i));
 
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));

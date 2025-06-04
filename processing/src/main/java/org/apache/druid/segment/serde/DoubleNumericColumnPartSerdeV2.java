@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -148,21 +147,15 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
 
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
       if (buffer.hasRemaining()) {
-        if (NullHandling.sqlCompatible()) {
-          bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
-        } else {
-          // Read from the buffer (to advance its position) but do not actually retain the bitmaps.
-          bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
-          bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
-        }
-
+        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
         hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();

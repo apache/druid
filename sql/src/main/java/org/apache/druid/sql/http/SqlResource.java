@@ -28,12 +28,13 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -140,9 +141,9 @@ public class SqlResource
       return Response.status(Status.NOT_FOUND).build();
     }
 
-    final Access access = authorizeCancellation(req, lifecycles);
+    final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
 
-    if (access.isAllowed()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(Cancelable::cancel);
@@ -211,7 +212,7 @@ public class SqlResource
           jsonMapper,
           responseContextConfig,
           selfNode,
-          QUERY_METRIC_COUNTER,
+          SqlResource.QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
           headers
@@ -304,7 +305,7 @@ public class SqlResource
         @Override
         public void recordFailure(Exception e)
         {
-          if (sqlQuery.queryContext().isDebug()) {
+          if (QueryLifecycle.shouldLogStackTrace(e, sqlQuery.queryContext())) {
             log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
           } else {
             log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
@@ -332,11 +333,11 @@ public class SqlResource
 
   /**
    * Authorize a query cancellation operation.
-   *
+   * <p>
    * Considers only datasource and table resources; not context key resources when checking permissions. This means
    * that a user's permission to cancel a query depends on the datasource, not the context variables used in the query.
    */
-  public Access authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
+  public AuthorizationResult authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
   {
     Set<ResourceAction> resources = cancelables
         .stream()

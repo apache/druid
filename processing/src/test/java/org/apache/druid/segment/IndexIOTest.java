@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.Intervals;
@@ -72,10 +71,6 @@ public class IndexIOTest extends InitializedNullHandlingTest
                                                        .withMetricCompression(CompressionStrategy.LZ4)
                                                        .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
                                                        .build();
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private static <T> List<T> filterByBitset(List<T> list, BitSet bitSet)
   {

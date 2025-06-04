@@ -46,7 +46,7 @@ public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
 
   public static AlertBuilder create(String descriptionFormat, Object... objects)
   {
-    return createEmittable(null, descriptionFormat, objects);
+    return AlertBuilder.createEmittable(null, descriptionFormat, objects);
   }
 
   public static AlertBuilder createEmittable(ServiceEmitter emitter, String descriptionFormat, Object... objects)

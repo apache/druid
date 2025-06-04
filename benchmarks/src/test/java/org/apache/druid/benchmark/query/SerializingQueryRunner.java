@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -32,10 +31,6 @@ import org.apache.druid.query.groupby.ResultRow;
 
 public class SerializingQueryRunner implements QueryRunner<ResultRow>
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final ObjectMapper smileMapper;
   private final QueryRunner<ResultRow> baseRunner;
   private final Class<ResultRow> clazz;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.mean;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -52,7 +51,7 @@ public class DoubleMeanBufferAggregator implements BufferAggregator
   {
     Object update = selector.getObject();
 
-    if (update == null && NullHandling.replaceWithDefault() == false) {
+    if (update == null) {
       return;
     }
     if (update instanceof DoubleMeanHolder) {

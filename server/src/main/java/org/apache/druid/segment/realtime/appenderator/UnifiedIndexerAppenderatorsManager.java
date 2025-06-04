@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,7 +45,8 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -114,6 +114,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter serviceEmitter;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
@@ -128,6 +129,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       ObjectMapper objectMapper,
       ServiceEmitter serviceEmitter,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider
@@ -139,6 +141,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
+    this.policyEnforcer = policyEnforcer;
     this.objectMapper = objectMapper;
     this.serviceEmitter = serviceEmitter;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
@@ -167,9 +170,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -194,7 +197,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
       );
 
@@ -215,7 +217,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -236,7 +237,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
       );
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -289,11 +289,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
-
-    final TableDataSource table =
-        analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
+    final TableDataSource table = ExecutionVertex.of(query).getBaseTableDataSource();
 
     final DatasourceBundle bundle;
 
@@ -361,7 +357,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           queryProcessingPool,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
-          cachePopulatorStats
+          cachePopulatorStats,
+          policyEnforcer
       );
     }
 

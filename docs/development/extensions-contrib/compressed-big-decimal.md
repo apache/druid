@@ -159,7 +159,7 @@ Query syntax:
     ],
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalSum",
             "name": "saleAmount",
             "fieldName": "saleAmount",
             "scale": 9,
@@ -185,7 +185,7 @@ Result:
 } ]
 ```
 
-Had you used *doubleSum* instead of compressedBigDecimal the result would be 
+Had you used *doubleSum* instead of *compressedBigDecimalSum* the result would be 
 
 ```json
 [ {
@@ -208,7 +208,7 @@ Query syntax:
     "granularity": "ALL",
     "aggregations": [
         {
-            "type": "compressedBigDecimal",
+            "type": "compressedBigDecimalSum",
             "name": "revenue",
             "fieldName": "revenue",
             "scale": 9,
@@ -239,3 +239,17 @@ Result:
   }
 } ]
 ```
+
+### Supported Query Functions 
+
+Native aggregation functions:
+
+ * `compressedBigDecimalSum`
+ * `compressedBigDecimalMin`
+ * `compressedBigDecimalMax`
+
+SQL aggregation functions:
+ * `big_sum()`
+ * `big_min()`
+ * `big_max()`
+

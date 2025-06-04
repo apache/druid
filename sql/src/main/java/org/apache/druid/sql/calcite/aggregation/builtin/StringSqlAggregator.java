@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -149,7 +148,7 @@ public class StringSqlAggregator implements SqlAggregator
     final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
     final NotDimFilter dimFilter = new NotDimFilter(
         plannerContext.isUseBoundsAndSelectors()
-        ? new SelectorDimFilter(fieldName, NullHandling.defaultStringValue(), null)
+        ? new SelectorDimFilter(fieldName, null, null)
         : NullFilter.forColumn(fieldName)
     );
     if (aggregateCall.isDistinct()) {

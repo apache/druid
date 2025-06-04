@@ -60,6 +60,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       ByteOrder byteOrder,
       CompressionFactory.LongEncodingWriter writer,
       CompressionStrategy compression,
+      int fileSizeLimit,
       Closer closer
   )
   {
@@ -71,6 +72,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
         filenameBase,
         compression,
         bufferSize,
+        fileSizeLimit,
         closer
     );
     this.writer = writer;

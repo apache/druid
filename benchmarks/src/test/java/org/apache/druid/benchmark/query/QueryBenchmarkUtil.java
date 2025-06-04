@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.query;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -32,10 +31,6 @@ import org.apache.druid.timeline.SegmentId;
 
 public class QueryBenchmarkUtil
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       SegmentId segmentId,

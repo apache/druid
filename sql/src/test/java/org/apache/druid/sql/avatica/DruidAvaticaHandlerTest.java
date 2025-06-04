@@ -40,9 +40,9 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -56,6 +56,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -88,6 +89,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
@@ -107,6 +109,7 @@ import org.skife.jdbi.v2.ResultIterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -158,8 +161,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
 
-  private final boolean nullNumeric = !NullHandling.replaceWithDefault();
-
   @BeforeAll
   public static void setUpClass(@TempDir File tempDir)
   {
@@ -206,7 +207,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     ServerWrapper(final DruidMeta druidMeta) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(0);
+      server = new Server(new InetSocketAddress("localhost", 0));
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(
@@ -276,6 +277,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+              binder.install(new PolicyModule());
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
@@ -342,7 +344,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testSelectCount() throws SQLException
   {
     try (Statement stmt = client.createStatement()) {
-      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo;");
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(
           ImmutableList.of(
@@ -564,6 +566,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.RESTRICTED_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -656,6 +664,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.RESTRICTED_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -736,7 +750,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -744,7 +758,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -752,7 +766,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -819,7 +833,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -827,7 +841,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -835,7 +849,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1036,7 +1050,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private SqlStatementFactory makeStatementFactory()
   {
-    return CalciteTests.createSqlStatementFactory(
+    return QueryFrameworkUtils.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         new PlannerFactory(
             makeRootSchema(),
@@ -1050,6 +1064,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             CalciteTests.createJoinableFactoryWrapper(),
             CatalogResolver.NULL_RESOLVER,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             new DruidHookDispatcher()
         )
     );
@@ -1608,17 +1623,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertTrue(rows.get(0).containsKey("arr2"));
       Assert.assertTrue(rows.get(0).containsKey("arr3"));
       Assert.assertTrue(rows.get(0).containsKey("arr4"));
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
-        Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
-        Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
-      } else {
-        Assert.assertArrayEquals(new Object[]{"a", null, null, "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
-        Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, 0L, 0L, 0L}, (Object[]) rows.get(0).get("arr2"));
-        Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr4"));
-      }
+      Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
     }
   }
 
@@ -1781,6 +1789,36 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     exec.shutdown();
     server.close();
+  }
+
+  @Test
+  public void testMultiStatementFails() throws SQLException
+  {
+    try (Statement stmt = client.createStatement()) {
+      Throwable t = Assert.assertThrows(
+          AvaticaSqlException.class,
+          () -> stmt.executeQuery("SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo")
+      );
+      // ugly error message for statement
+      Assert.assertEquals(
+          "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: SQL query string must contain only a single statement -> DruidException: SQL query string must contain only a single statement",
+          t.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testMultiPreparedStatementFails() throws SQLException
+  {
+    Throwable t = Assert.assertThrows(
+        AvaticaSqlException.class,
+        () -> client.prepareStatement("SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo")
+    );
+    // sad error message for prepared statement
+    Assert.assertEquals(
+        "Error -1 (00000) : while preparing SQL: SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo",
+        t.getMessage()
+    );
   }
 
   // Test the async feature using DBI, as used internally in Druid.

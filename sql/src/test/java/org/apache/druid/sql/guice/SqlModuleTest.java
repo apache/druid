@@ -33,7 +33,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -42,6 +41,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -52,9 +52,11 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -185,6 +187,7 @@ public class SqlModuleTest
             new LifecycleModule(),
             new ServerModule(),
             new JacksonModule(),
+            new PolicyModule(),
             new AuthenticatorMapperModule(),
             binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
@@ -194,7 +197,7 @@ public class SqlModuleTest
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(new NoopEscalator());
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
-              binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
+              binder.bind(RequestLogger.class).toInstance(NoopRequestLogger.instance());
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
@@ -216,6 +219,8 @@ public class SqlModuleTest
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
               binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+              binder.bind(CentralizedDatasourceSchemaConfig.class)
+                    .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
             },
             sqlModule,
             new TestViewManagerModule()

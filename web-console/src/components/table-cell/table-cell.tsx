@@ -17,11 +17,16 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import { Timezone } from 'chronoshift';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { isSimpleArray, prettyFormatIsoDateWithMsIfNeeded } from '../../utils';
+import {
+  isSimpleArray,
+  prettyFormatIsoDateWithMsIfNeeded,
+  toIsoStringInTimezone,
+} from '../../utils';
 import { ActionIcon } from '../action-icon/action-icon';
 
 import './table-cell.scss';
@@ -51,10 +56,11 @@ function shortenString(str: string): ShortParts {
 export interface TableCellProps {
   value: any;
   unlimited?: boolean;
+  timezone?: Timezone;
 }
 
 export const TableCell = React.memo(function TableCell(props: TableCellProps) {
-  const { value, unlimited } = props;
+  const { value, unlimited, timezone = Timezone.UTC } = props;
   const [showValue, setShowValue] = useState<string | undefined>();
 
   function renderShowValueDialog() {
@@ -98,7 +104,9 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
     const dateValue = value.valueOf();
     return (
       <div className="table-cell timestamp" data-tooltip={String(dateValue)}>
-        {isNaN(dateValue) ? 'Invalid date' : prettyFormatIsoDateWithMsIfNeeded(value.toISOString())}
+        {isNaN(dateValue)
+          ? 'Invalid date'
+          : prettyFormatIsoDateWithMsIfNeeded(toIsoStringInTimezone(value, timezone))}
       </div>
     );
   } else if (isSimpleArray(value)) {

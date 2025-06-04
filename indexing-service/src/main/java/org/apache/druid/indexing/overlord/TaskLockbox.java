@@ -474,7 +474,7 @@ public class TaskLockbox
       boolean reduceMetadataIO
   )
   {
-    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
+    log.debug("Allocating [%d] segments for datasource[%s], interval[%s]", requests.size(), dataSource, interval);
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
@@ -1132,11 +1132,11 @@ public class TaskLockbox
 
         if (match) {
           // Remove task from live list
-          log.info("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
+          log.debug("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
           final boolean removed = taskLockPosse.removeTask(task);
 
           if (taskLockPosse.isTasksEmpty()) {
-            log.info("TaskLock[%s] is now empty.", taskLock);
+            log.debug("TaskLock[%s] is now empty.", taskLock);
             possesHolder.remove(taskLockPosse);
           }
           if (possesHolder.isEmpty()) {
@@ -1259,27 +1259,42 @@ public class TaskLockbox
         );
       }
 
-      // Clean up pending segments associated with an APPEND task
-      if (task instanceof PendingSegmentAllocatingTask) {
-        final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
-        if (activeAllocatorIdToTaskIds.containsKey(taskAllocatorId)) {
-          final Set<String> taskIdsForSameAllocator = activeAllocatorIdToTaskIds.get(taskAllocatorId);
-          taskIdsForSameAllocator.remove(task.getId());
-
-          if (taskIdsForSameAllocator.isEmpty()) {
-            final int pendingSegmentsDeleted = metadataStorageCoordinator
-                .deletePendingSegmentsForTaskAllocatorId(task.getDataSource(), taskAllocatorId);
-            log.info(
-                "Deleted [%d] entries from pendingSegments table for taskAllocatorId[%s].",
-                pendingSegmentsDeleted, taskAllocatorId
-            );
-          }
-          activeAllocatorIdToTaskIds.remove(taskAllocatorId);
-        }
-      }
+      cleanupPendingSegments(task);
     }
     catch (Exception e) {
       log.warn(e, "Failure cleaning up upgradeSegments or pendingSegments tables.");
+    }
+  }
+
+  /**
+   * Cleans up pending segments associated with an APPEND task.
+   */
+  protected void cleanupPendingSegments(Task task)
+  {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      return;
+    }
+
+    giant.lock();
+    try {
+      final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
+      if (activeAllocatorIdToTaskIds.containsKey(taskAllocatorId)) {
+        final Set<String> taskIdsForSameAllocator = activeAllocatorIdToTaskIds.get(taskAllocatorId);
+        taskIdsForSameAllocator.remove(task.getId());
+
+        if (taskIdsForSameAllocator.isEmpty()) {
+          final int pendingSegmentsDeleted = metadataStorageCoordinator
+              .deletePendingSegmentsForTaskAllocatorId(task.getDataSource(), taskAllocatorId);
+          log.info(
+              "Deleted [%d] entries from pendingSegments table for taskAllocatorId[%s].",
+              pendingSegmentsDeleted, taskAllocatorId
+          );
+        }
+        activeAllocatorIdToTaskIds.remove(taskAllocatorId);
+      }
+    }
+    finally {
+      giant.unlock();
     }
   }
 

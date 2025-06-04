@@ -49,6 +49,6 @@ public enum ExprType implements TypeDescriptor
   @Override
   public boolean isArray()
   {
-    return this == ARRAY;
+    return this == ExprType.ARRAY;
   }
 }

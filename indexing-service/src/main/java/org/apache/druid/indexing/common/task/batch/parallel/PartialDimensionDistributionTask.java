@@ -36,10 +36,12 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
@@ -49,11 +51,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -182,7 +181,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
-                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .map(AuthorizationUtils::createExternalResourceReadAction)
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -228,7 +227,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxSavedParseExceptions()
     );
     try (
-        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             toolbox.getIndexingTmpDir(),
             dataSchema,
             inputSource,

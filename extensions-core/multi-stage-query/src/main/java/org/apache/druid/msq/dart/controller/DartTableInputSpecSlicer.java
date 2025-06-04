@@ -23,8 +23,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -39,6 +39,7 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -102,7 +103,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
     final TimelineLookup<String, ServerSelector> timeline =
-        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource()).getAnalysis()).orElse(null);
+        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource())).orElse(null);
 
     if (timeline == null) {
       return Collections.emptyList();
@@ -162,7 +163,8 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    final QueryableDruidServer<?> server = serverSelector.pick(null);
+    // Currently, Dart does not support clone query modes, all servers can be queried.
+    final QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.INCLUDECLONES);
 
     if (server == null) {
       return UNKNOWN;
@@ -279,7 +281,8 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     int numRealtimeServers = 0;
     int numOtherServers = 0;
 
-    for (final DruidServerMetadata server : serverSelector.getAllServers()) {
+    // Currently, Dart does not support clone query modes, all servers can be queried.
+    for (final DruidServerMetadata server : serverSelector.getAllServers(CloneQueryMode.INCLUDECLONES)) {
       if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
         numRealtimeServers++;
       } else {

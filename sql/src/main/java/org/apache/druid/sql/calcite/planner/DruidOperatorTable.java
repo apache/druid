@@ -558,7 +558,7 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private static SqlSyntax normalizeSyntax(final SqlSyntax syntax)
   {
-    if (!isFunctionSyntax(syntax)) {
+    if (!DruidOperatorTable.isFunctionSyntax(syntax)) {
       return syntax;
     } else {
       return SqlSyntax.FUNCTION;

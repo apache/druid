@@ -148,7 +148,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset
+      shuffleSpecFactoryPreAggregation = doLimitOrOffset || intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : resultShuffleSpecFactory;
 

@@ -91,15 +91,11 @@ jobs:
 
   integration-query-tests-middleManager-mariaDB:
     needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [11, 17, 21]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: ${{ matrix.jdk }}
-      runtime_jdk: ${{ matrix.jdk }}
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=query
       use_indexer: middleManager
       mysql_driver: org.mariadb.jdbc.Driver
@@ -164,7 +160,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-8-${{ github.sha }}
+          key: maven-${{ runner.os }}-17-${{ github.sha }}
           restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Maven build
@@ -175,7 +171,11 @@ jobs:
       - name: Run IT
         id: test
         run: |
-          # Debug echo
+          echo "Running mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C"
+          mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C
+          # Note: The above command relies on the correct version of the JARs being installed in the local m2 repository.
+          # For any changes, please rebuild it using the command from the previous step (./it.sh ci).
+
           echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}
 

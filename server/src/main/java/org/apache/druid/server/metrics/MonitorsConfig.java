@@ -95,8 +95,8 @@ public class MonitorsConfig
   {
     Map<String, String[]> dimensionsMap = new HashMap<>();
     for (String property : props.stringPropertyNames()) {
-      if (property.startsWith(METRIC_DIMENSION_PREFIX)) {
-        String dimension = property.substring(METRIC_DIMENSION_PREFIX.length());
+      if (property.startsWith(MonitorsConfig.METRIC_DIMENSION_PREFIX)) {
+        String dimension = property.substring(MonitorsConfig.METRIC_DIMENSION_PREFIX.length());
         if (dimensions.contains(dimension)) {
           dimensionsMap.put(
               dimension,

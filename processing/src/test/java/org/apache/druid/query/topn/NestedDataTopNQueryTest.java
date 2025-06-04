@@ -20,7 +20,6 @@
 package org.apache.druid.query.topn;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -157,7 +156,7 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
     verifyResults(
         results,
         ImmutableList.of(
-            new Object[]{1672531200000L, null, NullHandling.defaultDoubleValue()},
+            new Object[]{1672531200000L, null, null},
             new Object[]{1672531200000L, "100", 200.0},
             new Object[]{1672531200000L, "200", 400.0},
             new Object[]{1672531200000L, "300", 1200.0}

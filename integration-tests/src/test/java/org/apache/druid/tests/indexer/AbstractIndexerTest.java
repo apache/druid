@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
@@ -145,7 +146,7 @@ public abstract class AbstractIndexerTest
     coordinator.unloadSegmentsForDataSource(dataSource);
     ITRetryUtil.retryUntilFalse(
         () -> coordinator.areSegmentsLoaded(dataSource),
-        "Segment Unloading"
+        "Segments are loaded"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
     waitForAllTasksToCompleteForDataSource(dataSource);
@@ -154,8 +155,47 @@ public abstract class AbstractIndexerTest
   protected void waitForAllTasksToCompleteForDataSource(final String dataSource)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getUncompletedTasksForDataSource(dataSource).size() == 0),
-        StringUtils.format("Waiting for all tasks of [%s] to complete", dataSource)
+        () -> indexer.getUncompletedTasksForDataSource(dataSource).isEmpty(),
+        StringUtils.format("All tasks of [%s] have finished", dataSource)
+    );
+  }
+
+  /**
+   * Retries until segments have been loaded.
+   */
+  protected void waitForSegmentsToLoad(String dataSource)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(dataSource),
+        "Segments are loaded"
+    );
+  }
+
+  /**
+   * Retries until the segment count is as expected.
+   */
+  protected void waitUntilDatasourceSegmentCountEquals(String dataSource, int numExpectedSegments)
+  {
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getFullSegmentsMetadata(dataSource).size(),
+        numExpectedSegments,
+        "Segment count"
+    );
+  }
+
+  /**
+   * Retries until the total row count is as expected.
+   */
+  protected void waitUntilDatasourceRowCountEquals(String dataSource, long totalRows)
+  {
+    ITRetryUtil.retryUntilEquals(
+        () -> queryHelper.countRows(
+            dataSource,
+            Intervals.ETERNITY,
+            name -> new LongSumAggregatorFactory(name, "count")
+        ),
+        totalRows,
+        "Total row count in datasource"
     );
   }
 

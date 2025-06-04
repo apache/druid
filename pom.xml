@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>32.0.0-SNAPSHOT</version>
+    <version>34.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -74,7 +74,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.5.0</apache.curator.version>
+        <apache.curator.version>5.8.0</apache.curator.version>
         <apache.kafka.version>3.9.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
@@ -88,6 +88,7 @@
           -->
         <calcite.version>1.37.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
+        <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
@@ -95,9 +96,9 @@
         <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.0.1-jre</guava.version>
-        <guice.version>4.2.2</guice.version>
+        <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.56.v20240826</jetty.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.12.7.20221012</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -105,7 +106,7 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.108.Final</netty4.version>
+        <netty4.version>4.1.118.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.5</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -113,6 +114,7 @@
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
+        <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.14.2</mockito.version>
         <aws.sdk.version>1.12.638</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
@@ -156,7 +158,7 @@
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
+        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -194,6 +196,7 @@
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/kubernetes-extensions</module>
+        <module>extensions-core/kubernetes-overlord-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -220,7 +223,6 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
-        <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
@@ -251,12 +253,12 @@
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
-        <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <module>extensions-contrib/grpc-query</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
+        <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -291,16 +293,6 @@
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
-        </repository>
-
-        <!--
-        maven-dependency-plugin:3.1.2 seems to have updated HTTP repository access behavior.
-        We get the following error "Blocked mirror for repositories: [twitter (http://maven.twttr.com, default, releases+snapshots)]"
-        The suggested action step is to add the mirror: https://maven.apache.org/docs/3.8.1/release-notes.html#how-to-fix-when-i-get-a-http-repository-blocked
-        -->
-        <repository>
-            <id>twitter</id>
-            <url>https://maven.twttr.com</url>
         </repository>
     </repositories>
 
@@ -386,17 +378,6 @@
                 <groupId>com.github.rvesse</groupId>
                 <artifactId>airline</artifactId>
                 <version>2.8.4</version>
-            </dependency>
-            <dependency>
-                <groupId>org.skife.config</groupId>
-                <artifactId>config-magic</artifactId>
-                <version>0.9</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>net.minidev</groupId>
@@ -597,11 +578,6 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.google.inject.extensions</groupId>
-                <artifactId>guice-multibindings</artifactId>
-                <version>${guice.version}</version>
-            </dependency>
-            <dependency>
               <groupId>com.google.inject.extensions</groupId>
               <artifactId>guice-assistedinject</artifactId>
               <version>${guice.version}</version>
@@ -693,6 +669,16 @@
                 <groupId>org.glassfish.jaxb</groupId>
                 <artifactId>jaxb-runtime</artifactId>
                 <version>2.3.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.graalvm.js</groupId>
+                <artifactId>js</artifactId>
+                <version>${graaljs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.graalvm.js</groupId>
+                <artifactId>js-scriptengine</artifactId>
+                <version>${graaljs.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jdbi</groupId>
@@ -1010,8 +996,7 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <!-- Uses Netty 4.1.x -->
-                <version>2.5.3</version>
+                <version>3.0.1</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1341,6 +1326,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-testlib</artifactId>
+                <version>${guice.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava-testlib</artifactId>
                 <version>${guava.version}</version>
@@ -1497,6 +1488,15 @@
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
                         <exclude>com/fasterxml/jackson/databind/*</exclude>
                     </excludes>
+                    <!-- fileSets specify the target locations which will be scanned by jacoco:merge -->
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.basedir}</directory>
+                            <includes>
+                                <include>**/target/jacoco*.exec</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
                 </configuration>
                 <executions>
                     <execution>
@@ -1652,12 +1652,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <signature>
-                                <groupId>org.codehaus.mojo.signature
-                                </groupId>
-                                <artifactId>java18</artifactId>
-                                <version>1.0</version>
-                            </signature>
+                            <!-- checks for ${java.version}, TODO: replace this plugin with release flag with javac, see https://openjdk.org/jeps/247  -->
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
@@ -1800,6 +1795,7 @@
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
                     <!-- For node analysis info, see https://github.com/jeremylong/DependencyCheck/issues/2482#issuecomment-603755623 -->
                     <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>  <!-- plugin author (jeremylong) recommends to disable, since this analyzer is retired -->
+                    <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
                     <nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
                 </configuration>

@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,13 +75,8 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     assertExpr("cartesian_map((x, y) -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
-    if (NullHandling.replaceWithDefault()) {
-      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, "foo", "bar"});
-      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, "foo", "bar", "foo", "foofoo", "foobar", "bar", "barfoo", "barbar"});
-    } else {
-      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, null, null});
-      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, null, null, null, "foofoo", "foobar", null, "barfoo", "barbar"});
-    }
+    assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, null, null});
+    assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, null, null, null, "foofoo", "foobar", null, "barfoo", "barbar"});
   }
 
   @Test

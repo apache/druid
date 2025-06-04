@@ -28,9 +28,12 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
@@ -45,7 +48,6 @@ import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -56,6 +58,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -76,6 +79,7 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
@@ -114,7 +118,6 @@ public class CliBroker extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
-        new LegacyBrokerParallelMergeConfigModule(),
         new BrokerProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -136,6 +139,7 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, BrokerServerView.class);
           LifecycleModule.register(binder, MetadataSegmentView.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
+          binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
           binder.install(new CacheModule());
@@ -158,6 +162,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
+          Jerseys.addResource(binder, BrokerDynamicConfigResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
 
@@ -165,6 +170,7 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
+          binder.bind(BrokerViewOfCoordinatorConfig.class).in(ManageLifecycle.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
           Jerseys.addResource(binder, HistoricalResource.class);
@@ -182,6 +188,10 @@ public class CliBroker extends ServerRunnable
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+
+          binder.bind(LocalTmpStorageConfig.class)
+                .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("broker"))
+                .in(LazySingleton.class);
         },
         new LookupModule(),
         new SqlModule()

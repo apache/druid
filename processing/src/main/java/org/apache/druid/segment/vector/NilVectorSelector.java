@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IdLookup;
 
@@ -37,7 +36,7 @@ public class NilVectorSelector
   private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[QueryContexts.DEFAULT_VECTOR_SIZE];
 
   static {
-    Arrays.fill(DEFAULT_NULLS_VECTOR, NullHandling.sqlCompatible());
+    Arrays.fill(DEFAULT_NULLS_VECTOR, true);
   }
 
   private final VectorSizeInspector vectorSizeInspector;
@@ -82,9 +81,7 @@ public class NilVectorSelector
       );
     } else {
       final boolean[] nulls = new boolean[vectorSizeInspector.getMaxVectorSize()];
-      if (NullHandling.sqlCompatible()) {
-        Arrays.fill(nulls, true);
-      }
+      Arrays.fill(nulls, true);
       return new NilVectorSelector(
           vectorSizeInspector,
           nulls,
@@ -158,7 +155,7 @@ public class NilVectorSelector
   @Override
   public int lookupId(@Nullable final String name)
   {
-    return NullHandling.isNullOrEquivalent(name) ? 0 : -1;
+    return name == null ? 0 : -1;
   }
 
   @Override

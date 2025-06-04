@@ -22,6 +22,7 @@ package org.apache.druid.client.selector;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

@@ -26,67 +26,12 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CircularBuffer;
 
-import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class IndexTaskUtils
 {
-  @Nullable
-  public static List<ParseExceptionReport> getReportListFromSavedParseExceptions(
-      CircularBuffer<ParseExceptionReport> savedParseExceptionReports
-  )
-  {
-    if (savedParseExceptionReports == null) {
-      return null;
-    }
-    List<ParseExceptionReport> reports = new ArrayList<>();
-    for (int i = 0; i < savedParseExceptionReports.size(); i++) {
-      reports.add(savedParseExceptionReports.getLatest(i));
-    }
-
-    return reports;
-  }
-
-  /**
-   * Authorizes action to be performed on a task's datasource
-   *
-   * @return authorization result
-   */
-  public static Access datasourceAuthorizationCheck(
-      final HttpServletRequest req,
-      Action action,
-      String datasource,
-      AuthorizerMapper authorizerMapper
-  )
-  {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(datasource, ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
-  }
-
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final Task task)
   {
     metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
@@ -138,12 +83,12 @@ public class IndexTaskUtils
   )
   {
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     if (publishResult.isSuccess()) {
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
       for (DataSegment segment : publishResult.getSegments()) {
-        setSegmentDimensions(metricBuilder, segment);
+        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
         toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
         toolbox.getEmitter().emit(SegmentMetadataEvent.create(segment, DateTimes.nowUtc()));
       }

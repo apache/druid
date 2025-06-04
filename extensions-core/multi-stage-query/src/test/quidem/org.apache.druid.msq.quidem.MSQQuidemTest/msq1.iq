@@ -96,6 +96,7 @@ order by 1;
           "plannerStrategy" : "DECOUPLED",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "windowFunctionOperatorTransformation" : true
         }
       }
@@ -203,6 +204,7 @@ order by 1;
           "plannerStrategy" : "DECOUPLED",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
+          "startTime" : __TIMESTAMP__
           "windowFunctionOperatorTransformation" : true
         }
       }

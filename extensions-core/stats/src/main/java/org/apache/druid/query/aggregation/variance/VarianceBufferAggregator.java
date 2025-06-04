@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -120,7 +119,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class FloatVarianceAggregator extends VarianceBufferAggregator
   {
-    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseFloatColumnValueSelector selector;
 
     public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
@@ -131,7 +129,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      if (noNulls || !selector.isNull()) {
+      if (!selector.isNull()) {
         float v = selector.getFloat();
         long count = getCount(buf, position) + 1;
         double sum = getSum(buf, position) + v;
@@ -153,7 +151,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class DoubleVarianceAggregator extends VarianceBufferAggregator
   {
-    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseDoubleColumnValueSelector selector;
 
     public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
@@ -164,7 +161,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      if (noNulls || !selector.isNull()) {
+      if (!selector.isNull()) {
         double v = selector.getDouble();
         long count = getCount(buf, position) + 1;
         double sum = getSum(buf, position) + v;
@@ -186,7 +183,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class LongVarianceAggregator extends VarianceBufferAggregator
   {
-    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseLongColumnValueSelector selector;
 
     public LongVarianceAggregator(BaseLongColumnValueSelector selector)
@@ -197,7 +193,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      if (noNulls || !selector.isNull()) {
+      if (!selector.isNull()) {
         long v = selector.getLong();
         long count = getCount(buf, position) + 1;
         double sum = getSum(buf, position) + v;

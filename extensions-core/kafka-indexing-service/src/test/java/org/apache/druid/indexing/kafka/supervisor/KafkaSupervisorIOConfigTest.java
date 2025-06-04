@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
@@ -29,6 +28,7 @@ import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -51,7 +51,7 @@ public class KafkaSupervisorIOConfigTest
   public KafkaSupervisorIOConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
+    mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
 
   @Rule
@@ -86,7 +86,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(100, config.getPollTimeout());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertEquals(false, config.isUseEarliestOffset());
+    Assert.assertFalse(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
@@ -152,10 +152,10 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertEquals(true, config.isUseEarliestOffset());
+    Assert.assertTrue(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
-    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
+    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().orNull());
+    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().orNull());
   }
 
   @Test
@@ -195,9 +195,9 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertEquals(true, config.isUseEarliestOffset());
+    Assert.assertTrue(config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().get());
+    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().orNull());
   }
 
   @Test
@@ -287,14 +287,14 @@ public class KafkaSupervisorIOConfigTest
         + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
         + "}";
     exception.expect(JsonMappingException.class);
-    KafkaSupervisorIOConfig config = mapper.readValue(
+    mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
                 KafkaSupervisorIOConfig.class
-                )
-            ), KafkaSupervisorIOConfig.class
-        );
+            )
+        ), KafkaSupervisorIOConfig.class
+    );
   }
 
   @Test
@@ -310,7 +310,7 @@ public class KafkaSupervisorIOConfigTest
     autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfig.put("scaleActionStartDelayMillis", 0);
     autoScalerConfig.put("scaleActionPeriodMillis", 100);
-    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("taskCountMax", 10);
     autoScalerConfig.put("taskCountMin", 1);
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
@@ -328,6 +328,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT1H"),
         consumerProperties,
         mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -338,17 +339,60 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
-        null
+        null,
+        false
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
     Assert.assertNotNull(kafkaSupervisorIOConfig1.getAutoScalerConfig());
     Assert.assertTrue(kafkaSupervisorIOConfig1.getAutoScalerConfig().getEnableTaskAutoScaler());
     Assert.assertEquals(1, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMin());
-    Assert.assertEquals(2, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
+    Assert.assertEquals(10, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
     Assert.assertEquals(
         1200000,
         kafkaSupervisorIOConfig1.getAutoScalerConfig().getMinTriggerScaleActionFrequencyMillis()
+    );
+
+    autoScalerConfig.put("taskCountStart", 5);
+    kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
+        "test",
+        null,
+        null,
+        1,
+        1,
+        new Period("PT1H"),
+        consumerProperties,
+        mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
+        LagAggregator.DEFAULT,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        new Period("P1D"),
+        new Period("PT30S"),
+        true,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+    Assert.assertEquals(5, kafkaSupervisorIOConfig.getTaskCount().intValue());
+
+    Assert.assertThrows(
+        "taskCountMin <= taskCountStart <= taskCountMax",
+        RuntimeException.class, () -> {
+          autoScalerConfig.put("taskCountStart", 11); // > max task count
+          mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
+        }
+    );
+
+    Assert.assertThrows(
+        "taskCountMin <= taskCountStart <= taskCountMax",
+        RuntimeException.class, () -> {
+          autoScalerConfig.put("taskCountStart", 0); // < min task count
+          mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
+        }
     );
   }
 
@@ -371,6 +415,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT1H"),
         consumerProperties,
         null,
+        null,
         KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
@@ -381,7 +426,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         mapper.convertValue(idleConfig, IdleConfig.class),
-        null
+        null,
+        false
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);

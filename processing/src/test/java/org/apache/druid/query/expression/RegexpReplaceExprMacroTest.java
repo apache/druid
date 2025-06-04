@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -76,11 +75,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("xfxoxox", result.value());
-    }
+    Assert.assertNull(result.value());
   }
 
   @Test
@@ -131,11 +126,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("x", result.value());
-    }
+    Assert.assertNull(result.value());
   }
 
   @Test
@@ -169,11 +160,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_replace(a, null, 'x')", InputBindings.nilBindings());
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("x", result.value());
-    }
+    Assert.assertNull(result.value());
   }
 
   @Test
@@ -186,11 +173,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         )
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("x", result.value());
-    }
+    Assert.assertNull(result.value());
   }
 
   @Test
@@ -198,11 +181,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_replace(a, '', 'x')", InputBindings.nilBindings());
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("x", result.value());
-    }
+    Assert.assertNull(result.value());
   }
 
   @Test

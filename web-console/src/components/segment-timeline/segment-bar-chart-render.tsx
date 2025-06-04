@@ -20,39 +20,39 @@ import { Button, Intent } from '@blueprintjs/core';
 import type { NonNullDateRange } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import IntervalTree from '@flatten-js/interval-tree';
+import { day, Duration, minute, month, Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import { max, sort, sum } from 'd3-array';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
+import { select } from 'd3-selection';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 
 import type { Rule } from '../../druid-models';
 import { getDatasourceColor, RuleUtil } from '../../druid-models';
 import { useClock, useGlobalEventListener } from '../../hooks';
+import type { Margin, Stage } from '../../utils';
 import {
   allSameValue,
   arraysEqualByElement,
   clamp,
-  day,
-  Duration,
+  filterMap,
   formatBytes,
   formatNumber,
+  formatNumberAbbreviated,
+  formatStartDuration,
   groupBy,
   groupByAsMap,
-  minute,
-  month,
+  pickSmallestGranularityThatFits,
   pluralIfNeeded,
-  TZ_UTC,
   uniq,
 } from '../../utils';
-import type { Margin, Stage } from '../../utils/stage';
 import type { PortalBubbleOpenOn } from '../portal-bubble/portal-bubble';
 import { PortalBubble } from '../portal-bubble/portal-bubble';
 
-import { ChartAxis } from './chart-axis';
-import type { IntervalBar, IntervalRow, IntervalStat, TrimmedIntervalRow } from './common';
-import { aggregateSegmentStats, formatIntervalStat, formatIsoDateOnly } from './common';
+import type { IntervalBar, IntervalRow, IntervalStat, TrimmedIntervalRow } from './interval';
+import { aggregateSegmentStats, formatIntervalStat, formatIsoDateOnly } from './interval';
 
 import './segment-bar-chart-render.scss';
 
@@ -68,38 +68,6 @@ const POSSIBLE_GRANULARITIES = [
 ];
 
 const EXTEND_X_SCALE_DOMAIN_BY = 1;
-
-function formatStartDuration(start: Date, duration: Duration): string {
-  let sliceLength;
-  const { singleSpan } = duration;
-  switch (singleSpan) {
-    case 'year':
-      sliceLength = 4;
-      break;
-
-    case 'month':
-      sliceLength = 7;
-      break;
-
-    case 'day':
-      sliceLength = 10;
-      break;
-
-    case 'hour':
-      sliceLength = 13;
-      break;
-
-    case 'minute':
-      sliceLength = 16;
-      break;
-
-    default:
-      sliceLength = 19;
-      break;
-  }
-
-  return `${start.toISOString().slice(0, sliceLength)}/${duration}`;
-}
 
 // ---------------------------------------
 // Load rule stuff
@@ -125,14 +93,14 @@ function loadRuleToDateRange(loadRule: Rule): NonNullDateRange {
     case 'dropByPeriod':
     case 'broadcastByPeriod':
       return [
-        new Duration(loadRule.period || 'P1D').shift(new Date(), TZ_UTC, -1),
+        new Duration(loadRule.period || 'P1D').shift(new Date(), Timezone.UTC, -1),
         loadRule.includeFuture ? POSITIVE_INFINITY_DATE : new Date(),
       ];
 
     case 'dropBeforeByPeriod':
       return [
         NEGATIVE_INFINITY_DATE,
-        new Duration(loadRule.period || 'P1D').shift(new Date(), TZ_UTC, -1),
+        new Duration(loadRule.period || 'P1D').shift(new Date(), Timezone.UTC, -1),
       ];
 
     default:
@@ -168,6 +136,9 @@ function stackIntervalRows(trimmedIntervalRows: TrimmedIntervalRow[]): {
     const totalSizeDiff = datasourceToTotalSize[b.datasource] - datasourceToTotalSize[a.datasource];
     if (totalSizeDiff) return totalSizeDiff;
 
+    const datasourceNameDiff = b.datasource.localeCompare(a.datasource);
+    if (datasourceNameDiff) return datasourceNameDiff;
+
     return Number(a.realtime) - Number(b.realtime);
   });
 
@@ -200,7 +171,7 @@ interface BubbleInfo {
 interface SelectionRange {
   start: Date;
   end: Date;
-  done?: boolean;
+  finalized?: boolean;
 }
 
 export interface DatasourceRules {
@@ -253,7 +224,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
       selection &&
       selection.start.valueOf() === newSelection.start.valueOf() &&
       selection.end.valueOf() === newSelection.end.valueOf() &&
-      selection.done === newSelection.done
+      selection.finalized === newSelection.finalized
     ) {
       return;
     }
@@ -280,13 +251,15 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   const now = useClock(minute.canonicalLength);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
+  const innerStage = stage.applyMargin(CHART_MARGIN);
+
   const trimGranularity = useMemo(() => {
-    return Duration.pickSmallestGranularityThatFits(
+    return pickSmallestGranularityThatFits(
       POSSIBLE_GRANULARITIES,
       dateRange[1].valueOf() - dateRange[0].valueOf(),
-      Math.floor(stage.width / MIN_BAR_WIDTH),
+      Math.floor(Math.max(innerStage.width, 10) / MIN_BAR_WIDTH),
     ).toString();
-  }, [dateRange, stage.width]);
+  }, [dateRange, innerStage.width]);
 
   const { intervalBars, intervalTree } = useMemo(() => {
     const shownIntervalRows = intervalRows.filter(
@@ -304,12 +277,12 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     const trimDuration = new Duration(trimGranularity);
     const trimmedIntervalRows = shownIntervalRows.map(intervalRow => {
       const { start, end, segments, size, rows } = intervalRow;
-      const startTrimmed = trimDuration.floor(start, TZ_UTC);
-      let endTrimmed = trimDuration.ceil(end, TZ_UTC);
+      const startTrimmed = trimDuration.floor(start, Timezone.UTC);
+      let endTrimmed = trimDuration.ceil(end, Timezone.UTC);
 
       // Special handling to catch WEEK intervals when trimming to month.
       if (trimGranularity === 'P1M' && intervalRow.originalTimeSpan.toString() === 'P7D') {
-        endTrimmed = trimDuration.shift(startTrimmed, TZ_UTC);
+        endTrimmed = trimDuration.shift(startTrimmed, Timezone.UTC);
       }
 
       const shownDays = (endTrimmed.valueOf() - startTrimmed.valueOf()) / day.canonicalLength;
@@ -352,8 +325,6 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     return stackIntervalRows(fullyGroupedSegmentRows);
   }, [intervalRows, trimGranularity, dateRange, shownDatasource]);
 
-  const innerStage = stage.applyMargin(CHART_MARGIN);
-
   const baseTimeScale = scaleUtc()
     .domain(dateRange)
     .range([EXTEND_X_SCALE_DOMAIN_BY, innerStage.width - EXTEND_X_SCALE_DOMAIN_BY]);
@@ -367,7 +338,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   );
   const statScale = scaleLinear()
     .rangeRound([innerStage.height, 0])
-    .domain([0, (maxNormalizedStat ?? 1) * 1.05]);
+    .domain([0, (maxNormalizedStat ?? 100) * 1.05]);
 
   const formatTickRate = (n: number) => {
     switch (shownIntervalStat) {
@@ -375,7 +346,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         return formatNumber(n); // + ' seg/day';
 
       case 'rows':
-        return formatNumber(n); // + ' row/day';
+        return formatNumberAbbreviated(n); // + ' row/day';
 
       case 'size':
         return formatBytes(n);
@@ -391,7 +362,11 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
       setSelection(undefined);
     } else {
       const rect = svg.getBoundingClientRect();
-      const x = e.clientX - rect.x - CHART_MARGIN.left;
+      const x = clamp(
+        e.clientX - rect.x - CHART_MARGIN.left,
+        EXTEND_X_SCALE_DOMAIN_BY,
+        innerStage.width - EXTEND_X_SCALE_DOMAIN_BY,
+      );
       const y = e.clientY - rect.y - CHART_MARGIN.top;
       const time = baseTimeScale.invert(x);
       const action = y > innerStage.height || e.shiftKey ? 'shift' : 'select';
@@ -413,19 +388,21 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     if (mouseDownAt) {
       e.preventDefault();
 
-      const b = baseTimeScale.invert(x);
       if (mouseDownAt.action === 'shift' || e.shiftKey) {
-        setShiftOffset(mouseDownAt.time.valueOf() - b.valueOf());
+        setShiftOffset(mouseDownAt.time.valueOf() - baseTimeScale.invert(x).valueOf());
       } else {
+        const b = baseTimeScale.invert(
+          clamp(x, EXTEND_X_SCALE_DOMAIN_BY, innerStage.width - EXTEND_X_SCALE_DOMAIN_BY),
+        );
         if (mouseDownAt.time < b) {
           setSelectionIfNeeded({
-            start: day.floor(mouseDownAt.time, TZ_UTC),
-            end: day.ceil(b, TZ_UTC),
+            start: day.floor(mouseDownAt.time, Timezone.UTC),
+            end: day.ceil(b, Timezone.UTC),
           });
         } else {
           setSelectionIfNeeded({
-            start: day.floor(b, TZ_UTC),
-            end: day.ceil(mouseDownAt.time, TZ_UTC),
+            start: day.floor(b, Timezone.UTC),
+            end: day.ceil(mouseDownAt.time, Timezone.UTC),
           });
         }
       }
@@ -441,8 +418,8 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           new Duration(trimGranularity).getCanonicalLength() > day.canonicalLength * 25
             ? month
             : day;
-        const start = shifter.floor(time, TZ_UTC);
-        const end = shifter.ceil(time, TZ_UTC);
+        const start = shifter.floor(time, Timezone.UTC);
+        const end = shifter.shift(start, Timezone.UTC, 1);
 
         let intervalBars: IntervalBar[] = [];
         if (y <= innerStage.height) {
@@ -492,7 +469,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         }
       } else {
         if (selection) {
-          setSelection({ ...selection, done: true });
+          setSelection({ ...selection, finalized: true });
         }
       }
     } else if (0 <= x && x <= innerStage.width && 0 <= y && y <= innerStage.height) {
@@ -521,9 +498,12 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     }
   });
 
+  if (innerStage.isInvalid()) return;
+
   function startEndToXWidth({ start, end }: { start: Date; end: Date }) {
-    const xStart = clamp(timeScale(start), 0, innerStage.width);
-    const xEnd = clamp(timeScale(end), 0, innerStage.width);
+    const xStart = timeScale(start);
+    const xEnd = timeScale(end);
+    if (xEnd < 0 || innerStage.width < xStart) return;
 
     return {
       x: xStart,
@@ -532,132 +512,132 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
   }
 
   function segmentBarToRect(intervalBar: IntervalBar) {
+    const xWidth = startEndToXWidth(intervalBar);
+    if (!xWidth) return;
+
     const y0 = statScale(intervalBar.offset[shownIntervalStat]);
     const y = statScale(
       intervalBar.normalized[shownIntervalStat] + intervalBar.offset[shownIntervalStat],
     );
 
     return {
-      ...startEndToXWidth(intervalBar),
+      ...xWidth,
       y: y,
       height: y0 - y,
     };
   }
 
   let hoveredOpenOn: PortalBubbleOpenOn | undefined;
-  if (svgRef.current) {
-    const rect = svgRef.current.getBoundingClientRect();
 
-    if (bubbleInfo) {
-      const hoveredIntervalBars = bubbleInfo.intervalBars;
+  if (bubbleInfo) {
+    const hoveredIntervalBars = bubbleInfo.intervalBars;
 
-      let title: string | undefined;
-      let text: ReactNode;
-      if (hoveredIntervalBars.length === 0) {
-        title = bubbleInfo.timeLabel;
-        text = '';
-      } else if (hoveredIntervalBars.length === 1) {
-        const hoveredIntervalBar = hoveredIntervalBars[0];
-        title = `${formatStartDuration(
-          hoveredIntervalBar.start,
-          hoveredIntervalBar.originalTimeSpan,
-        )}${hoveredIntervalBar.realtime ? ' (realtime)' : ''}`;
-        text = (
-          <>
-            {!shownDatasource && <div>{`Datasource: ${hoveredIntervalBar.datasource}`}</div>}
-            <div>{`Size: ${
-              hoveredIntervalBar.realtime
-                ? 'estimated for realtime'
-                : formatIntervalStat('size', hoveredIntervalBar.size)
-            }`}</div>
-            <div>{`Rows: ${formatIntervalStat('rows', hoveredIntervalBar.rows)}`}</div>
-            <div>{`Segments: ${formatIntervalStat('segments', hoveredIntervalBar.segments)}`}</div>
-          </>
-        );
-      } else {
-        const datasources = uniq(hoveredIntervalBars.map(b => b.datasource));
-        const agg = aggregateSegmentStats(hoveredIntervalBars);
-        title = bubbleInfo.timeLabel;
-        text = (
-          <>
-            {!shownDatasource && (
-              <div>{`Totals for ${pluralIfNeeded(datasources.length, 'datasource')}`}</div>
-            )}
-            <div>{`Size: ${formatIntervalStat('size', agg.size)}`}</div>
-            <div>{`Rows: ${formatIntervalStat('rows', agg.rows)}`}</div>
-            <div>{`Segments: ${formatIntervalStat('segments', agg.segments)}`}</div>
-          </>
-        );
-      }
-
-      hoveredOpenOn = {
-        x:
-          rect.x +
-          CHART_MARGIN.left +
-          timeScale(new Date((bubbleInfo.start.valueOf() + bubbleInfo.end.valueOf()) / 2)),
-        y: rect.y + CHART_MARGIN.top,
-        title,
-        text,
-      };
-    } else if (selection) {
-      const selectedBars = intervalTree.search([
-        selection.start.valueOf() + 1,
-        selection.end.valueOf() - 1,
-      ]) as IntervalBar[];
-      const datasources = uniq(selectedBars.map(b => b.datasource));
-      const realtime = allSameValue(selectedBars.map(b => b.realtime));
-      const agg = aggregateSegmentStats(selectedBars);
-      hoveredOpenOn = {
-        x:
-          rect.x +
-          CHART_MARGIN.left +
-          timeScale(new Date((selection.start.valueOf() + selection.end.valueOf()) / 2)),
-        y: rect.y + CHART_MARGIN.top,
-        title: `${formatIsoDateOnly(selection.start)} → ${formatIsoDateOnly(selection.end)}`,
-        text: (
-          <>
-            {selectedBars.length ? (
-              <>
-                {!shownDatasource && (
-                  <div>{`Totals for ${pluralIfNeeded(datasources.length, 'datasource')}`}</div>
-                )}
-                <div>{`Size: ${formatIntervalStat('size', agg.size)}`}</div>
-                <div>{`Rows: ${formatIntervalStat('rows', agg.rows)}`}</div>
-                <div>{`Segments: ${formatIntervalStat('segments', agg.segments)}`}</div>
-              </>
-            ) : (
-              <div>No segments in this interval</div>
-            )}
-            {selection.done && (
-              <div className="button-bar">
-                <Button
-                  icon={IconNames.ZOOM_IN}
-                  text="Zoom in"
-                  intent={Intent.PRIMARY}
-                  small
-                  onClick={() => {
-                    if (!selection) return;
-                    setSelection(undefined);
-                    changeDateRange([selection.start, selection.end]);
-                  }}
-                />
-                {getIntervalActionButton?.(
-                  selection.start,
-                  selection.end,
-                  datasources.length === 1 ? datasources[0] : undefined,
-                  realtime,
-                )}
-              </div>
-            )}
-          </>
-        ),
-      };
+    let title: string | undefined;
+    let text: ReactNode;
+    if (hoveredIntervalBars.length === 0) {
+      title = bubbleInfo.timeLabel;
+      text = '';
+    } else if (hoveredIntervalBars.length === 1) {
+      const hoveredIntervalBar = hoveredIntervalBars[0];
+      title = `${formatStartDuration(
+        hoveredIntervalBar.start,
+        hoveredIntervalBar.originalTimeSpan,
+      )}${hoveredIntervalBar.realtime ? ' (realtime)' : ''}`;
+      text = (
+        <>
+          {!shownDatasource && <div>{`Datasource: ${hoveredIntervalBar.datasource}`}</div>}
+          <div>{`Size: ${
+            hoveredIntervalBar.realtime
+              ? 'estimated for realtime'
+              : formatIntervalStat('size', hoveredIntervalBar.size)
+          }`}</div>
+          <div>{`Rows: ${formatIntervalStat('rows', hoveredIntervalBar.rows)}`}</div>
+          <div>{`Segments: ${formatIntervalStat('segments', hoveredIntervalBar.segments)}`}</div>
+        </>
+      );
+    } else {
+      const datasources = uniq(hoveredIntervalBars.map(b => b.datasource));
+      const agg = aggregateSegmentStats(hoveredIntervalBars);
+      title = bubbleInfo.timeLabel;
+      text = (
+        <>
+          {!shownDatasource && (
+            <div>{`Totals for ${pluralIfNeeded(datasources.length, 'datasource')}`}</div>
+          )}
+          <div>{`Size: ${formatIntervalStat('size', agg.size)}`}</div>
+          <div>{`Rows: ${formatIntervalStat('rows', agg.rows)}`}</div>
+          <div>{`Segments: ${formatIntervalStat('segments', agg.segments)}`}</div>
+        </>
+      );
     }
+
+    hoveredOpenOn = {
+      x:
+        CHART_MARGIN.left +
+        timeScale(new Date((bubbleInfo.start.valueOf() + bubbleInfo.end.valueOf()) / 2)),
+      y: CHART_MARGIN.top,
+      title,
+      text,
+    };
+  } else if (selection) {
+    const selectedBars = intervalTree.search([
+      selection.start.valueOf() + 1,
+      selection.end.valueOf() - 1,
+    ]) as IntervalBar[];
+    const datasources = uniq(selectedBars.map(b => b.datasource));
+    const realtime = allSameValue(selectedBars.map(b => b.realtime));
+    const agg = aggregateSegmentStats(selectedBars);
+    hoveredOpenOn = {
+      x:
+        CHART_MARGIN.left +
+        timeScale(new Date((selection.start.valueOf() + selection.end.valueOf()) / 2)),
+      y: CHART_MARGIN.top,
+      title: `${formatIsoDateOnly(selection.start)} → ${formatIsoDateOnly(selection.end)}`,
+      text: (
+        <>
+          {selectedBars.length ? (
+            <>
+              {!shownDatasource && (
+                <div>{`Totals for ${pluralIfNeeded(datasources.length, 'datasource')}`}</div>
+              )}
+              <div>{`Size: ${formatIntervalStat('size', agg.size)}`}</div>
+              <div>{`Rows: ${formatIntervalStat('rows', agg.rows)}`}</div>
+              <div>{`Segments: ${formatIntervalStat('segments', agg.segments)}`}</div>
+            </>
+          ) : (
+            <div>No segments in this interval</div>
+          )}
+          {selection.finalized && (
+            <div className="button-bar">
+              <Button
+                icon={IconNames.ZOOM_IN}
+                text="Zoom in"
+                intent={Intent.PRIMARY}
+                small
+                onClick={() => {
+                  if (!selection) return;
+                  setSelection(undefined);
+                  changeDateRange([selection.start, selection.end]);
+                }}
+              />
+              {getIntervalActionButton?.(
+                selection.start,
+                selection.end,
+                datasources.length === 1 ? datasources[0] : undefined,
+                realtime,
+              )}
+            </div>
+          )}
+        </>
+      ),
+    };
   }
 
   function renderLoadRule(loadRule: Rule, i: number, isDefault: boolean) {
     const [start, end] = loadRuleToDateRange(loadRule);
-    const { x, width } = startEndToXWidth({ start, end });
+    const xWidth = startEndToXWidth({ start, end });
+    if (!xWidth) return;
+
     const title = RuleUtil.ruleToString(loadRule) + (isDefault ? ' (cluster default)' : '');
     return (
       <div
@@ -665,8 +645,8 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         className={classNames('load-rule', loadRuleToBaseType(loadRule))}
         data-tooltip={title}
         style={{
-          left: x,
-          width,
+          left: clamp(xWidth.x, 0, innerStage.width),
+          width: clamp(xWidth.width, 0, innerStage.width),
         }}
       >
         {title}
@@ -679,43 +659,20 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     <div className="segment-bar-chart-render">
       <svg
         ref={svgRef}
-        width={stage.width}
-        height={stage.height}
-        viewBox={`0 0 ${stage.width} ${stage.height}`}
+        {...stage.toWidthHeight()}
+        viewBox={stage.toViewBox()}
         preserveAspectRatio="xMinYMin meet"
         onMouseDown={handleMouseDown}
       >
         <g transform={`translate(${CHART_MARGIN.left},${CHART_MARGIN.top})`}>
-          <ChartAxis
-            className="gridline-x"
-            transform="translate(0,0)"
-            axis={axisLeft(statScale)
-              .tickValues(statScale.ticks(3).filter(v => v !== 0))
-              .tickSize(-innerStage.width)
-              .tickFormat(() => '')
-              .tickSizeOuter(0)}
-          />
-          <ChartAxis
-            className="axis-x"
-            transform={`translate(0,${innerStage.height})`}
-            axis={axisBottom(timeScale)}
-          />
-          <rect
-            className={classNames('time-shift-indicator', {
-              shifting: typeof shiftOffset === 'number',
+          <g className="h-gridline" transform="translate(0,0)">
+            {filterMap(statScale.ticks(3), (v, i) => {
+              if (v === 0) return;
+              const y = statScale(v);
+              return <line key={i} x1={0} y1={y} x2={innerStage.width} y2={y} />;
             })}
-            x={0}
-            y={innerStage.height}
-            width={innerStage.width}
-            height={CHART_MARGIN.bottom}
-          />
-          <ChartAxis
-            className="axis-y"
-            axis={axisLeft(statScale)
-              .ticks(3)
-              .tickFormat(e => formatTickRate(e.valueOf()))}
-          />
-          <g className="bar-group">
+          </g>
+          <g clipPath={`xywh(0px 0px ${innerStage.width}px ${innerStage.height}px) view-box`}>
             {bubbleInfo && (
               <rect
                 className="hover-highlight"
@@ -727,12 +684,14 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
             {0 < nowX && nowX < innerStage.width && (
               <line className="now-line" x1={nowX} x2={nowX} y1={0} y2={innerStage.height + 8} />
             )}
-            {intervalBars.map((intervalBar, i) => {
+            {filterMap(intervalBars, (intervalBar, i) => {
+              const r = segmentBarToRect(intervalBar);
+              if (!r) return;
               return (
                 <rect
                   key={i}
                   className={classNames('bar-unit', { realtime: intervalBar.realtime })}
-                  {...segmentBarToRect(intervalBar)}
+                  {...r}
                   fill={getDatasourceColor(intervalBar.datasource)}
                 />
               );
@@ -743,7 +702,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
               ))}
             {selection && (
               <rect
-                className={classNames('selection', { done: selection.done })}
+                className={classNames('selection', { finalized: selection.finalized })}
                 {...startEndToXWidth(selection)}
                 y={0}
                 height={innerStage.height}
@@ -763,6 +722,30 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
               />
             )}
           </g>
+          <g
+            className="axis-x"
+            transform={`translate(0,${innerStage.height + 1})`}
+            ref={(node: any) => select(node).call(axisBottom(timeScale))}
+          />
+          <rect
+            className={classNames('time-shift-indicator', {
+              shifting: typeof shiftOffset === 'number',
+            })}
+            x={0}
+            y={innerStage.height}
+            width={innerStage.width}
+            height={CHART_MARGIN.bottom}
+          />
+          <g
+            className="axis-y"
+            ref={(node: any) =>
+              select(node).call(
+                axisLeft(statScale)
+                  .ticks(3)
+                  .tickFormat(e => formatTickRate(e.valueOf())),
+              )
+            }
+          />
         </g>
       </svg>
       {(datasourceRules || datasourceRulesError) && (
@@ -781,13 +764,16 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           <div className="no-data-text">There are no segments in the selected range</div>
         </div>
       )}
-      <PortalBubble
-        className="segment-bar-chart-bubble"
-        openOn={hoveredOpenOn}
-        onClose={selection?.done ? () => setSelection(undefined) : undefined}
-        mute
-        direction="up"
-      />
+      {svgRef.current && (
+        <PortalBubble
+          className="segment-bar-chart-bubble"
+          openOn={hoveredOpenOn}
+          offsetElement={svgRef.current}
+          onClose={selection?.finalized ? () => setSelection(undefined) : undefined}
+          mute
+          direction="up"
+        />
+      )}
     </div>
   );
 };

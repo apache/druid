@@ -72,7 +72,11 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     // for string columns.
     final RexNode columnRexNode = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
-    final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), columnRexNode);
+    final DruidExpression columnArg = Expressions.toDruidExpression(
+        plannerContext,
+        inputAccessor.getInputRowSignature(),
+        columnRexNode
+    );
     if (columnArg == null) {
       return null;
     }
@@ -101,7 +105,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
                             SketchModule.THETA_SKETCH_TYPE.equals(type) ||
                             SketchModule.MERGE_TYPE.equals(type) ||
                             SketchModule.BUILD_TYPE.equals(type)
-                            ))
+                        ))
                         .orElse(false)) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
@@ -123,13 +127,15 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
-        plannerContext.setPlanningError(
-            "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
-            + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
-            columnArg.getDruidType(),
-            PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT
-        );
-        return null;
+        if (!isValidComplexInputType(inputType)) {
+          plannerContext.setPlanningError(
+              "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+              + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
+              columnArg.getDruidType(),
+              PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT
+          );
+          return null;
+        }
       }
 
       final DimensionSpec dimensionSpec;
@@ -166,4 +172,13 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  private boolean isValidComplexInputType(ColumnType columnType)
+  {
+    return SketchModule.THETA_SKETCH_TYPE.equals(columnType) ||
+           SketchModule.THETA_SKETCH.equals(columnType.getComplexTypeName()) ||
+           SketchModule.THETA_SKETCH_BUILD_AGG.equals(columnType.getComplexTypeName()) ||
+           SketchModule.THETA_SKETCH_MERGE_AGG.equals(columnType.getComplexTypeName());
+  }
+
 }

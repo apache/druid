@@ -139,7 +139,7 @@ public class ServiceClientModule implements DruidModule
         clientFactory.makeClient(
             NodeRole.BROKER.getJsonName(),
             serviceLocator,
-            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
+            StandardRetryPolicy.builder().maxAttempts(ServiceClientModule.CLIENT_MAX_ATTEMPTS).build()
         ),
         jsonMapper
     );

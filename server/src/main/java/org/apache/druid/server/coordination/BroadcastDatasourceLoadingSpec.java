@@ -134,7 +134,7 @@ public class BroadcastDatasourceLoadingSpec
       if (broadcastDatasourcesToLoad == null || broadcastDatasourcesToLoad.isEmpty()) {
         throw InvalidInput.exception("Set of broadcast datasources to load cannot be %s for mode[ONLY_REQUIRED].", broadcastDatasourcesToLoad);
       }
-      return loadOnly(new HashSet<>(broadcastDatasourcesToLoad));
+      return BroadcastDatasourceLoadingSpec.loadOnly(new HashSet<>(broadcastDatasourcesToLoad));
     } else {
       return defaultSpec;
     }

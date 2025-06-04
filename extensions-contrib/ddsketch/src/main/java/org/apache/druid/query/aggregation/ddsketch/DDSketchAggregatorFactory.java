@@ -24,7 +24,7 @@ import com.datadoghq.sketch.ddsketch.DDSketches;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.curator.shaded.com.google.common.math.IntMath;
+import com.google.common.math.IntMath;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;

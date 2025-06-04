@@ -45,7 +45,7 @@ import java.util.Comparator;
  */
 public class SketchHolder
 {
-  public static final SketchHolder EMPTY = of(
+  public static final SketchHolder EMPTY = SketchHolder.of(
       Sketches.updateSketchBuilder()
               .build()
               .compact(true, null)
@@ -195,7 +195,7 @@ public class SketchHolder
       Union union = (Union) SetOperation.builder().setNominalEntries(nomEntries).build(Family.UNION);
       holder1.updateUnion(union);
       holder2.updateUnion(union);
-      return of(union);
+      return SketchHolder.of(union);
     }
   }
 
@@ -208,15 +208,15 @@ public class SketchHolder
   public static SketchHolder deserialize(Object serializedSketch)
   {
     if (serializedSketch instanceof String) {
-      return of(deserializeFromBase64EncodedString((String) serializedSketch));
+      return SketchHolder.of(deserializeFromBase64EncodedString((String) serializedSketch));
     } else if (serializedSketch instanceof byte[]) {
-      return of(deserializeFromByteArray((byte[]) serializedSketch));
+      return SketchHolder.of(deserializeFromByteArray((byte[]) serializedSketch));
     } else if (serializedSketch instanceof SketchHolder) {
       return (SketchHolder) serializedSketch;
     } else if (serializedSketch instanceof Sketch
                || serializedSketch instanceof Union
                || serializedSketch instanceof Memory) {
-      return of(serializedSketch);
+      return SketchHolder.of(serializedSketch);
     }
 
     throw new ISE(
@@ -228,9 +228,9 @@ public class SketchHolder
   public static SketchHolder deserializeSafe(Object serializedSketch)
   {
     if (serializedSketch instanceof String) {
-      return of(deserializeFromBase64EncodedStringSafe((String) serializedSketch));
+      return SketchHolder.of(deserializeFromBase64EncodedStringSafe((String) serializedSketch));
     } else if (serializedSketch instanceof byte[]) {
-      return of(deserializeFromByteArraySafe((byte[]) serializedSketch));
+      return SketchHolder.of(deserializeFromByteArraySafe((byte[]) serializedSketch));
     }
 
     return deserialize(serializedSketch);
@@ -285,13 +285,13 @@ public class SketchHolder
         for (Object o : holders) {
           ((SketchHolder) o).updateUnion(union);
         }
-        return of(union);
+        return SketchHolder.of(union);
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
           intersection.intersect(((SketchHolder) o).getSketch());
         }
-        return of(intersection.getResult(false, null));
+        return SketchHolder.of(intersection.getResult(false, null));
       case NOT:
         if (holders.length < 1) {
           throw new IllegalArgumentException("A-Not-B requires at least 1 sketch");
@@ -306,7 +306,7 @@ public class SketchHolder
           AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
           result = anotb.aNotB(result, ((SketchHolder) holders[i]).getSketch());
         }
-        return of(result);
+        return SketchHolder.of(result);
       default:
         throw new IllegalArgumentException("Unknown sketch operation " + func);
     }

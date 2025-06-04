@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -76,14 +75,14 @@ public class VarianceAggregatorFactoryTest extends InitializedNullHandlingTest
   {
     VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
     VarianceAggregatorCollector v1 = new VarianceAggregatorCollector();
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.finalizeComputation(v1));
+    Assert.assertNull(target.finalizeComputation(v1));
   }
 
   @Test
   public void testFinalizeComputationWithNullShouldReturnNull()
   {
     VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.finalizeComputation(null));
+    Assert.assertNull(target.finalizeComputation(null));
   }
 
   @Test

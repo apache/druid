@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,8 +49,6 @@ public class FloatMaxAggregationTest
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
-
     VectorValueSelector vectorValueSelector = EasyMock.createMock(VectorValueSelector.class);
     EasyMock.expect(vectorValueSelector.getFloatVector()).andReturn(floatValues1).anyTimes();
     EasyMock.expect(vectorValueSelector.getNullVector()).andReturn(null).anyTimes();

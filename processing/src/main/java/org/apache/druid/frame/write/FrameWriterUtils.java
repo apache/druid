@@ -20,7 +20,6 @@
 package org.apache.druid.frame.write;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -312,13 +311,13 @@ public class FrameWriterUtils
     if (selector.supportsLookupNameUtf8()) {
       final ByteBuffer buf = selector.lookupNameUtf8(dictionaryId);
 
-      if (buf == null || (NullHandling.replaceWithDefault() && buf.remaining() == 0)) {
+      if (buf == null) {
         return ByteBuffer.wrap(NULL_STRING_MARKER_ARRAY);
       } else {
         return buf;
       }
     } else {
-      return getUtf8ByteBufferFromString(selector.lookupName(dictionaryId));
+      return FrameWriterUtils.getUtf8ByteBufferFromString(selector.lookupName(dictionaryId));
     }
   }
 
@@ -327,7 +326,7 @@ public class FrameWriterUtils
    */
   private static ByteBuffer getUtf8ByteBufferFromString(@Nullable final String data)
   {
-    if (NullHandling.isNullOrEquivalent(data)) {
+    if (data == null) {
       return ByteBuffer.wrap(NULL_STRING_MARKER_ARRAY);
     } else {
       return ByteBuffer.wrap(StringUtils.toUtf8(data));

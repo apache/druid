@@ -69,7 +69,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
   @Override
   public String getType()
   {
-    return DATASOURCE_METADATA;
+    return Query.DATASOURCE_METADATA;
   }
 
   @Override

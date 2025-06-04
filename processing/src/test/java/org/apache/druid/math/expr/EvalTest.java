@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.converters.Nullable;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
@@ -34,6 +33,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  */
@@ -183,7 +184,7 @@ public class EvalTest extends InitializedNullHandlingTest
     assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01+09:00')", bindings));
     assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01.419+09:00')", bindings));
     assertEquals(
-        NullHandling.replaceWithDefault() ? "NULL" : "",
+        "",
         eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString()
     );
     assertEquals("x", eval("nvl(if(x == 9223372036854775806, '', 'x'), 'NULL')", bindings).asString());
@@ -832,55 +833,28 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testIsNumericNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertFalse(ExprEval.ofLong(1L).isNumericNull());
-      Assert.assertTrue(ExprEval.ofLong(null).isNumericNull());
+    Assert.assertFalse(ExprEval.ofLong(1L).isNumericNull());
+    Assert.assertTrue(ExprEval.ofLong(null).isNumericNull());
 
-      Assert.assertFalse(ExprEval.ofDouble(1.0).isNumericNull());
-      Assert.assertTrue(ExprEval.ofDouble(null).isNumericNull());
+    Assert.assertFalse(ExprEval.ofDouble(1.0).isNumericNull());
+    Assert.assertTrue(ExprEval.ofDouble(null).isNumericNull());
 
-      Assert.assertTrue(ExprEval.of(null).isNumericNull());
-      Assert.assertTrue(ExprEval.of("one").isNumericNull());
-      Assert.assertFalse(ExprEval.of("1").isNumericNull());
+    Assert.assertTrue(ExprEval.of(null).isNumericNull());
+    Assert.assertTrue(ExprEval.of("one").isNumericNull());
+    Assert.assertFalse(ExprEval.of("1").isNumericNull());
 
-      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
+    Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
 
-      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
+    Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
 
-      Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
-    } else {
-      Assert.assertFalse(ExprEval.ofLong(1L).isNumericNull());
-      Assert.assertFalse(ExprEval.ofLong(null).isNumericNull());
-
-      Assert.assertFalse(ExprEval.ofDouble(1.0).isNumericNull());
-      Assert.assertFalse(ExprEval.ofDouble(null).isNumericNull());
-
-      // strings are still null
-      Assert.assertTrue(ExprEval.of(null).isNumericNull());
-      Assert.assertTrue(ExprEval.of("one").isNumericNull());
-      Assert.assertFalse(ExprEval.of("1").isNumericNull());
-
-      // arrays can still have nulls
-      Assert.assertFalse(ExprEval.ofLongArray(new Long[]{1L}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null, 2L, 3L}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofLongArray(new Long[]{null}).isNumericNull());
-
-      Assert.assertFalse(ExprEval.ofDoubleArray(new Double[]{1.1}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null, 1.1, 2.2}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofDoubleArray(new Double[]{null}).isNumericNull());
-
-      Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
-      Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
-    }
+    Assert.assertFalse(ExprEval.ofStringArray(new String[]{"1"}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofStringArray(new String[]{null, "1", "2"}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofStringArray(new String[]{"one"}).isNumericNull());
+    Assert.assertTrue(ExprEval.ofStringArray(new String[]{null}).isNumericNull());
   }
 
   @Test
@@ -962,15 +936,13 @@ public class EvalTest extends InitializedNullHandlingTest
 
     assertEquals(1L, eval("null || 1", bindings).value());
     assertEquals(1L, eval("1 || null", bindings).value());
-    // in sql incompatible mode, null is false, so we return 0
-    assertEquals(NullHandling.defaultLongValue(), eval("null || 0", bindings).valueOrDefault());
-    assertEquals(NullHandling.defaultLongValue(), eval("0 || null", bindings).valueOrDefault());
-    assertEquals(NullHandling.defaultLongValue(), eval("null || null", bindings).valueOrDefault());
+    assertNull(eval("null || 0", bindings).valueOrDefault());
+    assertNull(eval("0 || null", bindings).valueOrDefault());
+    assertNull(eval("null || null", bindings).valueOrDefault());
 
-    // in sql incompatible mode, null is false, so we return 0
-    assertEquals(NullHandling.defaultLongValue(), eval("null && 1", bindings).valueOrDefault());
-    assertEquals(NullHandling.defaultLongValue(), eval("1 && null", bindings).valueOrDefault());
-    assertEquals(NullHandling.defaultLongValue(), eval("null && null", bindings).valueOrDefault());
+    assertNull(eval("null && 1", bindings).valueOrDefault());
+    assertNull(eval("1 && null", bindings).valueOrDefault());
+    assertNull(eval("null && null", bindings).valueOrDefault());
     // if either side is false, output is false in both modes
     assertEquals(0L, eval("null && 0", bindings).value());
     assertEquals(0L, eval("0 && null", bindings).value());
@@ -1079,19 +1051,10 @@ public class EvalTest extends InitializedNullHandlingTest
   {
     ExprEval<?> longNull = ExprEval.ofLong(null);
     ExprEval<?> doubleNull = ExprEval.ofDouble(null);
-    Assert.assertEquals(NullHandling.sqlCompatible(), longNull.isNumericNull());
-    Assert.assertEquals(NullHandling.sqlCompatible(), doubleNull.isNumericNull());
-    Assert.assertEquals(NullHandling.defaultLongValue(), longNull.valueOrDefault());
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), doubleNull.valueOrDefault());
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0L, longNull.asLong());
-      Assert.assertEquals(0, longNull.asInt());
-      Assert.assertEquals(0.0, longNull.asDouble(), 0.0);
-
-      Assert.assertEquals(0L, doubleNull.asLong());
-      Assert.assertEquals(0, doubleNull.asInt());
-      Assert.assertEquals(0.0, doubleNull.asDouble(), 0.0);
-    }
+    Assert.assertTrue(longNull.isNumericNull());
+    Assert.assertTrue(doubleNull.isNumericNull());
+    Assert.assertNull(null, longNull.valueOrDefault());
+    Assert.assertNull(null, doubleNull.valueOrDefault());
   }
 
   @Test
@@ -1417,6 +1380,9 @@ public class EvalTest extends InitializedNullHandlingTest
     // longs
     assertBestEffortOf(1L, ExpressionType.LONG, 1L);
     assertBestEffortOf(1, ExpressionType.LONG, 1L);
+
+    // BigDecimal
+    assertBestEffortOf(new BigDecimal("0.034"), ExpressionType.DOUBLE, 0.034);
 
     // by default, booleans are handled as longs
     assertBestEffortOf(true, ExpressionType.LONG, 1L);

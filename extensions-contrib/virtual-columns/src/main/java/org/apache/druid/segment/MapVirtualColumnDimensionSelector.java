@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 abstract class MapVirtualColumnDimensionSelector implements DimensionSelector
@@ -49,22 +49,19 @@ abstract class MapVirtualColumnDimensionSelector implements DimensionSelector
   @Override
   public double getDouble()
   {
-    assert NullHandling.replaceWithDefault();
-    return 0.0;
+    throw DruidException.defensive("getDouble called on MapVirtualColumnDimensionSelector, but this is unsupported");
   }
 
   @Override
   public float getFloat()
   {
-    assert NullHandling.replaceWithDefault();
-    return 0.0f;
+    throw DruidException.defensive("getFloat called on MapVirtualColumnDimensionSelector, but this is unsupported");
   }
 
   @Override
   public long getLong()
   {
-    assert NullHandling.replaceWithDefault();
-    return 0L;
+    throw DruidException.defensive("getLong called on MapVirtualColumnDimensionSelector, but this is unsupported");
   }
 
   @Override

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.InDimFilter;
@@ -101,8 +100,6 @@ public class DimensionRangeShardSpecBenchmark
   @Setup
   public void setUp()
   {
-    NullHandling.initializeForTests();
-
     final Set<String> strings5k = new HashSet<>();
 
     final Random random = new Random(0); // Random... ish.

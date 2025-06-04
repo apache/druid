@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.hadoop.DatasourceRecordReader;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -46,7 +47,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -475,7 +475,6 @@ public class BatchDeltaIngestionTest
                 null,
                 null,
                 null,
-                false,
                 false,
                 false,
                 false,

@@ -56,10 +56,14 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
@@ -90,7 +94,6 @@ public class TaskLockboxTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
-  private ObjectMapper objectMapper;
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskLockbox lockbox;
@@ -104,7 +107,7 @@ public class TaskLockboxTest
   @Before
   public void setup()
   {
-    objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createTaskTables();
@@ -129,6 +132,14 @@ public class TaskLockboxTest
     EasyMock.replay(emitter);
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            objectMapper,
+            tablesConfig,
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
+        ),
         objectMapper,
         tablesConfig,
         derbyConnector,
@@ -463,6 +474,14 @@ public class TaskLockboxTest
     );
 
     IndexerMetadataStorageCoordinator loadedMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            loadedMapper,
+            derby.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
+        ),
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,

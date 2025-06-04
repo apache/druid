@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.error.DruidException;
@@ -131,6 +130,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
@@ -425,7 +425,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    NullHandling.initializeForTests();
     setUpClass();
 
     final List<Object[]> constructors = new ArrayList<>();
@@ -6201,11 +6200,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     Row result = Iterables.getOnlyElement(results).toMapBasedRow(query);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(39.2307d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
-    } else {
-      Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
-    }
+    Assert.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
   }
 
   @Test
@@ -6568,6 +6563,39 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             1126L
         )
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
+  }
+
+  @Test
+  public void testSubqueryWithOuterOffsetAndLimit()
+  {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
+    final GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(new DefaultLimitSpec(null, 1, 2))
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L)
     );
 
     // Subqueries are handled by the ToolChest
@@ -9413,22 +9441,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimFilter(new ExtractionDimFilter("quality", "", lookupExtractionFn, null))
         .build();
 
-    List<ResultRow> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
-          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
-      );
-    } else {
-      // Only empty string should match, nulls will not match
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
-          makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "dim-extraction");
@@ -9474,14 +9490,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-      extractionMap.put("", "REPLACED_VALUE");
-    } else {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "REPLACED_VALUE", true, false);
-      extractionMap.put("", "NOT_USED");
-    }
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+        mapLookupExtractor,
+        false,
+        "REPLACED_VALUE",
+        true,
+        false
+    );
+    extractionMap.put("", "NOT_USED");
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -9553,7 +9569,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9563,7 +9579,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9573,7 +9589,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9583,7 +9599,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
         makeRow(query, "2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
@@ -9595,7 +9611,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9605,7 +9621,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9615,7 +9631,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
 
         makeRow(
@@ -9626,7 +9642,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9636,7 +9652,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9646,7 +9662,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9656,7 +9672,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(query, "2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
         makeRow(query, "2011-04-02", "alias", "news", "rows", 1L, "idx", 114L),
@@ -9668,7 +9684,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9678,7 +9694,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         ),
         makeRow(
             query,
@@ -9688,7 +9704,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.defaultLongValue()
+            null
         )
     );
 
@@ -9749,14 +9765,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     extractionMap.put("", "EMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      extractionMap.put("", "EMPTY");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
-    } else {
-      extractionMap.put("", "SHOULD_NOT_BE_USED");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
-    }
+    extractionMap.put("", "SHOULD_NOT_BE_USED");
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -9786,14 +9796,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     extractionMap.put("", "EMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      extractionMap.put("", "EMPTY");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-    } else {
-      extractionMap.put("", "SHOULD_NOT_BE_USED");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, false);
-    }
+    extractionMap.put("", "SHOULD_NOT_BE_USED");
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, false);
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -10238,7 +10242,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             26L,
             "cardinality",
-            NullHandling.replaceWithDefault() ? 1.0002442201269182 : 0.0d,
+            0.0d,
             "hyperUnique",
             9.019833517963864d
         )
@@ -10876,8 +10880,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
-            "ql", NullHandling.defaultLongValue(),
-            "qf", NullHandling.defaultDoubleValue(),
+            "ql", null,
+            "qf", null,
             "count", 2L
         ),
         makeRow(
@@ -10918,42 +10922,22 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
-    List<ResultRow> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = Arrays.asList(
-          makeRow(
-              query,
-              "2011-04-01",
-              "ql", 0L,
-              "qf", 0.0,
-              "count", 2L
-          ),
-          makeRow(
-              query,
-              "2011-04-01",
-              "ql", 1700L,
-              "qf", 17000.0,
-              "count", 2L
-          )
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(
-              query,
-              "2011-04-01",
-              "ql", null,
-              "qf", null,
-              "count", 2L
-          ),
-          makeRow(
-              query,
-              "2011-04-01",
-              "ql", 1700L,
-              "qf", 17000.0,
-              "count", 2L
-          )
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "ql", null,
+            "qf", null,
+            "count", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "ql", 1700L,
+            "qf", 17000.0,
+            "count", 2L
+        )
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "numeric");
@@ -11083,17 +11067,17 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             outerQuery,
             "2011-04-01",
             "quallong",
-            NullHandling.defaultLongValue(),
+            null,
             "qualfloat",
-            NullHandling.defaultFloatValue(),
+            null,
             "qualdouble",
-            NullHandling.defaultDoubleValue(),
+            null,
             "ql_alias_sum",
-            NullHandling.defaultLongValue(),
+            null,
             "qf_alias_sum",
-            NullHandling.defaultFloatValue(),
+            null,
             "qd_alias_sum",
-            NullHandling.defaultDoubleValue()
+            null
         ),
         makeRow(
             outerQuery,
@@ -12341,24 +12325,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setLimit(5)
         .build();
 
-    List<ResultRow> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50L, "rows", 6L)
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", 0L, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40L, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50L, "rows", 6L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+        makeRow(query, "2011-04-01", "nullable", 10L, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 20L, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 40L, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 50L, "rows", 6L)
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
@@ -12378,24 +12351,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setLimit(5)
         .build();
 
-    List<ResultRow> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", 0.0, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+        makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
@@ -12419,24 +12381,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )), 5))
         .build();
 
-    List<ResultRow> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", 0.0, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+        makeRow(query, "2011-04-01", "nullable", 10.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 20.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 40.0, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
@@ -12458,24 +12409,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setLimit(5)
         .build();
 
-    List<ResultRow> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0f, "rows", 6L)
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          makeRow(query, "2011-04-01", "nullable", 0.0f, "rows", 6L),
-          makeRow(query, "2011-04-01", "nullable", 10.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 20.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 40.0f, "rows", 2L),
-          makeRow(query, "2011-04-01", "nullable", 50.0f, "rows", 6L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "nullable", null, "rows", 6L),
+        makeRow(query, "2011-04-01", "nullable", 10.0f, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 20.0f, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 40.0f, "rows", 2L),
+        makeRow(query, "2011-04-01", "nullable", 50.0f, "rows", 6L)
+    );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
@@ -13402,11 +13342,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "nil",
             null,
             "min",
-            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            10.0,
             "minExpression",
-            NullHandling.replaceWithDefault() ? 0.0 : 10.0,
+            10.0,
             "minVc",
-            NullHandling.replaceWithDefault() ? 0.0 : 10.0
+            10.0
         )
     );
 
@@ -13454,9 +13394,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "nil",
             null,
             "minExpression",
-            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            null,
             "minVc",
-            NullHandling.defaultFloatValue()
+            null
         )
     );
 
@@ -13510,7 +13450,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "min",
             Float.POSITIVE_INFINITY,
             "minExpression",
-            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
+            null,
             "minVc",
             Float.POSITIVE_INFINITY
         )
@@ -13546,13 +13486,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.replaceWithDefault() ? 0L : null,
+            null,
             "idxFloat",
-            NullHandling.replaceWithDefault() ? 0.0 : null,
+            null,
             "idxDouble",
-            NullHandling.replaceWithDefault() ? 0.0 : null,
+            null,
             "post",
-            NullHandling.replaceWithDefault() ? 0L : null
+            null
         )
     );
 
@@ -13630,11 +13570,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows",
             0L,
             "idx",
-            NullHandling.replaceWithDefault() ? 0L : null,
+            null,
             "idxFloat",
-            NullHandling.replaceWithDefault() ? 0.0 : null,
+            null,
             "idxDouble",
-            NullHandling.replaceWithDefault() ? 0.0 : null
+            null
         )
     );
 
@@ -13722,7 +13662,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

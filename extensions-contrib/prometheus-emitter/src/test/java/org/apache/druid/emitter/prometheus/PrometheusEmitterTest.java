@@ -22,6 +22,7 @@ package org.apache.druid.emitter.prometheus;
 import com.google.common.collect.ImmutableMap;
 import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -229,11 +230,15 @@ public class PrometheusEmitterTest
     PrometheusEmitter exportEmitter = new PrometheusEmitter(exportEmitterConfig);
     exportEmitter.start();
     Assert.assertNotNull(exportEmitter.getServer());
+    Assert.assertTrue(exportEmitter.getServer() instanceof HTTPServer);
+    exportEmitter.close();
 
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace2", null, 0, "pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
+    Assert.assertTrue(pushEmitter.getPushGateway() instanceof PushGateway);
+    pushEmitter.close();
   }
 
   @Test

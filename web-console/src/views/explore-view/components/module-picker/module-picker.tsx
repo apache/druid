@@ -18,7 +18,6 @@
 
 import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { JSX } from 'react';
 import React from 'react';
 
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -28,23 +27,24 @@ import './module-picker.scss';
 export interface ModulePickerProps {
   selectedModuleId: string | undefined;
   onSelectedModuleIdChange(newSelectedModuleId: string): void;
-  moreMenu?: JSX.Element;
+  fill?: boolean;
 }
 
 export const ModulePicker = React.memo(function ModulePicker(props: ModulePickerProps) {
-  const { selectedModuleId, onSelectedModuleIdChange, moreMenu } = props;
+  const { selectedModuleId, onSelectedModuleIdChange, fill } = props;
 
   const modules = ModuleRepository.getAllModuleEntries();
   const selectedModule = selectedModuleId
     ? ModuleRepository.getModule(selectedModuleId)
     : undefined;
+
   return (
-    <ButtonGroup className="module-picker" fill>
+    <ButtonGroup className="module-picker" fill={fill}>
       <Popover
         className="picker-button"
         minimal
-        fill
-        position={Position.BOTTOM_RIGHT}
+        fill={fill}
+        position={Position.BOTTOM_LEFT}
         content={
           <Menu>
             {modules.map((module, i) => (
@@ -61,16 +61,11 @@ export const ModulePicker = React.memo(function ModulePicker(props: ModulePicker
         <Button
           icon={selectedModule ? selectedModule.icon : IconNames.BOX}
           text={selectedModule ? selectedModule.title : 'Select module'}
-          fill
+          fill={fill}
           minimal
           rightIcon={IconNames.CARET_DOWN}
         />
       </Popover>
-      {moreMenu && (
-        <Popover className="more-button" position={Position.BOTTOM_RIGHT} content={moreMenu}>
-          <Button minimal icon={IconNames.MORE} />
-        </Popover>
-      )}
     </ButtonGroup>
   );
 });

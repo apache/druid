@@ -20,8 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
@@ -29,8 +27,6 @@ import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.StandardMSQComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
@@ -70,10 +66,6 @@ import java.util.concurrent.TimeUnit;
 @SqlTestFrameworkConfig.ComponentSupplier(MSQWindowFunctionsBenchmark.MSQComponentSupplier.class)
 public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final Logger log = new Logger(MSQWindowFunctionsBenchmark.class);
   private final Closer closer = Closer.create();
 
@@ -207,18 +199,11 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-      TestDataBuilder.attachIndexesForBenchmarkDatasource(retVal);
-      return retVal;
+      walker = super.addSegmentsToWalker(walker);
+      TestDataBuilder.attachIndexesForBenchmarkDatasource(walker);
+      return walker;
     }
   }
 }

@@ -110,6 +110,15 @@ public class AggregateProjectionMetadata
     return Objects.hash(schema, numRows);
   }
 
+  @Override
+  public String toString()
+  {
+    return "AggregateProjectionMetadata{" +
+           "schema=" + schema +
+           ", numRows=" + numRows +
+           '}';
+  }
+
   public static class Schema
   {
     /**
@@ -310,6 +319,10 @@ public class AggregateProjectionMetadata
           if (matchBuilder == null) {
             return null;
           }
+          // a query grouping column must also be defined as a projection grouping column
+          if (isInvalidGrouping(queryColumn) || isInvalidGrouping(matchBuilder.getRemapValue(queryColumn))) {
+            return null;
+          }
         }
       }
       if (queryCursorBuildSpec.getFilter() != null) {
@@ -435,6 +448,22 @@ public class AggregateProjectionMetadata
       }
     }
 
+    /**
+     * Check if a column is either part of {@link #groupingColumns}, or at least is not present in
+     * {@link #virtualColumns}. Naively we would just check that grouping column contains the column in question,
+     * however we can also use a projection when a column is truly missing. {@link #matchRequiredColumn} returns a
+     * match builder if the column is present as either a physical column, or a virtual column, but a virtual column
+     * could also be present for an aggregator input, so we must further check that a column not in the grouping list
+     * is also not a virtual column, the implication being that it is a missing column.
+     */
+    private boolean isInvalidGrouping(@Nullable String columnName)
+    {
+      if (columnName == null) {
+        return false;
+      }
+      return !groupingColumns.contains(columnName) && virtualColumns.exists(columnName);
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -464,6 +493,22 @@ public class AggregateProjectionMetadata
           Arrays.hashCode(aggregators),
           ordering
       );
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Schema{" +
+             "name='" + name + '\'' +
+             ", timeColumnName='" + timeColumnName + '\'' +
+             ", virtualColumns=" + virtualColumns +
+             ", groupingColumns=" + groupingColumns +
+             ", aggregators=" + Arrays.toString(aggregators) +
+             ", ordering=" + ordering +
+             ", timeColumnPosition=" + timeColumnPosition +
+             ", granularity=" + granularity +
+             ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
+             '}';
     }
   }
 }

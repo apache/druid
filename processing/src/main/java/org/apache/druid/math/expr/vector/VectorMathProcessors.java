@@ -21,2370 +21,899 @@ package org.apache.druid.math.expr.vector;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Exprs;
-import org.apache.druid.segment.column.Types;
-
-import java.util.function.Supplier;
+import org.apache.druid.math.expr.ExpressionValidationException;
+import org.apache.druid.math.expr.Function;
 
 public class VectorMathProcessors
 {
-  /**
-   * Make a 1 argument math processor with the following type rules
-   *    long    -> long
-   *    double  -> double
-   */
-  public static <T> ExprVectorProcessor<T> makeMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr arg,
-      Supplier<LongOutLongInFunctionVectorValueProcessor> longOutLongInSupplier,
-      Supplier<DoubleOutDoubleInFunctionVectorValueProcessor> doubleOutDoubleInSupplier
-  )
+  public static Add plus()
   {
-    final ExpressionType inputType = arg.getOutputType(inspector);
-
-    ExprVectorProcessor<?> processor = null;
-    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
-      processor = doubleOutDoubleInSupplier.get();
-    } else if (inputType.is(ExprType.LONG)) {
-      processor = longOutLongInSupplier.get();
-    }
-
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return Add.INSTANCE;
   }
 
-  /**
-   * Make a 1 argument math processor with the following type rules
-   *    long    -> double
-   *    double  -> double
-   */
-  public static <T> ExprVectorProcessor<T> makeDoubleMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr arg,
-      Supplier<DoubleOutLongInFunctionVectorValueProcessor> doubleOutLongInSupplier,
-      Supplier<DoubleOutDoubleInFunctionVectorValueProcessor> doubleOutDoubleInSupplier
-  )
+  public static Subtract subtract()
   {
-    final ExpressionType inputType = arg.getOutputType(inspector);
-
-    ExprVectorProcessor<?> processor = null;
-    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
-      processor = doubleOutDoubleInSupplier.get();
-    } else if (inputType.is(ExprType.LONG)) {
-      processor = doubleOutLongInSupplier.get();
-    }
-
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return Subtract.INSTANCE;
   }
 
-  /**
-   * Make a 1 argument math processor with the following type rules
-   *    long    -> long
-   *    double  -> long
-   */
-  public static <T> ExprVectorProcessor<T> makeLongMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr arg,
-      Supplier<LongOutLongInFunctionVectorValueProcessor> longOutLongInSupplier,
-      Supplier<LongOutDoubleInFunctionVectorValueProcessor> longOutDoubleInSupplier
-  )
+  public static Multiply multiply()
   {
-    final ExpressionType inputType = arg.getOutputType(inspector);
-
-    ExprVectorProcessor<?> processor = null;
-    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
-      processor = longOutDoubleInSupplier.get();
-    } else if (inputType.is(ExprType.LONG)) {
-      processor = longOutLongInSupplier.get();
-    }
-
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return Multiply.INSTANCE;
   }
 
-  /**
-   * Make a 2 argument, math processor with the following type rules
-   *    long, long      -> long
-   *    long, double    -> double
-   *    double, long    -> double
-   *    double, double  -> double
-   */
-  public static <T> ExprVectorProcessor<T> makeMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right,
-      Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
-      Supplier<DoubleOutLongDoubleInFunctionVectorValueProcessor> doubleOutLongDoubleInProcessor,
-      Supplier<DoubleOutDoubleLongInFunctionVectorValueProcessor> doubleOutDoubleLongInProcessor,
-      Supplier<DoubleOutDoublesInFunctionVectorValueProcessor> doubleOutDoublesInProcessor
-  )
+  public static Divide divide()
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(leftType, ExprType.LONG)) {
-      if (Types.isNullOr(rightType, ExprType.LONG)) {
-        processor = longOutLongsInProcessor.get();
-      } else if (rightType.anyOf(ExprType.STRING, ExprType.DOUBLE)) {
-        processor = doubleOutLongDoubleInProcessor.get();
-      }
-    } else if (Types.is(leftType, ExprType.DOUBLE)) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = doubleOutDoubleLongInProcessor.get();
-      } else if (Types.isNullOrAnyOf(rightType, ExprType.STRING, ExprType.DOUBLE)) {
-        processor = doubleOutDoublesInProcessor.get();
-      }
-    } else if (leftType == null) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = longOutLongsInProcessor.get();
-      } else if (Types.is(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutLongDoubleInProcessor.get();
-      } else if (rightType == null) {
-        processor = longOutLongsInProcessor.get();
-      }
-    } else if (leftType.is(ExprType.STRING)) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = doubleOutDoubleLongInProcessor.get();
-      } else if (Types.is(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutDoublesInProcessor.get();
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize(StringUtils.format("%s %s", leftType, rightType));
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return Divide.INSTANCE;
   }
 
-  /**
-   * Make a 2 argument, math processor with the following type rules
-   *    long, long      -> double
-   *    long, double    -> double
-   *    double, long    -> double
-   *    double, double  -> double
-   */
-  public static <T> ExprVectorProcessor<T> makeDoubleMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right,
-      Supplier<DoubleOutLongsInFunctionVectorValueProcessor> doubleOutLongsInProcessor,
-      Supplier<DoubleOutLongDoubleInFunctionVectorValueProcessor> doubleOutLongDoubleInProcessor,
-      Supplier<DoubleOutDoubleLongInFunctionVectorValueProcessor> doubleOutDoubleLongInProcessor,
-      Supplier<DoubleOutDoublesInFunctionVectorValueProcessor> doubleOutDoublesInProcessor
-  )
+  public static LongDivide longDivide()
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(leftType, ExprType.LONG)) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = doubleOutLongsInProcessor.get();
-      } else if (Types.isNullOr(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutLongDoubleInProcessor.get();
-      }
-    } else if (Types.is(leftType, ExprType.DOUBLE)) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = doubleOutDoubleLongInProcessor.get();
-      } else if (Types.isNullOr(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutDoublesInProcessor.get();
-      }
-    } else if (leftType == null) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = doubleOutDoubleLongInProcessor.get();
-      } else if (Types.is(rightType, ExprType.DOUBLE)) {
-        processor = doubleOutDoublesInProcessor.get();
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return LongDivide.INSTANCE;
   }
 
-  /**
-   * Make a 2 argument, math processor with the following type rules
-   *    long, long      -> long
-   *    long, double    -> long
-   *    double, long    -> long
-   *    double, double  -> long
-   */
-  public static <T> ExprVectorProcessor<T> makeLongMathProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right,
-      Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
-      Supplier<LongOutLongDoubleInFunctionVectorValueProcessor> longOutLongDoubleInProcessor,
-      Supplier<LongOutDoubleLongInFunctionVectorValueProcessor> longOutDoubleLongInProcessor,
-      Supplier<LongOutDoublesInFunctionVectorValueProcessor> longOutDoublesInProcessor
-  )
+  public static Modulo modulo()
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(leftType, ExprType.LONG)) {
-      if (Types.isNullOr(rightType, ExprType.LONG)) {
-        processor = longOutLongsInProcessor.get();
-      } else if (rightType.is(ExprType.DOUBLE)) {
-        processor = longOutLongDoubleInProcessor.get();
-      }
-    } else if (Types.is(leftType, ExprType.DOUBLE)) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = longOutDoubleLongInProcessor.get();
-      } else if (Types.isNullOr(rightType, ExprType.DOUBLE)) {
-        processor = longOutDoublesInProcessor.get();
-      }
-    } else if (leftType == null) {
-      if (Types.is(rightType, ExprType.LONG)) {
-        processor = longOutLongsInProcessor.get();
-      } else if (Types.is(rightType, ExprType.DOUBLE)) {
-        processor = longOutDoublesInProcessor.get();
-      }
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
+    return Modulo.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> plus(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Negate negate()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left + right;
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return (double) left + right;
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return left + (double) right;
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return left + right;
-          }
-        }
-    );
+    return Negate.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> minus(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Power power()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left - right;
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return (double) left - right;
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return left - (double) right;
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return left - right;
-          }
-        }
-    );
+    return Power.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> multiply(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static DoublePower doublePower()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left * right;
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return (double) left * right;
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return left * (double) right;
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return left * right;
-          }
-        }
-    );
+    return DoublePower.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> divide(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Max max()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left / right;
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return (double) left / right;
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return left / (double) right;
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return left / right;
-          }
-        }
-    );
+    return Max.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> longDivide(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Min min()
   {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left / right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return (long) (left / right);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) (left / right);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) (left / right);
-          }
-        }
-    );
+    return Min.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> modulo(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Atan2 atan2()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left % right;
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return (double) left % right;
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return left % (double) right;
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return left % right;
-          }
-        }
-    );
+    return Atan2.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> negate(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static CopySign copySign()
   {
-    return makeMathProcessor(
-        inspector,
-        arg,
-        () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long input)
-          {
-            return -input;
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return -input;
-          }
-        }
-    );
+    return CopySign.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> power(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Hypot hypot()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return LongMath.pow(left, Ints.checkedCast(right));
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.pow(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.pow(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.pow(left, right);
-          }
-        }
-    );
+    return Hypot.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> doublePower(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static Remainder remainder()
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if ((Types.is(leftType, ExprType.LONG) && Types.isNullOr(rightType, ExprType.LONG)) ||
-        (leftType == null && Types.is(rightType, ExprType.LONG))) {
-      processor = new DoubleOutLongsInFunctionVectorValueProcessor(
-          left.asVectorProcessor(inspector),
-          right.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public double apply(long left, long right)
-        {
-          return Math.pow(left, right);
-        }
-      };
-    }
-
-    if (processor != null) {
-      return (ExprVectorProcessor<T>) processor;
-    }
-    return power(inspector, left, right);
+    return Remainder.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> max(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static NextAfter nextAfter()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Math.max(left, right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.max(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.max(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.max(left, right);
-          }
-        }
-    );
+    return NextAfter.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> min(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Scalb scalb()
   {
-    return makeMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Math.min(left, right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.min(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.min(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.min(left, right);
-          }
-        }
-    );
+    return Scalb.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> atan2(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Abs abs()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.atan2(left, right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.atan2(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.atan2(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.atan2(left, right);
-          }
-        }
-    );
+    return Abs.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> copySign(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Acos acos()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.copySign((double) left, (double) right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.copySign((double) left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.copySign(left, (double) right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.copySign(left, right);
-          }
-        }
-    );
+    return Acos.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> hypot(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Asin asin()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.hypot(left, right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.hypot(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.hypot(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.hypot(left, right);
-          }
-        }
-    );
+    return Asin.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> remainder(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Atan atan()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.IEEEremainder(left, right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.IEEEremainder(left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.IEEEremainder(left, right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.IEEEremainder(left, right);
-          }
-        }
-    );
+    return Atan.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> nextAfter(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Cos cos()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.nextAfter((double) left, (double) right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.nextAfter((double) left, right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.nextAfter(left, (double) right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.nextAfter(left, right);
-          }
-        }
-    );
+    return Cos.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> scalb(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static Cosh cosh()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new DoubleOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, long right)
-          {
-            return Math.scalb((double) left, (int) right);
-          }
-        },
-        () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long left, double right)
-          {
-            return Math.scalb((double) left, (int) right);
-          }
-        },
-        () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, long right)
-          {
-            return Math.scalb(left, (int) right);
-          }
-        },
-        () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double left, double right)
-          {
-            return Math.scalb(left, (int) right);
-          }
-        }
-    );
+    return Cosh.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> acos(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Cot cot()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.acos(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.acos(input);
-          }
-        }
-    );
+    return Cot.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> asin(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Sin sin()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.asin(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.asin(input);
-          }
-        }
-    );
+    return Sin.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> atan(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Sinh sinh()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.atan(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.atan(input);
-          }
-        }
-    );
+    return Sinh.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> cos(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Tan tan()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cos(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cos(input);
-          }
-        }
-    );
+    return Tan.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> cosh(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Tanh tanh()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cosh(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cosh(input);
-          }
-        }
-    );
+    return Tanh.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> cot(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Cbrt cbrt()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cos(input) / Math.sin(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cos(input) / Math.sin(input);
-          }
-        }
-    );
+    return Cbrt.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> sin(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Ceil ceil()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.sin(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.sin(input);
-          }
-        }
-    );
+    return Ceil.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> sinh(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Floor floor()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.sinh(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.sinh(input);
-          }
-        }
-    );
+    return Floor.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> tan(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Exp exp()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.tan(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.tan(input);
-          }
-        }
-    );
+    return Exp.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> tanh(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Expm1 expm1()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.tanh(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.tanh(input);
-          }
-        }
-    );
+    return Expm1.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> abs(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static GetExponent getExponent()
   {
-    return makeMathProcessor(
-        inspector,
-        arg,
-        () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long input)
-          {
-            return Math.abs(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.abs(input);
-          }
-        }
-    );
+    return GetExponent.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> cbrt(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Log log()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.cbrt(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.cbrt(input);
-          }
-        }
-    );
+    return Log.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> ceil(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Log10 log10()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.ceil(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.ceil(input);
-          }
-        }
-    );
+    return Log10.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> floor(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Log1p log1p()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.floor(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.floor(input);
-          }
-        }
-    );
+    return Log1p.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> exp(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static NextUp nextUp()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.exp(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.exp(input);
-          }
-        }
-    );
+    return NextUp.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> expm1(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Rint rint()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.expm1(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.expm1(input);
-          }
-        }
-    );
+    return Rint.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> getExponent(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Signum signum()
   {
-    return makeLongMathProcessor(
-        inspector,
-        arg,
-        () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long input)
-          {
-            return Math.getExponent((double) input);
-          }
-        },
-        () -> new LongOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double input)
-          {
-            return Math.getExponent(input);
-          }
-        }
-    );
+    return Signum.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> log(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Sqrt sqrt()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.log(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.log(input);
-          }
-        }
-    );
+    return Sqrt.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> log10(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static ToDegrees toDegrees()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.log10(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.log10(input);
-          }
-        }
-    );
+    return ToDegrees.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> log1p(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static ToRadians toRadians()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.log1p(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.log1p(input);
-          }
-        }
-    );
+    return ToRadians.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> nextUp(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static Ulp ulp()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.nextUp((double) input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.nextUp(input);
-          }
-        }
-    );
+    return Ulp.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> rint(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseComplement bitwiseComplement()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.rint(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.rint(input);
-          }
-        }
-    );
+    return BitwiseComplement.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> signum(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseConvertDoubleToLongBits bitwiseConvertDoubleToLongBits()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.signum(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.signum(input);
-          }
-        }
-    );
+    return BitwiseConvertDoubleToLongBits.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> sqrt(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseConvertLongBitsToDouble bitwiseConvertLongBitsToDouble()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.sqrt(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.sqrt(input);
-          }
-        }
-    );
+    return BitwiseConvertLongBitsToDouble.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> toDegrees(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseAnd bitwiseAnd()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.toDegrees(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.toDegrees(input);
-          }
-        }
-    );
+    return BitwiseAnd.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> toRadians(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseOr bitwiseOr()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.toRadians(input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.toRadians(input);
-          }
-        }
-    );
+    return BitwiseOr.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> ulp(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseXor bitwiseXor()
   {
-    return makeDoubleMathProcessor(
-        inspector,
-        arg,
-        () -> new DoubleOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(long input)
-          {
-            return Math.ulp((double) input);
-          }
-        },
-        () -> new DoubleOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Math.ulp(input);
-          }
-        }
-    );
+    return BitwiseXor.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> bitwiseComplement(Expr.VectorInputBindingInspector inspector, Expr arg)
+  public static BitwiseShiftLeft bitwiseShiftLeft()
   {
-    return makeLongMathProcessor(
-        inspector,
-        arg,
-        () -> new LongOutLongInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long input)
-          {
-            return ~input;
-          }
-        },
-        () -> new LongOutDoubleInFunctionVectorValueProcessor(
-            arg.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double input)
-          {
-            return ~((long) input);
-          }
-        }
-    );
+    return BitwiseShiftLeft.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> bitwiseConvertDoubleToLongBits(
-      Expr.VectorInputBindingInspector inspector,
-      Expr arg
-  )
+  public static BitwiseShiftRight bitwiseShiftRight()
   {
-    final ExpressionType inputType = arg.getOutputType(inspector);
-
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(inputType, ExprType.LONG)) {
-      processor = new LongOutLongInFunctionVectorValueProcessor(
-          arg.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(long input)
-        {
-          return Double.doubleToLongBits(input);
-        }
-      };
-    } else if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
-      processor = new LongOutDoubleInFunctionVectorValueProcessor(
-          arg.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(double input)
-        {
-          return Double.doubleToLongBits(input);
-        }
-      };
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseConvertLongBitsToDouble(
-      Expr.VectorInputBindingInspector inspector,
-      Expr arg
-  )
-  {
-    final ExpressionType inputType = arg.getOutputType(inspector);
-
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(inputType, ExprType.LONG)) {
-      processor = new DoubleOutLongInFunctionVectorValueProcessor(
-          arg.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public double apply(long input)
-        {
-          return Double.longBitsToDouble(input);
-        }
-      };
-    } else if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
-      processor = new DoubleOutDoubleInFunctionVectorValueProcessor(
-          arg.asVectorProcessor(inspector),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public double apply(double input)
-        {
-          return Double.longBitsToDouble((long) input);
-        }
-      };
-    }
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
-    return (ExprVectorProcessor<T>) processor;
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseAnd(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
-  {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left & right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return left & (long) right;
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) left & right;
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) left & (long) right;
-          }
-        }
-    );
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseOr(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
-  {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left | right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return left | (long) right;
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) left | right;
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) left | (long) right;
-          }
-        }
-    );
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseXor(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
-  {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left ^ right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return left ^ (long) right;
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) left ^ right;
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) left ^ (long) right;
-          }
-        }
-    );
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseShiftLeft(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
-  {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left << right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return left << (long) right;
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) left << right;
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) left << (long) right;
-          }
-        }
-    );
-  }
-
-  public static <T> ExprVectorProcessor<T> bitwiseShiftRight(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
-  {
-    return makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return left >> right;
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return left >> (long) right;
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return (long) left >> right;
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return (long) left >> (long) right;
-          }
-        }
-    );
+    return BitwiseShiftRight.INSTANCE;
   }
 
   private VectorMathProcessors()
   {
     // No instantiation
+  }
+
+  /**
+   * Vectorizized addition processor factory
+   */
+  public static final class Add extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Add INSTANCE = new Add();
+
+    public Add()
+    {
+      super(Long::sum, Double::sum, Double::sum, Double::sum);
+    }
+  }
+
+  public static final class Subtract extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Subtract INSTANCE = new Subtract();
+
+    public Subtract()
+    {
+      super(
+          (left, right) -> left - right,
+          (left, right) -> (double) left - right,
+          (left, right) -> left - (double) right,
+          (left, right) -> left - right
+      );
+    }
+  }
+
+  public static final class Multiply extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Multiply INSTANCE = new Multiply();
+
+    public Multiply()
+    {
+      super(Multiply::multiply, Multiply::multiply, Multiply::multiply, Multiply::multiply);
+    }
+
+    private static long multiply(long x, long y)
+    {
+      return x * y;
+    }
+
+    private static double multiply(long x, double y)
+    {
+      return (double) x * y;
+    }
+
+    private static double multiply(double x, long y)
+    {
+      return x * (double) y;
+    }
+
+    private static double multiply(double x, double y)
+    {
+      return x * y;
+    }
+  }
+
+  public static final class Divide extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Divide INSTANCE = new Divide();
+
+    public Divide()
+    {
+      super(
+          (left, right) -> left / right,
+          (left, right) -> (double) left / right,
+          (left, right) -> left / (double) right,
+          (left, right) -> left / right
+      );
+    }
+  }
+
+  public static final class LongDivide extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final LongDivide INSTANCE = new LongDivide();
+
+    public LongDivide()
+    {
+      super(
+          (left, right) -> left / right,
+          (left, right) -> (long) (left / right),
+          (left, right) -> (long) (left / right),
+          (left, right) -> (long) (left / right)
+      );
+    }
+  }
+
+  public static final class Modulo extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Modulo INSTANCE = new Modulo();
+
+    public Modulo()
+    {
+      super(
+          (left, right) -> left % right,
+          (left, right) -> (double) left % right,
+          (left, right) -> left % (double) right,
+          (left, right) -> left % right
+      );
+    }
+  }
+
+  public static final class Negate extends SimpleVectorMathUnivariateProcessorFactory
+  {
+    private static final Negate INSTANCE = new Negate();
+
+    public Negate()
+    {
+      super(
+          input -> -input,
+          input -> -input
+      );
+    }
+  }
+
+  public static final class Power extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Power INSTANCE = new Power();
+
+    public Power()
+    {
+      super(
+          (left, right) -> LongMath.pow(left, Ints.checkedCast(right)),
+          Math::pow,
+          Math::pow,
+          Math::pow
+      );
+    }
+  }
+
+  public static final class DoublePower extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final DoublePower INSTANCE = new DoublePower();
+
+    public DoublePower()
+    {
+      super(Math::pow, Math::pow, Math::pow, Math::pow);
+    }
+  }
+
+  public static class Max extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Max INSTANCE = new Max();
+
+    public Max()
+    {
+      super(Math::max, Math::max, Math::max, Math::max);
+    }
+  }
+
+  public static class Min extends SimpleVectorMathBivariateProcessorFactory
+  {
+    private static final Min INSTANCE = new Min();
+
+    public Min()
+    {
+      super(Math::min, Math::min, Math::min, Math::min);
+    }
+  }
+
+  public static class Atan2 extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final Atan2 INSTANCE = new Atan2();
+
+    public Atan2()
+    {
+      super(Math::atan2, Math::atan2, Math::atan2, Math::atan2);
+    }
+  }
+
+  public static class CopySign extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final CopySign INSTANCE = new CopySign();
+
+    public CopySign()
+    {
+      super(
+          (l1, l2) -> Math.copySign((double) l1, (double) l2),
+          (l1, d2) -> Math.copySign((double) l1, d2),
+          (d1, l2) -> Math.copySign(d1, (double) l2),
+          Math::copySign
+      );
+    }
+  }
+
+  public static class Hypot extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final Hypot INSTANCE = new Hypot();
+
+    public Hypot()
+    {
+      super(Math::hypot, Math::hypot, Math::hypot, Math::hypot);
+    }
+  }
+
+  public static class Remainder extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final Remainder INSTANCE = new Remainder();
+
+    public Remainder()
+    {
+      super(Math::IEEEremainder, Math::IEEEremainder, Math::IEEEremainder, Math::IEEEremainder);
+    }
+  }
+
+  public static class NextAfter extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final NextAfter INSTANCE = new NextAfter();
+
+    public NextAfter()
+    {
+      super(
+          (l1, l2) -> Math.nextAfter((double) l1, (double) l2),
+          (l1, d2) -> Math.nextAfter((double) l1, d2),
+          (d1, l2) -> Math.nextAfter(d1, (double) l2),
+          Math::nextAfter
+      );
+    }
+  }
+
+  public static class Scalb extends SimpleVectorMathBivariateDoubleProcessorFactory
+  {
+    private static final Scalb INSTANCE = new Scalb();
+
+    public Scalb()
+    {
+      super(
+          (left, right) -> Math.scalb((double) left, (int) right),
+          (left, right) -> Math.scalb((double) left, (int) right),
+          (left, right) -> Math.scalb(left, (int) right),
+          (left, right) -> Math.scalb(left, (int) right)
+      );
+    }
+  }
+
+  public static final class Abs extends SimpleVectorMathUnivariateProcessorFactory
+  {
+    private static final Abs INSTANCE = new Abs();
+
+    public Abs()
+    {
+      super(Math::abs, Math::abs);
+    }
+  }
+
+  public static final class Acos extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Acos INSTANCE = new Acos();
+
+    public Acos()
+    {
+      super(Math::acos, Math::acos);
+    }
+  }
+
+  public static final class Asin extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Asin INSTANCE = new Asin();
+
+    public Asin()
+    {
+      super(Math::asin, Math::asin);
+    }
+  }
+
+  public static final class Atan extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Atan INSTANCE = new Atan();
+
+    public Atan()
+    {
+      super(Math::atan, Math::atan);
+    }
+  }
+
+  public static final class Cos extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Cos INSTANCE = new Cos();
+
+    public Cos()
+    {
+      super(Math::cos, Math::cos);
+    }
+  }
+
+  public static final class Cosh extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Cosh INSTANCE = new Cosh();
+
+    public Cosh()
+    {
+      super(Math::cosh, Math::cosh);
+    }
+  }
+
+  public static final class Cot extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Cot INSTANCE = new Cot();
+
+    public Cot()
+    {
+      super(
+          (input) -> Math.cos(input) / Math.sin(input),
+          (input) -> Math.cos(input) / Math.sin(input)
+      );
+    }
+  }
+
+  public static final class Sin extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Sin INSTANCE = new Sin();
+
+    public Sin()
+    {
+      super(Math::sin, Math::sin);
+    }
+  }
+
+  public static final class Sinh extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Sinh INSTANCE = new Sinh();
+
+    public Sinh()
+    {
+      super(Math::sinh, Math::sinh);
+    }
+  }
+
+  public static final class Tan extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Tan INSTANCE = new Tan();
+
+    public Tan()
+    {
+      super(Math::tan, Math::tan);
+    }
+  }
+
+  public static final class Tanh extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Tanh INSTANCE = new Tanh();
+
+    public Tanh()
+    {
+      super(Math::tanh, Math::tanh);
+    }
+  }
+
+  public static final class Cbrt extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Cbrt INSTANCE = new Cbrt();
+
+    public Cbrt()
+    {
+      super(Math::cbrt, Math::cbrt);
+    }
+  }
+
+  public static final class Ceil extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Ceil INSTANCE = new Ceil();
+
+    public Ceil()
+    {
+      super(Math::ceil, Math::ceil);
+    }
+  }
+
+  public static final class Floor extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Floor INSTANCE = new Floor();
+
+    public Floor()
+    {
+      super(Math::floor, Math::floor);
+    }
+  }
+
+  public static final class Exp extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Exp INSTANCE = new Exp();
+
+    public Exp()
+    {
+      super(Math::exp, Math::exp);
+    }
+  }
+
+  public static final class Expm1 extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Expm1 INSTANCE = new Expm1();
+
+    public Expm1()
+    {
+      super(Math::expm1, Math::expm1);
+    }
+  }
+
+  public static class GetExponent extends SimpleVectorMathUnivariateLongProcessorFactory
+  {
+    private static final GetExponent INSTANCE = new GetExponent();
+
+    public GetExponent()
+    {
+      super(Math::getExponent, Math::getExponent);
+    }
+  }
+
+  public static final class Log extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Log INSTANCE = new Log();
+
+    public Log()
+    {
+      super(Math::log, Math::log);
+    }
+  }
+
+  public static final class Log10 extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Log10 INSTANCE = new Log10();
+
+    public Log10()
+    {
+      super(Math::log10, Math::log10);
+    }
+  }
+  public static final class Log1p extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Log1p INSTANCE = new Log1p();
+
+    public Log1p()
+    {
+      super(Math::log1p, Math::log1p);
+    }
+  }
+
+  public static final class NextUp extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final NextUp INSTANCE = new NextUp();
+
+    public NextUp()
+    {
+      super(l -> Math.nextUp((double) l), Math::nextUp);
+    }
+  }
+
+  public static final class Rint extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Rint INSTANCE = new Rint();
+
+    public Rint()
+    {
+      super(Math::rint, Math::rint);
+    }
+  }
+
+  public static final class Signum extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Signum INSTANCE = new Signum();
+
+    public Signum()
+    {
+      super(Math::signum, Math::signum);
+    }
+  }
+
+  public static final class Sqrt extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Sqrt INSTANCE = new Sqrt();
+
+    public Sqrt()
+    {
+      super(Math::sqrt, Math::sqrt);
+    }
+  }
+
+  public static final class ToDegrees extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final ToDegrees INSTANCE = new ToDegrees();
+
+    public ToDegrees()
+    {
+      super(Math::toDegrees, Math::toDegrees);
+    }
+  }
+
+  public static final class ToRadians extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final ToRadians INSTANCE = new ToRadians();
+
+    public ToRadians()
+    {
+      super(Math::toRadians, Math::toRadians);
+    }
+  }
+
+  public static final class Ulp extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final Ulp INSTANCE = new Ulp();
+
+    public Ulp()
+    {
+      super(l -> Math.ulp((double) l), Math::ulp);
+    }
+  }
+
+
+  public static final class BitwiseComplement extends SimpleVectorMathUnivariateLongProcessorFactory
+  {
+    private static final BitwiseComplement INSTANCE = new BitwiseComplement();
+
+    public BitwiseComplement()
+    {
+      super(
+          input -> ~input,
+          input -> {
+            if (input < Long.MIN_VALUE || input > Long.MAX_VALUE) {
+              throw new ExpressionValidationException(
+                  Function.BitwiseComplement.NAME,
+                  "Possible data truncation, param [%f] is out of LONG value range",
+                  input
+              );
+            }
+            return ~((long) input);
+          }
+      );
+    }
+  }
+
+  public static class BitwiseConvertDoubleToLongBits extends SimpleVectorMathUnivariateLongProcessorFactory
+  {
+    private static final BitwiseConvertDoubleToLongBits INSTANCE = new BitwiseConvertDoubleToLongBits();
+
+    public BitwiseConvertDoubleToLongBits()
+    {
+      super(Double::doubleToLongBits, Double::doubleToLongBits);
+    }
+  }
+
+  public static class BitwiseConvertLongBitsToDouble extends SimpleVectorMathUnivariateDoubleProcessorFactory
+  {
+    private static final BitwiseConvertLongBitsToDouble INSTANCE = new BitwiseConvertLongBitsToDouble();
+
+    public BitwiseConvertLongBitsToDouble()
+    {
+      super(Double::longBitsToDouble, (input) -> Double.longBitsToDouble((long) input));
+    }
+  }
+
+  public static class BitwiseAnd extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final BitwiseAnd INSTANCE = new BitwiseAnd();
+
+    public BitwiseAnd()
+    {
+      super(
+          (left, right) -> left & right,
+          (left, right) -> left & (long) right,
+          (left, right) -> (long) left & right,
+          (left, right) -> (long) left & (long) right
+      );
+    }
+  }
+
+  public static class BitwiseOr extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final BitwiseOr INSTANCE = new BitwiseOr();
+
+    public BitwiseOr()
+    {
+      super(
+          (left, right) -> left | right,
+          (left, right) -> left | (long) right,
+          (left, right) -> (long) left | right,
+          (left, right) -> (long) left | (long) right
+      );
+    }
+  }
+
+  public static class BitwiseXor extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final BitwiseXor INSTANCE = new BitwiseXor();
+
+    public BitwiseXor()
+    {
+      super(
+          (left, right) -> left ^ right,
+          (left, right) -> left ^ (long) right,
+          (left, right) -> (long) left ^ right,
+          (left, right) -> (long) left ^ (long) right
+      );
+    }
+  }
+
+  public static class BitwiseShiftLeft extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final BitwiseShiftLeft INSTANCE = new BitwiseShiftLeft();
+
+    public BitwiseShiftLeft()
+    {
+      super(
+          (left, right) -> left << right,
+          (left, right) -> left << (long) right,
+          (left, right) -> (long) left << right,
+          (left, right) -> (long) left << (long) right
+      );
+    }
+  }
+
+  public static class BitwiseShiftRight extends SimpleVectorMathBivariateLongProcessorFactory
+  {
+    private static final BitwiseShiftRight INSTANCE = new BitwiseShiftRight();
+
+    public BitwiseShiftRight()
+    {
+      super(
+          (left, right) -> left >> right,
+          (left, right) -> left >> (long) right,
+          (left, right) -> (long) left >> right,
+          (left, right) -> (long) left >> (long) right
+      );
+    }
   }
 }

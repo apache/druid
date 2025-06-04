@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
 import org.apache.druid.segment.DimensionSelector;
@@ -36,12 +35,9 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
 
   public static void addStringToCollector(final HyperLogLogCollector collector, @Nullable final String s)
   {
-    // SQL standard spec does not count null values,
-    // Skip counting null values when we are not replacing null with default value.
-    // A special value for null in case null handling is configured to use empty string for null.
-    // check if nulls are to be ignored
-    if ((NullHandling.replaceWithDefault() && !NullHandling.ignoreNullsForStringCardinality()) || s != null) {
-      collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(nullToSpecial(s)).asBytes());
+    // SQL standard spec does not count null values
+    if (s != null) {
+      collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(s).asBytes());
     }
   }
 
@@ -53,26 +49,23 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      if (NullHandling.replaceWithDefault() || value != null) {
-        hasher.putUnencodedChars(nullToSpecial(value));
+      if (value != null) {
+        hasher.putUnencodedChars(value);
       }
     } else if (size != 0) {
       boolean hasNonNullValue = false;
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
         final String value = dimSelector.lookupName(row.get(i));
-        // SQL standard spec does not count null values,
-        // Skip counting null values when we are not replacing null with default value.
-        // A special value for null in case null handling is configured to use empty string for null.
-        if (NullHandling.sqlCompatible() && !hasNonNullValue && value != null) {
+        if (value != null) {
           hasNonNullValue = true;
         }
         values[i] = nullToSpecial(value);
       }
-      // SQL standard spec does not count null values,
-      // Skip counting null values when we are not replacing null with default value.
-      // A special value for null in case null handling is configured to use empty string for null.
-      if (NullHandling.replaceWithDefault() || hasNonNullValue) {
+      // note: this behavior is weird and probably not correct, as it skips things like [null, null] instead of
+      // counting them, and it sorts the values so [a, b] and [b, a] would be treated as equivalent... and not treated
+      // as distinct rows. Leaving as is to avoid changing the behavior for now though
+      if (hasNonNullValue) {
         // Values need to be sorted to ensure consistent multi-value ordering across different segments
         Arrays.sort(values);
         for (int i = 0; i < size; ++i) {

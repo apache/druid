@@ -27,6 +27,7 @@ import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -131,6 +132,16 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return set of partitions
    */
   Set<PartitionIdType> getPartitionIds(String stream);
+
+  /**
+   * Returns the end offsets for all the assigned partitions.
+   *
+   * @return Map from Partition ID to the corresponding end offset
+   */
+  default Map<PartitionIdType, SequenceOffsetType> getLatestSequenceNumbers(Set<StreamPartition<PartitionIdType>> partitions)
+  {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * close the RecordSupplier

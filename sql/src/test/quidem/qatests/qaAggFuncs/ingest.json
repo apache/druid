@@ -1,0 +1,66 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "2020-01-01 01:01:01.000,1111111111,AAAAAAAAAA,11.11111111,111.1111111\n2020-01-01 01:01:01.000,1111111111,BBBBBBBBBB,11.11111111,111.1111111\n2020-01-01 01:01:01.000,1111111111,,11.11111111,111.1111111\n2020-01-01 01:01:01.000,2222222222,AAAAAAAAAA,22.22222222,222.2222222\n2020-01-01 01:01:01.000,2222222222,BBBBBBBBBB,22.22222222,222.2222222\n2020-01-01 01:01:01.000,2222222222,,22.22222222,222.2222222\n2020-01-01 01:01:01.000,,AAAAAAAAAA,,\n2020-01-01 01:01:01.000,,BBBBBBBBBB,,\n2020-01-01 01:01:01.000,,,,\n2020-02-01 01:01:01.000,1111111111,AAAAAAAAAA,11.11111111,111.1111111\n2020-02-01 01:01:01.000,1111111111,BBBBBBBBBB,11.11111111,111.1111111\n2020-02-01 01:01:01.000,1111111111,,11.11111111,111.1111111\n2020-02-01 01:01:01.000,2222222222,AAAAAAAAAA,22.22222222,222.2222222\n2020-02-01 01:01:01.000,2222222222,BBBBBBBBBB,22.22222222,222.2222222\n2020-02-01 01:01:01.000,2222222222,,22.22222222,222.2222222\n2020-02-01 01:01:01.000,,AAAAAAAAAA,,\n2020-02-01 01:01:01.000,,BBBBBBBBBB,,\n2020-02-01 01:01:01.000,,,,\n"
+      },
+      "inputFormat": {
+        "type": "csv",
+        "columns": [
+          "timestamp",
+          "tab0l0",
+          "tab0s0",
+          "tab0f0",
+          "tab0d0"
+        ],
+        "findColumnsFromHeader": false
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 10000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 1
+    },
+    "dataSchema": {
+      "dataSource": "test_agg_funcs",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "MONTH"
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "long",
+            "name": "tab0l0"
+          },
+          {
+            "type": "string",
+            "name": "tab0s0",
+            "createBitmapIndex": true
+          },
+          {
+            "type": "float",
+            "name": "tab0f0"
+          },
+          {
+            "type": "double",
+            "name": "tab0d0"
+          }
+        ]
+      } 
+    }
+  }
+}

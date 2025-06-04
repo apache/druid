@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
@@ -30,12 +29,14 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -104,16 +105,8 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
-    return getQuerySegmentSpecForLookUp(this).lookup(this, walker);
-  }
-
-  @VisibleForTesting
-  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
-  {
-    DataSource queryDataSource = query.getDataSource();
-    return queryDataSource.getAnalysis()
-                             .getBaseQuerySegmentSpec()
-                             .orElseGet(query::getQuerySegmentSpec);
+    ExecutionVertex ev = ExecutionVertex.of(this);
+    return ev.getEffectiveQuerySegmentSpec().lookup(this, walker);
   }
 
   @Override

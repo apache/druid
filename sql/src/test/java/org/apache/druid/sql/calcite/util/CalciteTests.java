@@ -32,7 +32,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -53,7 +53,12 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RowFilterPolicy;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -74,13 +79,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -117,6 +120,7 @@ public class CalciteTests
   public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -133,26 +137,31 @@ public class CalciteTests
   public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
+  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG));
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
+        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
+          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
-            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
+            switch (resource.getName()) {
+              case FORBIDDEN_DATASOURCE:
+                return Access.DENIED;
+              default:
+                return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
               return Access.OK;
             }
@@ -161,14 +170,14 @@ public class CalciteTests
           case ResourceType.EXTERNAL:
             if (Action.WRITE.equals(action)) {
               if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
-                return new Access(false);
+                return Access.DENIED;
               } else {
                 return Access.OK;
               }
             }
-            return new Access(false);
+            return Access.DENIED;
           default:
-            return new Access(false);
+            return Access.DENIED;
         }
       };
     }
@@ -180,20 +189,22 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
+        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
+          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
             if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
-              return Access.OK;
+              return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
               return Access.OK;
             }
@@ -201,7 +212,7 @@ public class CalciteTests
           case ResourceType.EXTERNAL:
             return Access.OK;
           default:
-            return new Access(false);
+            return Access.DENIED;
         }
       };
     }
@@ -254,10 +265,10 @@ public class CalciteTests
   );
 
   public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
-      .addModule(new LookylooModule())
-      .addModule(new SqlAggregationModule())
-      .addModule(new CalciteTestOperatorModule())
-      .build();
+                                                         .addModule(new LookylooModule())
+                                                         .addModule(new SqlAggregationModule())
+                                                         .addModule(new CalciteTestOperatorModule())
+                                                         .build();
 
   private CalciteTests()
   {
@@ -277,24 +288,11 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return QueryFrameworkUtils.createMockQueryLifecycleFactory(walker, conglomerate);
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory
-  )
-  {
-    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
-  )
-  {
-    return QueryFrameworkUtils.createSqlStatementFactory(engine, plannerFactory, authConfig);
+    return QueryFrameworkUtils.createMockQueryLifecycleFactory(
+        walker,
+        conglomerate,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
   }
 
   public static ObjectMapper getJsonMapper()
@@ -388,6 +386,15 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
+    return createMockSystemSchema(druidSchema, new TestTimelineServerView(walker.getSegments()), authorizerMapper);
+  }
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final TimelineServerView timelineServerView,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
     final DruidNode coordinatorNode = mockCoordinatorNode();
     FakeDruidNodeDiscoveryProvider provider = mockDruidNodeDiscoveryProvider(coordinatorNode);
 
@@ -398,7 +405,8 @@ public class CalciteTests
         provider,
         NodeRole.COORDINATOR,
         "/simple/leader"
-    ) {
+    )
+    {
       @Override
       public String findCurrentLeader()
       {
@@ -406,7 +414,8 @@ public class CalciteTests
       }
     };
 
-    final OverlordClient overlordClient = new NoopOverlordClient() {
+    final OverlordClient overlordClient = new NoopOverlordClient()
+    {
       @Override
       public ListenableFuture<URI> findCurrentLeader()
       {
@@ -459,7 +468,7 @@ public class CalciteTests
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
-        new TestTimelineServerView(walker.getSegments()),
+        timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
@@ -481,7 +490,8 @@ public class CalciteTests
         conglomerate,
         walker,
         plannerConfig,
-        authorizerMapper);
+        authorizerMapper
+    );
   }
 
   /**

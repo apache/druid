@@ -41,12 +41,13 @@ import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -81,8 +82,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -93,15 +93,12 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -311,7 +308,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                .stream()
-               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+               .map(AuthorizationUtils::createExternalResourceReadAction)
                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -331,7 +328,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetUnparseableEvents(full != null)).build();
   }
 
@@ -342,18 +339,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     if (addDeterminePartitionStatsToReport(isFullReport, ingestionState)) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getReportListFromSavedParseExceptions(
-              determinePartitionsParseExceptionHandler.getSavedParseExceptionReports()
-          )
+          determinePartitionsParseExceptionHandler.getSavedParseExceptionReports()
       );
     }
 
     if (addBuildSegmentStatsToReport(isFullReport, ingestionState)) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getReportListFromSavedParseExceptions(
-              buildSegmentsParseExceptionHandler.getSavedParseExceptionReports()
-          )
+          buildSegmentsParseExceptionHandler.getSavedParseExceptionReports()
       );
     }
     return events;
@@ -400,7 +393,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
@@ -412,7 +405,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
 
     final TaskReport.ReportMap liveReports = buildLiveIngestionStatsReport(
         ingestionState,
@@ -547,19 +540,19 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
   protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    CircularBuffer<ParseExceptionReport> determinePartitionsParseExceptionReports =
+    List<ParseExceptionReport> determinePartitionsParseExceptionReports =
         determinePartitionsParseExceptionHandler.getSavedParseExceptionReports();
-    CircularBuffer<ParseExceptionReport> buildSegmentsParseExceptionReports =
+    List<ParseExceptionReport> buildSegmentsParseExceptionReports =
         buildSegmentsParseExceptionHandler.getSavedParseExceptionReports();
 
     if (determinePartitionsParseExceptionReports != null || buildSegmentsParseExceptionReports != null) {
       unparseableEventsMap.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getReportListFromSavedParseExceptions(determinePartitionsParseExceptionReports)
+          determinePartitionsParseExceptionReports
       );
       unparseableEventsMap.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getReportListFromSavedParseExceptions(buildSegmentsParseExceptionReports)
+          buildSegmentsParseExceptionReports
       );
     }
 
@@ -741,7 +734,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
+    try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
         tmpDir,
         ingestionSchema.getDataSchema(),
         inputSource,
@@ -865,11 +858,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
-    final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
-        );
+    final TransactionalSegmentPublisher publisher = buildSegmentPublisher(toolbox);
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -884,8 +873,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         dataSchema,
         tuningConfig,
         buildSegmentsMeters,
-        buildSegmentsParseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        buildSegmentsParseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -1069,7 +1057,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      IngestionMode ingestionMode = computeBatchIngestionMode(ioConfig);
+      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
 
       if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
                                                               .inputIntervals()
@@ -1132,8 +1120,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     @Nullable
@@ -1366,7 +1354,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -1394,14 +1382,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
         this.maxParseExceptions = maxParseExceptions == null
-                                  ? DEFAULT_MAX_PARSE_EXCEPTIONS
+                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
                                   : maxParseExceptions;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                        : maxSavedParseExceptions;
       }
       this.logParseExceptions = logParseExceptions == null
-                                ? DEFAULT_LOG_PARSE_EXCEPTIONS
+                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
       if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
         this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;

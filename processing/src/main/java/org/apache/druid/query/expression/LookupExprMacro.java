@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.inject.Inject;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -88,7 +87,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(extractionFn.apply(NullHandling.emptyToNullIfNeeded(arg.eval(bindings).asString())));
+        return ExprEval.of(extractionFn.apply(arg.eval(bindings).asString()));
       }
 
       @Nullable

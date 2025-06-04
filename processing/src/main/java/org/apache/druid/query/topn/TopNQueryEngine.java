@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -80,7 +81,7 @@ public class TopNQueryEngine
       @Nullable final TopNQueryMetrics queryMetrics
   )
   {
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
     if (cursorFactory == null) {
       throw new SegmentMissingException(
           "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
@@ -89,61 +90,68 @@ public class TopNQueryEngine
 
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
-    if (cursorHolder.isPreAggregated()) {
-      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
+
+    // Once we have a cursorHolder, we need to either return a Sequence, or close it immediately.
+    try {
+      if (cursorHolder.isPreAggregated()) {
+        query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
+      }
+      final Cursor cursor = cursorHolder.asCursor();
+      if (cursor == null) {
+        return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+      }
+
+      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+
+      final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
+          DimensionHandlerUtils.createColumnSelectorPlus(
+              new TopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
+              query.getDimensionSpec(),
+              factory
+          );
+
+      final int cardinality;
+      if (selectorPlus.getSelector() instanceof DimensionDictionarySelector) {
+        cardinality = ((DimensionDictionarySelector) selectorPlus.getSelector()).getValueCardinality();
+      } else {
+        cardinality = DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+      }
+      final TopNCursorInspector cursorInspector = new TopNCursorInspector(
+          factory,
+          segment.as(TopNOptimizationInspector.class),
+          segment.getDataInterval(),
+          cardinality
+      );
+
+      final CursorGranularizer granularizer = CursorGranularizer.create(
+          cursor,
+          timeBoundaryInspector,
+          cursorHolder.getTimeOrder(),
+          query.getGranularity(),
+          buildSpec.getInterval()
+      );
+      if (granularizer == null || selectorPlus.getSelector() == null) {
+        return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+      }
+
+      if (queryMetrics != null) {
+        queryMetrics.cursor(cursor);
+      }
+      final TopNMapFn mapFn = getMapFn(query, cursorInspector, queryMetrics);
+      return Sequences.filter(
+          Sequences.simple(granularizer.getBucketIterable())
+                   .map(bucketInterval -> {
+                     granularizer.advanceToBucket(bucketInterval);
+                     return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics);
+                   }),
+          Predicates.notNull()
+      ).withBaggage(cursorHolder);
     }
-    final Cursor cursor = cursorHolder.asCursor();
-    if (cursor == null) {
-      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, cursorHolder);
     }
-
-    final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
-
-    final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-
-    final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            new TopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
-            query.getDimensionSpec(),
-            factory
-        );
-
-    final int cardinality;
-    if (selectorPlus.getSelector() instanceof DimensionDictionarySelector) {
-      cardinality = ((DimensionDictionarySelector) selectorPlus.getSelector()).getValueCardinality();
-    } else {
-      cardinality = DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-    }
-    final TopNCursorInspector cursorInspector = new TopNCursorInspector(
-        factory,
-        segment.as(TopNOptimizationInspector.class),
-        segment.getDataInterval(),
-        cardinality
-    );
-
-    final CursorGranularizer granularizer = CursorGranularizer.create(
-        cursor,
-        timeBoundaryInspector,
-        cursorHolder.getTimeOrder(),
-        query.getGranularity(),
-        buildSpec.getInterval()
-    );
-    if (granularizer == null || selectorPlus.getSelector() == null) {
-      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
-    }
-
-    if (queryMetrics != null) {
-      queryMetrics.cursor(cursor);
-    }
-    final TopNMapFn mapFn = getMapFn(query, cursorInspector, queryMetrics);
-    return Sequences.filter(
-        Sequences.simple(granularizer.getBucketIterable())
-                 .map(bucketInterval -> {
-                   granularizer.advanceToBucket(bucketInterval);
-                   return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics);
-                 }),
-                 Predicates.notNull()
-    ).withBaggage(cursorHolder);
   }
 
   /**

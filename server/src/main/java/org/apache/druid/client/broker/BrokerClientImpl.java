@@ -26,13 +26,18 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class BrokerClientImpl implements BrokerClient
@@ -44,6 +49,19 @@ public class BrokerClientImpl implements BrokerClient
   {
     this.client = client;
     this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public ListenableFuture<String> submitSqlQuery(final ClientSqlQuery sqlQuery)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/v2/sql/")
+                    .jsonContent(jsonMapper, sqlQuery),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        FullResponseHolder::getContent
+    );
   }
 
   @Override
@@ -78,6 +96,22 @@ public class BrokerClientImpl implements BrokerClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config)
+  {
+    final RequestBuilder requestBuilder =
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+            .jsonContent(jsonMapper, config);
+
+    return FutureUtils.transform(
+        client.asyncRequest(requestBuilder, new BytesFullResponseHandler()),
+        holder -> {
+          final HttpResponseStatus status = holder.getStatus();
+          return status.equals(HttpResponseStatus.OK);
+        }
     );
   }
 }

@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -89,10 +88,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OnheapIncrementalIndexBenchmark
 {
   static final int DIMENSION_COUNT = 5;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   /**
    * Number of index and query tasks.

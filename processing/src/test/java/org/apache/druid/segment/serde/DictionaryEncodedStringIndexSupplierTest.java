@@ -157,10 +157,11 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     writeToBuffer(byteBuffer, stringWriter);
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
     return new StringUtf8ColumnIndexSupplier<>(
         roaringFactory.getBitmapFactory(),
-        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY)::singleThreaded,
+        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY, null)::singleThreaded,
         bitmaps,
         null
     );

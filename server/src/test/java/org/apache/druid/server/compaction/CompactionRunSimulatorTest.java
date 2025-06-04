@@ -22,7 +22,6 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
@@ -33,9 +32,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -74,9 +74,9 @@ public class CompactionRunSimulatorTest
 
     final CompactionSimulateResult simulateResult = simulator.simulateRunWithConfig(
         DruidCompactionConfig.empty().withDatasourceConfig(
-            DataSourceCompactionConfig.builder().forDataSource("wiki").build()
+            InlineSchemaDataSourceCompactionConfig.builder().forDataSource("wiki").build()
         ),
-        segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments(),
+        segmentsMetadataManager.getRecentDataSourcesSnapshot(),
         CompactionEngine.NATIVE
     );
 

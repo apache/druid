@@ -20,7 +20,6 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -90,7 +89,7 @@ public class LongFieldReader extends NumericFieldReader
     @Override
     public long getLong()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
       return TransformUtils.detransformToLong(bits);
     }

@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -134,6 +135,7 @@ public class WorkerTaskManagerTest
                 null,
                 taskActionClientFactory,
                 null,
+                NoopPolicyEnforcer.instance(),
                 null,
                 null,
                 null,
@@ -141,6 +143,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 notifierFactory,
+                null,
                 null,
                 null,
                 NoopJoinableFactory.INSTANCE,

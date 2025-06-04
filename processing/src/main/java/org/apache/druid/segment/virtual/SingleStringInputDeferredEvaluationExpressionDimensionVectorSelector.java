@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
@@ -52,7 +53,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
   )
   {
     // Verify selector has a working dictionary.
-    if (selector.getValueCardinality() == CARDINALITY_UNKNOWN
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {
       throw new ISE(
           "Selector of class[%s] does not have a dictionary, cannot use it.",
@@ -146,9 +147,9 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     }
 
     @Override
-    public <T> T[] getObjectVector(String name)
+    public Object[] getObjectVector(String name)
     {
-      return (T[]) currentValue;
+      return currentValue;
     }
 
     @Override

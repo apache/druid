@@ -27,10 +27,10 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Set;
 
 public class SegmentTimelineTest
 {
-
   @Test
   public void testIsOvershadowed()
   {
@@ -63,6 +63,20 @@ public class SegmentTimelineTest
     Assert.assertTrue(
         timeline.isOvershadowed(createSegment("2022-01-02/2022-01-03", "v1", 0, 1))
     );
+  }
+
+  @Test
+  public void testAddRemoveSegment()
+  {
+    final DataSegment segment = createSegment("2022-01-01/P1D", "v1", 0, 1);
+
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(Set.of());
+    timeline.add(segment);
+    Assert.assertEquals(1, timeline.getNumObjects());
+
+    timeline.remove(segment);
+    Assert.assertEquals(0, timeline.getNumObjects());
+    Assert.assertTrue(timeline.isEmpty());
   }
 
   private DataSegment createSegment(String interval, String version, int partitionNum, int totalNumPartitions)

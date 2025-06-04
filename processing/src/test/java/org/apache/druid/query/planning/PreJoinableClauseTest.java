@@ -21,21 +21,35 @@ package org.apache.druid.query.planning;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.segment.join.JoinType;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class PreJoinableClauseTest
 {
-  private final PreJoinableClause clause = new PreJoinableClause(
-      "j.",
-      new TableDataSource("foo"),
-      JoinType.LEFT,
-      JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
-      null
-  );
+  private final PreJoinableClause clause = makePreJoinableClause();
+
+  private PreJoinableClause makePreJoinableClause()
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("bar"),
+        new TableDataSource("foo"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+
+    );
+    return new PreJoinableClause(join);
+  }
+
 
   @Test
   public void test_getPrefix()

@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, FormGroup } from '@blueprintjs/core';
+import { Button, ButtonGroup, Callout, FormGroup } from '@blueprintjs/core';
 import type { TimeRelativeFilterPattern } from 'druid-query-toolkit';
 import React from 'react';
 
+import { prettyFormatIsoDateWithMsIfNeeded } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
 
 interface PartialPattern {
@@ -101,12 +102,13 @@ export interface TimeRelativeFilterControlProps {
   querySource: QuerySource;
   filterPattern: TimeRelativeFilterPattern;
   setFilterPattern(filterPattern: TimeRelativeFilterPattern): void;
+  timeBounds?: [Date, Date];
 }
 
 export const TimeRelativeFilterControl = React.memo(function TimeRelativeFilterControl(
   props: TimeRelativeFilterControlProps,
 ) {
-  const { filterPattern, setFilterPattern } = props;
+  const { filterPattern, setFilterPattern, timeBounds } = props;
   const { column, negated } = filterPattern;
 
   const initKey = partialPatternToKey(filterPattern);
@@ -135,6 +137,13 @@ export const TimeRelativeFilterControl = React.memo(function TimeRelativeFilterC
           </ButtonGroup>
         </FormGroup>
       ))}
+      {timeBounds && (
+        <FormGroup>
+          <Callout>{`${prettyFormatIsoDateWithMsIfNeeded(
+            timeBounds[0],
+          )} → ${prettyFormatIsoDateWithMsIfNeeded(timeBounds[1])}`}</Callout>
+        </FormGroup>
+      )}
     </div>
   );
 });

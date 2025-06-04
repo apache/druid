@@ -31,11 +31,11 @@ import com.google.common.collect.Sets;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -43,6 +43,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -57,6 +59,8 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -77,10 +81,6 @@ import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private DerivativeDataSourceManager derivativesManager;
@@ -117,6 +117,14 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     );
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            jsonMapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
+        ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -313,12 +321,15 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         EasyMock.createMock(HttpClient.class)
     );
 
+    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    filter.start();
     brokerServerView = new BrokerServerView(
         druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
+        new BrokerSegmentWatcherConfig(),
+        filter
     );
     baseView.start();
   }

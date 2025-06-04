@@ -21,11 +21,11 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -83,12 +83,12 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
 
   public static byte validateVersion(byte version)
   {
-    if (version != V0 && version != V1) {
+    if (version != FrontCodedIndexed.V0 && version != FrontCodedIndexed.V1) {
       throw new IAE(
           "Unknown format version for FrontCodedIndexed [%s], must be [%s] or [%s]",
           version,
-          V0,
-          V1
+          FrontCodedIndexed.V0,
+          FrontCodedIndexed.V1
       );
     }
     return version;
@@ -100,7 +100,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == V0 || version == V1, "only V0 and V1 exist, encountered " + version);
     final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
-    final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
+    final boolean hasNull = TypeStrategies.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
     // size of offsets + values
     final int size = VByte.readInt(orderedBuffer);

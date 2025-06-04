@@ -56,7 +56,7 @@ public class Sequences
 
   public static <T> Sequence<T> concat(Iterable<Sequence<T>> sequences)
   {
-    return concat(simple(sequences));
+    return concat(Sequences.simple(sequences));
   }
 
   public static <T> Sequence<T> concat(Sequence<? extends Sequence<T>> sequences)

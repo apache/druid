@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
 import org.apache.druid.initialization.Initialization;
@@ -51,7 +52,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
@@ -148,13 +148,13 @@ public class HadoopDruidIndexerConfig
     // the Map<> intermediary
 
     if (argSpec.containsKey("spec")) {
-      return JSON_MAPPER.convertValue(
+      return HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
           argSpec,
           HadoopDruidIndexerConfig.class
       );
     }
     return new HadoopDruidIndexerConfig(
-        JSON_MAPPER.convertValue(
+        HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
             argSpec,
             HadoopIngestionSpec.class
         )
@@ -166,7 +166,7 @@ public class HadoopDruidIndexerConfig
   {
     try {
       return fromMap(
-          JSON_MAPPER.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -180,7 +180,7 @@ public class HadoopDruidIndexerConfig
     // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
-          JSON_MAPPER.readValue(str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(str, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (IOException e) {
@@ -197,7 +197,7 @@ public class HadoopDruidIndexerConfig
       Reader reader = new InputStreamReader(fs.open(pt), StandardCharsets.UTF_8);
 
       return fromMap(
-          JSON_MAPPER.readValue(reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+          HadoopDruidIndexerConfig.JSON_MAPPER.readValue(reader, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
       );
     }
     catch (Exception e) {
@@ -207,7 +207,7 @@ public class HadoopDruidIndexerConfig
 
   public static HadoopDruidIndexerConfig fromConfiguration(Configuration conf)
   {
-    final HadoopDruidIndexerConfig retVal = fromString(conf.get(CONFIG_PROPERTY));
+    final HadoopDruidIndexerConfig retVal = fromString(conf.get(HadoopDruidIndexerConfig.CONFIG_PROPERTY));
     retVal.verify();
     return retVal;
   }
@@ -590,7 +590,7 @@ public class HadoopDruidIndexerConfig
     Configuration conf = job.getConfiguration();
 
     try {
-      conf.set(CONFIG_PROPERTY, JSON_MAPPER.writeValueAsString(this));
+      conf.set(HadoopDruidIndexerConfig.CONFIG_PROPERTY, HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(this));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

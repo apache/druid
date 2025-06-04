@@ -19,18 +19,17 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.IngestionState;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskContextReport;
@@ -68,6 +67,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -75,9 +75,9 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -92,6 +92,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -131,7 +132,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   private final Map<Interval, String> intervalToLockVersion = new HashMap<>();
 
-  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
+  protected AbstractBatchIndexTask(
+      String id,
+      String dataSource,
+      Map<String, Object> context,
+      IngestionMode ingestionMode
+  )
   {
     super(id, dataSource, context, ingestionMode);
     maxAllowedLockCount = -1;
@@ -451,6 +457,30 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+  protected TransactionalSegmentPublisher buildSegmentPublisher(TaskToolbox toolbox)
+  {
+    return new TransactionalSegmentPublisher()
+    {
+      @Override
+      public SegmentPublishResult publishAnnotatedSegments(
+          @Nullable Set<DataSegment> segmentsToBeOverwritten,
+          Set<DataSegment> segmentsToPublish,
+          @Nullable Object commitMetadata,
+          @Nullable SegmentSchemaMapping schemaMapping
+      ) throws IOException
+      {
+        return toolbox.getTaskActionClient().submit(
+            buildPublishAction(
+                segmentsToBeOverwritten,
+                segmentsToPublish,
+                schemaMapping,
+                getTaskLockHelper().getLockTypeToUse()
+            )
+        );
+      }
+    };
+  }
+
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {
     // The given intervals are first converted to align with segment granularity. This is because,
@@ -634,20 +664,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             .build();
       }
       // We only need to store filter since that is the only field auto compaction support
-      Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
-                                          ? null
-                                          : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
-      List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
-                                 ? null
-                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<>() {});
+      CompactionTransformSpec transformSpec = CompactionTransformSpec.of(
+          ingestionSpec.getDataSchema().getTransformSpec()
+      );
+      List<AggregatorFactory> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
+                                            ? null
+                                            : Arrays.asList(ingestionSpec.getDataSchema().getAggregators());
 
       return CompactionState.addCompactionStateToSegments(
           tuningConfig.getPartitionsSpec(),
           dimensionsSpec,
           metricsSpec,
           transformSpec,
-          tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper()),
-          granularitySpec.asMap(toolbox.getJsonMapper())
+          tuningConfig.getIndexSpec(),
+          granularitySpec,
+          ingestionSpec.getDataSchema().getProjections()
       );
     } else {
       return Function.identity();
@@ -719,7 +750,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource(), getId())
+                                                 .createSegmentHandoffNotifier(
+                                                     segmentsToWaitFor.get(0).getDataSource(),
+                                                     getId()
+                                                 )
     ) {
 
       final ExecutorService exec = Execs.directExecutor();
@@ -761,7 +795,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     }
   }
-  
+
   @Nullable
   public static String findVersion(Map<Interval, String> versions, Interval interval)
   {
@@ -812,7 +846,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 
-      version = findVersion(versions, interval);
+      version = AbstractBatchIndexTask.findVersion(versions, interval);
       if (version == null) {
         throw new ISE("Cannot find a version for interval[%s]", interval);
       }
@@ -820,7 +854,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       // We don't have explicit intervals. We can use the segment granularity to figure out what
       // interval we need, but we might not have already locked it.
       interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
-      final String existingLockVersion = findVersion(versions, interval);
+      final String existingLockVersion = AbstractBatchIndexTask.findVersion(versions, interval);
       if (existingLockVersion == null) {
         if (ingestionSpec.getTuningConfig() instanceof ParallelIndexTuningConfig) {
           final int maxAllowedLockCount = ((ParallelIndexTuningConfig) ingestionSpec.getTuningConfig())
@@ -936,8 +970,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   /**
    * Builds a map with the following keys and values:
-   *  {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
-   *  {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
+   * {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
+   * {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
    */
   protected TaskReport.ReportMap buildIngestionStatsAndContextReport(
       IngestionState ingestionState,

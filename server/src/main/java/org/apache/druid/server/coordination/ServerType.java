@@ -153,11 +153,11 @@ public enum ServerType
   {
     // this doesn't actually check that the NodeRole is a typical data node
     if (nodeRole.equals(NodeRole.HISTORICAL)) {
-      return HISTORICAL;
+      return ServerType.HISTORICAL;
     } else if (nodeRole.equals(NodeRole.BROKER)) {
-      return BROKER;
+      return ServerType.BROKER;
     } else {
-      return INDEXER_EXECUTOR;
+      return ServerType.INDEXER_EXECUTOR;
     }
   }
 

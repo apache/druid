@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -678,12 +677,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   )
   {
     final Object inputValue = row.get(path);
-    // in default value mode, even though the input row had an empty string, the selector spits out null, so we want
-    // to take the null checking path
-    final boolean isStringAndNullEquivalent =
-        inputValue instanceof String && NullHandling.isNullOrEquivalent((String) inputValue);
-
-    if (row.containsKey(path) && inputValue != null && !isStringAndNullEquivalent) {
+    if (row.containsKey(path) && inputValue != null) {
       Assert.assertEquals(inputValue, valueSelector.getObject());
       if (ColumnType.LONG.equals(singleType)) {
         Assert.assertEquals(inputValue, valueSelector.getLong());

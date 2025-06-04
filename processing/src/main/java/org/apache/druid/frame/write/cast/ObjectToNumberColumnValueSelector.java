@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write.cast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -67,21 +66,21 @@ public class ObjectToNumberColumnValueSelector implements ColumnValueSelector<Nu
   public double getDouble()
   {
     final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_DOUBLE : n.doubleValue();
+    return n == null ? 0.0d : n.doubleValue();
   }
 
   @Override
   public float getFloat()
   {
     final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_FLOAT : n.floatValue();
+    return n == null ? 0.0f : n.floatValue();
   }
 
   @Override
   public long getLong()
   {
     final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_LONG : n.longValue();
+    return n == null ? 0L : n.longValue();
   }
 
   @Override

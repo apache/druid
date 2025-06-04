@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 
@@ -110,7 +109,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    */
   public static ColumnCapabilitiesImpl createDefault()
   {
-    return snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
+    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
   }
 
   /**
@@ -125,9 +124,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
                                                                  .setDictionaryValuesSorted(false)
                                                                  .setDictionaryValuesUnique(false)
                                                                  .setHasSpatialIndexes(false);
-    if (NullHandling.replaceWithDefault()) {
-      builder.setHasNulls(false);
-    }
     return builder;
   }
 

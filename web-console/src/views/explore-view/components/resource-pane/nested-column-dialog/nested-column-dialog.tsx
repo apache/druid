@@ -33,14 +33,23 @@ import React, { useState } from 'react';
 
 import { ClearableInput, Loader, MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
-import { caseInsensitiveContains, filterMap, pluralIfNeeded } from '../../../../../utils';
+import {
+  caseInsensitiveContains,
+  filterMap,
+  pluralIfNeeded,
+  toggle,
+  wait,
+} from '../../../../../utils';
 import type { QuerySource } from '../../../models';
 import { ExpressionMeta } from '../../../models';
-import { toggle } from '../../../utils';
 
 import './nested-column-dialog.scss';
 
 const ARRAY_CONCAT_AGG_SIZE = 10000;
+
+function cleanPath(path: string): string {
+  return path.replace(/^\$/, '').replace(/\['/g, '').replace(/']/g, '');
+}
 
 export interface NestedColumnDialogProps {
   nestedColumn: SqlExpression;
@@ -61,6 +70,8 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
   const [pathsState] = useQueryManager({
     query: nestedColumn,
     processQuery: async nestedColumn => {
+      await wait(4000);
+
       const query = querySource
         .getInitBaseQuery()
         .addSelect(
@@ -82,6 +93,12 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
     },
   });
 
+  const effectiveNamingScheme = namingScheme.includes('%') ? namingScheme : namingScheme + '%';
+
+  function getOutputName(path: string): string {
+    return effectiveNamingScheme.replaceAll('%', cleanPath(path));
+  }
+
   const paths = pathsState.data;
   return (
     <Dialog className="nested-column-dialog" isOpen onClose={onClose} title="Expand nested column">
@@ -90,11 +107,23 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
           Replace <Tag minimal>{String(nestedColumn.getOutputName())}</Tag> with path expansions for
           the selected paths.
         </p>
+        <FormGroup label="Nameing scheme">
+          <InputGroup
+            value={namingScheme}
+            onChange={e => {
+              setNamingScheme(e.target.value.slice(0, ExpressionMeta.MAX_NAME_LENGTH));
+            }}
+          />
+        </FormGroup>
         {pathsState.isLoading() && <Loader />}
         {pathsState.getErrorMessage()}
         {paths && (
           <FormGroup>
-            <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
+            <ClearableInput
+              value={searchString}
+              onValueChange={setSearchString}
+              placeholder="Search"
+            />
             <Menu className="path-selector">
               {filterMap(paths, (path, i) => {
                 if (!caseInsensitiveContains(path, searchString)) return;
@@ -104,6 +133,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
                     checked={selectedPaths.includes(path)}
                     onChange={() => setSelectedPaths(toggle(selectedPaths, path))}
                     text={path}
+                    data-tooltip={`Will become: ${getOutputName(path)}`}
                   />
                 );
               })}
@@ -130,14 +160,6 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
             </ButtonGroup>
           </FormGroup>
         )}
-        <FormGroup label="Nameing scheme">
-          <InputGroup
-            value={namingScheme}
-            onChange={e => {
-              setNamingScheme(e.target.value.slice(0, ExpressionMeta.MAX_NAME_LENGTH));
-            }}
-          />
-        </FormGroup>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -152,17 +174,12 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
               disabled={!selectedPaths.length}
               intent={Intent.PRIMARY}
               onClick={() => {
-                const effectiveNamingScheme = namingScheme.includes('%')
-                  ? namingScheme
-                  : namingScheme + '[%]';
                 onApply(
                   querySource.addColumnAfter(
-                    nestedColumn.getOutputName()!,
+                    nestedColumn.getOutputName() || '',
                     ...selectedPaths.map(path =>
-                      F('JSON_VALUE', nestedColumn, path).as(
-                        querySource.getAvailableName(
-                          effectiveNamingScheme.replaceAll('%', path.replace(/^\$\./, '')),
-                        ),
+                      SqlFunction.jsonValue(nestedColumn, path).as(
+                        querySource.getAvailableName(getOutputName(path)),
                       ),
                     ),
                   ),

@@ -27,7 +27,6 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -181,9 +180,7 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
         isNull(concat(inputRef(0), literal("x"), inputRef(1)));
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible()
-        ? or(isNull(inputRef(0)), isNull(inputRef(1)))
-        : rexBuilder.makeLiteral(false),
+        or(isNull(inputRef(0)), isNull(inputRef(1))),
         shuttle.apply(call)
     );
   }
@@ -197,9 +194,7 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         rexBuilder.makeCall(
             SqlStdOperatorTable.NOT,
-            NullHandling.sqlCompatible()
-            ? or(isNull(inputRef(0)), isNull(inputRef(1)))
-            : rexBuilder.makeLiteral(false)
+            or(isNull(inputRef(0)), isNull(inputRef(1)))
         ),
         shuttle.apply(call)
     );
@@ -228,12 +223,10 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
     Assert.assertEquals(
-        NullHandling.sqlCompatible()
-        ? or(
+        or(
             and(isNull(inputRef(0)), unknown),
             and(isNull(inputRef(1)), unknown)
-        )
-        : rexBuilder.makeLiteral(false),
+        ),
         shuttle.apply(call)
     );
   }
@@ -249,12 +242,10 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
     Assert.assertEquals(
-        NullHandling.sqlCompatible()
-        ? or(
+        or(
             and(isNull(inputRef(0)), unknown),
             and(isNull(inputRef(1)), unknown)
-        )
-        : rexBuilder.makeLiteral(false),
+        ),
         shuttle.apply(call)
     );
   }
@@ -294,12 +285,10 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
     Assert.assertEquals(
-        NullHandling.sqlCompatible()
-        ? or(
+        or(
             and(isNull(inputRef(0)), unknown),
             and(isNull(inputRef(1)), unknown)
-        )
-        : rexBuilder.makeLiteral(false),
+        ),
         shuttle.apply(call)
     );
   }

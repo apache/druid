@@ -128,7 +128,7 @@ public enum ValueType implements TypeDescriptor
   @Override
   public boolean isPrimitive()
   {
-    return STRING.equals(this) || isNumeric(this);
+    return this.equals(ValueType.STRING) || isNumeric(this);
   }
 
   @Nullable
@@ -143,11 +143,11 @@ public enum ValueType implements TypeDescriptor
 
   public static boolean isNumeric(ValueType type)
   {
-    return type == LONG || type == FLOAT || type == DOUBLE;
+    return type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE;
   }
 
   public static boolean isArray(ValueType type)
   {
-    return type == ARRAY;
+    return type == ValueType.ARRAY;
   }
 }

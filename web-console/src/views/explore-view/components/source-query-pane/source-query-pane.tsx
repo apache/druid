@@ -76,7 +76,7 @@ export const SourceQueryPane = React.memo(function SourceQueryPane(props: Source
             onSourceChange(queryString);
           }}
         />
-        <Button text="Hide" onClick={() => onClose()} />
+        <Button icon={IconNames.MINUS} text="Minimize" onClick={() => onClose()} />
       </div>
     </div>
   );

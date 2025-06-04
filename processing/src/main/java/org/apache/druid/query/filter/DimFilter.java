@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -65,7 +64,6 @@ public interface DimFilter extends Cacheable
    * Returns an optimized version of this filter.
    *
    * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.
-   *                          See {@link NullHandling#useThreeValueLogic()}.
    */
   DimFilter optimize(boolean mayIncludeUnknown);
 
@@ -81,7 +79,6 @@ public interface DimFilter extends Cacheable
    * for an example}
    *
    * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.
-   *                          See {@link NullHandling#useThreeValueLogic()}.
    */
   Filter toOptimizedFilter(boolean mayIncludeUnknown);
 

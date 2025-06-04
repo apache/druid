@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -65,7 +64,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   {
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
     EncodedKeyComponent<StructuredData> key;
@@ -114,22 +113,14 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
-    } else {
-      Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
-    }
+
+    Assert.assertEquals(104, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(0L, false);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(16, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
-    } else {
-      Assert.assertEquals(48, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 8, indexer.globalDictionary.getCardinality());
-    }
+
+    Assert.assertEquals(48, key.getEffectiveSizeBytes());
+    Assert.assertEquals(baseCardinality + 8, indexer.globalDictionary.getCardinality());
     Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
@@ -230,41 +221,18 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertEquals("3", dimensionSelector.getObject());
 
       cursor.advance();
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertNull(valueSelector.getObject());
-        Assert.assertTrue(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-        Assert.assertNull(dimensionSelector.getObject());
-      } else {
-        Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
-        Assert.assertFalse(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertEquals(
-            String.valueOf(NullHandling.defaultLongValue()),
-            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-        );
-        Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
-      }
-
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
 
       cursor.advance();
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertNull(valueSelector.getObject());
-        Assert.assertTrue(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-        Assert.assertNull(dimensionSelector.getObject());
-      } else {
-        Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
-        Assert.assertFalse(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertEquals(
-            String.valueOf(NullHandling.defaultLongValue()),
-            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-        );
-        Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
-      }
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
       Assert.assertEquals(ColumnType.LONG, cursorFactory.getColumnCapabilities(LONG_COL).toColumnType());
     }
   }
@@ -314,40 +282,18 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertEquals("3.3", dimensionSelector.getObject());
 
       cursor.advance();
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertNull(valueSelector.getObject());
-        Assert.assertTrue(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-        Assert.assertNull(dimensionSelector.getObject());
-      } else {
-        Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
-        Assert.assertFalse(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertEquals(
-            String.valueOf(NullHandling.defaultDoubleValue()),
-            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-        );
-        Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
-      }
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
 
       cursor.advance();
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertNull(valueSelector.getObject());
-        Assert.assertTrue(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-        Assert.assertNull(dimensionSelector.getObject());
-      } else {
-        Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
-        Assert.assertFalse(valueSelector.isNull());
-        Assert.assertEquals(1, dimensionSelector.getRow().size());
-        Assert.assertEquals(
-            String.valueOf(NullHandling.defaultDoubleValue()),
-            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-        );
-        Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
-      }
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
       Assert.assertEquals(ColumnType.DOUBLE, cursorFactory.getColumnCapabilities(DOUBLE_COL).toColumnType());
     }
   }
@@ -549,7 +495,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantNull()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
@@ -574,7 +520,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantString()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
@@ -598,7 +544,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantLong()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
@@ -622,7 +568,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantEmptyArray()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
@@ -646,7 +592,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantArray()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
@@ -670,7 +616,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testConstantEmptyObject()
   {
-    int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
+    int baseCardinality = 0;
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 

@@ -26,12 +26,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
@@ -57,11 +59,13 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -225,7 +229,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(
-          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
+          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)))
                           .isPresent()
       ).get(100, TimeUnit.MILLISECONDS);
       Assert.assertTrue(hasTimeline);
@@ -379,17 +383,21 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
   {
     DirectDruidClientFactory druidClientFactory = EasyMock.createMock(DirectDruidClientFactory.class);
     DirectDruidClient directDruidClient = EasyMock.mock(DirectDruidClient.class);
-    EasyMock.expect(druidClientFactory.makeDirectClient(EasyMock.anyObject(DruidServer.class)))
-            .andReturn(directDruidClient)
+    Capture<DruidServer> serverCapture = Capture.newInstance();
+    EasyMock.expect(druidClientFactory.make(EasyMock.capture(serverCapture)))
+            .andAnswer(() -> new QueryableDruidServer(serverCapture.getValue(), directDruidClient))
             .anyTimes();
 
     EasyMock.replay(druidClientFactory);
+    BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    filter.start();
     return new BrokerServerView(
         druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
+        new BrokerSegmentWatcherConfig(),
+        filter
     );
   }
 

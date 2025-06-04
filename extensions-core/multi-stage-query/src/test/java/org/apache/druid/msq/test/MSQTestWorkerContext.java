@@ -38,6 +38,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
@@ -92,6 +93,12 @@ public class MSQTestWorkerContext implements WorkerContext
   public ObjectMapper jsonMapper()
   {
     return mapper;
+  }
+
+  @Override
+  public PolicyEnforcer policyEnforcer()
+  {
+    return injector.getInstance(PolicyEnforcer.class);
   }
 
   @Override
@@ -151,7 +158,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public int maxConcurrentStages()
   {
-    return 1;
+    return 2;
   }
 
   @Override
@@ -173,6 +180,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public FrameContextImpl(File tempDir)
     {
       this.tempDir = tempDir;
+    }
+
+    @Override
+    public PolicyEnforcer policyEnforcer()
+    {
+      return MSQTestWorkerContext.this.policyEnforcer();
     }
 
     @Override

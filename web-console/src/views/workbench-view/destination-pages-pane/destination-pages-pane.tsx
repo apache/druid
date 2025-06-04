@@ -16,7 +16,18 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, Intent, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
+import {
+  AnchorButton,
+  Button,
+  ControlGroup,
+  InputGroup,
+  Intent,
+  Label,
+  Menu,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
@@ -24,15 +35,7 @@ import ReactTable from 'react-table';
 import type { Execution } from '../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
-import {
-  clamp,
-  downloadUrl,
-  formatBytes,
-  formatInteger,
-  pluralIfNeeded,
-  tickIcon,
-  wait,
-} from '../../../utils';
+import { clamp, formatBytes, formatInteger, pluralIfNeeded, tickIcon } from '../../../utils';
 
 import './destination-pages-pane.scss';
 
@@ -55,7 +58,7 @@ function resultFormatToExtension(resultFormat: ResultFormat): string {
   }
 }
 
-const RESULT_FORMAT_LABEL: Record<ResultFormat, string> = {
+const RESULT_FORMAT_DESCRIPTION: Record<ResultFormat, string> = {
   object: 'Array of objects',
   array: 'Array of arrays',
   objectLines: 'JSON Lines',
@@ -71,37 +74,36 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
   props: DestinationPagesPaneProps,
 ) {
   const { execution } = props;
+  const [prefix, setPrefix] = useState(execution.id);
   const [desiredResultFormat, setDesiredResultFormat] = useState<ResultFormat>('objectLines');
   const desiredExtension = resultFormatToExtension(desiredResultFormat);
 
   const destination = execution.destination;
   const pages = execution.destinationPages;
   if (!pages) return null;
-  const id = Api.encodePath(execution.id);
+  const numPages = pages.length;
 
   const numTotalRows = destination?.numTotalRows;
 
   function getResultUrl(pageIndex: number) {
     return UrlBaser.base(
-      `/druid/v2/sql/statements/${id}/results?${
+      `/druid/v2/sql/statements/${Api.encodePath(execution.id)}/results?${
         pageIndex < 0 ? '' : `page=${pageIndex}&`
-      }resultFormat=${desiredResultFormat}`,
+      }resultFormat=${desiredResultFormat}&filename=${getPageFilename(pageIndex)}`,
     );
   }
 
-  function getPageFilename(pageIndex: number, numPages: number) {
+  function getFilenamePageInfo(pageIndex: number) {
+    if (pageIndex < 0) return '';
     const numPagesString = String(numPages);
     const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
-    return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
+    return `.page_${pageNumberString}_of_${numPagesString}`;
   }
 
-  async function downloadAllData() {
-    if (!pages) return;
-    downloadUrl(getResultUrl(-1), `${id}_all_data.${desiredExtension}`);
-    await wait(100);
+  function getPageFilename(pageIndex: number) {
+    return `${prefix}${getFilenamePageInfo(pageIndex)}.${desiredExtension}`;
   }
 
-  const numPages = pages.length;
   return (
     <div className="destination-pages-pane">
       <p>
@@ -110,37 +112,45 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
         } have been written to ${pluralIfNeeded(numPages, 'page')}. `}
       </p>
       <p>
-        Format when downloading:{' '}
-        <Popover
-          minimal
-          position={Position.BOTTOM_LEFT}
-          content={
-            <Menu>
-              {RESULT_FORMATS.map((resultFormat, i) => (
-                <MenuItem
-                  key={i}
-                  icon={tickIcon(desiredResultFormat === resultFormat)}
-                  text={RESULT_FORMAT_LABEL[resultFormat]}
-                  label={resultFormat}
-                  onClick={() => setDesiredResultFormat(resultFormat)}
-                />
-              ))}
-            </Menu>
-          }
-        >
-          <Button
-            text={RESULT_FORMAT_LABEL[desiredResultFormat]}
-            rightIcon={IconNames.CARET_DOWN}
+        <Label>Download as</Label>
+        <ControlGroup className="download-as-controls">
+          <InputGroup
+            value={prefix}
+            onChange={(e: any) => setPrefix(e.target.value.slice(0, 200))}
+            placeholder="file_prefix"
+            rightElement={<Button disabled text={`.${desiredExtension}`} />}
+            fill
           />
-        </Popover>{' '}
-        {pages.length > 1 && (
-          <Button
-            intent={Intent.PRIMARY}
-            icon={IconNames.DOWNLOAD}
-            text="Download all data (concatenated)"
-            onClick={() => void downloadAllData()}
-          />
-        )}
+          <Popover
+            minimal
+            position={Position.BOTTOM_LEFT}
+            content={
+              <Menu>
+                {RESULT_FORMATS.map((resultFormat, i) => (
+                  <MenuItem
+                    key={i}
+                    icon={tickIcon(desiredResultFormat === resultFormat)}
+                    text={RESULT_FORMAT_DESCRIPTION[resultFormat]}
+                    label={resultFormat}
+                    onClick={() => setDesiredResultFormat(resultFormat)}
+                  />
+                ))}
+              </Menu>
+            }
+          >
+            <Button
+              text={RESULT_FORMAT_DESCRIPTION[desiredResultFormat]}
+              rightIcon={IconNames.CARET_DOWN}
+            />
+          </Popover>
+        </ControlGroup>
+        <AnchorButton
+          intent={Intent.PRIMARY}
+          icon={IconNames.DOWNLOAD}
+          text="Download all data (concatenated)"
+          href={getResultUrl(-1)}
+          download
+        />
       </p>
       <ReactTable
         data={pages}
@@ -184,7 +194,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 text="Download"
                 minimal
                 href={getResultUrl(value)}
-                download={getPageFilename(value, numPages)}
+                download
               />
             ),
           },

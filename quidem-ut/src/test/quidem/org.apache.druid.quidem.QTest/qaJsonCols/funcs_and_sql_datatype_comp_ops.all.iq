@@ -1,0 +1,511 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A001
+#-------------------------------------------------------------------------
+SELECT (c1 = c1) c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A002
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 = c1;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A003
+#-------------------------------------------------------------------------
+SELECT (c1 <> c1) c
+FROM test_json_cols;
++-------+
+| c     |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A004
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 <> c1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A005
+#-------------------------------------------------------------------------
+SELECT (c1 > c2) c
+FROM test_json_cols;
+Cannot apply '>' to arguments of type '<COMPLEX<JSON>> > <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A006
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 > c2;
+Cannot apply '>' to arguments of type '<COMPLEX<JSON>> > <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A007
+#-------------------------------------------------------------------------
+SELECT (c1 >= c2) c
+FROM test_json_cols;
+Cannot apply '>=' to arguments of type '<COMPLEX<JSON>> >= <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A008
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 >= c2;
+Cannot apply '>=' to arguments of type '<COMPLEX<JSON>> >= <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A009
+#-------------------------------------------------------------------------
+SELECT (c1 < c2) c
+FROM test_json_cols;
+Cannot apply '<' to arguments of type '<COMPLEX<JSON>> < <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A010
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 < c2;
+Cannot apply '<' to arguments of type '<COMPLEX<JSON>> < <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A011
+#-------------------------------------------------------------------------
+SELECT (c1 <= c2) c
+FROM test_json_cols;
+Cannot apply '<=' to arguments of type '<COMPLEX<JSON>> <= <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A012
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 <= c2;
+Cannot apply '<=' to arguments of type '<COMPLEX<JSON>> <= <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A013
+#-------------------------------------------------------------------------
+SELECT (c1 BETWEEN c1 AND c2) c
+FROM test_json_cols;
+Cannot apply 'BETWEEN ASYMMETRIC' to arguments of type '<COMPLEX<JSON>> BETWEEN ASYMMETRIC <COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A014
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 BETWEEN c1 AND c2;
+Cannot apply 'BETWEEN ASYMMETRIC' to arguments of type '<COMPLEX<JSON>> BETWEEN ASYMMETRIC <COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A015
+#-------------------------------------------------------------------------
+SELECT (c1 NOT BETWEEN c1 AND c2) c
+FROM test_json_cols;
+Cannot apply 'NOT BETWEEN ASYMMETRIC' to arguments of type '<COMPLEX<JSON>> NOT BETWEEN ASYMMETRIC <COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A016
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 NOT BETWEEN c1 AND c2;
+Cannot apply 'NOT BETWEEN ASYMMETRIC' to arguments of type '<COMPLEX<JSON>> NOT BETWEEN ASYMMETRIC <COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A017
+#-------------------------------------------------------------------------
+SELECT (c1 like c2) c
+FROM test_json_cols;
+Cannot apply 'LIKE' to arguments of type 'LIKE(<COMPLEX<JSON>>, <COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A018
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 like c2;
+Cannot apply 'LIKE' to arguments of type 'LIKE(<COMPLEX<JSON>>, <COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A019
+#-------------------------------------------------------------------------
+SELECT (c1 not like c2) c
+FROM test_json_cols;
+Cannot apply 'NOT LIKE' to arguments of type 'NOT LIKE(<COMPLEX<JSON>>, <COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A020
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 not like c2;
+Cannot apply 'NOT LIKE' to arguments of type 'NOT LIKE(<COMPLEX<JSON>>, <COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A021
+#-------------------------------------------------------------------------
+SELECT (c1 IS NULL) c
+FROM test_json_cols;
++-------+
+| c     |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A022
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A023
+#-------------------------------------------------------------------------
+SELECT (c1 IS NOT NULL) c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A024
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A025
+#-------------------------------------------------------------------------
+SELECT (c1 IS TRUE) c
+FROM test_json_cols;
+Cannot apply 'IS TRUE' to arguments of type '<COMPLEX<JSON>> IS TRUE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A026
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS TRUE;
+Cannot apply 'IS TRUE' to arguments of type '<COMPLEX<JSON>> IS TRUE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A027
+#-------------------------------------------------------------------------
+SELECT (c1 IS NOT TRUE) c
+FROM test_json_cols;
+Cannot apply 'IS NOT TRUE' to arguments of type '<COMPLEX<JSON>> IS NOT TRUE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A028
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS NOT TRUE;
+Cannot apply 'IS NOT TRUE' to arguments of type '<COMPLEX<JSON>> IS NOT TRUE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A029
+#-------------------------------------------------------------------------
+SELECT (c1 IS FALSE) c
+FROM test_json_cols;
+Cannot apply 'IS FALSE' to arguments of type '<COMPLEX<JSON>> IS FALSE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A030
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS FALSE;
+Cannot apply 'IS FALSE' to arguments of type '<COMPLEX<JSON>> IS FALSE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A031
+#-------------------------------------------------------------------------
+SELECT (c1 IS NOT FALSE) c
+FROM test_json_cols;
+Cannot apply 'IS NOT FALSE' to arguments of type '<COMPLEX<JSON>> IS NOT FALSE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A032
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IS NOT FALSE;
+Cannot apply 'IS NOT FALSE' to arguments of type '<COMPLEX<JSON>> IS NOT FALSE
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A033
+#-------------------------------------------------------------------------
+SELECT (c1 IN (json_object(KEY 'a1' VALUE 'A', KEY 'a2' VALUE 1))) c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A034
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IN (json_object(KEY 'a1' VALUE 'A', KEY 'a2' VALUE 1));
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A035
+#-------------------------------------------------------------------------
+SELECT (c1 NOT IN (json_object(KEY 'a1' VALUE 'A', KEY 'a2' VALUE 1))) c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A036
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 NOT IN (json_object(KEY 'a1' VALUE 'A', KEY 'a2' VALUE 1));
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A037
+#-------------------------------------------------------------------------
+SELECT (c1 IN
+          (SELECT c1
+           FROM test_json_cols)) c
+FROM test_json_cols;
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A038
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 IN
+    (SELECT c1
+     FROM test_json_cols);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A039
+#-------------------------------------------------------------------------
+SELECT (c1 NOT IN
+          (SELECT c1
+           FROM test_json_cols)) c
+FROM test_json_cols;
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A040
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1 NOT IN
+    (SELECT c1
+     FROM test_json_cols);
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A041
+#-------------------------------------------------------------------------
+SELECT (c1
+        AND c2) c
+FROM test_json_cols;
+ Cannot apply 'AND' to arguments of type '<COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A042
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1
+  AND c2;
+ Cannot apply 'AND' to arguments of type '<COMPLEX<JSON>> AND <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A043
+#-------------------------------------------------------------------------
+SELECT (c1
+        OR c2) c
+FROM test_json_cols;
+Cannot apply 'OR' to arguments of type '<COMPLEX<JSON>> OR <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A044
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE c1
+  OR c2;
+Cannot apply 'OR' to arguments of type '<COMPLEX<JSON>> OR <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A045
+#-------------------------------------------------------------------------
+SELECT (NOT c1) c
+FROM test_json_cols;
+Cannot apply 'NOT' to arguments of type 'NOT<COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_datatype_comp_ops TEST_ID: A046
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE NOT c1;
+Cannot apply 'NOT' to arguments of type 'NOT<COMPLEX<JSON>>'
+!error
+

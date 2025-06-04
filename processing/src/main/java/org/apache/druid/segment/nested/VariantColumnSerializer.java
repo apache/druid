@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -206,7 +205,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     // null is always 0
     dictionaryWriter.write(null);
     for (String value : strings) {
-      value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
         continue;
       }

@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.query.QueryContexts;
@@ -57,10 +56,6 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class LongCompressionBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param("longCompress/")
   private static String dirPath;
 
@@ -84,7 +79,7 @@ public class LongCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy + "-" + format);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
   }
 
   @TearDown

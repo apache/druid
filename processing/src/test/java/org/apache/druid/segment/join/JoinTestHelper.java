@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -138,19 +137,19 @@ public class JoinTestHelper
         @Override
         public Supplier<Object> makeFloatProcessor(BaseFloatColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getFloat();
+          return () -> selector.isNull() ? null : selector.getFloat();
         }
 
         @Override
         public Supplier<Object> makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getDouble();
+          return () -> selector.isNull() ? null : selector.getDouble();
         }
 
         @Override
         public Supplier<Object> makeLongProcessor(BaseLongColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getLong();
+          return () -> selector.isNull() ? null : selector.getLong();
         }
 
         @Override

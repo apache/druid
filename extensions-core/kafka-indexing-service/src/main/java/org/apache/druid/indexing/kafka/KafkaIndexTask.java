@@ -33,13 +33,10 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +44,14 @@ import java.util.Set;
 public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private static final String TYPE = "index_kafka";
+
+  /**
+   * Resources that a {@link KafkaIndexTask} is authorized to use. Includes
+   * performing a read action on external resource of type
+   */
+  public static final Set<ResourceAction> INPUT_SOURCE_RESOURCES = Set.of(
+      AuthorizationUtils.createExternalResourceReadAction(KafkaIndexTaskModule.SCHEME)
+  );
 
   private final ObjectMapper configMapper;
 
@@ -93,7 +98,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
     return new IncrementalPublishingKafkaIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
         lockGranularityToUse
     );
   }
@@ -155,10 +159,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(KafkaIndexTaskModule.SCHEME, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return INPUT_SOURCE_RESOURCES;
   }
 
   @Override

@@ -22,10 +22,10 @@ package org.apache.druid.server.coordinator.duty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -49,17 +49,17 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   private static final Logger log = new Logger(KillCompactionConfig.class);
   private static final int UPDATE_NUM_RETRY = 5;
 
-  private final SegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final IndexerMetadataStorageCoordinator storageCoordinator;
   private final CoordinatorConfigManager configManager;
 
   public KillCompactionConfig(
       MetadataCleanupConfig config,
-      SegmentsMetadataManager sqlSegmentsMetadataManager,
+      IndexerMetadataStorageCoordinator storageCoordinator,
       CoordinatorConfigManager configManager
   )
   {
     super("compaction configs", config, Stats.Kill.COMPACTION_CONFIGS);
-    this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
+    this.storageCoordinator = storageCoordinator;
     this.configManager = configManager;
   }
 
@@ -94,7 +94,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
     // Get all active datasources
     // Note that we get all active datasources after getting compaction config to prevent race condition if new
     // datasource and config are added.
-    Set<String> activeDatasources = sqlSegmentsMetadataManager.retrieveAllDataSourceNames();
+    Set<String> activeDatasources = storageCoordinator.retrieveAllDatasourceNames();
     final Map<String, DataSourceCompactionConfig> updated = current
         .getCompactionConfigs()
         .stream()

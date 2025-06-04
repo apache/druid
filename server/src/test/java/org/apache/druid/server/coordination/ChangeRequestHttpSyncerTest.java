@@ -60,7 +60,7 @@ public class ChangeRequestHttpSyncerTest
         ImmutableList.of(
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -72,7 +72,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -84,7 +84,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             true,
                             "reset the counter",
@@ -96,7 +96,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -108,7 +108,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,

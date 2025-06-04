@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
@@ -56,7 +57,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionSelector impl
   )
   {
     // Verify selector has a working dictionary.
-    if (selector.getValueCardinality() == CARDINALITY_UNKNOWN
+    if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {
       throw new ISE("Selector of class[%s] does not have a dictionary, cannot use it.", selector.getClass().getName());
     }

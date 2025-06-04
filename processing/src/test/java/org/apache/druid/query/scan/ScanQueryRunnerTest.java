@@ -30,7 +30,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -992,7 +991,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                       eventVal = DateTimes.of(values1[i]).getMillis();
                     } else if (specs[1].equals("FLOAT")) {
                       try {
-                        eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                        eventVal = values1[i].isEmpty() ? null : Float.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
                         throw new ISE("This object cannot be converted to a Float!");
@@ -1000,7 +999,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     } else if (specs[1].equals("DOUBLE")) {
                       try {
                         eventVal = values1[i].isEmpty()
-                                   ? NullHandling.defaultDoubleValue()
+                                   ? null
                                    : Double.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
@@ -1008,7 +1007,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                       }
                     } else if (specs[1].equals("LONG")) {
                       try {
-                        eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                        eventVal = values1[i].isEmpty() ? null : Long.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
                         throw new ISE("This object cannot be converted to a Long!");

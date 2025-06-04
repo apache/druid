@@ -334,7 +334,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       // issue async requests
       Response.CompleteListener completeListener = result -> {
         if (result.isFailed()) {
-          LOG.warn(
+          LOG.noStackTrace().info(
               result.getFailure(),
               "Failed to forward cancellation request to [%s]",
               server.getHost()

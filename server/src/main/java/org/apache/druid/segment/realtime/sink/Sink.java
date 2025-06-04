@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -63,10 +64,10 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
@@ -85,7 +86,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final boolean useMaxMemoryEstimates;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
 
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
@@ -109,8 +109,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       String version,
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
-      long maxBytesInMemory,
-      boolean useMaxMemoryEstimates
+      long maxBytesInMemory
   )
   {
     this(
@@ -121,7 +120,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         Collections.emptyList()
     );
   }
@@ -134,7 +132,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
-      boolean useMaxMemoryEstimates,
       List<FireHydrant> hydrants
   )
   {
@@ -145,7 +142,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -306,7 +302,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
    * Acquire references to all {@link FireHydrant} that represent this sink. Returns null if they cannot all be
    * acquired, possibly because they were closed (swapped to null) concurrently with this method being called.
    *
-   * @param segmentMapFn           from {@link org.apache.druid.query.DataSource#createSegmentMapFunction(Query, AtomicLong)}
+   * @param segmentMapFn           from {@link org.apache.druid.query.DataSource#createSegmentMapFunction(Query)}
    * @param skipIncrementalSegment whether in-memory {@link IncrementalIndex} segments should be skipped
    */
   @Nullable
@@ -336,7 +332,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .setIndexSchema(indexSchema)
         .setMaxRowCount(maxRowsInMemory)
         .setMaxBytesInMemory(maxBytesInMemory)
-        .setUseMaxMemoryEstimates(useMaxMemoryEstimates)
         .build();
 
     final FireHydrant old;
@@ -401,7 +396,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   @GuardedBy("hydrantLock")
   private void overwriteIndexDimensions(Segment segment)
   {
-    RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+    RowSignature rowSignature = Objects.requireNonNull(segment.as(CursorFactory.class)).getRowSignature();
     for (String dim : rowSignature.getColumnNames()) {
       columnsExcludingCurrIndex.add(dim);
       rowSignature.getColumnType(dim).ifPresent(type -> columnTypeExcludingCurrIndex.put(dim, type));
@@ -422,7 +417,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       }
 
       // Add columns from the currHydrant that do not yet exist in columnsExcludingCurrIndex.
-      RowSignature currSignature = currHydrant.getHydrantSegment().asCursorFactory().getRowSignature();
+      RowSignature currSignature = currHydrant.getHydrantSegment().as(CursorFactory.class).getRowSignature();
 
       for (String dim : currSignature.getColumnNames()) {
         if (!columnsExcludingCurrIndex.contains(dim)) {

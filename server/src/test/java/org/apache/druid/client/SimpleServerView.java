@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -33,7 +33,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -82,7 +81,7 @@ public class SimpleServerView implements TimelineServerView
 
   public void addServer(DruidServer server, DataSegment dataSegment)
   {
-    servers.put(server, new QueryableDruidServer<>(server, clientFactory.makeDirectClient(server)));
+    servers.put(server, new QueryableDruidServer(server, clientFactory.makeDirectClient(server)));
     addSegmentToServer(server, dataSegment);
   }
 
@@ -115,7 +114,7 @@ public class SimpleServerView implements TimelineServerView
   {
     final ServerSelector selector = selectors.computeIfAbsent(
         segment.getId().toString(),
-        k -> new ServerSelector(segment, tierSelectorStrategy)
+        k -> new ServerSelector(segment, tierSelectorStrategy, HistoricalFilter.IDENTITY_FILTER)
     );
     selector.addServerAndUpdateSegment(servers.get(server), segment);
     // broker needs to skip tombstones in its timelines
@@ -124,12 +123,8 @@ public class SimpleServerView implements TimelineServerView
   }
 
   @Override
-  public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+  public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
-    final TableDataSource table =
-        analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
-
     return Optional.ofNullable(timelines.get(table.getName()));
   }
 
@@ -139,11 +134,12 @@ public class SimpleServerView implements TimelineServerView
     return Collections.emptyList();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {
     final QueryableDruidServer queryableDruidServer = Preconditions.checkNotNull(servers.get(server), "server");
-    return queryableDruidServer.getQueryRunner();
+    return (QueryRunner<T>) queryableDruidServer.getQueryRunner();
   }
 
   @Override

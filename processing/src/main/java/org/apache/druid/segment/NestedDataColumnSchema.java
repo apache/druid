@@ -30,10 +30,8 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Nested column {@link DimensionSchema}. If {@link #formatVersion} is set to 4, or null and
- * {@link DefaultColumnFormatConfig#nestedColumnFormatVersion} is set to 4, then {@link NestedDataColumnHandlerV4} is
- * used, else {@link NestedCommonFormatColumnHandler} is used instead and this is equivalent to using
- * {@link AutoTypeColumnSchema}
+ * Nested column {@link DimensionSchema}. This uses {@link NestedCommonFormatColumnHandler} and is equivalent to using
+ * {@link AutoTypeColumnSchema}, but remains for backwards compatibility.
  */
 public class NestedDataColumnSchema extends DimensionSchema
 {
@@ -90,11 +88,7 @@ public class NestedDataColumnSchema extends DimensionSchema
   @Override
   public DimensionHandler getDimensionHandler()
   {
-    if (formatVersion == 4) {
-      return new NestedDataColumnHandlerV4(getName());
-    } else {
-      return new NestedCommonFormatColumnHandler(getName(), null);
-    }
+    return new NestedCommonFormatColumnHandler(getName(), null);
   }
 
   @Override

@@ -50,7 +50,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -388,11 +389,10 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     QueryRunner<T> queryRunner = null;
 
     if (runningItem != null) {
-      final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
       final Task task = runningItem.getTask();
+      final TableDataSource queryTable = ExecutionVertex.of(query).getBaseTableDataSource();
 
-      if (analysis.getBaseTableDataSource().isPresent()
-          && task.getDataSource().equals(analysis.getBaseTableDataSource().get().getName())) {
+      if (task.getDataSource().equals(queryTable.getName())) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {

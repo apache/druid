@@ -22,7 +22,6 @@ package org.apache.druid.data.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Longs;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -98,9 +97,6 @@ public final class Rows
   /**
    * Convert an object to a number.
    *
-   * If {@link NullHandling#replaceWithDefault()} is true, this method will never return null. If false, it will return
-   * {@link NullHandling#defaultLongValue()} instead of null.
-   *
    * @param name                 field name of the object being converted (may be used for exception messages)
    * @param inputValue           the actual object being converted
    * @param outputType           expected return type, or null if it should be automatically detected
@@ -126,7 +122,7 @@ public final class Rows
     final Number asNumber;
 
     if (inputValue == null) {
-      asNumber = (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
+      asNumber = null;
     } else if (inputValue instanceof Number) {
       asNumber = (Number) inputValue;
     } else if (inputValue instanceof String) {
@@ -159,7 +155,7 @@ public final class Rows
               name
           );
         } else {
-          return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
+          return null;
         }
       }
     } else {
@@ -171,7 +167,7 @@ public final class Rows
             name
         );
       } else {
-        return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
+        return null;
       }
     }
 

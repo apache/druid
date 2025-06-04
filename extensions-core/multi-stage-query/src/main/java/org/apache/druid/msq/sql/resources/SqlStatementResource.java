@@ -74,9 +74,9 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -95,6 +95,7 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -114,6 +115,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -122,6 +124,8 @@ public class SqlStatementResource
 {
 
   public static final String RESULT_FORMAT = "__resultFormat";
+  public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
+  private static final Pattern FILENAME_PATTERN = Pattern.compile("^[^/:*?><\\\\\"|\0\n\r]*$");
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final ObjectMapper jsonMapper;
@@ -277,6 +281,7 @@ public class SqlStatementResource
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
       @QueryParam("resultFormat") String resultFormat,
+      @QueryParam("filename") String filename,
       @Context final HttpServletRequest req
   )
   {
@@ -309,10 +314,12 @@ public class SqlStatementResource
       );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
+      final String contentDispositionHeaderValue = filename != null ? StringUtils.format("attachment; filename=\"%s\"", validateFilename(filename)) : null;
+
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       if (!signature.isPresent() || MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
         // Since it's not a select query, nothing to return.
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       // returning results
@@ -321,18 +328,20 @@ public class SqlStatementResource
       results = getResultYielder(queryId, page, msqControllerTask, closer);
       if (!results.isPresent()) {
         // no results, return empty
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
-      return Response.ok((StreamingOutput) outputStream -> resultPusher(
+      final Response.ResponseBuilder responseBuilder = Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
           new CountingOutputStream(outputStream),
           preferredFormat
-      )).build();
+      ));
+
+      return addContentDisposition(responseBuilder, contentDispositionHeaderValue).build();
     }
 
 
@@ -484,7 +493,13 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ, false);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(
+        taskId,
+        authenticationResult,
+        true,
+        Action.READ,
+        false
+    );
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -585,7 +600,11 @@ public class SqlStatementResource
     }
 
     // since we need the controller payload for auth checks.
-    MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
+    MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(
+        queryId,
+        authenticationResult,
+        forAction
+    );
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
     MSQTaskReportPayload taskReportPayload = null;
@@ -640,9 +659,9 @@ public class SqlStatementResource
    * necessary permissions. A user has the necessary permissions if one of the following criteria is satisfied:
    * 1. The user is the one who submitted the query
    * 2. The user belongs to a role containing the READ or WRITE permissions over the STATE resource. For endpoints like GET,
-   *   the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
-   *   have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
-   *   the currentUser always equal to the queryUser)
+   * the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
+   * have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
+   * the currentUser always equal to the queryUser)
    */
   private MSQControllerTask getMSQControllerTaskAndCheckPermission(
       String queryId,
@@ -655,7 +674,6 @@ public class SqlStatementResource
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
     String queryUser = String.valueOf(msqControllerTask.getQuerySpec()
-                                                       .getQuery()
                                                        .getContext()
                                                        .get(MSQTaskQueryMaker.USER_KEY));
 
@@ -665,21 +683,21 @@ public class SqlStatementResource
       return msqControllerTask;
     }
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, forAction)),
         authorizerMapper
     );
 
-    if (access.isAllowed()) {
-      return msqControllerTask;
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(StringUtils.format(
+          "The current user[%s] cannot view query id[%s] since the query is owned by another user",
+          currentUser,
+          queryId
+      ));
     }
 
-    throw new ForbiddenException(StringUtils.format(
-        "The current user[%s] cannot view query id[%s] since the query is owned by another user",
-        currentUser,
-        queryId
-    ));
+    return msqControllerTask;
   }
 
   /**
@@ -711,7 +729,7 @@ public class SqlStatementResource
     if (resultFormatParam == null) {
       return QueryContexts.getAsEnum(
           RESULT_FORMAT,
-          msqSpec.getQuery().context().get(RESULT_FORMAT),
+          msqSpec.getContext().get(RESULT_FORMAT),
           ResultFormat.class,
           ResultFormat.DEFAULT_RESULT_FORMAT
       );
@@ -967,6 +985,42 @@ public class SqlStatementResource
     }
   }
 
+  private static Response.ResponseBuilder addContentDisposition(
+      Response.ResponseBuilder responseBuilder,
+      String contentDisposition
+  )
+  {
+    if (contentDisposition != null) {
+      responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDisposition);
+    }
+    return responseBuilder;
+  }
+
+  /**
+   * Validates that a filename is valid. Filenames are considered to be valid if it is:
+   * <ul>
+   *   <li>Not empty.</li>
+   *   <li>Not longer than 255 characters.</li>
+   *   <li>Does not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.</li>
+   * </ul>
+   */
+  @VisibleForTesting
+  static String validateFilename(@NotNull String filename)
+  {
+    if (filename.isEmpty()) {
+      throw InvalidInput.exception("Filename cannot be empty.");
+    }
+
+    if (filename.length() > 255) {
+      throw InvalidInput.exception("Filename cannot be longer than 255 characters.");
+    }
+
+    if (!FILENAME_PATTERN.matcher(filename).matches()) {
+      throw InvalidInput.exception("Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \0, \n, or \r)");
+    }
+    return filename;
+  }
+
   private <T> T contactOverlord(final ListenableFuture<T> future, String queryId)
   {
     try {
@@ -990,7 +1044,11 @@ public class SqlStatementResource
 
   private static DruidException queryNotFoundException(String queryId)
   {
-    return NotFound.exception("Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.", queryId, MSQControllerTask.TYPE);
+    return NotFound.exception(
+        "Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.",
+        queryId,
+        MSQControllerTask.TYPE
+    );
   }
 
 }

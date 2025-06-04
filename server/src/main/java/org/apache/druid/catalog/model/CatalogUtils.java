@@ -203,7 +203,7 @@ public class CatalogUtils
    */
   public static String getNonBlankString(Map<String, Object> args, String parameter)
   {
-    String value = getString(args, parameter);
+    String value = CatalogUtils.getString(args, parameter);
     if (value != null) {
       value = value.trim();
       if (value.isEmpty()) {
@@ -215,7 +215,7 @@ public class CatalogUtils
 
   public static List<String> getUriListArg(Map<String, Object> args, String parameter)
   {
-    String urisString = getString(args, parameter);
+    String urisString = CatalogUtils.getString(args, parameter);
     if (Strings.isNullOrEmpty(urisString)) {
       throw new IAE("One or more values are required for parameter %s", parameter);
     }

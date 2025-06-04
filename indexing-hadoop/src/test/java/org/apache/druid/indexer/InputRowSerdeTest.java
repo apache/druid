@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -38,6 +37,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -59,7 +59,6 @@ public class InputRowSerdeTest
   private Map<String, Object> event;
 
   static {
-    NullHandling.initializeForTests();
     new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
   }
 
@@ -153,11 +152,11 @@ public class InputRowSerdeTest
     Assert.assertEquals(300.1f, out.getRaw("d4"));
     Assert.assertEquals(400.5d, out.getRaw("d5"));
 
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), out.getMetric("agg_non_existing"));
+    Assert.assertNull(out.getMetric("agg_non_existing"));
     Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
     Assert.assertEquals(100L, out.getMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
-    Assert.assertEquals(NullHandling.defaultLongValue(), out.getMetric("unparseable"));
+    Assert.assertNull(out.getMetric("unparseable"));
 
     EasyMock.verify(mockedAggregator);
     EasyMock.verify(mockedNullAggregator);
@@ -275,28 +274,11 @@ public class InputRowSerdeTest
 
     byte[] result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, new AggregatorFactory[0]).getSerializedRow();
 
-    if (NullHandling.replaceWithDefault()) {
-      long expected = 0;
-      expected += 9;  // timestamp bytes + dims length
-      expected += 18; // dim_non_existing writes: 1 16 1 bytes
-      expected += 4;  // d1: writes 1 2 1 bytes
-      expected += 14; // d2: writes 1 2 1 1 4 1 4 bytes
-      expected += 11; // d3: writes 1 2 8 bytes
-      expected += 7;  // d4: writes 1 2 4 bytes
-      expected += 11; // d5: writes 1 2 8 bytes
-      expected += 1;  // writes aggregator length
+    long expected = 9 + 18 + 4 + 14 + 4 + 4 + 4 + 1;
 
-      Assert.assertEquals(expected, result.length);
-      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 0}, Arrays.copyOfRange(result, 48, 56));
-      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0}, Arrays.copyOfRange(result, 59, 63));
-      Assert.assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 0}, Arrays.copyOfRange(result, 66, 74));
-    } else {
-      long expected = 9 + 18 + 4 + 14 + 4 + 4 + 4 + 1;
-
-      Assert.assertEquals(expected, result.length);
-      Assert.assertEquals(result[48], NullHandling.IS_NULL_BYTE);
-      Assert.assertEquals(result[52], NullHandling.IS_NULL_BYTE);
-      Assert.assertEquals(result[56], NullHandling.IS_NULL_BYTE);
-    }
+    Assert.assertEquals(expected, result.length);
+    Assert.assertEquals(result[48], TypeStrategies.IS_NULL_BYTE);
+    Assert.assertEquals(result[52], TypeStrategies.IS_NULL_BYTE);
+    Assert.assertEquals(result[56], TypeStrategies.IS_NULL_BYTE);
   }
 }

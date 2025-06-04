@@ -52,7 +52,6 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -74,9 +73,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -245,11 +244,22 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
-        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
-        SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper)
+        SEGMENTS_TABLE,
+        new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SERVERS_TABLE,
+        new ServersTable(
+            druidNodeDiscoveryProvider,
+            serverInventoryView,
+            authorizerMapper,
+            overlordClient,
+            coordinatorDruidLeaderClient
+        ),
+        SERVER_SEGMENTS_TABLE,
+        new ServerSegmentsTable(serverView, authorizerMapper),
+        TASKS_TABLE,
+        new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE,
+        new SupervisorsTable(overlordClient, authorizerMapper)
     );
   }
 
@@ -634,7 +644,7 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          NullHandling.defaultLongValue(),
+          null,
           toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
@@ -692,7 +702,7 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
-          NullHandling.defaultLongValue(),
+          null,
           toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
@@ -1136,19 +1146,20 @@ public class SystemSchema extends AbstractSchema
       AuthorizerMapper authorizerMapper
   )
   {
-    final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
     );
-    if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
+
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException("Insufficient permission to view servers: " + authResult.getErrorMessage());
     }
   }
 
   /**
    * Project a row using "projects" from {@link SegmentsTable#scan(DataContext, List, int[])}.
-   *
+   * <p>
    * Also, fix up types so {@link ColumnType#STRING} are transformed to Strings if they aren't yet. This defers
    * computation of {@link ObjectMapper#writeValueAsString(Object)} or {@link Object#toString()} until we know we
    * actually need it.

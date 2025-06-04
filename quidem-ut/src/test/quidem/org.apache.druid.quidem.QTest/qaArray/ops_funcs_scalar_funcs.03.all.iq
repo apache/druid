@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_int) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_float) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_str) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C13_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_null) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C14_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C15_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C16_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_empty) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C17_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C18_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C19_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_mixed) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C20_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C21_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C22_D1
+#-------------------------------------------------------------------------
+SELECT ln(a_nested) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C23_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B6_C24_D1
+#-------------------------------------------------------------------------
+SELECT ln(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LN' to arguments of type 'LN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C1_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_bool) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C2_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C3_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C4_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_int) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C5_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C6_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_float) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_str) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C11_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C12_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C13_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_null) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C14_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C15_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C16_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_empty) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C17_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C18_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C19_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_mixed) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C20_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C21_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C22_D1
+#-------------------------------------------------------------------------
+SELECT log10(a_nested) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C23_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B7_C24_D1
+#-------------------------------------------------------------------------
+SELECT log10(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOG10' to arguments of type 'LOG10(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT power(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'POWER' to arguments of type 'POWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT power(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'POWER' to arguments of type 'POWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT power(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'POWER' to arguments of type 'POWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT power(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'POWER' to arguments of type 'POWER(
+!error
+

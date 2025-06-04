@@ -18,7 +18,10 @@
 
 import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { CancelToken } from 'axios';
+import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
+import { isDate } from 'date-fns';
 import type {
   Column,
   FilterPattern,
@@ -27,10 +30,16 @@ import type {
   SqlQuery,
 } from 'druid-query-toolkit';
 import { filterPatternsToExpression, fitFilterPatterns } from 'druid-query-toolkit';
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
 
+import { useQueryManager } from '../../../../hooks';
+import { prettyFormatIsoDateWithMsIfNeeded, without } from '../../../../utils';
 import type { QuerySource } from '../../models';
-import { formatPatternWithoutNegation, initPatternForColumn } from '../../utils';
+import {
+  formatPatternWithoutNegation,
+  initPatternForColumn,
+  patternToBoundsQuery,
+} from '../../utils';
 import { DroppableContainer } from '../droppable-container/droppable-container';
 
 import { FilterMenu } from './filter-menu/filter-menu';
@@ -39,9 +48,11 @@ import './filter-pane.scss';
 
 export interface FilterPaneProps {
   querySource: QuerySource | undefined;
+  extraFilter: SqlExpression;
+  timezone: Timezone;
   filter: SqlExpression;
   onFilterChange(filter: SqlExpression): void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
   onAddToSourceQueryAsColumn?: (expression: SqlExpression) => void;
   onMoveToSourceQueryAsClause?: (expression: SqlExpression, changeWhere?: SqlExpression) => void;
 }
@@ -49,16 +60,48 @@ export interface FilterPaneProps {
 export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps, ref) {
   const {
     querySource,
+    extraFilter,
+    timezone,
     filter,
     onFilterChange,
     runSqlQuery,
     onAddToSourceQueryAsColumn,
     onMoveToSourceQueryAsClause,
   } = props;
-  const patterns = fitFilterPatterns(filter);
+  const patterns = useMemo(() => fitFilterPatterns(filter), [filter]);
 
   const [menuIndex, setMenuIndex] = useState<number>(-1);
   const [menuNew, setMenuNew] = useState<{ column?: Column }>();
+
+  const boundsQuery: string | undefined = useMemo(() => {
+    if (!querySource) return;
+    const relativePatterns = patterns.filter(p => p.type === 'timeRelative');
+    if (relativePatterns.length !== 1) return;
+    return patternToBoundsQuery(querySource.query, relativePatterns[0])?.toString();
+  }, [querySource, patterns]);
+
+  const [boundsState] = useQueryManager<string, [Date, Date]>({
+    query: boundsQuery,
+    processQuery: async (query, cancelToken) => {
+      const boundsData = await runSqlQuery(query, cancelToken);
+      const startEndRecord = boundsData.toObjectArray()[0];
+      if (!startEndRecord || !isDate(startEndRecord.start) || !isDate(startEndRecord.end)) {
+        throw new Error('Unexpected result');
+      }
+      return [startEndRecord.start, startEndRecord.end];
+    },
+  });
+
+  function filterTooltip(pattern: FilterPattern): string | undefined {
+    if (pattern.type !== 'timeRelative') return;
+    if (boundsState.isLoading()) return 'Loading...';
+    if (boundsState.isError()) return boundsState.getErrorMessage();
+    if (!boundsState.data) return;
+    const [start, end] = boundsState.data;
+    return `${prettyFormatIsoDateWithMsIfNeeded(
+      start,
+    )} → ${prettyFormatIsoDateWithMsIfNeeded(end)}`;
+  }
 
   function filterOn(column: Column) {
     const relevantPatternIndex = patterns.findIndex(
@@ -98,7 +141,8 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                 content={
                   <FilterMenu
                     querySource={querySource}
-                    filter={filter}
+                    extraFilter={extraFilter}
+                    filter={filterPatternsToExpression(without(patterns, pattern))}
                     initPattern={pattern}
                     onPatternChange={newPattern => {
                       changePatterns(patterns.map((c, idx) => (idx === i ? newPattern : c)));
@@ -107,6 +151,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                       setMenuIndex(-1);
                     }}
                     runSqlQuery={runSqlQuery}
+                    timeBounds={boundsState.data}
                     onAddToSourceQueryAsColumn={onAddToSourceQueryAsColumn}
                     onMoveToSourceQueryAsClause={
                       onMoveToSourceQueryAsClause
@@ -126,15 +171,16 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                 <Button
                   className={classNames('filter-text-button', { negated: pattern.negated })}
                   minimal
-                  text={formatPatternWithoutNegation(pattern)}
+                  text={formatPatternWithoutNegation(pattern, timezone)}
                   onClick={() => setMenuIndex(i)}
+                  data-tooltip={i !== menuIndex ? filterTooltip(pattern) : undefined}
                 />
               </Popover>
             ) : (
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
                 minimal
-                text={formatPatternWithoutNegation(pattern)}
+                text={formatPatternWithoutNegation(pattern, timezone)}
                 disabled
               />
             )}
@@ -144,6 +190,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
               minimal
               small
               onClick={() => changePatterns(patterns.filter((_clause, idx) => idx !== i))}
+              data-tooltip="Remove filter"
             />
           </div>
         );
@@ -157,6 +204,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
           content={
             <FilterMenu
               querySource={querySource}
+              extraFilter={extraFilter}
               filter={filter}
               initPattern={menuNew?.column ? initPatternForColumn(menuNew?.column) : undefined}
               onPatternChange={newPattern => {
@@ -176,6 +224,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
             text={patterns.length ? undefined : 'Add filter'}
             onClick={() => setMenuNew({})}
             minimal
+            data-tooltip={patterns.length ? 'Add filter' : undefined}
           />
         </Popover>
       ) : (
@@ -184,6 +233,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
           text={patterns.length ? undefined : 'Add filter'}
           disabled
           minimal
+          data-tooltip="No query source, unable to query"
         />
       )}
     </DroppableContainer>

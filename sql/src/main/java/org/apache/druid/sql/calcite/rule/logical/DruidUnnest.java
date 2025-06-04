@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -43,15 +44,15 @@ import java.util.List;
 public class DruidUnnest extends Unnest implements DruidLogicalNode, SourceDescProducer
 {
   protected DruidUnnest(RelOptCluster cluster, RelTraitSet traits, RelNode input, RexNode unnestExpr,
-      RelDataType rowType, RexNode condition)
+      RelDataTypeField unnestFieldType, RexNode condition)
   {
-    super(cluster, traits, input, unnestExpr, rowType, condition);
+    super(cluster, traits, input, unnestExpr, unnestFieldType, condition);
   }
 
   @Override
   protected RelNode copy(RelTraitSet traitSet, RelNode input)
   {
-    return new DruidUnnest(getCluster(), traitSet, input, unnestExpr, rowType, filter);
+    return new DruidUnnest(getCluster(), traitSet, input, unnestExpr, unnestFieldType, filter);
   }
 
   @Override
@@ -123,6 +124,6 @@ public class DruidUnnest extends Unnest implements DruidLogicalNode, SourceDescP
 
   private RelDataType getUnnestedType()
   {
-    return rowType.getFieldList().get(rowType.getFieldCount() - 1).getType();
+    return unnestFieldType.getType();
   }
 }

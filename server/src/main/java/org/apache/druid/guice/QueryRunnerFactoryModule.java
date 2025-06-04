@@ -90,7 +90,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
 
-    DruidBinders.queryLogicBinder(binder)
+    DruidBinders.queryBinder(binder)
         .bindQueryLogic(UnionQuery.class, UnionQueryLogic.class);
   }
 

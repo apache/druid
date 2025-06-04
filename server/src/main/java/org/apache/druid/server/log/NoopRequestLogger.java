@@ -25,6 +25,13 @@ import org.apache.druid.server.RequestLogLine;
  */
 public class NoopRequestLogger implements RequestLogger
 {
+  private static final NoopRequestLogger INSTANCE = new NoopRequestLogger();
+
+  public static NoopRequestLogger instance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public void logNativeQuery(RequestLogLine requestLogLine)
   {

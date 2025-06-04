@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,6 +52,7 @@ import java.nio.channels.WritableByteChannel;
 public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
+  public static final int MAX_FILE_SIZE = Integer.MAX_VALUE - PAGE_SIZE;
 
   private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
@@ -73,18 +73,31 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       .writeByteArray(x -> x.fileNameByteArray);
 
 
+  /**
+   * Creates a new writer that accepts byte buffers and compresses them.
+   *
+   * @param segmentWriteOutMedium supplier of temporary files
+   * @param filenameBase          base filename to be used for secondary files, if multiple files are needed
+   * @param compressionStrategy   compression strategy to apply
+   * @param bufferSize            size of the buffers that will be passed in
+   * @param fileSizeLimit         limit for files created by the writer. In production code, this should always be
+   *                              {@link GenericIndexedWriter#MAX_FILE_SIZE}. The parameter is exposed only for testing.
+   * @param closer                closer to attach temporary compression buffers to
+   */
   public static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
       final int bufferSize,
+      final int fileSizeLimit,
       final Closer closer
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer)
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer),
+        fileSizeLimit
     );
     writer.objectsSorted = false;
     return writer;
@@ -170,7 +183,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       ObjectStrategy<T> strategy
   )
   {
-    this(segmentWriteOutMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
+    this(segmentWriteOutMedium, filenameBase, strategy, MAX_FILE_SIZE);
   }
 
   public GenericIndexedWriter(
@@ -296,9 +309,6 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long endOffset = getOffset(index);
     int valueSize = checkedCastNonnegativeLongToInt(endOffset - startOffset);
     if (valueSize == 0) {
-      if (NullHandling.replaceWithDefault()) {
-        return null;
-      }
       ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
       valuesOut.readFully(startOffset - Integer.BYTES, bb);
       bb.flip();

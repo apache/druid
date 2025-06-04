@@ -120,7 +120,6 @@ public class BatchAppenderator implements Appenderator
   private final IndexMerger indexMerger;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
-  private final boolean useMaxMemoryEstimates;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -171,7 +170,6 @@ public class BatchAppenderator implements Appenderator
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -189,7 +187,6 @@ public class BatchAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
   }
@@ -480,8 +477,7 @@ public class BatchAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig,
-          useMaxMemoryEstimates
+          maxBytesTuningConfig
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -1073,7 +1069,6 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
-        useMaxMemoryEstimates,
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable

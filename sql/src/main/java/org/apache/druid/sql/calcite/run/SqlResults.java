@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Evals;
@@ -63,7 +62,7 @@ public class SqlResults
 
     if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
       if (value == null || value instanceof String) {
-        coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
+        coercedValue = value;
       } else if (value instanceof NlsString) {
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
@@ -138,7 +137,7 @@ public class SqlResults
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       if (context.isStringifyArrays()) {
         if (value instanceof String) {
-          coercedValue = NullHandling.nullToEmptyIfNeeded((String) value);
+          coercedValue = value;
         } else if (value instanceof NlsString) {
           coercedValue = ((NlsString) value).getValue();
         } else {

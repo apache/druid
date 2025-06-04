@@ -56,24 +56,6 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
     this.valueSupplier = valueSupplier;
   }
 
-  public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      CompressedColumnarIntsSupplier offsetSupplier = CompressedColumnarIntsSupplier.fromByteBuffer(
-          buffer,
-          order
-      );
-      CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
-          buffer,
-          order
-      );
-      return new V3CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
-    }
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
   public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper mapper)
   {
     byte versionFromBuffer = buffer.get();

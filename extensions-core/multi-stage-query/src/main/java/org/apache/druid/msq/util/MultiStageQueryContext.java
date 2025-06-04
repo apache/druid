@@ -29,7 +29,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
@@ -43,6 +45,7 @@ import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -101,6 +104,8 @@ import java.util.stream.Collectors;
  **/
 public class MultiStageQueryContext
 {
+  private static final Logger log = new Logger(MultiStageQueryContext.class);
+
   public static final String CTX_MSQ_MODE = "mode";
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
 
@@ -158,6 +163,8 @@ public class MultiStageQueryContext
   public static final String CTX_IS_REINDEX = "isReindex";
 
   public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
+
+  public static final String CTX_START_TIME = "startTime";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -275,7 +282,7 @@ public class MultiStageQueryContext
   {
     return queryContext.getBoolean(
         CTX_IS_REINDEX,
-        true
+        false
     );
   }
 
@@ -429,6 +436,19 @@ public class MultiStageQueryContext
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
+  }
+
+  public static DateTime getStartTime(final QueryContext queryContext)
+  {
+    // Get the start time from the query context set by the broker.
+    if (!queryContext.containsKey(CTX_START_TIME)) {
+      // If it is missing, as could be the case for an older version of the broker, use the current time instead, to
+      // have something to timeout against.
+      DateTime startTime = DateTimes.nowUtc();
+      log.warn("Query context does not contain start time. Defaulting to the current time[%s] instead.", startTime);
+      return startTime;
+    }
+    return DateTimes.of(queryContext.getString(CTX_START_TIME));
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)

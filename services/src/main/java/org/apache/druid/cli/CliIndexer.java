@@ -67,7 +67,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -82,6 +81,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -149,9 +149,6 @@ public class CliIndexer extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid", DruidNode.class, Parent.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
-
-            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
-
             CliPeon.configureIntermediaryData(binder);
             CliPeon.bindTaskConfigAndClients(binder);
 
@@ -196,6 +193,9 @@ public class CliIndexer extends ServerRunnable
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+            binder.bind(LocalTmpStorageConfig.class)
+                  .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("indexer"))
+                  .in(LazySingleton.class);
           }
 
           @Provides

@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.joda.time.Chronology;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -115,22 +115,10 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      ExprVectorProcessor<?> processor;
-      processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(
-              args.get(0).asVectorProcessor(inspector),
-              ExpressionType.LONG,
-              inspector.getMaxVectorSize()
-          ),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(long input)
-        {
-          return chronology.add(period, input, step);
-        }
-      };
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          input -> chronology.add(period, input, step)
+      );
 
       return (ExprVectorProcessor<T>) processor;
     }

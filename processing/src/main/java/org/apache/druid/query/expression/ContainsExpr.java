@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
@@ -67,7 +66,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   @Override
   public ExprEval eval(final Expr.ObjectBinding bindings)
   {
-    final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+    final String s = arg.eval(bindings).asString();
 
     if (s == null) {
       // same behavior as regexp_like.

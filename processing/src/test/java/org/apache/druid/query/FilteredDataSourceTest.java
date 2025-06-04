@@ -22,7 +22,9 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,15 +32,15 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
-public class FilteredDataSourceTest
+public class FilteredDataSourceTest extends InitializedNullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   private final TableDataSource fooDataSource = new TableDataSource("foo");
   private final TableDataSource barDataSource = new TableDataSource("bar");
-  private final FilteredDataSource filteredFooDataSource = FilteredDataSource.create(fooDataSource, null);
-  private final FilteredDataSource filteredBarDataSource = FilteredDataSource.create(barDataSource, null);
+  private final FilteredDataSource filteredFooDataSource = FilteredDataSource.create(fooDataSource, DimFilters.dimEquals("col", "value"));
+  private final FilteredDataSource filteredBarDataSource = FilteredDataSource.create(barDataSource, DimFilters.dimEquals("col", "value"));
 
   @Test
   public void test_getTableNames()
@@ -67,7 +69,7 @@ public class FilteredDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(filteredFooDataSource.isConcrete());
+    Assert.assertTrue(filteredFooDataSource.isProcessable());
   }
 
   @Test
@@ -88,20 +90,6 @@ public class FilteredDataSourceTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Expected [1] child");
     filteredFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource));
-  }
-
-  @Test
-  public void test_withUpdatedDataSource()
-  {
-    FilteredDataSource newFilteredDataSource = (FilteredDataSource) filteredFooDataSource.withUpdatedDataSource(
-        new TableDataSource("bar"));
-    Assert.assertTrue(newFilteredDataSource.getBase().equals(barDataSource));
-  }
-
-  @Test
-  public void test_withAnalysis()
-  {
-    Assert.assertTrue(filteredFooDataSource.getAnalysis().equals(fooDataSource.getAnalysis()));
   }
 
   @Test
@@ -129,7 +117,7 @@ public class FilteredDataSourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     final FilteredDataSource deserializedFilteredDataSource = jsonMapper.readValue(
-        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}",
+        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":{\"type\":\"selector\",\"dimension\":\"col\",\"value\":\"value\"}}",
         FilteredDataSource.class
     );
 
@@ -142,7 +130,10 @@ public class FilteredDataSourceTest
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(filteredFooDataSource);
-    Assert.assertEquals("{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}", s);
+    Assert.assertEquals(
+        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":{\"type\":\"selector\",\"dimension\":\"col\",\"value\":\"value\"}}",
+        s
+    );
   }
 
   @Test

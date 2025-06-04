@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -84,11 +83,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
               aggregatorFactory.getNumBuckets(),
               aggregatorFactory.getOutlierHandlingMode()
           );
-          if (NullHandling.replaceWithDefault()) {
-            fbh.add(NullHandling.defaultDoubleValue());
-          } else {
-            fbh.incrementMissing();
-          }
+          fbh.incrementMissing();
           return fbh;
         } else if (rawValue instanceof Number) {
           FixedBucketsHistogram fbh = new FixedBucketsHistogram(

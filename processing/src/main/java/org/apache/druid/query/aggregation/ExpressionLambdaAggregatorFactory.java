@@ -28,7 +28,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
@@ -124,7 +123,7 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
 
     this.initialValueExpressionString = initialValue;
     this.initialCombineValueExpressionString = initialCombineValue == null ? initialValue : initialCombineValue;
-    this.isNullUnlessAggregated = isNullUnlessAggregated == null ? NullHandling.sqlCompatible() : isNullUnlessAggregated;
+    this.isNullUnlessAggregated = isNullUnlessAggregated == null || isNullUnlessAggregated;
     this.shouldAggregateNullInputs = shouldAggregateNullInputs == null || shouldAggregateNullInputs;
     if (shouldCombineAggregateNullInputs == null) {
       this.shouldCombineAggregateNullInputs = this.shouldAggregateNullInputs;

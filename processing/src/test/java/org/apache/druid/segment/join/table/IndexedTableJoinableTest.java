@@ -21,7 +21,6 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -60,10 +59,6 @@ public class IndexedTableJoinableTest
   private static final String SEARCH_VALUE_VALUE = "1";
   private static final String SEARCH_VALUE_UNKNOWN = "10";
   private static final long MAX_CORRELATION_SET_SIZE = 10_000L;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private final ColumnSelectorFactory dummyColumnSelectorFactory = new ColumnSelectorFactory()
   {

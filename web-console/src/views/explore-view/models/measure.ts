@@ -199,7 +199,15 @@ export class Measure extends ExpressionMeta {
     (this as any).name = this.as || Measure.defaultNameFromExpression(this.expression);
   }
 
-  public equivalent(other: ExpressionMeta | undefined): boolean {
+  public equals(other: Measure | undefined): boolean {
+    return (
+      other instanceof Measure &&
+      this.name === other.name &&
+      this.expression.equals(other.expression)
+    );
+  }
+
+  public equivalent(other: Measure | undefined): boolean {
     if (!other || this.name !== other.name) return false;
 
     if (Measure.getAggregateMeasureName(this.expression) === other.name) {

@@ -120,7 +120,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public String getType()
   {
-    return TIMESERIES;
+    return Query.TIMESERIES;
   }
 
   @JsonProperty

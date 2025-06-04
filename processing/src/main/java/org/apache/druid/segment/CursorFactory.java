@@ -26,6 +26,10 @@ import javax.annotation.Nullable;
 
 public interface CursorFactory extends ColumnInspector
 {
+  /**
+   * Creates a {@link CursorHolder} for a given {@link CursorBuildSpec} which describes how the reader is going to
+   * scan, filter, transform, group and aggregate, and/or order the data.
+   */
   CursorHolder makeCursorHolder(CursorBuildSpec spec);
 
   /**

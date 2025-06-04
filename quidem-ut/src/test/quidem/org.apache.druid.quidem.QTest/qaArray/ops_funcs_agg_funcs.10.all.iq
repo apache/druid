@@ -1,0 +1,261 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C23_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C24_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING bit_or(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_OR' to arguments of type 'BIT_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING bit_xor(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING bit_xor(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING bit_xor(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C11_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C12_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING bit_xor(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C13_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C14_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C15_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING bit_xor(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C16_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C17_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C18_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING bit_xor(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C19_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C20_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C21_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING bit_xor(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C22_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C23_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B35_C24_D1
+#-------------------------------------------------------------------------
+SELECT bit_xor(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING bit_xor(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'BIT_XOR' to arguments of type 'BIT_XOR(
+!error
+

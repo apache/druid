@@ -22,7 +22,6 @@ package org.apache.druid.server.lookup;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
@@ -55,23 +54,14 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
             .andReturn("empty").atLeastOnce();
     EasyMock.replay(lookupCache);
     Assert.assertEquals("empty", loadingLookup.apply(""));
-    if (!NullHandling.sqlCompatible()) {
-      // Nulls and empty strings should have same behavior
-      Assert.assertEquals("empty", loadingLookup.apply(null));
-    } else {
-      Assert.assertNull(loadingLookup.apply(null));
-    }
+    Assert.assertNull(loadingLookup.apply(null));
     EasyMock.verify(lookupCache);
   }
 
   @Test
   public void testUnapplyNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply(null));
-    } else {
-      Assert.assertNull(loadingLookup.unapply(null));
-    }
+    Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply(null));
   }
 
   @Test

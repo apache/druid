@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
@@ -159,7 +158,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
             ),
             new NotDimFilter(
                 plannerContext.isUseBoundsAndSelectors()
-                ? new SelectorDimFilter(fieldName, NullHandling.defaultStringValue(), null)
+                ? new SelectorDimFilter(fieldName, null, null)
                 : NullFilter.forColumn(fieldName)
             )
         )

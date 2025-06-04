@@ -239,6 +239,10 @@ public class BlockingExecutorService implements ExecutorService
 
     private void executeNow()
     {
+      if (future.isDone()) {
+        return;
+      }
+
       try {
         T result = callable.call();
         future.complete(result);

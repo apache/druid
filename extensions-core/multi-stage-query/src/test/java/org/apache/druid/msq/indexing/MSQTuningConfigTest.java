@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -75,5 +76,27 @@ public class MSQTuningConfigTest
                   )
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testDefaultValuesForElements()
+  {
+    MSQTuningConfig msqTuningConfig = new MSQTuningConfig(null, null, null, null, null);
+    Assert.assertEquals(1, msqTuningConfig.getMaxNumWorkers());
+    Assert.assertEquals(100000, msqTuningConfig.getMaxRowsInMemory());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, msqTuningConfig.getRowsPerSegment());
+    Assert.assertEquals(null, msqTuningConfig.getMaxNumSegments());
+    Assert.assertEquals(IndexSpec.DEFAULT, msqTuningConfig.getIndexSpec());
+  }
+
+  @Test
+  public void testCustomValuesForElements()
+  {
+    MSQTuningConfig msqTuningConfig = new MSQTuningConfig(5, 200000, 5000, 10, IndexSpec.builder().build());
+    Assert.assertEquals(5, msqTuningConfig.getMaxNumWorkers());
+    Assert.assertEquals(200000, msqTuningConfig.getMaxRowsInMemory());
+    Assert.assertEquals(5000, msqTuningConfig.getRowsPerSegment());
+    Assert.assertEquals(Integer.valueOf(10), msqTuningConfig.getMaxNumSegments());
+    Assert.assertEquals(IndexSpec.builder().build(), msqTuningConfig.getIndexSpec());
   }
 }

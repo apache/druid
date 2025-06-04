@@ -64,6 +64,9 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -124,7 +127,8 @@ import java.util.function.Consumer;
 
 public class QueryResourceTest
 {
-  private static final DefaultQueryRunnerFactoryConglomerate CONGLOMERATE = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of());
+  private static final DefaultQueryRunnerFactoryConglomerate CONGLOMERATE = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(
+      ImmutableMap.of());
   private static final AuthenticationResult AUTHENTICATION_RESULT =
       new AuthenticationResult("druid", "druid", null, null);
 
@@ -244,6 +248,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -279,6 +284,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -298,7 +304,9 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<>() {}
+        new TypeReference<>()
+        {
+        }
     );
 
     Assert.assertEquals(0, responses.size());
@@ -351,6 +359,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -393,94 +402,57 @@ public class QueryResourceTest
   public void testResponseWithIncludeTrailerHeader() throws IOException
   {
     queryResource = new QueryResource(
-      new QueryLifecycleFactory(
-        CONGLOMERATE,
-        new QuerySegmentWalker()
-        {
-          @Override
-          public <T> QueryRunner<T> getQueryRunnerForIntervals(
-              Query<T> query,
-              Iterable<Interval> intervals
-          )
-          {
-            return (queryPlus, responseContext) -> new Sequence<T>() {
-              @Override
-              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
-              {
-                if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
-                  try {
-                    ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
-                  }
-                  catch (IOException ignore) {
-                  }
-                }
-
-                throw new QueryTimeoutException();
-              }
-
-              @Override
-              public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
-              {
-                return Yielders.done(initValue, null);
-              }
-            };
-          }
-
-          @Override
-          public <T> QueryRunner<T> getQueryRunnerForSegments(
-              Query<T> query,
-              Iterable<SegmentDescriptor> specs
-          )
-          {
-            throw new UnsupportedOperationException();
-          }
-        },
-        new DefaultGenericQueryMetricsFactory(),
-        new NoopServiceEmitter(),
-        testRequestLogger,
-        new AuthConfig(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
-      ),
-      jsonMapper,
-      smileMapper,
-      queryScheduler,
-      new AuthConfig(),
-      null,
-      ResponseContextConfig.newConfig(true),
-      DRUID_NODE
-    );
-
-    expectPermissiveHappyPathAuth();
-
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
-        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest));
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
-
-    final HttpFields fields = response.getTrailers().get();
-    Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
-    Assert.assertEquals(fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
-        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.");
-
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
-  }
-
-  @Test
-  public void testSuccessResponseWithTrailerHeader() throws IOException
-  {
-    queryResource = new QueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
-            TEST_SEGMENT_WALKER,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                return (queryPlus, responseContext) -> new Sequence<T>()
+                {
+                  @Override
+                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                  {
+                    if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
+                      try {
+                        ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
+                      }
+                      catch (IOException ignore) {
+                      }
+                    }
+
+                    throw new QueryTimeoutException();
+                  }
+
+                  @Override
+                  public <OutType> Yielder<OutType> toYielder(
+                      OutType initValue,
+                      YieldingAccumulator<OutType, T> accumulator
+                  )
+                  {
+                    return Yielders.done(initValue, null);
+                  }
+                };
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -499,7 +471,54 @@ public class QueryResourceTest
     Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
                                                SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
                                            null /*pretty*/,
-                                           testServletRequest));
+                                           testServletRequest
+    ));
+    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
+
+    final HttpFields fields = response.getTrailers().get();
+    Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+    Assert.assertEquals(
+        fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
+        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query."
+    );
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
+  }
+
+  @Test
+  public void testSuccessResponseWithTrailerHeader() throws IOException
+  {
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
+    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
+                                               SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+                                           null /*pretty*/,
+                                           testServletRequest
+    ));
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
 
     final HttpFields fields = response.getTrailers().get();
@@ -540,7 +559,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig))
+        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, Suppliers.ofInstance(overrideConfig))
         {
           @Override
           public QueryLifecycle factorize()
@@ -554,6 +573,7 @@ public class QueryResourceTest
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 overrideConfig,
                 new AuthConfig(),
+                NoopPolicyEnforcer.instance(),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -605,6 +625,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
@@ -623,7 +644,9 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<>() {}
+        new TypeReference<>()
+        {
+        }
     );
 
     Assert.assertNotNull(response);
@@ -822,7 +845,7 @@ public class QueryResourceTest
           public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             if (resource.getName().equals("allow")) {
-              return new Access(true);
+              return Access.allowWithRestriction(RowFilterPolicy.from(new NullFilter("col", null)));
             } else {
               return new Access(false);
             }
@@ -840,6 +863,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -872,7 +896,9 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<>() {}
+        new TypeReference<>()
+        {
+        }
     );
 
     Assert.assertEquals(0, responses.size());
@@ -913,6 +939,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1009,6 +1036,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1116,6 +1144,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
@@ -1470,6 +1499,7 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),

@@ -23,9 +23,11 @@ import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -82,7 +84,20 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
   }
 
-  public static CompressedColumnarFloatsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  /**
+   * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SmooshedFileMapper}.
+   *
+   * @param buffer       primary buffer to read from
+   * @param order        byte order
+   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   */
+  public static CompressedColumnarFloatsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      @Nullable SmooshedFileMapper smooshMapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -99,7 +114,8 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
-          compression
+          compression,
+          smooshMapper
       );
       return new CompressedColumnarFloatsSupplier(
           totalSize,

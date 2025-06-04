@@ -28,6 +28,9 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -41,6 +44,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
@@ -52,19 +56,21 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAu
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -84,13 +90,15 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
 
+import static org.junit.Assert.assertThrows;
+
 public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 {
   private SeekableStreamSupervisorIngestionSpec ingestionSchema;
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private ServiceEmitter emitter;
+  private StubServiceEmitter emitter;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private DataSchema dataSchema;
   private SeekableStreamSupervisorTuningConfig seekableStreamSupervisorTuningConfig;
@@ -116,7 +124,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     taskStorage = EasyMock.mock(TaskStorage.class);
     taskMaster = EasyMock.mock(TaskMaster.class);
     indexerMetadataStorageCoordinator = EasyMock.mock(IndexerMetadataStorageCoordinator.class);
-    emitter = EasyMock.mock(ServiceEmitter.class);
+    emitter = new StubServiceEmitter();
     rowIngestionMetersFactory = EasyMock.mock(RowIngestionMetersFactory.class);
     dataSchema = EasyMock.mock(DataSchema.class);
     seekableStreamSupervisorTuningConfig = EasyMock.mock(SeekableStreamSupervisorTuningConfig.class);
@@ -788,6 +796,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("minTriggerScaleActionFrequencyMillis not elapsed yet"::equals));
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
     autoScaler.reset();
     autoScaler.stop();
   }
@@ -846,6 +855,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("Already at max task count"::equals));
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -940,6 +950,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -988,6 +999,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1040,6 +1052,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
+
+    emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1099,6 +1113,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
             .anyMatch("Already at min task count"::equals));
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1120,6 +1135,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         null,
         null
@@ -1175,6 +1191,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         null,
+        LagAggregator.DEFAULT,
         null,
         new IdleConfig(true, null),
         null
@@ -1298,6 +1315,161 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals("value", spec.getContextValue("key"));
   }
 
+  @Test
+  public void test_validateSpecUpdateTo_ShortCircuits()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        Map.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    TestSeekableStreamSupervisorSpec proposedSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        Map.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    );
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Cannot update supervisor spec since one or both of the specs have not provided an input source stream in the 'ioConfig'."
+        )
+    );
+
+
+    TestSupervisorSpec otherSpec = new TestSupervisorSpec("fake", new Object());
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(otherSpec)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            StringUtils.format("Cannot update supervisor spec from type[%s] to type[%s]", proposedSpec.getClass().getSimpleName(), otherSpec.getClass().getSimpleName())
+        )
+    );
+  }
+
+  @Test
+  public void test_validateSpecUpdateTo_SourceStringComparisons()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec originalSpec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source1";
+      }
+    };
+    TestSeekableStreamSupervisorSpec proposedSpecDiffSource = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source2";
+      }
+    };
+    TestSeekableStreamSupervisorSpec proposedSpecSameSource = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
+    )
+    {
+      @Override
+      public String getSource()
+      {
+        return "source1";
+      }
+    };
+
+    // Mistmatched stream strings test
+    MatcherAssert.assertThat(
+        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.INVALID_INPUT,
+            "invalidInput"
+        ).expectMessageIs(
+            "Update of the input source stream from [source1] to [source2] is not supported for a running supervisor."
+            + "\nTo perform the update safely, follow these steps:"
+            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+            + "\n(2) Create a new supervisor with the new input source stream."
+            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
+        )
+    );
+
+    // Happy path test
+    originalSpec.validateSpecUpdateTo(proposedSpecSameSource);
+  }
+
   private void mockIngestionSchema()
   {
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1343,6 +1515,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           null,
           mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
+          LagAggregator.DEFAULT,
           null,
           null,
           null
@@ -1363,6 +1536,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           null,
           null,
           mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
+          LagAggregator.DEFAULT,
           null,
           null,
           null

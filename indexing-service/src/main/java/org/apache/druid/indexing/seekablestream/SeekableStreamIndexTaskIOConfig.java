@@ -21,8 +21,8 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
@@ -33,14 +33,13 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 
-  @Nullable
   private final Integer taskGroupId;
   private final String baseSequenceName;
   private final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers;
   private final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers;
   private final boolean useTransaction;
-  private final Optional<DateTime> minimumMessageTime;
-  private final Optional<DateTime> maximumMessageTime;
+  private final DateTime minimumMessageTime;
+  private final DateTime maximumMessageTime;
   private final InputFormat inputFormat;
   private final Long refreshRejectionPeriodsInMinutes;
 
@@ -49,9 +48,9 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       final String baseSequenceName,
       final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
-      final Boolean useTransaction,
-      final DateTime minimumMessageTime,
-      final DateTime maximumMessageTime,
+      @Nullable final Boolean useTransaction,
+      @Nullable final DateTime minimumMessageTime,
+      @Nullable final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
       @Nullable final Long refreshRejectionPeriodsInMinutes // can be null for backward compabitility
   )
@@ -60,9 +59,9 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startSequenceNumbers = Preconditions.checkNotNull(startSequenceNumbers, "startSequenceNumbers");
     this.endSequenceNumbers = Preconditions.checkNotNull(endSequenceNumbers, "endSequenceNumbers");
-    this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
-    this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-    this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
+    this.useTransaction = Configs.valueOrDefault(useTransaction, DEFAULT_USE_TRANSACTION);
+    this.minimumMessageTime = minimumMessageTime;
+    this.maximumMessageTime = maximumMessageTime;
     this.inputFormat = inputFormat;
     this.refreshRejectionPeriodsInMinutes = refreshRejectionPeriodsInMinutes;
 
@@ -73,8 +72,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
 
     Preconditions.checkArgument(
         startSequenceNumbers.getPartitionSequenceNumberMap()
-                       .keySet()
-                       .equals(endSequenceNumbers.getPartitionSequenceNumberMap().keySet()),
+                            .keySet()
+                            .equals(endSequenceNumbers.getPartitionSequenceNumberMap().keySet()),
         "start partition set and end partition set must match"
     );
   }
@@ -111,15 +110,15 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_ABSENT)
-  public Optional<DateTime> getMaximumMessageTime()
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public DateTime getMaximumMessageTime()
   {
     return maximumMessageTime;
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_ABSENT)
-  public Optional<DateTime> getMinimumMessageTime()
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public DateTime getMinimumMessageTime()
   {
     return minimumMessageTime;
   }

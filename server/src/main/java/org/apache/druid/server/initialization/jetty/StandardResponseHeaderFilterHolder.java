@@ -73,7 +73,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
       final Response serverResponse
   )
   {
-    for (final String headerName : STANDARD_HEADERS) {
+    for (final String headerName : StandardResponseHeaderFilterHolder.STANDARD_HEADERS) {
       if (serverResponse.getHeaders().containsKey(headerName) && proxyResponse.containsHeader(headerName)) {
         ((org.eclipse.jetty.server.Response) proxyResponse).getHttpFields().remove(headerName);
       }

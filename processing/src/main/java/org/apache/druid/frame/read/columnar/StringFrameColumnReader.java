@@ -22,7 +22,6 @@ package org.apache.druid.frame.read.columnar;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.Frame;
@@ -537,8 +536,7 @@ public class StringFrameColumnReader implements FrameColumnReader
 
       final int dataLength = Ints.checkedCast(dataEnd - dataStart);
 
-      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
-          (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER)) {
+      if (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER) {
         return null;
       }
 

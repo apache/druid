@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -73,6 +74,7 @@ public class ExternalTableScanRuleTest
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         AuthConfig.newBuilder().build(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
     final PlannerContext plannerContext = PlannerContext.create(

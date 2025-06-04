@@ -24,6 +24,10 @@ on:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 jobs:
   build:
@@ -45,7 +49,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-8-${{ github.sha }}
+          key: maven-${{ runner.os }}-17-${{ github.sha }}
 
       - name: Maven build
         id: maven_build
@@ -127,7 +131,7 @@ jobs:
           cache: maven
 
       - name: maven build # needed to rebuild incase of maven snapshot resolution fails
-        run: mvn clean install dependency:go-offline -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
+        run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check
         run: |

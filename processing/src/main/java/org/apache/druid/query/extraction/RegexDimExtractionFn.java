@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -106,14 +105,13 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public String apply(@Nullable String dimValue)
   {
     final String retVal;
-    String val = NullHandling.nullToEmptyIfNeeded(dimValue);
-    final Matcher matcher = val == null ? null : pattern.matcher(val);
+    final Matcher matcher = dimValue == null ? null : pattern.matcher(dimValue);
     if (matcher != null && matcher.find()) {
       retVal = matcher.group(index);
     } else {
       retVal = replaceMissingValue ? replaceMissingValueWith : dimValue;
     }
-    return NullHandling.emptyToNullIfNeeded(retVal);
+    return retVal;
   }
 
   @JsonProperty("expr")

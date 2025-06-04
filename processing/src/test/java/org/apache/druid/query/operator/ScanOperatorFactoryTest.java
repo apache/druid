@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,10 +51,6 @@ import java.util.List;
 @SuppressWarnings("unchecked")
 public class ScanOperatorFactoryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testEquals()
   {

@@ -1,0 +1,92 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "inline",
+        "data": "{\"timestamp\":\"2022-01-01T00:00:00\",\"s_int\":1,\"s_null\":null,\"a_bool\":[true,false,null],\"a_int\":[1,2,null],\"a_float\":[0.1,0.2,null],\"a_str\":[\"S1\",\"S2\",null],\"a_null\":[null,null,null],\"a_empty\":[],\"a_mixed\":[true,1,0.1,\"S1\",null],\"a_nested\":[[true,false,null],[1,2,null],[0.1,0.2,null],[\"S1\",\"S2\",null],[null,null,null],[],[true,1,0.1,\"S1\",null],[[true,false,null],[1,2,null],[0.1,0.2,null],[\"S1\",\"S2\",null],[null,null,null],[],[true,1,0.1,\"S1\",null],[[true,false,null],[1,2,null],[0.1,0.2,null],[\"S1\",\"S2\",null],[null,null,null],[],[true,1,0.1,\"S1\",null]]]]}\n{\"timestamp\":\"2022-02-01T00:00:00\",\"s_int\":2,\"s_null\":null,\"a_bool\":[null,true,false],\"a_int\":[null,1,2],\"a_float\":[null,0.1,0.2],\"a_str\":[null,\"S1\",\"S2\"],\"a_null\":[null,null,null],\"a_empty\":[],\"a_mixed\":[null,true,1,0.1,\"S1\"],\"a_nested\":[[null,true,false],[null,1,2],[null,0.1,0.2],[null,\"S1\",\"S2\"],[null,null,null],[],[null,true,1,0.1,\"S1\"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,\"S1\",\"S2\"],[null,null,null],[],[null,true,1,0.1,\"S1\"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,\"S1\",\"S2\"],[null,null,null],[],[null,true,1,0.1,\"S1\"]]]]}\n{\"timestamp\":\"2022-03-01T00:00:00\",\"s_int\":null,\"s_null\":null,\"a_bool\":[false,null,true],\"a_int\":[2,null,1],\"a_float\":[0.2,null,0.1],\"a_str\":[\"S2\",null,\"S1\"],\"a_null\":[null,null,null],\"a_empty\":[],\"a_mixed\":[\"S1\",null,true,1,0.1],\"a_nested\":[[false,null,true],[2,null,1],[0.2,null,0.1],[\"S2\",null,\"S1\"],[null,null,null],[],[\"S1\",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],[\"S2\",null,\"S1\"],[null,null,null],[],[\"S1\",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],[\"S2\",null,\"S1\"],[null,null,null],[],[\"S1\",null,true,1,0.1]]]]}\n"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 10000000,
+        "maxTotalRows": 500000000
+      },
+      "maxNumConcurrentSubTasks": 1,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "test_unnest",
+      "granularitySpec": {
+        "type": "uniform",
+        "queryGranularity": "NONE",
+        "rollup": false,
+        "segmentGranularity": "YEAR"
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "type": "auto",
+            "name": "s_int"
+          },
+          {
+            "type": "auto",
+            "name": "s_null"
+          },
+          {
+            "type": "auto",
+            "name": "a_bool"
+          },
+          {
+            "type": "auto",
+            "name": "a_int"
+          },
+          {
+            "type": "auto",
+            "name": "a_float"
+          },
+          {
+            "type": "auto",
+            "name": "a_str"
+          },
+          {
+            "type": "auto",
+            "name": "a_null"
+          },
+          {
+            "type": "auto",
+            "name": "a_empty"
+          },
+          {
+            "type": "auto",
+            "name": "a_mixed"
+          },
+          {
+            "type": "auto",
+            "name": "a_nested"
+          }
+        ]
+      },
+      "metricsSpec": null,
+      "transformSpec": null
+    }
+  },
+  "context": null
+}

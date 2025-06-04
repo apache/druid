@@ -33,13 +33,17 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -53,11 +57,11 @@ public class TaskActionTestKit extends ExternalResource
   private TaskLockbox taskLockbox;
   private TestDerbyConnector testDerbyConnector;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private SegmentsMetadataManager segmentsMetadataManager;
   private TaskActionToolbox taskActionToolbox;
-  private SegmentSchemaManager segmentSchemaManager;
-  private SegmentSchemaCache segmentSchemaCache;
+  private SegmentMetadataCache segmentMetadataCache;
+  private BlockingExecutorService metadataCachePollExec;
 
+  private boolean useSegmentMetadataCache = false;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
 
   public TaskLockbox getTaskLockbox()
@@ -70,11 +74,6 @@ public class TaskActionTestKit extends ExternalResource
     return metadataStorageCoordinator;
   }
 
-  public SegmentsMetadataManager getSegmentsMetadataManager()
-  {
-    return segmentsMetadataManager;
-  }
-
   public TaskActionToolbox getTaskActionToolbox()
   {
     return taskActionToolbox;
@@ -83,6 +82,16 @@ public class TaskActionTestKit extends ExternalResource
   public void setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
   {
     this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
+  }
+
+  public void setUseSegmentMetadataCache(boolean useSegmentMetadataCache)
+  {
+    this.useSegmentMetadataCache = useSegmentMetadataCache;
+  }
+
+  public void syncSegmentMetadataCache()
+  {
+    metadataCachePollExec.finishNextPendingTasks(4);
   }
 
   @Override
@@ -94,40 +103,24 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig)
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
-    segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
+    final SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
+        metadataStorageTablesConfig,
+        objectMapper,
+        testDerbyConnector
+    );
+
+    final SqlSegmentMetadataTransactionFactory transactionFactory = setupTransactionFactory(objectMapper);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        transactionFactory,
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
-    )
-    {
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return 2;
-      }
-    };
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
-    segmentsMetadataManager = new SqlSegmentsMetadataManager(
-        objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
-        Suppliers.ofInstance(metadataStorageTablesConfig),
-        testDerbyConnector,
-        segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
     );
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
-      @Override
-      public boolean isBatchSegmentAllocation()
-      {
-        return true;
-      }
-
       @Override
       public long getBatchAllocationWaitTime()
       {
@@ -164,6 +157,48 @@ public class TaskActionTestKit extends ExternalResource
     testDerbyConnector.createConfigTable();
     testDerbyConnector.createTaskTables();
     testDerbyConnector.createAuditTable();
+
+    segmentMetadataCache.start();
+    segmentMetadataCache.becomeLeader();
+    syncSegmentMetadataCache();
+  }
+
+  private SqlSegmentMetadataTransactionFactory setupTransactionFactory(ObjectMapper objectMapper)
+  {
+    metadataCachePollExec = new BlockingExecutorService("test-cache-poll-exec");
+    SegmentMetadataCache.UsageMode cacheMode
+        = useSegmentMetadataCache
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
+
+    segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        objectMapper,
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode)),
+        Suppliers.ofInstance(metadataStorageTablesConfig),
+        new NoopSegmentSchemaCache(),
+        testDerbyConnector,
+        (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
+        NoopServiceEmitter.instance()
+    );
+
+    final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
+    leaderSelector.becomeLeader();
+
+    return new SqlSegmentMetadataTransactionFactory(
+        objectMapper,
+        metadataStorageTablesConfig,
+        testDerbyConnector,
+        leaderSelector,
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
+    )
+    {
+      @Override
+      public int getMaxRetries()
+      {
+        return 2;
+      }
+    };
   }
 
   @Override
@@ -174,7 +209,9 @@ public class TaskActionTestKit extends ExternalResource
     taskLockbox = null;
     testDerbyConnector = null;
     metadataStorageCoordinator = null;
-    segmentsMetadataManager = null;
     taskActionToolbox = null;
+    segmentMetadataCache.stopBeingLeader();
+    segmentMetadataCache.stop();
+    useSegmentMetadataCache = false;
   }
 }

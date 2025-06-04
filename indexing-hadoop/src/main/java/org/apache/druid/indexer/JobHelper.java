@@ -413,9 +413,9 @@ public class JobHelper
     authenticate();
 
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
-    final Configuration configuration = injectSystemProperties(new Configuration(), config);
+    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);
-    injectDruidProperties(configuration, config);
+    JobHelper.injectDruidProperties(configuration, config);
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
       if (jobSucceeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
@@ -619,7 +619,7 @@ public class JobHelper
         prependFSIfNullScheme(fs, basePath),
         StringUtils.format(
             "./%s.%d",
-            dataSegmentPusher.makeIndexPathName(segmentTemplate, INDEX_ZIP),
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
             taskAttemptID.getId()
         )
     );
@@ -640,9 +640,9 @@ public class JobHelper
   ) throws IOException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(indexerSchema);
-    final Configuration configuration = injectSystemProperties(new Configuration(), config);
+    final Configuration configuration = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(configuration);
-    injectDruidProperties(configuration, config);
+    JobHelper.injectDruidProperties(configuration, config);
     for (DataSegmentAndIndexZipFilePath segmentAndIndexZipFilePath : segmentAndIndexZipFilePaths) {
       Path tmpPath = new Path(segmentAndIndexZipFilePath.getTmpIndexZipFilePath());
       Path finalIndexZipFilePath = new Path(segmentAndIndexZipFilePath.getFinalIndexZipFilePath());

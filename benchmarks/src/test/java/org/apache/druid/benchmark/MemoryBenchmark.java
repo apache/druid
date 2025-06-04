@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.epinephelinae.collection.HashTableUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -46,10 +45,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 15)
 public class MemoryBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"4", "5", "8", "9", "12", "16", "31", "32", "64", "128"})
   public int numBytes;
 

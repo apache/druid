@@ -19,11 +19,10 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
@@ -61,22 +60,10 @@ public abstract class WrappedSegmentReference implements SegmentReference
     return delegate.getDataInterval();
   }
 
-  @Nullable
   @Override
-  public QueryableIndex asQueryableIndex()
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
   {
-    return delegate.asQueryableIndex();
-  }
-
-  @Nullable
-  @Override
-  public <T> T as(@Nonnull Class<T> clazz)
-  {
-    if (TimeBoundaryInspector.class.equals(clazz)) {
-      return (T) WrappedTimeBoundaryInspector.create(delegate.as(TimeBoundaryInspector.class));
-    } else {
-      return SegmentReference.super.as(clazz);
-    }
+    delegate.validateOrElseThrow(policyEnforcer);
   }
 
   @Override

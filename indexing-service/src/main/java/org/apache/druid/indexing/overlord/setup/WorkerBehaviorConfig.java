@@ -40,7 +40,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 public interface WorkerBehaviorConfig
 {
   String CONFIG_KEY = "worker.config";
-  WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy(null);
+  WorkerSelectStrategy DEFAULT_STRATEGY = new EqualDistributionWorkerSelectStrategy(null, null);
 
   WorkerSelectStrategy getSelectStrategy();
 }

@@ -387,6 +387,10 @@ public class DruidException extends RuntimeException
      */
     RUNTIME_FAILURE(500),
     /**
+     * Indicates that the underlying service is unavailable to serve the request.
+     */
+    SERVICE_UNAVAILABLE(503),
+    /**
      * A timeout happened
      */
     TIMEOUT(504),

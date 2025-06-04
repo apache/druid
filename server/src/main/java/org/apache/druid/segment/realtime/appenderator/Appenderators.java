@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -58,9 +59,9 @@ public class Appenderators
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -84,14 +85,14 @@ public class Appenderators
             queryProcessingPool,
             Preconditions.checkNotNull(cache, "cache"),
             cacheConfig,
-            cachePopulatorStats
+            cachePopulatorStats,
+            policyEnforcer
         ),
         indexIO,
         indexMerger,
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
@@ -107,7 +108,6 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -125,7 +125,6 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }

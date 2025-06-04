@@ -47,8 +47,7 @@ Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to fi
 ## Garbage collection
 
 In general, the project team recommends using the G1 collector with default settings. This is the default collector in
-Java 11 and 17. To enable G1 on Java 8, use `-XX:+UseG1GC`. There is no harm in explicitly specifying this on Java 11
-or 17 as well.
+Java 11 and 17.
 
 Garbage collector selection and tuning is a form of sport in the Java community. There may be situations where adjusting
 garbage collection configuration improves or worsens performance. The project team's guidance is that most people do

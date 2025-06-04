@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -76,7 +75,6 @@ public class ProtobufInputFormatTest
   @Before
   public void setUp() throws Exception
   {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(

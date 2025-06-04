@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -41,10 +40,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
@@ -103,6 +105,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         EasyMock.createMock(TaskActionClientFactory.class),
         emitter,
+        NoopPolicyEnforcer.instance(),
         new NoopDataSegmentPusher(),
         new NoopDataSegmentKiller(),
         new NoopDataSegmentMover(),
@@ -111,6 +114,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
+        DruidProcessingConfig::new,
         null,
         NoopJoinableFactory.INSTANCE,
         null,
@@ -321,6 +325,13 @@ public class SingleTaskBackgroundRunnerTest
             0,
             null
         )
+        {
+          @Override
+          public boolean waitForCleanupToFinish()
+          {
+            return true;
+          }
+        }
     );
 
     Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));

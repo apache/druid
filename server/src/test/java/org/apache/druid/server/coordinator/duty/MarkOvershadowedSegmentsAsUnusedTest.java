@@ -92,7 +92,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDataSourcesSnapshot(
-            segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+            segmentsMetadataManager.getRecentDataSourcesSnapshot()
         )
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(
@@ -102,7 +102,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
 
-    SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+    SegmentTimeline timeline = segmentsMetadataManager.getRecentDataSourcesSnapshot()
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get("test");
 
@@ -111,9 +111,13 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     Assert.assertTrue(timeline.isOvershadowed(segmentV1));
 
     // Run the duty and verify that the overshadowed segments are marked unused
-    params = new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
+    params = new MarkOvershadowedSegmentsAsUnused(
+        (ds, segmentIds) -> segmentsMetadataManager.markSegmentsAsUnused(segmentIds)
+    ).run(params);
 
-    Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
+    Set<DataSegment> updatedUsedSegments = Sets.newHashSet(
+        segmentsMetadataManager.getRecentDataSourcesSnapshot().iterateAllUsedSegmentsInSnapshot()
+    );
     Assert.assertEquals(1, updatedUsedSegments.size());
     Assert.assertTrue(updatedUsedSegments.contains(segmentV2));
 

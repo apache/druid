@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -47,7 +46,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
   }
 
   @Override
@@ -103,7 +102,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public float getFloat(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_FLOAT
+           ? 0.0f
            : TypeStrategies.readNotNullNullableFloat(buf, position);
   }
 
@@ -111,7 +110,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public double getDouble(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_DOUBLE
+           ? 0.0d
            : TypeStrategies.readNotNullNullableDouble(buf, position);
   }
 
@@ -119,7 +118,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_LONG
+           ? 0L
            : TypeStrategies.readNotNullNullableLong(buf, position);
   }
 

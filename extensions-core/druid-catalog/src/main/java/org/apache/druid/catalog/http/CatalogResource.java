@@ -21,7 +21,7 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import org.apache.curator.shaded.com.google.common.collect.Lists;
+import com.google.common.collect.Lists;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
@@ -34,8 +34,8 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -56,7 +56,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -108,17 +107,17 @@ public class CatalogResource
    * </ul>
    *
    * @param schemaName The name of the Druid schema, which must be writable
-   *        and the user must have at least read access.
-   * @param tableName The name of the table definition to modify. The user must
-   *        have write access to the table.
-   * @param spec The new table definition.
-   * @param version the expected version of an existing table. The version must
-   *        match. If not (or if the table does not exist), returns an error.
-   * @param overwrite if {@code true}, then overwrites any existing table.
-   *        If {@code false}, then the operation fails if the table already exists.
-   *        Ignored if a version is specified.
-   * @param req the HTTP request used for authorization.
-    */
+   *                   and the user must have at least read access.
+   * @param tableName  The name of the table definition to modify. The user must
+   *                   have write access to the table.
+   * @param spec       The new table definition.
+   * @param version    the expected version of an existing table. The version must
+   *                   match. If not (or if the table does not exist), returns an error.
+   * @param overwrite  if {@code true}, then overwrites any existing table.
+   *                   If {@code false}, then the operation fails if the table already exists.
+   *                   Ignored if a version is specified.
+   * @param req        the HTTP request used for authorization.
+   */
   @POST
   @Path("/schemas/{schema}/tables/{name}")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -181,9 +180,9 @@ public class CatalogResource
    * the definition is created before the datasource itself.)
    *
    * @param schemaName The Druid schema. The user must have read access.
-   * @param tableName The name of the table within the schema. The user must have
-   *        read access.
-   * @param req the HTTP request used for authorization.
+   * @param tableName  The name of the table within the schema. The user must have
+   *                   read access.
+   * @param req        the HTTP request used for authorization.
    * @return the definition for the table, if any.
    */
   @GET
@@ -211,8 +210,8 @@ public class CatalogResource
    * for the given schema and table.
    *
    * @param schemaName The name of the schema that holds the table.
-   * @param tableName The name of the table definition to delete. The user must have
-   *             write access.
+   * @param tableName  The name of the table definition to delete. The user must have
+   *                   write access.
    */
   @DELETE
   @Path("/schemas/{schema}/tables/{name}")
@@ -247,9 +246,9 @@ public class CatalogResource
    * the table spec changed between the time it was retrieve and the edit operation
    * is submitted.
    *
-   * @param schemaName The name of the schema that holds the table.
-   * @param tableName The name of the table definition to delete. The user must have
-   *             write access.
+   * @param schemaName  The name of the schema that holds the table.
+   * @param tableName   The name of the table definition to delete. The user must have
+   *                    write access.
    * @param editRequest The operation to perform. See the classes for details.
    */
   @POST
@@ -281,7 +280,7 @@ public class CatalogResource
    * Retrieves the list of all Druid schema names.
    *
    * @param format the format of the response. See the code for the
-   *        available formats
+   *               available formats
    */
   @GET
   @Path("/schemas")
@@ -318,9 +317,9 @@ public class CatalogResource
    * the read-only schemas, there will be no table definitions.
    *
    * @param schemaName The name of the Druid schema to query. The user must
-   *        have read access.
-   * @param format the format of the response. See the code for the
-   *        available formats
+   *                   have read access.
+   * @param format     the format of the response. See the code for the
+   *                   available formats
    */
   @GET
   @Path("/schemas/{schema}/tables")
@@ -360,7 +359,7 @@ public class CatalogResource
    * table definitions known to the catalog. Used to prime a cache on first access.
    * After that, the Coordinator will push updates to Brokers. Returns the full
    * list of table details.
-   *
+   * <p>
    * It is expected that the number of table definitions will be of small or moderate
    * size, so no provision is made to handle very large lists.
    */
@@ -467,9 +466,9 @@ public class CatalogResource
     List<Pair<SchemaSpec, TableMetadata>> tables = new ArrayList<>();
     for (SchemaSpec schema : catalog.schemaRegistry().schemas()) {
       tables.addAll(catalog.tables().tablesInSchema(schema.name())
-          .stream()
-          .map(table -> Pair.of(schema, table))
-          .collect(Collectors.toList()));
+                           .stream()
+                           .map(table -> Pair.of(schema, table))
+                           .collect(Collectors.toList()));
 
     }
     Iterable<Pair<SchemaSpec, TableMetadata>> filtered = AuthorizationUtils.filterAuthorizedResources(
@@ -483,9 +482,9 @@ public class CatalogResource
     );
 
     List<TableMetadata> metadata = Lists.newArrayList(filtered)
-        .stream()
-        .map(pair -> pair.rhs)
-        .collect(Collectors.toList());
+                                        .stream()
+                                        .map(pair -> pair.rhs)
+                                        .collect(Collectors.toList());
     return Response.ok().entity(metadata).build();
   }
 
@@ -499,9 +498,9 @@ public class CatalogResource
         req,
         tables,
         name ->
-          Collections.singletonList(
-              resourceAction(schema, name, Action.READ)),
-          authorizerMapper
+            Collections.singletonList(
+                resourceAction(schema, name, Action.READ)),
+        authorizerMapper
     );
     return Response.ok().entity(Lists.newArrayList(filtered)).build();
   }
@@ -581,13 +580,13 @@ public class CatalogResource
 
   private void authorize(String resource, String key, Action action, HttpServletRequest request)
   {
-    final Access authResult = authorizeAccess(resource, key, action, request);
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+    final AuthorizationResult authResult = authorizeAccess(resource, key, action, request);
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
   }
 
-  private Access authorizeAccess(String resource, String key, Action action, HttpServletRequest request)
+  private AuthorizationResult authorizeAccess(String resource, String key, Action action, HttpServletRequest request)
   {
     return AuthorizationUtils.authorizeResourceAction(
         request,

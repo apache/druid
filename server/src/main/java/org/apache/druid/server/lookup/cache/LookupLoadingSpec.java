@@ -127,7 +127,7 @@ public class LookupLoadingSpec
       if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
         throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
       }
-      return loadOnly(new HashSet<>(lookupsToLoad));
+      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
     } else {
       return defaultSpec;
     }

@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -97,7 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class IndexMergerTestBase extends InitializedNullHandlingTest
+public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -1197,68 +1196,35 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
       final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-      if (NullHandling.replaceWithDefault()) {
-        Assert.assertEquals(
-            ImmutableList.of("__time", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-            ImmutableList.copyOf(adapter.getDimensionNames(true))
-        );
-        Assert.assertEquals(
-            ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-            ImmutableList.copyOf(adapter.getDimensionNames(false))
-        );
-      } else {
-        Assert.assertEquals(
-            ImmutableList.of("__time", "d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-            ImmutableList.copyOf(adapter.getDimensionNames(true))
-        );
-        Assert.assertEquals(
-            ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-            ImmutableList.copyOf(adapter.getDimensionNames(false))
-        );
-      }
+      Assert.assertEquals(
+          ImmutableList.of("__time", "d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames(true))
+      );
+      Assert.assertEquals(
+          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames(false))
+      );
       Assert.assertEquals(4, rowList.size());
-      if (NullHandling.replaceWithDefault()) {
-        Assert.assertEquals(
-            Arrays.asList(null, "310", null, null, null, null, "910"),
-            rowList.get(0).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList("210", "311", null, null, "710", "810", "911"),
-            rowList.get(1).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList(null, null, "520", "620", "720", "820", "920"),
-            rowList.get(2).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList(null, null, null, "621", null, "821", "921"),
-            rowList.get(3).dimensionValues()
-        );
 
-        checkBitmapIndex(Arrays.asList(0, 2, 3), getBitmapIndex(adapter, "d2", null));
-        checkBitmapIndex(Arrays.asList(0, 1, 3), getBitmapIndex(adapter, "d5", null));
-        checkBitmapIndex(Arrays.asList(0, 3), getBitmapIndex(adapter, "d7", null));
-      } else {
-        Assert.assertEquals(
-            Arrays.asList("", "", "310", null, null, "", null, "910"),
-            rowList.get(0).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList(null, "210", "311", null, null, "710", "810", "911"),
-            rowList.get(1).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList(null, null, null, "520", "620", "720", "820", "920"),
-            rowList.get(2).dimensionValues()
-        );
-        Assert.assertEquals(
-            Arrays.asList(null, null, null, "", "621", "", "821", "921"),
-            rowList.get(3).dimensionValues()
-        );
-        checkBitmapIndex(Arrays.asList(2, 3), getBitmapIndex(adapter, "d2", null));
-        checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "d5", null));
-        checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d7", null));
-      }
+      Assert.assertEquals(
+          Arrays.asList("", "", "310", null, null, "", null, "910"),
+          rowList.get(0).dimensionValues()
+      );
+      Assert.assertEquals(
+          Arrays.asList(null, "210", "311", null, null, "710", "810", "911"),
+          rowList.get(1).dimensionValues()
+      );
+      Assert.assertEquals(
+          Arrays.asList(null, null, null, "520", "620", "720", "820", "920"),
+          rowList.get(2).dimensionValues()
+      );
+      Assert.assertEquals(
+          Arrays.asList(null, null, null, "", "621", "", "821", "921"),
+          rowList.get(3).dimensionValues()
+      );
+      checkBitmapIndex(Arrays.asList(2, 3), getBitmapIndex(adapter, "d2", null));
+      checkBitmapIndex(Arrays.asList(0, 1), getBitmapIndex(adapter, "d5", null));
+      checkBitmapIndex(Collections.emptyList(), getBitmapIndex(adapter, "d7", null));
 
       checkBitmapIndex(Collections.singletonList(1), getBitmapIndex(adapter, "d2", "210"));
 
@@ -1379,41 +1345,24 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(
-          ImmutableList.of("__time", "d3", "d6", "d8", "d9"),
-          ImmutableList.copyOf(adapter.getDimensionNames(true))
-      );
-      Assert.assertEquals(
-          ImmutableList.of("d3", "d6", "d8", "d9"),
-          ImmutableList.copyOf(adapter.getDimensionNames(false))
-      );
-    } else {
-      Assert.assertEquals(
-          ImmutableList.of("__time", "d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-          ImmutableList.copyOf(adapter.getDimensionNames(true))
-      );
-      Assert.assertEquals(
-          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-          ImmutableList.copyOf(adapter.getDimensionNames(false))
-      );
-    }
+    Assert.assertEquals(
+        ImmutableList.of("__time", "d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+        ImmutableList.copyOf(adapter.getDimensionNames(true))
+    );
+    Assert.assertEquals(
+        ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+        ImmutableList.copyOf(adapter.getDimensionNames(false))
+    );
 
     Assert.assertEquals(4, rowList.size());
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(0).dimensionValues());
-      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(1).dimensionValues());
-      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(2).dimensionValues());
-      Assert.assertEquals(Arrays.asList(null, "621", "821", "921"), rowList.get(3).dimensionValues());
-    } else {
-      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(0).dimensionValues());
-      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(1).dimensionValues());
-      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(2).dimensionValues());
-      Assert.assertEquals(
-          Arrays.asList(null, null, null, "", "621", "", "821", "921"),
-          rowList.get(3).dimensionValues()
-      );
-    }
+
+    Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(0).dimensionValues());
+    Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(1).dimensionValues());
+    Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(2).dimensionValues());
+    Assert.assertEquals(
+        Arrays.asList(null, null, null, "", "621", "", "821", "921"),
+        rowList.get(3).dimensionValues()
+    );
 
     checkBitmapIndex(Collections.singletonList(3), getBitmapIndex(adapter, "d3", null));
     checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "d3", "310"));
@@ -1972,8 +1921,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         Arrays.asList(
-            NullHandling.defaultLongValue(),
-            NullHandling.defaultFloatValue(),
+            null,
+            null,
             "Nully Row"
         ),
         rowList.get(0).dimensionValues()
@@ -2668,108 +2617,60 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         ImmutableList.copyOf(adapter.getDimensionNames(false))
     );
 
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(11, rowList.size());
+    Assert.assertEquals(14, rowList.size());
 
-      Assert.assertEquals(Arrays.asList("leek", null), rowList.get(0).dimensionValues());
-      Assert.assertEquals(12L, rowList.get(0).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", null), rowList.get(0).dimensionValues());
+    Assert.assertEquals(8L, rowList.get(0).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "1", "2", "3")), rowList.get(1).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(1).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "1", "2", "3")), rowList.get(1).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(1).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "3")), rowList.get(2).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(2).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "3")), rowList.get(2).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(2).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", "1"), rowList.get(3).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(3).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", ""), rowList.get(3).dimensionValues());
+    Assert.assertEquals(4L, rowList.get(3).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3")), rowList.get(4).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(4).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("", "1", "2", "3")), rowList.get(4).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(4).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3")), rowList.get(5).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(5).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("", "3")), rowList.get(5).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(5).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3", "5")), rowList.get(6).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(6).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", "1"), rowList.get(6).dimensionValues());
+    Assert.assertEquals(4L, rowList.get(6).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "4")), rowList.get(7).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(7).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3")), rowList.get(7).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(7).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", "2"), rowList.get(8).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(8).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3")), rowList.get(8).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(8).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("potato", Arrays.asList("1", "3")), rowList.get(9).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(9).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3", "5")), rowList.get(9).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(9).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("potato", "2"), rowList.get(10).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(10).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "4")), rowList.get(10).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(10).metricValues().get(0));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8), getBitmapIndex(adapter, "dimA", "leek"));
-      checkBitmapIndex(Arrays.asList(9, 10), getBitmapIndex(adapter, "dimA", "potato"));
+    Assert.assertEquals(Arrays.asList("leek", "2"), rowList.get(11).dimensionValues());
+    Assert.assertEquals(4L, rowList.get(11).metricValues().get(0));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", null));
-      checkBitmapIndex(ImmutableList.of(), getBitmapIndex(adapter, "dimMultiVal", ""));
-      checkBitmapIndex(Arrays.asList(1, 3, 4, 5, 6, 7, 9), getBitmapIndex(adapter, "dimMultiVal", "1"));
-      checkBitmapIndex(Arrays.asList(1, 4, 8, 10), getBitmapIndex(adapter, "dimMultiVal", "2"));
-      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 6, 9), getBitmapIndex(adapter, "dimMultiVal", "3"));
-      checkBitmapIndex(Collections.singletonList(7), getBitmapIndex(adapter, "dimMultiVal", "4"));
-      checkBitmapIndex(Collections.singletonList(6), getBitmapIndex(adapter, "dimMultiVal", "5"));
-    } else {
-      Assert.assertEquals(14, rowList.size());
+    Assert.assertEquals(Arrays.asList("potato", Arrays.asList("1", "3")), rowList.get(12).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(12).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", null), rowList.get(0).dimensionValues());
-      Assert.assertEquals(8L, rowList.get(0).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("potato", "2"), rowList.get(13).dimensionValues());
+    Assert.assertEquals(4L, rowList.get(13).metricValues().get(0));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "1", "2", "3")), rowList.get(1).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(1).metricValues().get(0));
+    checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), getBitmapIndex(adapter, "dimA", "leek"));
+    checkBitmapIndex(Arrays.asList(12, 13), getBitmapIndex(adapter, "dimA", "potato"));
 
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList(null, "3")), rowList.get(2).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(2).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", ""), rowList.get(3).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(3).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("", "1", "2", "3")), rowList.get(4).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(4).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("", "3")), rowList.get(5).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(5).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", "1"), rowList.get(6).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(6).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3")), rowList.get(7).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(7).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3")), rowList.get(8).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(8).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "3", "5")), rowList.get(9).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(9).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "4")), rowList.get(10).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(10).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("leek", "2"), rowList.get(11).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(11).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("potato", Arrays.asList("1", "3")), rowList.get(12).dimensionValues());
-      Assert.assertEquals(2L, rowList.get(12).metricValues().get(0));
-
-      Assert.assertEquals(Arrays.asList("potato", "2"), rowList.get(13).dimensionValues());
-      Assert.assertEquals(4L, rowList.get(13).metricValues().get(0));
-
-      checkBitmapIndex(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), getBitmapIndex(adapter, "dimA", "leek"));
-      checkBitmapIndex(Arrays.asList(12, 13), getBitmapIndex(adapter, "dimA", "potato"));
-
-      checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", null));
-      checkBitmapIndex(ImmutableList.of(3, 4, 5), getBitmapIndex(adapter, "dimMultiVal", ""));
-      checkBitmapIndex(Arrays.asList(1, 4, 6, 7, 8, 9, 10, 12), getBitmapIndex(adapter, "dimMultiVal", "1"));
-      checkBitmapIndex(Arrays.asList(1, 4, 7, 11, 13), getBitmapIndex(adapter, "dimMultiVal", "2"));
-      checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 7, 8, 9, 12), getBitmapIndex(adapter, "dimMultiVal", "3"));
-      checkBitmapIndex(Collections.singletonList(10), getBitmapIndex(adapter, "dimMultiVal", "4"));
-      checkBitmapIndex(Collections.singletonList(9), getBitmapIndex(adapter, "dimMultiVal", "5"));
-    }
+    checkBitmapIndex(Arrays.asList(0, 1, 2), getBitmapIndex(adapter, "dimMultiVal", null));
+    checkBitmapIndex(ImmutableList.of(3, 4, 5), getBitmapIndex(adapter, "dimMultiVal", ""));
+    checkBitmapIndex(Arrays.asList(1, 4, 6, 7, 8, 9, 10, 12), getBitmapIndex(adapter, "dimMultiVal", "1"));
+    checkBitmapIndex(Arrays.asList(1, 4, 7, 11, 13), getBitmapIndex(adapter, "dimMultiVal", "2"));
+    checkBitmapIndex(Arrays.asList(1, 2, 4, 5, 7, 8, 9, 12), getBitmapIndex(adapter, "dimMultiVal", "3"));
+    checkBitmapIndex(Collections.singletonList(10), getBitmapIndex(adapter, "dimMultiVal", "4"));
+    checkBitmapIndex(Collections.singletonList(9), getBitmapIndex(adapter, "dimMultiVal", "5"));
   }
 
   private MapBasedInputRow getRowForTestMaxColumnsToMerge(
@@ -3104,7 +3005,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                       .setDimensions(
                           Arrays.asList(
                               new StringDimensionSchema("a"),
-                              new StringDimensionSchema("b")
+                              new StringDimensionSchema("b"),
+                              new LongDimensionSchema("c")
                           )
                       );
 

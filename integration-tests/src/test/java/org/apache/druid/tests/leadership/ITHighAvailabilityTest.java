@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.cli.CliCustomNodeRole;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -259,12 +258,12 @@ public class ITHighAvailabilityTest
   private static String fillTemplate(IntegrationTestingConfig config, String template, String overlordLeader, String coordinatorLeader)
   {
     /*
-      {"host":"%%BROKER%%","server_type":"broker", "is_leader": %%NON_LEADER%%},
+      {"host":"%%BROKER%%","server_type":"broker", "is_leader": null},
       {"host":"%%COORDINATOR_ONE%%","server_type":"coordinator", "is_leader": %%COORDINATOR_ONE_LEADER%%},
       {"host":"%%COORDINATOR_TWO%%","server_type":"coordinator", "is_leader": %%COORDINATOR_TWO_LEADER%%},
       {"host":"%%OVERLORD_ONE%%","server_type":"overlord", "is_leader": %%OVERLORD_ONE_LEADER%%},
       {"host":"%%OVERLORD_TWO%%","server_type":"overlord", "is_leader": %%OVERLORD_TWO_LEADER%%},
-      {"host":"%%ROUTER%%","server_type":"router", "is_leader": %%NON_LEADER%%}
+      {"host":"%%ROUTER%%","server_type":"router", "is_leader": null}
      */
     String working = template;
 
@@ -288,7 +287,6 @@ public class ITHighAvailabilityTest
       working = StringUtils.replace(working, "%%COORDINATOR_ONE_LEADER%%", "0");
       working = StringUtils.replace(working, "%%COORDINATOR_TWO_LEADER%%", "1");
     }
-    working = StringUtils.replace(working, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return working;
   }
 

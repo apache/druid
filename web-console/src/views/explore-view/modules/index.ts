@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import './grouping-table-module';
-import './record-table-module';
-import './time-chart-module';
-import './bar-chart-module';
-import './pie-chart-module';
-import './multi-axis-chart-module';
+import './grouping-table-module/grouping-table-module';
+import './record-table-module/record-table-module';
+import './time-chart-module/time-chart-module';
+import './bar-chart-module/bar-chart-module';
+import './pie-chart-module/pie-chart-module';
+import './multi-axis-chart-module/multi-axis-chart-module';

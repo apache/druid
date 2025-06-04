@@ -23,11 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ModelProperties;
 import org.apache.druid.catalog.model.ModelProperties.GranularityPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
+import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -59,6 +61,8 @@ public class DatasourceDefn extends TableDefn
    */
   public static final String CLUSTER_KEYS_PROPERTY = "clusterKeys";
 
+  public static final String PROJECTIONS_KEYS_PROPERTY = "projections";
+
   /**
    * The set of existing columns to "delete" (actually, just hide) from the
    * SQL layer. Used to "remove" unwanted columns to avoid the need to rewrite
@@ -70,13 +74,51 @@ public class DatasourceDefn extends TableDefn
 
   public static final String TABLE_TYPE = "datasource";
 
+  public DatasourceDefn()
+  {
+    super(
+        "Datasource",
+        TABLE_TYPE,
+        Arrays.asList(
+            new SegmentGranularityFieldDefn(),
+            new ModelProperties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
+            new ClusterKeysDefn(),
+            new HiddenColumnsDefn(),
+            new ModelProperties.BooleanPropertyDefn(SEALED_PROPERTY),
+            new ProjectionsDefn()
+        ),
+        null
+    );
+  }
+
+  @Override
+  protected void validateColumn(ColumnSpec spec)
+  {
+    super.validateColumn(spec);
+    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
+      // Validate type in next PR
+    }
+  }
+
+  /**
+   * Check if {@link TableSpec#type()} is {@link DatasourceDefn#TABLE_TYPE}
+   */
+  public static boolean isDatasource(String tableType)
+  {
+    return DatasourceDefn.TABLE_TYPE.equals(tableType);
+  }
+
+  public static boolean isDatasource(ResolvedTable table)
+  {
+    return table.defn() instanceof DatasourceDefn;
+  }
+
   public static class SegmentGranularityFieldDefn extends GranularityPropertyDefn
   {
     public SegmentGranularityFieldDefn()
     {
       super(SEGMENT_GRANULARITY_PROPERTY);
     }
-
   }
 
   public static class HiddenColumnsDefn extends StringListPropertyDefn
@@ -131,38 +173,13 @@ public class DatasourceDefn extends TableDefn
     }
   }
 
-  public DatasourceDefn()
+  public static class ProjectionsDefn extends ModelProperties.TypeRefPropertyDefn<List<DatasourceProjectionMetadata>>
   {
-    super(
-        "Datasource",
-        TABLE_TYPE,
-        Arrays.asList(
-            new SegmentGranularityFieldDefn(),
-            new ModelProperties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
-            new ClusterKeysDefn(),
-            new HiddenColumnsDefn(),
-            new ModelProperties.BooleanPropertyDefn(SEALED_PROPERTY)
-        ),
-        null
-    );
-  }
+    public static final TypeReference<List<DatasourceProjectionMetadata>> TYPE_REF = new TypeReference<>() {};
 
-  @Override
-  protected void validateColumn(ColumnSpec spec)
-  {
-    super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
-      // Validate type in next PR
+    public ProjectionsDefn()
+    {
+      super(PROJECTIONS_KEYS_PROPERTY, "DatasourceProjectionMetadata list", TYPE_REF);
     }
-  }
-
-  public static boolean isDatasource(String tableType)
-  {
-    return TABLE_TYPE.equals(tableType);
-  }
-
-  public static boolean isDatasource(ResolvedTable table)
-  {
-    return table.defn() instanceof DatasourceDefn;
   }
 }

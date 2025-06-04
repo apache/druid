@@ -39,21 +39,19 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.hook.DruidHook;
-import org.joda.time.Interval;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -87,7 +85,8 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
+      ExecutionVertex ev = ExecutionVertex.of(query);
+      if (Intervals.ONLY_ETERNITY.equals(ev.getEffectiveQuerySegmentSpec().getIntervals())) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -156,14 +155,6 @@ public class NativeQueryMaker implements QueryMaker
     );
   }
 
-  private List<Interval> findBaseDataSourceIntervals(Query<?> query)
-  {
-    return query.getDataSource().getAnalysis()
-                .getBaseQuerySegmentSpec()
-                .map(QuerySegmentSpec::getIntervals)
-                .orElseGet(query::getIntervals);
-  }
-
   @SuppressWarnings("unchecked")
   private <T> QueryResponse<Object[]> execute(
       Query<?> query, // Not final: may be reassigned with query ID added
@@ -185,14 +176,18 @@ public class NativeQueryMaker implements QueryMaker
     query = query.withSqlQueryId(plannerContext.getSqlQueryId());
 
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
-    final Access authorizationResult = plannerContext.getAuthorizationResult();
+    final AuthorizationResult authorizationResult = plannerContext.getAuthorizationResult();
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
 
     // After calling "runSimple" the query will start running. We need to do this before reading the toolChest, since
     // otherwise it won't yet be initialized. (A bummer, since ideally, we'd verify the toolChest exists and can do
     // array-based results before starting the query; but in practice we don't expect this to happen since we keep
     // tight control over which query types we generate in the SQL layer. They all support array-based results.)
-    final QueryResponse<T> results = queryLifecycle.runSimple((Query<T>) query, authenticationResult, authorizationResult);
+    final QueryResponse<T> results = queryLifecycle.runSimple(
+        (Query<T>) query,
+        authenticationResult,
+        authorizationResult
+    );
 
     return mapResultSequence(
         results,

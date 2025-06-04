@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -148,11 +147,7 @@ public class StreamingMergeSortedGrouperTest extends InitializedNullHandlingTest
   public void testNotEnoughBuffer()
   {
     expectedException.expect(IllegalStateException.class);
-    if (NullHandling.replaceWithDefault()) {
-      expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[20]");
-    } else {
-      expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[21]");
-    }
+    expectedException.expectMessage("Buffer[50] should be large enough to store at least three records[21]");
 
     newGrouper(GrouperTestUtil.newColumnSelectorFactory(), 50);
   }

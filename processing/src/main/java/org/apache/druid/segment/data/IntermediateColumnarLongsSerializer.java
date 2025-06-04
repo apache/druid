@@ -145,6 +145,7 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
           order,
           writer,
           compression,
+          GenericIndexedWriter.MAX_FILE_SIZE,
           closer
       );
     }

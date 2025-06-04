@@ -25,7 +25,7 @@ import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -73,7 +73,7 @@ public class DartControllerContextTest
    * Query spec that exists mainly to test {@link DartControllerContext#queryKernelConfig}.
    */
   @Mock
-  private MSQSpec querySpec;
+  private LegacyMSQSpec querySpec;
 
   /**
    * Query returned by {@link #querySpec}.
@@ -87,9 +87,8 @@ public class DartControllerContextTest
     mockCloser = MockitoAnnotations.openMocks(this);
     memoryIntrospector = new MemoryIntrospectorImpl(100_000_000, 0.75, 1, 1, null);
     Mockito.when(serverView.getDruidServerMetadatas()).thenReturn(SERVERS);
-    Mockito.when(querySpec.getQuery()).thenReturn(query);
     Mockito.when(querySpec.getDestination()).thenReturn(TaskReportMSQDestination.instance());
-    Mockito.when(query.context()).thenReturn(queryContext);
+    Mockito.when(querySpec.getContext()).thenReturn(queryContext);
   }
 
   @AfterEach

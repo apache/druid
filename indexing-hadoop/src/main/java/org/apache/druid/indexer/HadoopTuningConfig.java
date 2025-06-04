@@ -63,7 +63,6 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
         false,
-        false,
         true,
         false,
         false,
@@ -92,7 +91,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final boolean useMaxMemoryEstimates;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -129,7 +127,6 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      final @JsonProperty("useMaxMemoryEstimates") @Nullable Boolean useMaxMemoryEstimates,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") @Nullable Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -163,7 +160,6 @@ public class HadoopTuningConfig implements TuningConfig
         maxRowsInMemory,
         Configs.valueOrDefault(maxRowsInMemoryCOMPAT, DEFAULT_MAX_ROWS_IN_MEMORY_BATCH)
     );
-    this.useMaxMemoryEstimates = Configs.valueOrDefault(useMaxMemoryEstimates, false);
     this.appendableIndexSpec = Configs.valueOrDefault(appendableIndexSpec, DEFAULT_APPENDABLE_INDEX);
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
@@ -188,9 +184,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.ignoreInvalidRows = Configs.valueOrDefault(ignoreInvalidRows, false);
     this.maxParseExceptions = Configs.valueOrDefault(
         maxParseExceptions,
-        this.ignoreInvalidRows ? DEFAULT_MAX_PARSE_EXCEPTIONS : 0
+        this.ignoreInvalidRows ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : 0
     );
-    this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, DEFAULT_LOG_PARSE_EXCEPTIONS);
+    this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS);
     this.useYarnRMJobStatusFallback = Configs.valueOrDefault(useYarnRMJobStatusFallback, true);
 
     if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
@@ -264,12 +260,6 @@ public class HadoopTuningConfig implements TuningConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
-  }
-
-  @JsonProperty
-  public boolean isUseMaxMemoryEstimates()
-  {
-    return useMaxMemoryEstimates;
   }
 
   @JsonProperty
@@ -381,7 +371,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -414,7 +403,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -447,7 +435,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,

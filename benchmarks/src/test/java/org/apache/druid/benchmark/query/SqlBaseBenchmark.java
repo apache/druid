@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
@@ -61,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchAppr
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.PhysicalSegmentInspector;
@@ -127,7 +127,6 @@ public class SqlBaseBenchmark
   private static final String STORAGE_FRAME_COLUMNAR = "FRAME_COLUMNAR";
 
   static {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
     HllSketchModule.registerSerde();
     SketchModule.registerSerde();
@@ -454,6 +453,7 @@ public class SqlBaseBenchmark
         new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -475,8 +475,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable
@@ -497,8 +496,7 @@ public class SqlBaseBenchmark
           descriptor,
           new FrameSegment(
               FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.COLUMNAR),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable

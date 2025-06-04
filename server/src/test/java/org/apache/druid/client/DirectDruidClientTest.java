@@ -27,9 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,6 +38,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -50,6 +49,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -105,11 +105,13 @@ public class DirectDruidClientTest
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
+    final BrokerViewOfCoordinatorConfig filter = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    filter.start();
     httpClient = EasyMock.createMock(HttpClient.class);
     serverSelector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
+        filter
     );
     queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
     client = new DirectDruidClient(
@@ -246,7 +248,7 @@ public class DirectDruidClientTest
 
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null), queryableDruidServer2);
+    Assert.assertEquals(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }

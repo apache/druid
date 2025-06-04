@@ -89,7 +89,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
         dataSourcesSnapshot
     );
 
-    if (datasourceToNonOvershadowedEternityTombstones.size() == 0) {
+    if (datasourceToNonOvershadowedEternityTombstones.isEmpty()) {
       log.debug("No non-overshadowed eternity tombstones found.");
       return params;
     }
@@ -102,7 +102,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
     datasourceToNonOvershadowedEternityTombstones.forEach((datasource, nonOvershadowedEternityTombstones) -> {
       final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
       stats.add(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, datasourceKey, nonOvershadowedEternityTombstones.size());
-      final int unusedCount = deleteHandler.markSegmentsAsUnused(nonOvershadowedEternityTombstones);
+      final int unusedCount = deleteHandler.markSegmentsAsUnused(datasource, nonOvershadowedEternityTombstones);
       log.info(
           "Successfully marked [%d] non-overshadowed eternity tombstones[%s] of datasource[%s] as unused.",
           unusedCount,
@@ -127,7 +127,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
    * </p>
    *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline
-   * @return the set of non-overshadowed eternity tombstones grouped by datasource
+   * @return Map from datasource to set of non-overshadowed eternity tombstones
    */
   private Map<String, Set<SegmentId>> determineNonOvershadowedEternityTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
   {

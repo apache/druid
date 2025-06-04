@@ -1,0 +1,1894 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W6_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        length(server_ip) DESC, timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W6_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W6_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           length(server_ip) DESC, timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W7_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W7_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        length(server_ip) ASC, timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W7_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W7_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           length(server_ip) ASC, timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W8_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W8_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        length(server_ip) DESC, timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W8_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W8_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           length(server_ip) DESC, timezone,
+                                                                                   time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W9_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W9_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W9_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W9_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W10_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W10_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W10_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W10_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W11_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W11_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W11_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W11_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W12_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W12_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W12_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W12_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W13_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W13_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W13_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W13_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W14_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W14_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W14_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W14_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W15_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W15_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W15_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W15_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           time_floor(__time, 'PT12H') ASC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W16_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W16_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W16_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W16_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           time_floor(__time, 'PT12H') DESC, timezone ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W17_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W17_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W17_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W17_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W18_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W18_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip DESC,
+                                                        length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING);
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A7_sum_count_W18_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') ROWS BETWEEN 0 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+---------+---------+
+| server_ip    | client_ip     | timezone | t                   | sum_val | cnt_val |
++--------------+---------------+----------+---------------------+---------+---------+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       3 |       1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |       6 |       2 |
++--------------+---------------+----------+---------------------+---------+---------+
+(8 rows)
+
+!ok
+

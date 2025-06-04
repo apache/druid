@@ -6,7 +6,7 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "jsx": "react-jsx",
-    "lib": ["dom", "es2016", "esnext"],
+    "lib": ["dom", "es2021", "esnext"],
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,

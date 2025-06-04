@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.any;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -36,7 +36,6 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   private static final byte BYTE_FLAG_NULL_MASK = 0x01;
   private static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
   protected final VectorValueSelector vectorValueSelector;
 
   public NumericAnyVectorAggregator(VectorValueSelector vectorValueSelector)
@@ -65,7 +64,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, replaceWithDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
     initValue(buf, position + FOUND_VALUE_OFFSET);
   }
 
@@ -86,7 +85,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
       }
       // There are no nulls, so try to put a value from the value selector
       if (putAnyValueFromRow(buf, position + FOUND_VALUE_OFFSET, startRow, endRow)) {
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE));
       }
     }
   }
@@ -124,16 +123,11 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   @VisibleForTesting
   boolean isValueNull(ByteBuffer buf, int position)
   {
-    return (buf.get(position) & BYTE_FLAG_NULL_MASK) == NullHandling.IS_NULL_BYTE;
+    return (buf.get(position) & BYTE_FLAG_NULL_MASK) == TypeStrategies.IS_NULL_BYTE;
   }
 
   private void putNull(ByteBuffer buf, int position)
   {
-    if (!replaceWithDefault) {
-      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
-    } else {
-      initValue(buf, position + FOUND_VALUE_OFFSET);
-      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
-    }
+    buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NULL_BYTE));
   }
 }

@@ -96,6 +96,9 @@ public class S3Utils
         // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
         // https://github.com/aws/aws-sdk-java/issues/2285
         return true;
+      } else if (e instanceof InterruptedException) {
+        Thread.interrupted(); // Clear interrupted state and not retry
+        return false;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
@@ -327,7 +330,7 @@ public class S3Utils
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-    retryS3Operation(() -> {
+    S3Utils.retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);
       return null;
     }, retries);
@@ -348,15 +351,15 @@ public class S3Utils
       String bucket,
       String key,
       File file
-  )
+  ) throws InterruptedException
   {
     final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
 
     if (!disableAcl) {
-      putObjectRequest.setAccessControlList(grantFullControlToBucketOwner(service, bucket));
+      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.putObject(putObjectRequest);
+    service.upload(putObjectRequest);
   }
 
   @Nullable

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -76,9 +75,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPattern()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
 
     final ExprEval<?> result = eval(
         "regexp_like(a, null)",
@@ -106,9 +103,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnEmptyString()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
 
     final ExprEval<?> result = eval(
         "regexp_like(a, null)",
@@ -136,9 +131,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
 
     final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.nilBindings());
     Assert.assertEquals(
@@ -151,10 +144,6 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testEmptyStringPatternOnNull()
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.nilBindings());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals(ExprEval.ofLongBoolean(true).value(), result.value());
-    }
+    Assert.assertNull(result.value());
   }
 }

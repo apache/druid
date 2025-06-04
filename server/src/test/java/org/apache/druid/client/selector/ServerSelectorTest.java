@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -64,7 +65,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
 
     selector.addServerAndUpdateSegment(
@@ -107,7 +109,8 @@ public class ServerSelectorTest
   {
     final ServerSelector selector = new ServerSelector(
         null,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
   }
 
@@ -131,7 +134,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertFalse(selector.hasData());
   }
@@ -158,7 +162,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertTrue(selector.hasData());
   }

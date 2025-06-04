@@ -1,0 +1,583 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT array_agg(111.1111111, 100000);
+is not supported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_agg(tab0d0, 100000) AS col
+   FROM test_agg_funcs)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT array_length(array_agg(tab0d0, 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT array_offset(array_agg(tab0d0, 100000), 100) AS col
+FROM test_agg_funcs
+WHERE tab0d0>111
+  AND tab0d0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT array_ordinal(array_agg(tab0d0, 100000), 100) AS col
+FROM test_agg_funcs
+WHERE tab0d0>222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_contains(array_agg(tab0d0, 100000), 111.1111111) AS col
+   FROM test_agg_funcs)
+WHERE col IS TRUE
+  OR col IS FALSE
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_contains(array_agg(tab0d0, 100000), array[111.1111111, 222.2222222]) AS col
+   FROM test_agg_funcs)
+WHERE col IS TRUE
+  OR col IS FALSE
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0d0, 100000), 333.3333333) AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A09
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0d0, 100000), array[111.1111111, 333.3333333]) AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_overlap(array_agg(tab0d0, 100000), array[111.1111111, 333.3333333]) AS col
+   FROM test_agg_funcs)
+WHERE col IS TRUE
+  OR col IS FALSE
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A11
+#-------------------------------------------------------------------------
+SELECT array_overlap(array_agg(tab0d0, 100000), array[333.3333333, 444.4444444]) AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A12
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_overlap(array_agg(tab0d0, 100000), array_agg(tab0d0, 100000)) AS col
+   FROM test_agg_funcs)
+WHERE col IS TRUE
+  OR col IS FALSE
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A13
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_offset_of(array_agg(tab0d0, 100000), 111.1111111) AS col
+   FROM test_agg_funcs
+   WHERE tab0d0>111
+     AND tab0d0<222)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A14
+#-------------------------------------------------------------------------
+SELECT array_offset_of(array_agg(tab0d0, 100000), 333.3333333) AS col
+FROM test_agg_funcs
+WHERE tab0d0>111
+  AND tab0d0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A15
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_ordinal_of(array_agg(tab0d0, 100000), 111.1111111) AS col
+   FROM test_agg_funcs
+   WHERE tab0d0>111
+     AND tab0d0<222)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A16
+#-------------------------------------------------------------------------
+SELECT array_ordinal_of(array_agg(tab0d0, 100000), 333.3333333) AS col
+FROM test_agg_funcs
+WHERE tab0d0>111
+  AND tab0d0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A17
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_to_string(array_agg(tab0d0, 100000), '|') AS col
+   FROM test_agg_funcs)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A18
+#-------------------------------------------------------------------------
+SELECT contains_string(array_to_string(array_agg(tab0d0, 100000), '|'), '111.')
+AND contains_string(array_to_string(array_agg(tab0d0, 100000), '|'), '|') AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A19
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_prepend(333.3333333, array_agg(tab0d0, 100000)) AS col
+   FROM test_agg_funcs)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A20
+#-------------------------------------------------------------------------
+SELECT array_length(array_prepend(333.3333333, array_agg(tab0d0, 100000))) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A21
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_append(array_agg(tab0d0, 100000), 333.3333333) AS col
+   FROM test_agg_funcs)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A22
+#-------------------------------------------------------------------------
+SELECT array_length(array_append(array_agg(tab0d0, 100000), 333.3333333)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A23
+#-------------------------------------------------------------------------
+SELECT array_length(array_concat(array_agg(tab0d0, 100000), array[333.3333333])) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A24
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_concat(array_agg(tab0d0, 100000), array_agg(tab0d0, 100000)) AS col
+   FROM test_agg_funcs)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A25
+#-------------------------------------------------------------------------
+SELECT array_length(array_concat(array_agg(tab0d0, 100000), array_agg(tab0d0, 100000))) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  36 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A26
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_slice(array_agg(tab0d0, 100000), 0, 1) AS col
+   FROM test_agg_funcs
+   WHERE tab0d0>111
+     AND tab0d0<222)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A27
+#-------------------------------------------------------------------------
+SELECT array_slice(array_agg(tab0d0, 100000), 100, 101) AS col
+FROM test_agg_funcs
+WHERE tab0d0>111
+  AND tab0d0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A28
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_agg(t0.tab0d0, 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0d0 IS NOT NULL)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A29
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_to_string(array_agg(t0.tab0d0, 100000), '') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0d0 IS NOT NULL)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A30
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT length(array_to_string(array_agg(t0.tab0d0, 100000), '')) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0d0 IS NOT NULL)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A31
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_agg(t0.tab0d0, 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0d0)
+WHERE NOT array_contains(col, 99999)
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A32
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_to_string(array_agg(t0.tab0d0, 100000), '') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0d0)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A33
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT length(array_to_string(array_agg(t0.tab0d0, 100000), '')) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0d0)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+

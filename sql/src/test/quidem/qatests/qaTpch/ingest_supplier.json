@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaTpch/data",
+        "filter" : "supplier.tbl.gz"
+      },
+      "inputFormat": { "type": "tsv", "columns": ["s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"], "findColumnsFromHeader": false, "delimiter": "|" },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "supplier",
+      "granularitySpec": {
+        "segmentGranularity": "year",
+        "queryGranularity": null,
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto",
+	"missingValue": "2025-01-01T00:00:00.000"
+      },
+      "dimensionsSpec": {
+        "dimensions": [{"name": "s_suppkey", "type": "long"}, {"name": "s_name", "type": "string"}, {"name": "s_address", "type": "string"}, {"name": "s_nationkey", "type": "long"}, {"name": "s_phone", "type": "string"}, {"name": "s_acctbal", "type": "float"}, {"name": "s_comment", "type": "string"}]
+      }
+    }
+  }
+}
+
+

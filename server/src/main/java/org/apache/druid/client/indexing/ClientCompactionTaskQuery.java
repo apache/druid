@@ -20,12 +20,16 @@
 package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -44,7 +48,9 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   private final ClientCompactionTaskGranularitySpec granularitySpec;
   private final ClientCompactionTaskDimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metricsSpec;
-  private final ClientCompactionTaskTransformSpec transformSpec;
+  private final CompactionTransformSpec transformSpec;
+  @Nullable
+  private final List<AggregateProjectionSpec> projections;
   private final Map<String, Object> context;
   private final ClientCompactionRunnerInfo compactionRunner;
 
@@ -57,7 +63,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
       @JsonProperty("granularitySpec") ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("dimensionsSpec") ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @JsonProperty("metricsSpec") AggregatorFactory[] metrics,
-      @JsonProperty("transformSpec") ClientCompactionTaskTransformSpec transformSpec,
+      @JsonProperty("transformSpec") CompactionTransformSpec transformSpec,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("compactionRunner") @Nullable ClientCompactionRunnerInfo compactionRunner
   )
@@ -70,6 +77,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.dimensionsSpec = dimensionsSpec;
     this.metricsSpec = metrics;
     this.transformSpec = transformSpec;
+    this.projections = projections;
     this.context = context;
     this.compactionRunner = compactionRunner;
   }
@@ -127,7 +135,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
-  public ClientCompactionTaskTransformSpec getTransformSpec()
+  public CompactionTransformSpec getTransformSpec()
   {
     return transformSpec;
   }
@@ -136,6 +144,14 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  @JsonProperty("projections")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
   }
 
   @JsonProperty("compactionRunner")
@@ -163,6 +179,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
+           Objects.equals(projections, that.projections) &&
            Objects.equals(context, that.context) &&
            Objects.equals(compactionRunner, that.compactionRunner);
   }
@@ -178,6 +195,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
         granularitySpec,
         dimensionsSpec,
         transformSpec,
+        projections,
         context,
         compactionRunner
     );
@@ -197,6 +215,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
            ", dimensionsSpec=" + dimensionsSpec +
            ", metricsSpec=" + Arrays.toString(metricsSpec) +
            ", transformSpec=" + transformSpec +
+           ", catalogConfig=" + projections +
            ", context=" + context +
            ", compactionRunner=" + compactionRunner +
            '}';

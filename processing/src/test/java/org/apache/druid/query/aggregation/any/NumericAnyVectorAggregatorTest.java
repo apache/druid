@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -95,7 +95,7 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
     target.init(buf, POSITION);
     Assert.assertEquals(0, buf.get(POSITION) & BYTE_FLAG_FOUND_MASK);
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE,
+        TypeStrategies.IS_NULL_BYTE,
         buf.get(POSITION)
     );
   }
@@ -104,18 +104,14 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   public void aggregateNotFoundAndHasNullsShouldPutNull()
   {
     target.aggregate(buf, POSITION, 0, 3);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE, buf.get(POSITION));
-    } else {
-      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
-    }
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NULL_BYTE, buf.get(POSITION));
   }
 
   @Test
   public void aggregateNotFoundAndHasNullsOutsideRangeShouldPutValue()
   {
     target.aggregate(buf, POSITION, 0, 1);
-    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE, buf.get(POSITION));
   }
 
   @Test
@@ -123,7 +119,7 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   {
     Mockito.doReturn(null).when(selector).getNullVector();
     target.aggregate(buf, POSITION, 0, 3);
-    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE, buf.get(POSITION));
   }
 
   @Test
@@ -145,8 +141,8 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i] + positionOffset;
       Assert.assertEquals(
-          BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE,
-          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE)
+          BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE,
+          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE)
       );
       Assert.assertEquals(i, buf.getLong(position + 1));
     }
@@ -164,8 +160,8 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i] + positionOffset;
       Assert.assertEquals(
-          BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE,
-          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE)
+          BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE,
+          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | TypeStrategies.IS_NOT_NULL_BYTE)
       );
       Assert.assertEquals(rows[i], buf.getLong(position + 1));
     }

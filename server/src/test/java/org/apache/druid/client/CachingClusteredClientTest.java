@@ -44,7 +44,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -75,6 +75,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -93,7 +94,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -549,7 +549,8 @@ public class CachingClusteredClientTest
     EasyMock.replay(dataSegment);
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), dataSegment);
     timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
@@ -1752,7 +1753,8 @@ public class CachingClusteredClientTest
 
     ServerSelector selector = new ServerSelector(
         segment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
     return selector;
@@ -1785,7 +1787,8 @@ public class CachingClusteredClientTest
 
     ServerSelector selector = new ServerSelector(
         segment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
     return selector;
@@ -2232,7 +2235,8 @@ public class CachingClusteredClientTest
         EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),
-            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+            HistoricalFilter.IDENTITY_FILTER
         );
         selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
         EasyMock.reset(mockSegment);
@@ -2568,33 +2572,11 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
+        values.add(new SearchHit(dim, objects[index].toString(), (Integer) objects[index + 1]));
+        index += 2;
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));
-    }
-    return retVal;
-  }
-
-  private Iterable<ResultRow> makeGroupByResults(GroupByQuery query, Object... objects)
-  {
-    List<ResultRow> retVal = new ArrayList<>();
-    int index = 0;
-    while (index < objects.length) {
-      final DateTime timestamp = (DateTime) objects[index++];
-      final Map<String, Object> rowMap = (Map<String, Object>) objects[index++];
-      final ResultRow row = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
-
-      if (query.getResultRowHasTimestamp()) {
-        row.set(0, timestamp.getMillis());
-      }
-
-      for (Map.Entry<String, Object> entry : rowMap.entrySet()) {
-        final int position = query.getResultRowSignature().indexOf(entry.getKey());
-        row.set(position, entry.getValue());
-      }
-
-      retVal.add(row);
     }
     return retVal;
   }
@@ -2637,7 +2619,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+          public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(TableDataSource analysis)
           {
             return Optional.of(timeline);
           }
@@ -3059,7 +3041,8 @@ public class CachingClusteredClientTest
     );
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
     timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
@@ -3075,7 +3058,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.getEntityTag());
+    Assert.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
   }
 
   @Test
@@ -3100,7 +3083,8 @@ public class CachingClusteredClientTest
     );
     final ServerSelector selector = new ServerSelector(
         dataSegment,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
     timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));

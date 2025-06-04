@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -84,16 +83,7 @@ public class DecoupledExtension implements BeforeEachCallback
       public DruidQTestInfo getQTestInfo()
       {
         if (runQuidem) {
-          final String testName;
-          if (decTestConfig.separateDefaultModeTest()) {
-            if (NullHandling.sqlCompatible()) {
-              testName = BaseCalciteQueryTest.queryFrameworkRule.testName() + "@NullHandling=sql";
-            } else {
-              testName = BaseCalciteQueryTest.queryFrameworkRule.testName() + "@NullHandling=default";
-            }
-          } else {
-            testName = BaseCalciteQueryTest.queryFrameworkRule.testName();
-          }
+          final String testName = BaseCalciteQueryTest.queryFrameworkRule.testName();
           return new DruidQTestInfo(
               qCaseDir,
               testName,

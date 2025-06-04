@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -45,6 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
@@ -60,13 +60,13 @@ import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.mockito.ArgumentMatchers;
@@ -83,14 +83,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-public class MSQTestControllerContext implements ControllerContext
+public class MSQTestControllerContext implements ControllerContext, DartControllerContextFactory
 {
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
@@ -177,7 +177,7 @@ public class MSQTestControllerContext implements ControllerContext
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<?> future = executor.submit(() -> {
+      ListenableFuture<?> future = EXECUTOR.submit(() -> {
         try {
           worker.run();
         }
@@ -271,7 +271,7 @@ public class MSQTestControllerContext implements ControllerContext
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
-        worker.stop();
+        worker.stop(CancellationReason.TASK_SHUTDOWN);
       }
       return Futures.immediateFuture(null);
     }
@@ -281,23 +281,6 @@ public class MSQTestControllerContext implements ControllerContext
   public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
-  }
-
-  @Override
-  public QueryKitSpec makeQueryKitSpec(
-      final QueryKit<Query<?>> queryKit,
-      final String queryId,
-      final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
-  )
-  {
-    return new QueryKitSpec(
-        queryKit,
-        queryId,
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-        querySpec.getTuningConfig().getMaxNumWorkers(),
-        1
-    );
   }
 
   @Override
@@ -353,13 +336,19 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
+    MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
+    taskLauncherConfig.highFrequencyCheckMillis = 1;
+    taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
+    taskLauncherConfig.lowFrequencyCheckMillis = 2;
+
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
         "test-datasource",
         overlordClient,
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
-        0
+        0,
+        taskLauncherConfig
     );
   }
 
@@ -379,5 +368,11 @@ public class MSQTestControllerContext implements ControllerContext
   public WorkerClient newWorkerClient()
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
+  }
+
+  @Override
+  public ControllerContext newContext(String queryId)
+  {
+    return this;
   }
 }

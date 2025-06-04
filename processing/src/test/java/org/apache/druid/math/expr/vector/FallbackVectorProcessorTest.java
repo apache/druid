@@ -21,7 +21,6 @@ package org.apache.druid.math.expr.vector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -184,7 +183,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(ExpressionType.DOUBLE, eval.getType());
     Assert.assertArrayEquals(
-        new Object[]{101.0, NullHandling.defaultDoubleValue(), 1.3},
+        new Object[]{101.0, null, 1.3},
         eval.getObjectVector()
     );
     Assert.assertArrayEquals(
@@ -193,7 +192,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
         0
     );
     Assert.assertArrayEquals(
-        NullHandling.sqlCompatible() ? new boolean[]{false, true, false} : null,
+        new boolean[]{false, true, false},
         eval.getNullVector()
     );
   }
@@ -234,7 +233,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(ExpressionType.STRING, eval.getType());
     Assert.assertArrayEquals(
-        new Object[]{"foo3.1", NullHandling.sqlCompatible() ? null : "3.2", "baz3.3"},
+        new Object[]{"foo3.1", null, "baz3.3"},
         eval.getObjectVector()
     );
   }

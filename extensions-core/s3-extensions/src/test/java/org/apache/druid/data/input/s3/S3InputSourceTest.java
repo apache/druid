@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
+import org.apache.druid.storage.s3.S3TransferConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -113,7 +114,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
   public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
-      new NoopServerSideEncryption()
+      new NoopServerSideEncryption(),
+      new S3TransferConfig()
   );
   public static final S3InputDataConfig INPUT_DATA_CONFIG;
   private static final int MAX_LISTING_LENGTH = 10;

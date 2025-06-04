@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -632,13 +631,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         Assert.assertEquals(1, rowD.size());
         Assert.assertEquals(1, rowD.get(0));
         IndexedInts rowE = dimSelector3E.getRow();
-        if (NullHandling.replaceWithDefault()) {
-          Assert.assertEquals(1, rowE.size());
-          Assert.assertEquals(0, rowE.get(0));
-        } else {
-          Assert.assertEquals(1, rowE.size());
-          Assert.assertEquals(1, rowE.get(0));
-        }
+        Assert.assertEquals(1, rowE.size());
+        Assert.assertEquals(1, rowE.get(0));
         cursor.advance();
         rowNumInCursor++;
       }

@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
@@ -136,7 +135,7 @@ public abstract class KeyMappingMultiValueGroupByColumnSelectorStrategy implemen
         );
       } else {
         // Since this is used for String dimensions only, we can directly put the default string value here
-        resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValue());
+        resultRow.set(selectorPlus.getResultRowPosition(), null);
       }
     }
 
@@ -218,7 +217,7 @@ public abstract class KeyMappingMultiValueGroupByColumnSelectorStrategy implemen
         final String value = dictionary.get(id);
         resultRow.set(selectorPlus.getResultRowPosition(), value);
       } else {
-        resultRow.set(selectorPlus.getResultRowPosition(), NullHandling.defaultStringValue());
+        resultRow.set(selectorPlus.getResultRowPosition(), null);
       }
     }
 

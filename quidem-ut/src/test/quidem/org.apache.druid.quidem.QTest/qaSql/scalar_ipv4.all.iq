@@ -1,0 +1,1059 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A1_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NULL
+       OR ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NOT DISTINCT
+           FROM 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS DISTINCT
+                FROM '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS TRUE
+           AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT TRUE
+           AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS FALSE
+           AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT FALSE
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) like '%'
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+           AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                    2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A1_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NULL
+       OR '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IN
+         (SELECT '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NULL
+                 OR ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NOT DISTINCT
+                     FROM 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS DISTINCT
+                          FROM '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS TRUE
+                     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT TRUE
+                     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS FALSE
+                     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT FALSE
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) like '%'
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                          1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                          2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+                     AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                              2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A1_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NULL
+          OR ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS NOT DISTINCT
+              FROM 1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IS DISTINCT
+                   FROM '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS TRUE
+              AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT TRUE
+              AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS FALSE
+              AND ('1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)) IS NOT FALSE
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) like '%'
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                   1||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                   2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))
+              AND '1'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(session_length, '255.0.0.0/1') AS char),
+                                                                                       2||cast(ipv4_match(session_length, '255.0.0.0/1') AS char))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A2_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NULL
+       OR ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NOT DISTINCT
+           FROM 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS DISTINCT
+                FROM '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS TRUE
+           AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT TRUE
+           AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS FALSE
+           AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT FALSE
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) like '%'
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                           1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                           2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+           AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                               2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A2_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NULL
+       OR '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IN
+         (SELECT '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NULL
+                 OR ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NOT DISTINCT
+                     FROM 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS DISTINCT
+                          FROM '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS TRUE
+                     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT TRUE
+                     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS FALSE
+                     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT FALSE
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) like '%'
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                                     1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                                     2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+                     AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                                         2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A2_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NULL
+          OR ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS NOT DISTINCT
+              FROM 1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IS DISTINCT
+                   FROM '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) > '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) >= '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) < 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <= 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS TRUE
+              AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT TRUE
+              AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) = '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS FALSE
+              AND ('1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) <> '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)) IS NOT FALSE
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) BETWEEN '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND 2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT BETWEEN '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) AND '0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char)
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) like '%'
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) not like '__DOES_NOT_EXIST__%'
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                              1||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                              2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))
+              AND '1'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char) NOT IN ('0'||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char),
+                                                                                  2||cast(ipv4_match(client_ip, '255.0.0.0/1') AS char))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A3_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ipv4_parse(session_length) IS NULL
+       OR (ipv4_parse(session_length) = ipv4_parse(session_length)+0
+           AND ipv4_parse(session_length) IS NOT DISTINCT
+           FROM ipv4_parse(session_length)+0
+           AND ipv4_parse(session_length) <> ipv4_parse(session_length)-2
+           AND (ipv4_parse(session_length) IS DISTINCT
+                FROM ipv4_parse(session_length)-2)
+           AND ipv4_parse(session_length) > ipv4_parse(session_length)-2
+           AND ipv4_parse(session_length) >= ipv4_parse(session_length)-2
+           AND ipv4_parse(session_length) < ipv4_parse(session_length)+2
+           AND ipv4_parse(session_length) <= ipv4_parse(session_length)+2
+           AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS TRUE
+           AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS NOT TRUE
+           AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS FALSE
+           AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS NOT FALSE
+           AND ipv4_parse(session_length) BETWEEN ipv4_parse(session_length)-2 AND ipv4_parse(session_length)+2
+           AND ipv4_parse(session_length) NOT BETWEEN ipv4_parse(session_length) AND ipv4_parse(session_length)-2
+           AND ipv4_parse(session_length) like '%'
+           AND ipv4_parse(session_length) not like '__DOES_NOT_EXIST__%'
+           AND ipv4_parse(session_length) IN (ipv4_parse(session_length)-2,
+                                                                        ipv4_parse(session_length)+0,
+                                                                        ipv4_parse(session_length)+2)
+           AND ipv4_parse(session_length) NOT IN (ipv4_parse(session_length)-2,
+                                                                            ipv4_parse(session_length)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A3_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ipv4_parse(session_length) IS NULL
+       OR ipv4_parse(session_length) IN
+         (SELECT ipv4_parse(session_length)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (ipv4_parse(session_length) IS NULL
+                 OR (ipv4_parse(session_length) = ipv4_parse(session_length)+0
+                     AND ipv4_parse(session_length) IS NOT DISTINCT
+                     FROM ipv4_parse(session_length)+0
+                     AND ipv4_parse(session_length) <> ipv4_parse(session_length)-2
+                     AND (ipv4_parse(session_length) IS DISTINCT
+                          FROM ipv4_parse(session_length)-2)
+                     AND ipv4_parse(session_length) > ipv4_parse(session_length)-2
+                     AND ipv4_parse(session_length) >= ipv4_parse(session_length)-2
+                     AND ipv4_parse(session_length) < ipv4_parse(session_length)+2
+                     AND ipv4_parse(session_length) <= ipv4_parse(session_length)+2
+                     AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS TRUE
+                     AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS NOT TRUE
+                     AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS FALSE
+                     AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS NOT FALSE
+                     AND ipv4_parse(session_length) BETWEEN ipv4_parse(session_length)-2 AND ipv4_parse(session_length)+2
+                     AND ipv4_parse(session_length) NOT BETWEEN ipv4_parse(session_length) AND ipv4_parse(session_length)-2
+                     AND ipv4_parse(session_length) like '%'
+                     AND ipv4_parse(session_length) not like '__DOES_NOT_EXIST__%'
+                     AND ipv4_parse(session_length) IN (ipv4_parse(session_length)-2,
+                                                                                  ipv4_parse(session_length)+0,
+                                                                                  ipv4_parse(session_length)+2)
+                     AND ipv4_parse(session_length) NOT IN (ipv4_parse(session_length)-2,
+                                                                                      ipv4_parse(session_length)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A3_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          ipv4_parse(session_length),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (ipv4_parse(session_length) IS NULL
+          OR (ipv4_parse(session_length) = ipv4_parse(session_length)+0
+              AND ipv4_parse(session_length) IS NOT DISTINCT
+              FROM ipv4_parse(session_length)+0
+              AND ipv4_parse(session_length) <> ipv4_parse(session_length)-2
+              AND (ipv4_parse(session_length) IS DISTINCT
+                   FROM ipv4_parse(session_length)-2)
+              AND ipv4_parse(session_length) > ipv4_parse(session_length)-2
+              AND ipv4_parse(session_length) >= ipv4_parse(session_length)-2
+              AND ipv4_parse(session_length) < ipv4_parse(session_length)+2
+              AND ipv4_parse(session_length) <= ipv4_parse(session_length)+2
+              AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS TRUE
+              AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS NOT TRUE
+              AND (ipv4_parse(session_length) = ipv4_parse(session_length)-2) IS FALSE
+              AND (ipv4_parse(session_length) <> ipv4_parse(session_length)-2) IS NOT FALSE
+              AND ipv4_parse(session_length) BETWEEN ipv4_parse(session_length)-2 AND ipv4_parse(session_length)+2
+              AND ipv4_parse(session_length) NOT BETWEEN ipv4_parse(session_length) AND ipv4_parse(session_length)-2
+              AND ipv4_parse(session_length) like '%'
+              AND ipv4_parse(session_length) not like '__DOES_NOT_EXIST__%'
+              AND ipv4_parse(session_length) IN (ipv4_parse(session_length)-2,
+                                                                           ipv4_parse(session_length)+0,
+                                                                           ipv4_parse(session_length)+2)
+              AND ipv4_parse(session_length) NOT IN (ipv4_parse(session_length)-2,
+                                                                               ipv4_parse(session_length)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A4_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ipv4_parse(client_ip) IS NULL
+       OR (ipv4_parse(client_ip) = ipv4_parse(client_ip)+0
+           AND ipv4_parse(client_ip) IS NOT DISTINCT
+           FROM ipv4_parse(client_ip)+0
+           AND ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2
+           AND (ipv4_parse(client_ip) IS DISTINCT
+                FROM ipv4_parse(client_ip)-2)
+           AND ipv4_parse(client_ip) > ipv4_parse(client_ip)-2
+           AND ipv4_parse(client_ip) >= ipv4_parse(client_ip)-2
+           AND ipv4_parse(client_ip) < ipv4_parse(client_ip)+2
+           AND ipv4_parse(client_ip) <= ipv4_parse(client_ip)+2
+           AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS TRUE
+           AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS NOT TRUE
+           AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS FALSE
+           AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS NOT FALSE
+           AND ipv4_parse(client_ip) BETWEEN ipv4_parse(client_ip)-2 AND ipv4_parse(client_ip)+2
+           AND ipv4_parse(client_ip) NOT BETWEEN ipv4_parse(client_ip) AND ipv4_parse(client_ip)-2
+           AND ipv4_parse(client_ip) like '%'
+           AND ipv4_parse(client_ip) not like '__DOES_NOT_EXIST__%'
+           AND ipv4_parse(client_ip) IN (ipv4_parse(client_ip)-2,
+                                                              ipv4_parse(client_ip)+0,
+                                                              ipv4_parse(client_ip)+2)
+           AND ipv4_parse(client_ip) NOT IN (ipv4_parse(client_ip)-2,
+                                                                  ipv4_parse(client_ip)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A4_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ipv4_parse(client_ip) IS NULL
+       OR ipv4_parse(client_ip) IN
+         (SELECT ipv4_parse(client_ip)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (ipv4_parse(client_ip) IS NULL
+                 OR (ipv4_parse(client_ip) = ipv4_parse(client_ip)+0
+                     AND ipv4_parse(client_ip) IS NOT DISTINCT
+                     FROM ipv4_parse(client_ip)+0
+                     AND ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2
+                     AND (ipv4_parse(client_ip) IS DISTINCT
+                          FROM ipv4_parse(client_ip)-2)
+                     AND ipv4_parse(client_ip) > ipv4_parse(client_ip)-2
+                     AND ipv4_parse(client_ip) >= ipv4_parse(client_ip)-2
+                     AND ipv4_parse(client_ip) < ipv4_parse(client_ip)+2
+                     AND ipv4_parse(client_ip) <= ipv4_parse(client_ip)+2
+                     AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS TRUE
+                     AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS NOT TRUE
+                     AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS FALSE
+                     AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS NOT FALSE
+                     AND ipv4_parse(client_ip) BETWEEN ipv4_parse(client_ip)-2 AND ipv4_parse(client_ip)+2
+                     AND ipv4_parse(client_ip) NOT BETWEEN ipv4_parse(client_ip) AND ipv4_parse(client_ip)-2
+                     AND ipv4_parse(client_ip) like '%'
+                     AND ipv4_parse(client_ip) not like '__DOES_NOT_EXIST__%'
+                     AND ipv4_parse(client_ip) IN (ipv4_parse(client_ip)-2,
+                                                                        ipv4_parse(client_ip)+0,
+                                                                        ipv4_parse(client_ip)+2)
+                     AND ipv4_parse(client_ip) NOT IN (ipv4_parse(client_ip)-2,
+                                                                            ipv4_parse(client_ip)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A4_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          ipv4_parse(client_ip),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (ipv4_parse(client_ip) IS NULL
+          OR (ipv4_parse(client_ip) = ipv4_parse(client_ip)+0
+              AND ipv4_parse(client_ip) IS NOT DISTINCT
+              FROM ipv4_parse(client_ip)+0
+              AND ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2
+              AND (ipv4_parse(client_ip) IS DISTINCT
+                   FROM ipv4_parse(client_ip)-2)
+              AND ipv4_parse(client_ip) > ipv4_parse(client_ip)-2
+              AND ipv4_parse(client_ip) >= ipv4_parse(client_ip)-2
+              AND ipv4_parse(client_ip) < ipv4_parse(client_ip)+2
+              AND ipv4_parse(client_ip) <= ipv4_parse(client_ip)+2
+              AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS TRUE
+              AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS NOT TRUE
+              AND (ipv4_parse(client_ip) = ipv4_parse(client_ip)-2) IS FALSE
+              AND (ipv4_parse(client_ip) <> ipv4_parse(client_ip)-2) IS NOT FALSE
+              AND ipv4_parse(client_ip) BETWEEN ipv4_parse(client_ip)-2 AND ipv4_parse(client_ip)+2
+              AND ipv4_parse(client_ip) NOT BETWEEN ipv4_parse(client_ip) AND ipv4_parse(client_ip)-2
+              AND ipv4_parse(client_ip) like '%'
+              AND ipv4_parse(client_ip) not like '__DOES_NOT_EXIST__%'
+              AND ipv4_parse(client_ip) IN (ipv4_parse(client_ip)-2,
+                                                                 ipv4_parse(client_ip)+0,
+                                                                 ipv4_parse(client_ip)+2)
+              AND ipv4_parse(client_ip) NOT IN (ipv4_parse(client_ip)-2,
+                                                                     ipv4_parse(client_ip)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A5_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ipv4_stringify(session_length) IS NULL
+       OR ('1'||ipv4_stringify(session_length) = 1||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) IS NOT DISTINCT
+           FROM 1||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)
+           AND ('1'||ipv4_stringify(session_length) IS DISTINCT
+                FROM '0'||ipv4_stringify(session_length))
+           AND '1'||ipv4_stringify(session_length) > '0'||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) >= '0'||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) < 2||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) <= 2||ipv4_stringify(session_length)
+           AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS TRUE
+           AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS NOT TRUE
+           AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS FALSE
+           AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS NOT FALSE
+           AND '1'||ipv4_stringify(session_length) BETWEEN '0'||ipv4_stringify(session_length) AND 2||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) NOT BETWEEN '1'||ipv4_stringify(session_length) AND '0'||ipv4_stringify(session_length)
+           AND '1'||ipv4_stringify(session_length) like '%'
+           AND '1'||ipv4_stringify(session_length) not like '__DOES_NOT_EXIST__%'
+           AND '1'||ipv4_stringify(session_length) IN ('0'||ipv4_stringify(session_length),
+                                                       1||ipv4_stringify(session_length),
+                                                       2||ipv4_stringify(session_length))
+           AND '1'||ipv4_stringify(session_length) NOT IN ('0'||ipv4_stringify(session_length),
+                                                           2||ipv4_stringify(session_length)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A5_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ipv4_stringify(session_length) IS NULL
+       OR '1'||ipv4_stringify(session_length) IN
+         (SELECT '1'||ipv4_stringify(session_length)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||ipv4_stringify(session_length) IS NULL
+                 OR ('1'||ipv4_stringify(session_length) = 1||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) IS NOT DISTINCT
+                     FROM 1||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)
+                     AND ('1'||ipv4_stringify(session_length) IS DISTINCT
+                          FROM '0'||ipv4_stringify(session_length))
+                     AND '1'||ipv4_stringify(session_length) > '0'||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) >= '0'||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) < 2||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) <= 2||ipv4_stringify(session_length)
+                     AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS TRUE
+                     AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS NOT TRUE
+                     AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS FALSE
+                     AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS NOT FALSE
+                     AND '1'||ipv4_stringify(session_length) BETWEEN '0'||ipv4_stringify(session_length) AND 2||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) NOT BETWEEN '1'||ipv4_stringify(session_length) AND '0'||ipv4_stringify(session_length)
+                     AND '1'||ipv4_stringify(session_length) like '%'
+                     AND '1'||ipv4_stringify(session_length) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||ipv4_stringify(session_length) IN ('0'||ipv4_stringify(session_length),
+                                                                 1||ipv4_stringify(session_length),
+                                                                 2||ipv4_stringify(session_length))
+                     AND '1'||ipv4_stringify(session_length) NOT IN ('0'||ipv4_stringify(session_length),
+                                                                     2||ipv4_stringify(session_length))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A5_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||ipv4_stringify(session_length),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||ipv4_stringify(session_length) IS NULL
+          OR ('1'||ipv4_stringify(session_length) = 1||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) IS NOT DISTINCT
+              FROM 1||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)
+              AND ('1'||ipv4_stringify(session_length) IS DISTINCT
+                   FROM '0'||ipv4_stringify(session_length))
+              AND '1'||ipv4_stringify(session_length) > '0'||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) >= '0'||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) < 2||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) <= 2||ipv4_stringify(session_length)
+              AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS TRUE
+              AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS NOT TRUE
+              AND ('1'||ipv4_stringify(session_length) = '0'||ipv4_stringify(session_length)) IS FALSE
+              AND ('1'||ipv4_stringify(session_length) <> '0'||ipv4_stringify(session_length)) IS NOT FALSE
+              AND '1'||ipv4_stringify(session_length) BETWEEN '0'||ipv4_stringify(session_length) AND 2||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) NOT BETWEEN '1'||ipv4_stringify(session_length) AND '0'||ipv4_stringify(session_length)
+              AND '1'||ipv4_stringify(session_length) like '%'
+              AND '1'||ipv4_stringify(session_length) not like '__DOES_NOT_EXIST__%'
+              AND '1'||ipv4_stringify(session_length) IN ('0'||ipv4_stringify(session_length),
+                                                          1||ipv4_stringify(session_length),
+                                                          2||ipv4_stringify(session_length))
+              AND '1'||ipv4_stringify(session_length) NOT IN ('0'||ipv4_stringify(session_length),
+                                                              2||ipv4_stringify(session_length))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A6_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS NULL
+       OR ('1'||ipv4_stringify(ipv4_parse(client_ip)) = 1||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IS NOT DISTINCT
+           FROM 1||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))
+           AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS DISTINCT
+                FROM '0'||ipv4_stringify(ipv4_parse(client_ip)))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) > '0'||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) >= '0'||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) < 2||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <= 2||ipv4_stringify(ipv4_parse(client_ip))
+           AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS TRUE
+           AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT TRUE
+           AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS FALSE
+           AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT FALSE
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) BETWEEN '0'||ipv4_stringify(ipv4_parse(client_ip)) AND 2||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT BETWEEN '1'||ipv4_stringify(ipv4_parse(client_ip)) AND '0'||ipv4_stringify(ipv4_parse(client_ip))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) like '%'
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) not like '__DOES_NOT_EXIST__%'
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                              1||ipv4_stringify(ipv4_parse(client_ip)),
+                                                              2||ipv4_stringify(ipv4_parse(client_ip)))
+           AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                  2||ipv4_stringify(ipv4_parse(client_ip))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A6_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS NULL
+       OR '1'||ipv4_stringify(ipv4_parse(client_ip)) IN
+         (SELECT '1'||ipv4_stringify(ipv4_parse(client_ip))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS NULL
+                 OR ('1'||ipv4_stringify(ipv4_parse(client_ip)) = 1||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IS NOT DISTINCT
+                     FROM 1||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))
+                     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS DISTINCT
+                          FROM '0'||ipv4_stringify(ipv4_parse(client_ip)))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) > '0'||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) >= '0'||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) < 2||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <= 2||ipv4_stringify(ipv4_parse(client_ip))
+                     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS TRUE
+                     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT TRUE
+                     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS FALSE
+                     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT FALSE
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) BETWEEN '0'||ipv4_stringify(ipv4_parse(client_ip)) AND 2||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT BETWEEN '1'||ipv4_stringify(ipv4_parse(client_ip)) AND '0'||ipv4_stringify(ipv4_parse(client_ip))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) like '%'
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                        1||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                        2||ipv4_stringify(ipv4_parse(client_ip)))
+                     AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                            2||ipv4_stringify(ipv4_parse(client_ip)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A6_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||ipv4_stringify(ipv4_parse(client_ip)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS NULL
+          OR ('1'||ipv4_stringify(ipv4_parse(client_ip)) = 1||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IS NOT DISTINCT
+              FROM 1||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))
+              AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) IS DISTINCT
+                   FROM '0'||ipv4_stringify(ipv4_parse(client_ip)))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) > '0'||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) >= '0'||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) < 2||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) <= 2||ipv4_stringify(ipv4_parse(client_ip))
+              AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS TRUE
+              AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT TRUE
+              AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) = '0'||ipv4_stringify(ipv4_parse(client_ip))) IS FALSE
+              AND ('1'||ipv4_stringify(ipv4_parse(client_ip)) <> '0'||ipv4_stringify(ipv4_parse(client_ip))) IS NOT FALSE
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) BETWEEN '0'||ipv4_stringify(ipv4_parse(client_ip)) AND 2||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT BETWEEN '1'||ipv4_stringify(ipv4_parse(client_ip)) AND '0'||ipv4_stringify(ipv4_parse(client_ip))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) like '%'
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) not like '__DOES_NOT_EXIST__%'
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                 1||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                 2||ipv4_stringify(ipv4_parse(client_ip)))
+              AND '1'||ipv4_stringify(ipv4_parse(client_ip)) NOT IN ('0'||ipv4_stringify(ipv4_parse(client_ip)),
+                                                                     2||ipv4_stringify(ipv4_parse(client_ip)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A7_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+       OR ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+           FROM 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                FROM '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+           AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+           AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+           AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                             1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                             2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+           AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A7_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+       OR '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IN
+         (SELECT '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+                 OR ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+                     FROM 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                          FROM '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+                     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+                     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+                     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                       1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                       2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+                     AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                           2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A7_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+          OR ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+              FROM 1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                   FROM '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+              AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+              AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+              AND ('1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                1||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))
+              AND '1'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                    2||cast(ipv6_match(session_length, 'aaaa:db8::8a2e:0:7334/16') AS char))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A8_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+       OR ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+           FROM 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                FROM '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+           AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+           AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+           AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                        1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                        2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+           AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                            2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A8_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+       OR '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IN
+         (SELECT '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+                 OR ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+                     FROM 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                          FROM '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+                     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+                     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+                     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                  1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                  2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+                     AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                                      2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_ipv4 TEST_ID: A8_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NULL
+          OR ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS NOT DISTINCT
+              FROM 1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IS DISTINCT
+                   FROM '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) > '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) >= '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) < 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <= 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS TRUE
+              AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT TRUE
+              AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) = '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS FALSE
+              AND ('1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) <> '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)) IS NOT FALSE
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) BETWEEN '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND 2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT BETWEEN '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) AND '0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char)
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) like '%'
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) not like '__DOES_NOT_EXIST__%'
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                           1||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                           2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))
+              AND '1'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char) NOT IN ('0'||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char),
+                                                                                               2||cast(ipv6_match(client_ip, 'aaaa:db8::8a2e:0:7334/16') AS char))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+

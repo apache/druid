@@ -114,13 +114,13 @@ public class SupervisorResourceTest extends EasyMockSupport
               } else {
                 if (resource.getType().equals(ResourceType.DATASOURCE)) {
                   if (resource.getName().equals("datasource2")) {
-                    return new Access(false, "not authorized.");
+                    return Access.deny("not authorized.");
                   } else {
                     return Access.OK;
                   }
                 } else if (resource.getType().equals(ResourceType.EXTERNAL)) {
                   if (resource.getName().equals("test")) {
-                    return new Access(false, "not authorized.");
+                    return Access.deny("not authorized.");
                   } else {
                     return Access.OK;
                   }
@@ -161,7 +161,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request);
+    Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -171,10 +171,59 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request);
+    response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+  }
+
+  @Test
+  public void testSpecPost_whenSkipRestartIfUnmodifiedIsTrue()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
+    {
+
+      @Override
+      public List<String> getDataSources()
+      {
+        return List.of("datasource1");
+      }
+    };
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(false);
+
+    setupMockRequest();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    replayAll();
+
+    Response response = supervisorResource.specPost(spec, true, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+
+    setupMockRequest();
+    setupMockRequestForAudit();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    response = supervisorResource.specPost(spec, true, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
   }
 
   @Test
@@ -201,7 +250,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request);
+    Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -211,10 +260,17 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request);
+    response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+
+    resetAll();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+    response = supervisorResource.specPost(spec, null, request);
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
   }
 
   @Test
@@ -230,7 +286,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       }
     };
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
@@ -238,10 +294,11 @@ public class SupervisorResourceTest extends EasyMockSupport
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true).times(2);
     replayAll();
 
-    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, request));
+    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, false, request));
+    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, null, request));
     verifyAll();
   }
 

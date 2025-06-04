@@ -41,6 +41,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -75,13 +76,13 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -131,18 +132,18 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
   }
 
   @Test
-  public void testManageInternalReleaseLockWhenTaskIsNotReady() throws Exception
+  public void testManageQueuedTasksReleaseLockWhenTaskIsNotReady() throws Exception
   {
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
     // to task2.
@@ -153,14 +154,14 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
     taskQueue.add(task2);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
     // task3 can run because task2 is still blocked by task1.
     final TestTask task3 = new TestTask("t3", Intervals.of("2021-02-01/P1M"));
     taskQueue.add(task3);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(task3.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
@@ -170,7 +171,7 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.shutdown(task3.getId(), "Emulating shutdown of task3");
 
     // Now task2 should run.
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
   }
 
@@ -232,14 +233,14 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    maxPayloadTaskQueue.setActive();
+    maxPayloadTaskQueue.setActive(true);
 
     // 1 MB is not too large
     char[] context = new char[1024 * 1024];
@@ -377,7 +378,7 @@ public class TaskQueueTest extends IngestionTestBase
       }
     };
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
     Assert.assertTrue(statusOptional.isPresent());
@@ -415,10 +416,10 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     // Announce the task and wait for it to start running
     final String taskId = task.getId();
@@ -437,7 +438,7 @@ public class TaskQueueTest extends IngestionTestBase
         TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
         workerHolder
     );
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
@@ -503,7 +504,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
 
     Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
     Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
@@ -701,14 +702,14 @@ public class TaskQueueTest extends IngestionTestBase
     }
   }
 
-  private class SimpleTaskRunner extends SingleTaskBackgroundRunner
+  static class SimpleTaskRunner extends SingleTaskBackgroundRunner
   {
-    SimpleTaskRunner()
+    SimpleTaskRunner(ServiceEmitter emitter)
     {
       super(
           EasyMock.createMock(TaskToolboxFactory.class),
           null,
-          serviceEmitter,
+          emitter,
           new DruidNode("overlord", "localhost", false, 8091, null, true, false),
           null
       );

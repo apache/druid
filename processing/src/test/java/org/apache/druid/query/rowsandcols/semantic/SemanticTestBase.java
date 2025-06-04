@@ -20,7 +20,6 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.FluentIterable;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.NoAsRowsAndColumns;
@@ -41,10 +40,6 @@ import java.util.function.Function;
 @RunWith(Parameterized.class)
 public abstract class SemanticTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> parameterFeed()
   {

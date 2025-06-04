@@ -99,7 +99,8 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
     return (buffer, builder, columnConfig, parent) -> {
       final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
       FloatNumericColumnSupplier columnSupplier = new FloatNumericColumnSupplier(
           column,

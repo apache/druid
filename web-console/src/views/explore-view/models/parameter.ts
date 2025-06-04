@@ -18,7 +18,9 @@
 
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { mapRecord, mapRecordIfChanged } from '../../../utils';
+import type { SqlExpression } from 'druid-query-toolkit';
+
+import { deleteKeys, mapRecord, mapRecordOrReturn } from '../../../utils';
 
 import { ExpressionMeta } from './expression-meta';
 import { Measure } from './measure';
@@ -26,13 +28,28 @@ import type { QuerySource } from './query-source';
 
 export type OptionValue = string | number;
 
-export type ModuleFunctor<T> = T | ((options: { parameterValues: ParameterValues }) => T);
+function isOptionValue(v: unknown): v is OptionValue {
+  return typeof v === 'string' || typeof v === 'number';
+}
 
-export function evaluateFunctor<T>(fn: ModuleFunctor<T>, parameterValues: ParameterValues): T {
-  if (typeof fn === 'function') {
-    return (fn as any)({ parameterValues });
+export type ModuleFunctor<T> =
+  | T
+  | ((options: {
+      querySource: QuerySource | undefined;
+      where: SqlExpression;
+      parameterValues: ParameterValues;
+    }) => T);
+
+export function evaluateFunctor<T>(
+  functor: ModuleFunctor<T> | undefined,
+  parameterValues: ParameterValues,
+  querySource: QuerySource | undefined,
+  where: SqlExpression,
+): T | undefined {
+  if (typeof functor === 'function') {
+    return (functor as any)({ where, parameterValues, querySource });
   } else {
-    return fn;
+    return functor;
   }
 }
 
@@ -41,12 +58,14 @@ export interface ParameterTypes {
   boolean: boolean;
   number: number;
   option: OptionValue;
-  options: OptionValue[];
+  options: readonly OptionValue[];
   expression: ExpressionMeta;
-  expressions: ExpressionMeta[];
+  expressions: readonly ExpressionMeta[];
   measure: Measure;
-  measures: Measure[];
+  measures: readonly Measure[];
 }
+
+type OptionLabels = { [key: string | number]: string } | ((x: string) => string);
 
 interface TypedExtensions {
   boolean: {};
@@ -56,12 +75,12 @@ interface TypedExtensions {
     max?: number;
   };
   option: {
-    options: readonly OptionValue[];
-    optionLabels?: { [key: string | number]: string };
+    options: ModuleFunctor<readonly OptionValue[]>;
+    optionLabels?: OptionLabels;
   };
   options: {
-    options: readonly OptionValue[];
-    optionLabels?: { [key: string | number]: string };
+    options: ModuleFunctor<readonly OptionValue[]>;
+    optionLabels?: OptionLabels;
     allowDuplicates?: boolean;
     nonEmpty?: boolean;
   };
@@ -81,33 +100,15 @@ export type TypedParameterDefinition<Type extends keyof ParameterTypes> = TypedE
   label?: ModuleFunctor<string>;
   type: Type;
   transferGroup?: string;
-  defaultValue?:
-    | ParameterTypes[Type]
-    | ((querySource: QuerySource) => ParameterTypes[Type] | undefined);
-
+  defaultValue?: ModuleFunctor<ParameterTypes[Type] | undefined>;
   sticky?: boolean;
   required?: ModuleFunctor<boolean>;
+  important?: boolean;
   description?: ModuleFunctor<string>;
   placeholder?: string;
+  defined?: ModuleFunctor<boolean>;
   visible?: ModuleFunctor<boolean>;
-
-  /**
-   * Validate the value of this parameter.
-   *
-   * @param value - Current parameter value or undefined if no value has been set.
-   * @returns - An error message if the value is invalid, or undefined if the value is valid.
-   */
-  validate?: (value: ParameterTypes[Type] | undefined) => string | undefined;
-
-  /**
-   * Determines whether the parameter should exist in the visual modules parameters.
-   *
-   * If the provided function returns false, the parameter value will be deleted from
-   * the module's parameters. If true, it will be whatever the relative control
-   *
-   * @default undefined
-   */
-  defined?: (options: { parametersValues: Record<string, any> }) => boolean;
+  legacyName?: string;
 };
 
 export type ParameterDefinition =
@@ -132,20 +133,23 @@ export function getModuleOptionLabel(
   optionValue: OptionValue,
   parameterDefinition: ParameterDefinition,
 ): string {
-  const { optionLabels = {} } = parameterDefinition as any;
+  const { optionLabels } = parameterDefinition as any;
 
-  return (
-    optionLabels[optionValue] ??
-    (typeof optionValue === 'string'
-      ? optionValue
-      : typeof optionValue !== 'undefined'
-      ? String(optionValue)
-      : 'Malformed option')
-  );
+  if (typeof optionLabels === 'function') {
+    const l = optionLabels(optionValue);
+    if (typeof l !== 'undefined') return l;
+  }
+
+  if (optionLabels && typeof optionLabels === 'object') {
+    const l = optionLabels[optionValue];
+    if (typeof l !== 'undefined') return l;
+  }
+
+  return typeof optionValue !== 'undefined' ? String(optionValue) : 'Malformed option';
 }
 
 export type ParameterValues = Readonly<Record<string, any>>;
-export type Parameters = Record<string, ParameterDefinition>;
+export type Parameters = Readonly<Record<string, ParameterDefinition>>;
 
 // -----------------------------------------------------
 
@@ -154,7 +158,11 @@ export function inflateParameterValues(
   parameters: Parameters,
 ): ParameterValues {
   return mapRecord(parameters, (parameter, parameterName) =>
-    inflateParameterValue(parameterValues?.[parameterName], parameter),
+    inflateParameterValue(
+      parameterValues?.[parameterName] ??
+        (parameter.legacyName ? parameterValues?.[parameter.legacyName] : undefined),
+      parameter,
+    ),
   );
 }
 
@@ -165,26 +173,19 @@ function inflateParameterValue(value: unknown, parameter: ParameterDefinition): 
       return Boolean(value);
 
     case 'number': {
-      let v = Number(value);
-      if (isNaN(v)) v = 0;
-      if (typeof parameter.min === 'number') {
-        v = Math.max(v, parameter.min);
-      }
-      if (typeof parameter.max === 'number') {
-        v = Math.min(v, parameter.max);
-      }
+      const v = Number(value);
+      if (isNaN(v)) return;
       return v;
     }
 
-    case 'option':
-      if (!parameter.options || !parameter.options.includes(value as OptionValue)) return;
-      return value as OptionValue;
-
-    case 'options': {
-      if (!Array.isArray(value)) return [];
-      const options = parameter.options || [];
-      return value.filter(v => options.includes(v));
+    case 'option': {
+      if (!isOptionValue(value)) return;
+      return value;
     }
+
+    case 'options':
+      if (!Array.isArray(value)) return [];
+      return value.filter(isOptionValue);
 
     case 'expression':
       return ExpressionMeta.inflate(value);
@@ -205,6 +206,25 @@ function inflateParameterValue(value: unknown, parameter: ParameterDefinition): 
 
 // -----------------------------------------------------
 
+export function removeUndefinedParameterValues(
+  parameterValues: ParameterValues,
+  parameters: Parameters,
+  querySource: QuerySource | undefined,
+  where: SqlExpression,
+): ParameterValues {
+  const keysToRemove = Object.keys(parameterValues).filter(key => {
+    const parameter = parameters[key];
+    if (!parameter) return true;
+    return (
+      typeof parameter.defined !== 'undefined' &&
+      !evaluateFunctor(parameter.defined, parameterValues, querySource, where)
+    );
+  });
+  return keysToRemove.length ? deleteKeys(parameterValues, keysToRemove) : parameterValues;
+}
+
+// -----------------------------------------------------
+
 function defaultForType(parameterType: keyof ParameterTypes): any {
   switch (parameterType) {
     case 'boolean':
@@ -221,21 +241,26 @@ function defaultForType(parameterType: keyof ParameterTypes): any {
 
 export function effectiveParameterDefault(
   parameter: ParameterDefinition,
+  parameterValues: ParameterValues,
   querySource: QuerySource | undefined,
+  where: SqlExpression,
+  previousParameterValue: any,
 ): any {
-  const { defaultValue } = parameter;
-  switch (typeof defaultValue) {
-    case 'function':
-      return (
-        (querySource ? defaultValue(querySource) : undefined) ?? defaultForType(parameter.type)
-      );
-
-    case 'undefined':
-      return defaultForType(parameter.type);
-
-    default:
-      return defaultValue;
+  if (
+    typeof parameter.defined !== 'undefined' &&
+    evaluateFunctor(parameter.defined, parameterValues, querySource, where) === false
+  ) {
+    return;
   }
+  const newDefault =
+    evaluateFunctor(parameter.defaultValue, parameterValues, querySource, where) ??
+    defaultForType(parameter.type);
+
+  if (previousParameterValue instanceof Measure && previousParameterValue.equals(newDefault)) {
+    return previousParameterValue;
+  }
+
+  return newDefault;
 }
 
 // -----------------------------------------------------
@@ -245,7 +270,7 @@ export function renameColumnsInParameterValues(
   parameters: Parameters,
   rename: Map<string, string>,
 ): ParameterValues {
-  return mapRecordIfChanged(parameterValues, (parameterValue, k) =>
+  return mapRecordOrReturn(parameterValues, (parameterValue, k) =>
     renameColumnsInParameterValue(parameterValue, parameters[k], rename),
   );
 }
@@ -258,10 +283,10 @@ function renameColumnsInParameterValue(
   if (typeof parameterValue !== 'undefined') {
     switch (parameter.type) {
       case 'expression':
-        return (parameterValue as ExpressionMeta).renameInExpression(rename);
+        return (parameterValue as ExpressionMeta).applyRename(rename);
 
       case 'measure':
-        return (parameterValue as Measure).renameInExpression(rename);
+        return (parameterValue as Measure).applyRename(rename);
 
       case 'expressions':
       case 'measures':

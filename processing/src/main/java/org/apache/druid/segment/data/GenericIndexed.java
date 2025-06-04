@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -159,7 +159,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     @Nullable
     public byte[] toBytes(@Nullable String val)
     {
-      return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
+      return StringUtils.toUtf8Nullable(val);
     }
 
     @Override
@@ -175,32 +175,36 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
   };
 
-  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
+  /**
+   * Reads a GenericIndexed from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SmooshedFileMapper}.
+   *
+   * @param buffer     primary buffer to read from
+   * @param strategy   deserialization strategy
+   * @param fileMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                   a version 1 indexed.
+   */
+  public static <T> GenericIndexed<T> read(
+      ByteBuffer buffer,
+      ObjectStrategy<T> strategy,
+      @Nullable SmooshedFileMapper fileMapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
     if (VERSION_ONE == versionFromBuffer) {
       return createGenericIndexedVersionOne(buffer, strategy);
     } else if (VERSION_TWO == versionFromBuffer) {
-      throw new IAE(
-          "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
-          + " to read version 2 indexed."
-      );
-    }
-    throw new IAE("Unknown version[%d]", (int) versionFromBuffer);
-  }
-
-  public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (VERSION_ONE == versionFromBuffer) {
-      return createGenericIndexedVersionOne(buffer, strategy);
-    } else if (VERSION_TWO == versionFromBuffer) {
+      if (fileMapper == null) {
+        throw DruidException.defensive(
+            "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
+            + " with non-null fileMapper to read version 2 indexed."
+        );
+      }
       return createGenericIndexedVersionTwo(buffer, strategy, fileMapper);
     }
 
-    throw new IAE("Unknown version [%s]", versionFromBuffer);
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
   public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
@@ -560,10 +564,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
   {
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
     int size = endOffset - startOffset;
-    // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
-    // When SQL compatibility is not enabled return null for both null as well as empty string case.
-    if (size == 0 && (NullHandling.replaceWithDefault()
-                      || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+    if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
       return null;
     }
     copyValueBuffer.position(startOffset);
@@ -601,10 +602,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
-      // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
-      // When SQL compatibility is not enabled return null for both null as well as empty string case.
-      if (size == 0 && (NullHandling.replaceWithDefault()
-                        || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+      if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
 

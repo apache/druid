@@ -27,7 +27,6 @@ import java.util.Set;
 /**
  * Supports load queue management.
  */
-@Deprecated
 public interface LoadQueuePeon
 {
   void start();

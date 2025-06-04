@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.curator.shaded.com.google.common.base.Verify;
+import com.google.common.base.Verify;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
@@ -51,16 +51,6 @@ public class Tasks
   public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String TASK_LOCK_TYPE = "taskLockType";
   public static final String USE_CONCURRENT_LOCKS = "useConcurrentLocks";
-
-  /**
-   * Context flag denoting if maximum possible values should be used to estimate
-   * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
-   * more details.
-   * <p>
-   * The value of this flag is true by default which corresponds to the old method
-   * of estimation.
-   */
-  public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**
    * Context flag to denote if segments published to metadata by a task should

@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
@@ -57,11 +56,8 @@ import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.apache.druid.segment.serde.DoubleNumericColumnPartSerde;
 import org.apache.druid.segment.serde.DoubleNumericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
 import org.apache.druid.segment.serde.FloatNumericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.LongNumericColumnPartSerde;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerdeV2;
 import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -537,12 +533,27 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < dimensions.size(); i++) {
         final String dimension = dimensions.get(i);
-        DimensionMergerV9 merger = mergers.get(i);
+        final DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (!merger.hasOnlyNulls()) {
-          ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-          makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
+        final ColumnDescriptor columnDesc;
+        if (merger.hasOnlyNulls()) {
+          // synthetic null column descriptor if merger participates in generic null column stuff
+          // always write a null column if hasOnlyNulls is true. This is correct regardless of how storeEmptyColumns is
+          // set because:
+          // - if storeEmptyColumns is true, the base table also does this,
+          // - if storeEmptyColumns is false, the base table omits the column from the dimensions list as if it does not
+          //   exist, however for projections the dimensions list is always populated by the projection schema, so a
+          //   column always needs to exist to not run into null pointer exceptions.
+          columnDesc = ColumnDescriptor
+              .builder()
+              .setValueType(columnFormats.get(dimension).getLogicalType().getType())
+              .addSerde(new NullColumnPartSerde(rowCount, indexSpec.getBitmapSerdeFactory()))
+              .build();
+        } else {
+          // use merger descriptor, merger either has values or handles it own null column storage details
+          columnDesc = merger.makeColumnDescriptor();
         }
+        makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
       }
 
       progress.stopSection(section2);
@@ -724,53 +735,29 @@ public class IndexMergerV9 implements IndexMerger
 
   static ColumnPartSerde createLongColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use LongNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return LongNumericColumnPartSerde.serializerBuilder()
+    return LongNumericColumnPartSerdeV2.serializerBuilder()
                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                       .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                        .withDelegate(serializer)
                                        .build();
-    } else {
-      return LongNumericColumnPartSerdeV2.serializerBuilder()
-                                         .withByteOrder(IndexIO.BYTE_ORDER)
-                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                         .withDelegate(serializer)
-                                         .build();
-    }
   }
 
   static ColumnPartSerde createDoubleColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use DoubleNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return DoubleNumericColumnPartSerde.serializerBuilder()
+    return DoubleNumericColumnPartSerdeV2.serializerBuilder()
                                          .withByteOrder(IndexIO.BYTE_ORDER)
+                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                          .withDelegate(serializer)
                                          .build();
-    } else {
-      return DoubleNumericColumnPartSerdeV2.serializerBuilder()
-                                           .withByteOrder(IndexIO.BYTE_ORDER)
-                                           .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                           .withDelegate(serializer)
-                                           .build();
-    }
   }
 
   static ColumnPartSerde createFloatColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use FloatNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return FloatNumericColumnPartSerde.serializerBuilder()
+    return FloatNumericColumnPartSerdeV2.serializerBuilder()
                                         .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                         .withDelegate(serializer)
                                         .build();
-    } else {
-      return FloatNumericColumnPartSerdeV2.serializerBuilder()
-                                          .withByteOrder(IndexIO.BYTE_ORDER)
-                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                          .withDelegate(serializer)
-                                          .build();
-    }
   }
 
   private void makeTimeColumn(
@@ -995,25 +982,14 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return LongColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getLongEncoding()
-      );
-    } else {
-      return LongColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getLongEncoding(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return LongColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getLongEncoding(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   static GenericColumnSerializer createDoubleColumnSerializer(
@@ -1022,23 +998,13 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use DoubleColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return DoubleColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression()
-      );
-    } else {
-      return DoubleColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return DoubleColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   static GenericColumnSerializer createFloatColumnSerializer(
@@ -1047,23 +1013,13 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use FloatColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return FloatColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression()
-      );
-    } else {
-      return FloatColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return FloatColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   private void writeDimValuesAndSetupDimConversion(
@@ -1232,7 +1188,7 @@ public class IndexMergerV9 implements IndexMerger
 
     List<File> tempDirs = new ArrayList<>();
 
-    if (maxColumnsToMerge == UNLIMITED_MAX_COLUMNS_TO_MERGE) {
+    if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(
           indexes,
           rollup,
@@ -1248,12 +1204,18 @@ public class IndexMergerV9 implements IndexMerger
     List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
     List<File> currentOutputs = new ArrayList<>();
 
-    log.debug("base outDir: " + outDir);
+    log.debug("Base outDir[%s]", outDir);
 
     try {
       int tierCounter = 0;
       while (true) {
-        log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
+        log.info(
+            "Merging phases[%,d] (indexes[%,d], maxColumnsToMerge[%,d]), tiers finished processed so far[%,d].",
+            currentPhases.size(),
+            indexes.size(),
+            maxColumnsToMerge,
+            tierCounter
+        );
         for (List<IndexableAdapter> phase : currentPhases) {
           final File phaseOutDir;
           final boolean isFinalPhase = currentPhases.size() == 1;
@@ -1265,8 +1227,8 @@ public class IndexMergerV9 implements IndexMerger
             phaseOutDir = FileUtils.createTempDir();
             tempDirs.add(phaseOutDir);
           }
-          log.info("Merging phase with %d indexes.", phase.size());
-          log.debug("phase outDir: " + phaseOutDir);
+          log.info("Merging phase with index count[%,d].", phase.size());
+          log.debug("Phase outDir[%s]", phaseOutDir);
 
           File phaseOutput = merge(
               phase,

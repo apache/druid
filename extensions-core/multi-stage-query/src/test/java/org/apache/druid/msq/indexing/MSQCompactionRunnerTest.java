@@ -26,14 +26,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -50,6 +50,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -63,6 +64,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -70,16 +72,16 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -102,9 +104,13 @@ public class MSQCompactionRunnerTest
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
 
   private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, false);
-  private static final StringDimensionSchema MV_STRING_DIMENSION = new StringDimensionSchema("mv_string_dim", null, null);
+  private static final StringDimensionSchema MV_STRING_DIMENSION = new StringDimensionSchema(
+      "mv_string_dim",
+      null,
+      null
+  );
   private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
-  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 4);
+  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 5);
   private static final AutoTypeColumnSchema AUTO_DIMENSION = new AutoTypeColumnSchema("auto_dim", null);
   private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(
       STRING_DIMENSION,
@@ -112,6 +118,19 @@ public class MSQCompactionRunnerTest
       MV_STRING_DIMENSION,
       NESTED_DIMENSION,
       AUTO_DIMENSION
+  );
+  private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
+      "projection",
+      VirtualColumns.create(
+          Granularities.toVirtualColumn(
+              Granularities.HOUR,
+              Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+          )
+      ),
+      ImmutableList.of(STRING_DIMENSION),
+      new AggregatorFactory[]{
+          new LongSumAggregatorFactory(LONG_DIMENSION.getName(), LONG_DIMENSION.getName())
+      }
   );
   private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
       COMPACTION_INTERVAL,
@@ -122,6 +141,20 @@ public class MSQCompactionRunnerTest
           null,
           null,
           null,
+          null,
+          ImmutableSet.of(MV_STRING_DIMENSION.getName())
+      )
+  );
+  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS_WITH_PROJECTION = ImmutableMap.of(
+      COMPACTION_INTERVAL,
+      new CombinedDataSchema(
+          DATA_SOURCE,
+          new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+          new DimensionsSpec(DIMENSIONS),
+          null,
+          null,
+          null,
+          ImmutableList.of(PROJECTION_SPEC),
           ImmutableSet.of(MV_STRING_DIMENSION.getName())
       )
   );
@@ -129,15 +162,12 @@ public class MSQCompactionRunnerTest
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
-  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, TestExprMacroTable.INSTANCE, null);
+  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(
+      JSON_MAPPER,
+      TestExprMacroTable.INSTANCE,
+      null
+  );
   private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(STRING_DIMENSION.getName());
-
-
-  @BeforeClass
-  public static void setupClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void testMultipleDisjointCompactionIntervalsAreInvalid()
@@ -200,8 +230,9 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
-                                                                                                     INTERVAL_DATASCHEMAS
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        INTERVAL_DATASCHEMAS
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
@@ -222,8 +253,9 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
-                                                                                                     INTERVAL_DATASCHEMAS
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        INTERVAL_DATASCHEMAS
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
@@ -366,13 +398,14 @@ public class MSQCompactionRunnerTest
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
     Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
 
-    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
-    ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
+    Query<?> query = actualMSQSpec.getQuery();
+    Assert.assertTrue(query instanceof ScanQuery);
+    ScanQuery scanQuery = (ScanQuery) query;
 
     List<String> expectedColumns = new ArrayList<>();
     List<ColumnType> expectedColumnTypes = new ArrayList<>();
@@ -447,10 +480,11 @@ public class MSQCompactionRunnerTest
         Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
     );
 
-    MSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
 
-    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
-    ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
+    Query<?> query = actualMSQSpec.getQuery();
+    Assert.assertTrue(query instanceof ScanQuery);
+    ScanQuery scanQuery = (ScanQuery) query;
 
     // Dimensions should already list __time and the order should remain intact
     Assert.assertEquals(
@@ -486,6 +520,7 @@ public class MSQCompactionRunnerTest
             Collections.singletonList(COMPACTION_INTERVAL)
         ),
         new TransformSpec(dimFilter, Collections.emptyList()),
+        null,
         multiValuedDimensions
     );
 
@@ -496,13 +531,14 @@ public class MSQCompactionRunnerTest
 
     MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
 
-    MSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
     Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
 
-    Assert.assertTrue(actualMSQSpec.getQuery() instanceof GroupByQuery);
-    GroupByQuery groupByQuery = (GroupByQuery) actualMSQSpec.getQuery();
+    Query<?> query = actualMSQSpec.getQuery();
+    Assert.assertTrue(query instanceof GroupByQuery);
+    GroupByQuery groupByQuery = (GroupByQuery) query;
 
     Assert.assertEquals(dimFilter, groupByQuery.getFilter());
     Assert.assertEquals(
@@ -543,6 +579,84 @@ public class MSQCompactionRunnerTest
     Assert.assertEquals(expectedDimensionSpec, groupByQuery.getDimensions());
   }
 
+  @Test
+  public void testCompactionConfigWithProjectionsProducesCorrectSpec() throws JsonProcessingException
+  {
+    DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
+    CompactionTask taskCreatedWithTransformSpec = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        null,
+        Collections.emptyMap(),
+        null,
+        null,
+        ImmutableList.of(PROJECTION_SPEC)
+    );
+
+    DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource(DATA_SOURCE)
+                  .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+                  .withDimensions(DIMENSIONS)
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          SEGMENT_GRANULARITY.getDefaultGranularity(),
+                          QUERY_GRANULARITY.getDefaultGranularity(),
+                          false,
+                          Collections.singletonList(COMPACTION_INTERVAL)
+                      )
+                  )
+                  .withProjections(ImmutableList.of(PROJECTION_SPEC))
+                  .withTransform(new TransformSpec(dimFilter, Collections.emptyList()))
+                  .build();
+
+
+    List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
+        taskCreatedWithTransformSpec,
+        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+    );
+
+    MSQControllerTask msqControllerTask = Iterables.getOnlyElement(msqControllerTasks);
+
+    LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
+
+    Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
+    Assert.assertEquals(getExpectedDestinationWithProjections(), actualMSQSpec.getDestination());
+
+    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
+    ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
+
+    List<String> expectedColumns = new ArrayList<>();
+    List<ColumnType> expectedColumnTypes = new ArrayList<>();
+    // Add __time since this is a time-ordered query which doesn't have __time explicitly defined in dimensionsSpec
+    expectedColumns.add(ColumnHolder.TIME_COLUMN_NAME);
+    expectedColumnTypes.add(ColumnType.LONG);
+
+    // Add TIME_VIRTUAL_COLUMN since a query granularity is specified
+    expectedColumns.add(MSQCompactionRunner.TIME_VIRTUAL_COLUMN);
+    expectedColumnTypes.add(ColumnType.LONG);
+
+    expectedColumns.addAll(DIMENSIONS.stream().map(DimensionSchema::getName).collect(Collectors.toList()));
+    expectedColumnTypes.addAll(DIMENSIONS.stream().map(DimensionSchema::getColumnType).collect(Collectors.toList()));
+
+    Assert.assertEquals(expectedColumns, scanQuery.getColumns());
+    Assert.assertEquals(expectedColumnTypes, scanQuery.getColumnTypes());
+
+    Assert.assertEquals(dimFilter, scanQuery.getFilter());
+    Assert.assertEquals(
+        JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
+        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+    );
+    Assert.assertEquals(
+        JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
+        msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
+    );
+    Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assert.assertEquals(
+        PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        scanQuery.getOrderBys()
+    );
+  }
+
   private CompactionTask createCompactionTask(
       @Nullable PartitionsSpec partitionsSpec,
       @Nullable DimFilter dimFilter,
@@ -551,8 +665,20 @@ public class MSQCompactionRunnerTest
       @Nullable AggregatorFactory[] metricsSpec
   )
   {
-    ClientCompactionTaskTransformSpec transformSpec =
-        new ClientCompactionTaskTransformSpec(dimFilter);
+    return createCompactionTask(partitionsSpec, dimFilter, contextParams, granularitySpec, metricsSpec, null);
+  }
+
+  private CompactionTask createCompactionTask(
+      @Nullable PartitionsSpec partitionsSpec,
+      @Nullable DimFilter dimFilter,
+      Map<String, Object> contextParams,
+      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable List<AggregateProjectionSpec> projections
+  )
+  {
+    CompactionTransformSpec transformSpec =
+        new CompactionTransformSpec(dimFilter);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
         null
@@ -573,6 +699,7 @@ public class MSQCompactionRunnerTest
         .granularitySpec(granularitySpec)
         .dimensionsSpec(new DimensionsSpec(null))
         .metricsSpec(metricsSpec)
+        .projections(projections)
         .compactionRunner(MSQ_COMPACTION_RUNNER)
         .context(context);
 
@@ -615,6 +742,20 @@ public class MSQCompactionRunnerTest
         null,
         Collections.singletonList(COMPACTION_INTERVAL),
         DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+        null,
+        null
+    );
+  }
+
+  private static DataSourceMSQDestination getExpectedDestinationWithProjections()
+  {
+    return new DataSourceMSQDestination(
+        DATA_SOURCE,
+        SEGMENT_GRANULARITY.getDefaultGranularity(),
+        null,
+        Collections.singletonList(COMPACTION_INTERVAL),
+        DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+        ImmutableList.of(PROJECTION_SPEC),
         null
     );
   }

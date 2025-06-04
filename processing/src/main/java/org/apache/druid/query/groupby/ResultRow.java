@@ -91,7 +91,7 @@ public final class ResultRow
   public static ResultRow fromLegacyRow(Row row, final GroupByQuery query)
   {
     // Can't be sure if we'll get result rows with or without postaggregations, so be safe.
-    final ResultRow resultRow = create(query.getResultRowSizeWithPostAggregators());
+    final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithPostAggregators());
 
     int i = 0;
     if (query.getResultRowHasTimestamp()) {

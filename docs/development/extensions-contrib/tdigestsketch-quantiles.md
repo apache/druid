@@ -149,3 +149,27 @@ Similar to quantilesFromTDigestSketch except it takes in a single fraction for c
 |name|A String for the output (result) name of the calculation.|yes|
 |field|A field reference pointing to the field aggregated/combined T-Digest sketch.|yes|
 |fraction|Decimal value between 0 and 1|yes|
+
+### SQL functions
+
+Once you load the T-Digest extension, you can use the following SQL functions.
+
+#### TDIGEST_GENERATE_SKETCH
+
+Builds a T-Digest sketch on values produced by an expression.
+Compression parameter (default value 100) determines the accuracy and size of the sketch.
+Higher compression provides higher accuracy but requires more storage space.
+
+* **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
+* **Default**: Empty Base64-encoded T-Digest sketch string
+* **Function type**: [Aggregation](../../querying/sql-aggregations.md)
+
+#### TDIGEST_QUANTILE
+
+Builds a T-Digest sketch on values produced by an expression and returns the value for the quantile.
+Compression parameter (default value 100) determines the accuracy and size of the sketch.
+Higher compression provides higher accuracy but requires more storage space.
+
+* **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
+* **Default**: `Double.NaN`
+* **Function type**: [Aggregation](../../querying/sql-aggregations.md)

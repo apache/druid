@@ -19,12 +19,31 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.PolicyEnforcer;
+
 /**
- * A {@link Segment} with a associated references, such as {@link ReferenceCountingSegment} where the reference is
+ * A {@link Segment} with an associated references, such as {@link ReferenceCountingSegment} where the reference is
  * the segment itself, and {@link org.apache.druid.segment.join.HashJoinSegment} which wraps a
  * {@link ReferenceCountingSegment} and also includes the associated list of
  * {@link org.apache.druid.segment.join.JoinableClause}
  */
 public interface SegmentReference extends Segment, ReferenceCountedObject
 {
+
+  /**
+   * Validates if the segment complies with the policy restrictions on tables.
+   * <p>
+   * This should be called right before the segment is about to be processed by the query stack, and after
+   * {@link org.apache.druid.query.planning.ExecutionVertex#createSegmentMapFunction(PolicyEnforcer)}.
+   */
+  default void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    // For testing purposes, we allow the NoopPolicyEnforcer to pass through.
+    if (policyEnforcer instanceof NoopPolicyEnforcer) {
+      return;
+    }
+    throw new UnsupportedOperationException("validateOrElseThrow is not supported");
+  }
+
 }

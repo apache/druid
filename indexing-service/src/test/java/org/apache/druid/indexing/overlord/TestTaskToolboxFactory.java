@@ -26,7 +26,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -42,8 +41,11 @@ import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -84,6 +86,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.taskExecutorNode,
         bob.taskActionClientFactory,
         bob.emitter,
+        bob.policyEnforcer,
         bob.segmentPusher,
         bob.dataSegmentKiller,
         bob.dataSegmentMover,
@@ -92,6 +95,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.serverAnnouncer,
         bob.handoffNotifierFactory,
         bob.queryRunnerFactoryConglomerateProvider,
+        bob.processingConfigProvider,
         bob.queryProcessingPool,
         bob.joinableFactory,
         bob.monitorSchedulerProvider,
@@ -128,6 +132,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DruidNode taskExecutorNode;
     private TaskActionClientFactory taskActionClientFactory = task -> null;
     private ServiceEmitter emitter;
+    private PolicyEnforcer policyEnforcer;
     private DataSegmentPusher segmentPusher;
     private DataSegmentKiller dataSegmentKiller;
     private DataSegmentMover dataSegmentMover;
@@ -136,6 +141,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DataSegmentServerAnnouncer serverAnnouncer;
     private SegmentHandoffNotifierFactory handoffNotifierFactory;
     private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
+    private Provider<DruidProcessingConfig> processingConfigProvider;
     private QueryProcessingPool queryProcessingPool;
     private JoinableFactory joinableFactory;
     private Provider<MonitorScheduler> monitorSchedulerProvider;
@@ -188,6 +194,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
       return this;
     }
 
+    public Builder setPolicyEnforcer(PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
+      return this;
+    }
+
     public Builder setSegmentPusher(DataSegmentPusher segmentPusher)
     {
       this.segmentPusher = segmentPusher;
@@ -233,6 +245,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setQueryRunnerFactoryConglomerateProvider(Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider)
     {
       this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
+      return this;
+    }
+
+    public Builder setProcessingConfigProvider(Provider<DruidProcessingConfig> processingConfigProvider)
+    {
+      this.processingConfigProvider = processingConfigProvider;
       return this;
     }
 

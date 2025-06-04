@@ -157,37 +157,70 @@ jobs:
           echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
           docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
-        jdk: [ '11', '21.0.4' ]
-    name: "unit tests (jdk${{ matrix.jdk }})"
-    uses: ./.github/workflows/unit-tests.yml
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-    with:
-      jdk: ${{ matrix.jdk }}
+  # check if it is a PR and if it is approved. For approved PRs, we do not want to run tests sequentially
+  check-approval:
+    runs-on: ubuntu-latest
+    outputs:
+      approved: ${{ steps.check.outputs.isApproved }}
+    steps:
+      - name: Check if Triggered by a PR
+        id: determine-trigger
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "isPR=true" >> $GITHUB_ENV
+          else
+            echo "isPR=false" >> $GITHUB_ENV
+          fi
 
-  unit-tests:
-    name: "unit tests (jdk17)"
-    uses: ./.github/workflows/unit-tests.yml
-    needs: build
-    with:
-      jdk: 17
+      - name: Check PR Approval (if applicable)
+        id: check
+        if: ${{ env.isPR == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            const approved = reviews.data.some(review => review.state === 'APPROVED');
+            core.setOutput("isApproved", approved);
+
+      - name: Default to Approved for Branch
+        id: default-check
+        if: ${{ env.isPR == 'false' }}
+        run: echo "::set-output name=isApproved::true"
+
+  unit-tests-unapproved:
+    name: "unit tests - PR unapproved"
+    uses: ./.github/workflows/ci.yml
+    needs: [check-approval]
+    if: ${{ needs.check-approval.outputs.approved != 'true' }}
+
+  unit-tests-approved:
+    name: "unit tests - PR approved"
+    uses: ./.github/workflows/ci.yml
+    needs: [check-approval]
+    if: ${{ needs.check-approval.outputs.approved == 'true' }}
 
   standard-its:
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    needs: [build, unit-tests-unapproved, check-approval]
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
-    needs: [unit-tests, set-env-var]
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    needs: [build, unit-tests-unapproved, check-approval]
+    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
       DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
       DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
       DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+
+  actions-timeline:
+    needs: [build, unit-tests-approved, unit-tests-unapproved, revised-its, standard-its]
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: Kesin11/actions-timeline@427ee2cf860166e404d0d69b4f2b24012bb7af4f

@@ -22,7 +22,6 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
@@ -183,11 +182,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    if (NullHandling.replaceWithDefault()) {
-      assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
-    } else {
-      assertArrayExpr("concat(x,' ',nonexistent,' ',y)", null);
-    }
+    assertArrayExpr("concat(x,' ',nonexistent,' ',y)", null);
 
     assertExpr("concat(z)", "3.1");
     assertArrayExpr("concat()", null);
@@ -262,17 +257,17 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("lpad(x, 5, 'ab')", "abfoo");
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
-    assertExpr("lpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("lpad(x, -1, 'ab')", "");
     assertExpr("lpad(null, 5, 'ab')", null);
-    assertExpr("lpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
-    assertExpr("lpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
-    assertExpr("lpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("lpad(x, 2, '')", "fo");
+    assertExpr("lpad(x, 6, '')", "foo");
+    assertExpr("lpad('', 3, '*')", "***");
     assertExpr("lpad(x, 2, null)", null);
     assertExpr("lpad(a, 4, '*')", "[foo");
     assertExpr("lpad(a, 2, '*')", "[f");
-    assertExpr("lpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("lpad(a, 2, '')", "[f");
     assertExpr("lpad(b, 4, '*')", "[1, ");
-    assertExpr("lpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("lpad(b, 2, '')", "[1");
     assertExpr("lpad(b, 2, null)", null);
     assertExpr("lpad(x, 5, x)", "fofoo");
     assertExpr("lpad(x, 5, y)", "22foo");
@@ -287,16 +282,16 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("rpad(x, 5, 'ab')", "fooab");
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
-    assertExpr("rpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("rpad(x, -1, 'ab')", "");
     assertExpr("rpad(null, 5, 'ab')", null);
-    assertExpr("rpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
-    assertExpr("rpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
-    assertExpr("rpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("rpad(x, 2, '')", "fo");
+    assertExpr("rpad(x, 6, '')", "foo");
+    assertExpr("rpad('', 3, '*')", "***");
     assertExpr("rpad(x, 2, null)", null);
     assertExpr("rpad(a, 2, '*')", "[f");
-    assertExpr("rpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("rpad(a, 2, '')", "[f");
     assertExpr("rpad(b, 4, '*')", "[1, ");
-    assertExpr("rpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("rpad(b, 2, '')", "[1");
     assertExpr("rpad(b, 2, null)", null);
     assertExpr("rpad(x, 5, x)", "foofo");
     assertExpr("rpad(x, 5, y)", "foo22");
@@ -356,7 +351,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayOffsetOf()
   {
     assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
-    assertExpr("array_offset_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_offset_of([1, 2, 3], 4)", null);
     assertExpr("array_offset_of(a, 'baz')", 2L);
   }
 
@@ -364,7 +359,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayOrdinalOf()
   {
     assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
-    assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_ordinal_of([1, 2, 3], 4)", null);
     assertExpr("array_ordinal_of(a, 'baz')", 3L);
   }
 
@@ -609,21 +604,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         Pair.of("a", "ARRAY<STRING>")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      if (NullHandling.sqlCompatible()) {
-        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
-      } else {
-        Throwable t = Assert.assertThrows(
-            DruidException.class,
-            () -> assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null)
-        );
-        Assert.assertEquals(
-            StringUtils.format(
-                "Function[round] first argument should be a LONG or DOUBLE but got %s instead",
-                argAndType.rhs
-            ),
-            t.getMessage()
-        );
-      }
+      assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
     }
   }
 
@@ -752,7 +733,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("human_readable_binary_byte_format(nonexist)", NullHandling.sqlCompatible() ? null : "0 B");
+    assertExpr("human_readable_binary_byte_format(nonexist)", null);
 
     //f = 12.34
     assertExpr("human_readable_binary_byte_format(f)", "12 B");
@@ -779,19 +760,6 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testSizeForatInvalidArgumentType()
   {
-    if (NullHandling.replaceWithDefault()) {
-      //x = "foo"
-      Throwable t = Assert.assertThrows(
-          DruidException.class,
-          () -> Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
-                      .eval(bestEffortBindings)
-      );
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] needs a number as its first argument but got STRING instead",
-          t.getMessage()
-      );
-    }
-
     // x = "foo"
     Throwable t = Assert.assertThrows(
         DruidException.class,
@@ -917,7 +885,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseAnd('2', '1')", null);
     // but one is ok, druid forgives you
     assertExpr("bitwiseAnd(3, '1')", 1L);
-    assertExpr("bitwiseAnd(2, null)", NullHandling.replaceWithDefault() ? 0L : null);
+    assertExpr("bitwiseAnd(2, null)", null);
 
     // unary doesn't accept any slop
     assertExpr("bitwiseComplement('1')", null);
@@ -964,7 +932,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testLeft()
   {
-    assertExpr("left('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("left('hello', 0)", "");
     assertExpr("left('hello', 2)", "he");
     assertExpr("left('hello', '2')", "he");
     assertExpr("left('hello', 'hello')", null);
@@ -984,7 +952,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testRight()
   {
-    assertExpr("right('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("right('hello', 0)", "");
     assertExpr("right('hello', 2)", "lo");
     assertExpr("right('hello', '2')", "lo");
     assertExpr("right('hello', 'hello')", null);
@@ -1031,7 +999,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated."
     );
     assertExpr("decode_base64_utf8('eyJ0ZXN0IjogMX0=')", "{\"test\": 1}");
-    assertExpr("decode_base64_utf8('')", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("decode_base64_utf8('')", "");
   }
 
   @Test

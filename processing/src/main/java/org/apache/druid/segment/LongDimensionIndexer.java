@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -55,7 +54,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   {
     Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions, dimensionName);
     if (l == null) {
-      hasNulls = NullHandling.sqlCompatible();
+      hasNulls = true;
     }
     return new EncodedKeyComponent<>(l, Long.BYTES);
   }
@@ -63,7 +62,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public void setSparseIndexed()
   {
-    hasNulls = NullHandling.sqlCompatible();
+    hasNulls = true;
   }
 
   @Override
@@ -139,7 +138,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          assert NullHandling.replaceWithDefault();
+          assert !isNull();
           return 0;
         }
 
@@ -154,7 +153,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          return NullHandling.defaultLongValue();
+          return null;
         }
 
         return (Long) dims[dimIndex];

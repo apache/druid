@@ -255,6 +255,19 @@ public class Logger
     logSegments(this::error, segments, preamble);
   }
 
+  /**
+   * Logs error exception first and then logs the segments
+   */
+  public void errorSegments(
+      Throwable throwable,
+      @Nullable final Collection<DataSegment> segments,
+      String preamble
+  )
+  {
+    log.error(preamble, throwable);
+    logSegments(this::error, segments, preamble);
+  }
+
   public boolean isTraceEnabled()
   {
     return log.isTraceEnabled();

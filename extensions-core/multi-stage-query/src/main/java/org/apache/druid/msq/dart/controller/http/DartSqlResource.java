@@ -31,14 +31,14 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.msq.indexing.error.CancellationReason;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -61,13 +61,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -85,8 +85,8 @@ public class DartSqlResource extends SqlResource
   private final SqlLifecycleManager sqlLifecycleManager;
   private final DartSqlClients sqlClients;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig dartQueryConfig;
 
+  // make dartqueryId a prefix the {{queeryid}}-{{startupTime}}-{{queryIndex}
   @Inject
   public DartSqlResource(
       final ObjectMapper jsonMapper,
@@ -97,8 +97,7 @@ public class DartSqlResource extends SqlResource
       final DartSqlClients sqlClients,
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
-      @Self final DruidNode selfNode,
-      @Dart final DefaultQueryConfig dartQueryConfig
+      @Self final DruidNode selfNode
   )
   {
     super(
@@ -114,7 +113,6 @@ public class DartSqlResource extends SqlResource
     this.sqlLifecycleManager = sqlLifecycleManager;
     this.sqlClients = sqlClients;
     this.authorizerMapper = authorizerMapper;
-    this.dartQueryConfig = dartQueryConfig;
   }
 
   /**
@@ -144,7 +142,7 @@ public class DartSqlResource extends SqlResource
   )
   {
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
-    final Access stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
@@ -175,7 +173,7 @@ public class DartSqlResource extends SqlResource
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
 
     final GetQueriesResponse response;
-    if (stateReadAccess.isAllowed()) {
+    if (stateReadAccess.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see all running queries, as well as authentication details.
       response = new GetQueriesResponse(queries);
     } else {
@@ -211,15 +209,6 @@ public class DartSqlResource extends SqlResource
   {
     final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
 
-    // Default context keys from dartQueryConfig.
-    for (Map.Entry<String, Object> entry : dartQueryConfig.getContext().entrySet()) {
-      context.putIfAbsent(entry.getKey(), entry.getValue());
-    }
-
-    // Dart queryId must be globally unique; cannot use user-provided sqlQueryId or queryId.
-    final String dartQueryId = UUID.randomUUID().toString();
-    context.put(DartSqlEngine.CTX_DART_QUERY_ID, dartQueryId);
-
     return super.doPost(sqlQuery.withOverridenContext(context), req);
   }
 
@@ -245,25 +234,25 @@ public class DartSqlResource extends SqlResource
       return Response.status(Response.Status.ACCEPTED).build();
     }
 
-    final Access access = authorizeCancellation(req, cancelables);
+    final AuthorizationResult authResult = authorizeCancellation(req, cancelables);
 
-    if (access.isAllowed()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
 
       // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,
       // get the controller and stop it.
       for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
         final HttpStatement stmt = (HttpStatement) cancelable;
-        final Object dartQueryId = stmt.context().get(DartSqlEngine.CTX_DART_QUERY_ID);
+        final Object dartQueryId = stmt.context().get(QueryContexts.CTX_DART_QUERY_ID);
         if (dartQueryId instanceof String) {
           final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
           if (holder != null) {
-            holder.cancel();
+            holder.cancel(CancellationReason.USER_REQUEST);
           }
         } else {
           log.warn(
               "%s[%s] for query[%s] is not a string, cannot cancel.",
-              DartSqlEngine.CTX_DART_QUERY_ID,
+              QueryContexts.CTX_DART_QUERY_ID,
               dartQueryId,
               sqlQueryId
           );

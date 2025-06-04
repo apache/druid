@@ -21,7 +21,6 @@ package org.apache.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
@@ -65,16 +64,13 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
     if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(
           selector,
-          input -> {
-            String val = NullHandling.nullToEmptyIfNeeded(input);
-            return val != null && val.startsWith(prefix);
-          }
+          input -> input != null && input.startsWith(prefix)
       );
     }
 
     final IdMapping.Builder builder = IdMapping.Builder.ofUnknownCardinality();
     for (int i = 0; i < selectorCardinality; i++) {
-      String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
+      String val = selector.lookupName(i);
       if (val != null && val.startsWith(prefix)) {
         builder.addForwardMapping(i);
       }

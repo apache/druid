@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
@@ -29,9 +30,9 @@ import com.google.inject.name.Names;
 import org.apache.druid.cli.CliBroker;
 import org.apache.druid.cli.QueryJettyServerInitializer;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
-import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -39,7 +40,6 @@ import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
-import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -53,13 +53,9 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.SegmentWranglerModule;
-import org.apache.druid.guice.ServerModule;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
-import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.http.HttpClientModule;
@@ -67,6 +63,7 @@ import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
 import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Log4jShutterDownerModule;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
@@ -77,14 +74,8 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.ResponseContextConfig;
-import org.apache.druid.server.SubqueryGuardrailHelper;
-import org.apache.druid.server.SubqueryGuardrailHelperProvider;
-import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
-import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
@@ -95,9 +86,9 @@ import org.apache.druid.server.security.TLSCertificateCheckerModule;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
-import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
@@ -116,16 +107,36 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   }
 
   @Override
-  public void configureGuice(CoreInjectorBuilder builder, List<Module> overrideModules)
+  public void gatherProperties(Properties properties)
   {
-    super.configureGuice(builder);
+    properties.put("druid.enableTlsPort", "false");
+    properties.put("druid.zk.service.enabled", "false");
+    properties.put("druid.plaintextPort", "12345");
+    properties.put("druid.host", "localhost");
+    properties.put("druid.broker.segment.awaitInitializationOnStart", "false");
+  }
 
-    installForServerModules(builder);
-    builder.add(new QueryRunnerFactoryModule());
+  @Override
+  public DruidModule getCoreModule()
+  {
+    Builder<Module> modules = ImmutableList.builder();
+    modules.add(super.getCoreModule());
+    modules.addAll(forServerModules());
 
-    overrideModules.addAll(brokerModules());
-    overrideModules.add(new BrokerTestModule());
-    builder.add(QuidemCaptureModule.class);
+    modules.addAll(brokerModules());
+    modules.add(new QuidemCaptureModule());
+
+    return DruidModuleCollection.of(modules.build());
+
+  }
+
+  @Override
+  public DruidModule getOverrideModule()
+  {
+    return DruidModuleCollection.of(
+        super.getOverrideModule(),
+        new BrokerTestModule()
+    );
   }
 
   public static class BrokerTestModule extends AbstractModule
@@ -144,19 +155,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
 
     @Provides
     @LazySingleton
-    public Properties getProps()
-    {
-      Properties localProps = new Properties();
-      localProps.put("druid.enableTlsPort", "false");
-      localProps.put("druid.zk.service.enabled", "false");
-      localProps.put("druid.plaintextPort", "12345");
-      localProps.put("druid.host", "localhost");
-      localProps.put("druid.broker.segment.awaitInitializationOnStart", "false");
-      return localProps;
-    }
-
-    @Provides
-    @LazySingleton
     DruidNodeDiscoveryProvider getDruidNodeDiscoveryProvider()
     {
       final DruidNode coordinatorNode = CalciteTests.mockCoordinatorNode();
@@ -167,16 +165,13 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   /**
    * Closely related to {@link CoreInjectorBuilder#forServer()}
    */
-  private void installForServerModules(CoreInjectorBuilder builder)
+  private List<Module> forServerModules()
   {
-
-    builder.add(
+    return ImmutableList.of(
         new Log4jShutterDownerModule(),
-        new LifecycleModule(),
-        ExtensionsModule.SecondaryModule.class,
+        new ExtensionsModule.SecondaryModule(),
         new DruidAuthModule(),
-        TLSCertificateCheckerModule.class,
-        EmitterModule.class,
+        new TLSCertificateCheckerModule(),
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class, true),
@@ -184,8 +179,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new CuratorModule(),
         new AnnouncerModule(),
         new SegmentWriteOutMediumModule(),
-        new ServerModule(),
-        new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
         new DiscoveryModule(),
@@ -199,12 +192,10 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new JavaScriptModule(),
         new AuthenticatorModule(),
         new AuthorizerModule(),
-        new AuthorizerMapperModule(),
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
-        new SqlModule(),
         ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of())
     );
   }
@@ -215,21 +206,18 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   static List<? extends Module> brokerModules()
   {
     return ImmutableList.of(
-        new BrokerProcessingModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new BrokerServiceModule(),
         binder -> {
 
+          binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
           );
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
-          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
-
-          binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
@@ -241,7 +229,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
 
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
           Jerseys.addResource(binder, BrokerQueryResource.class);
-          binder.bind(SubqueryGuardrailHelper.class).toProvider(SubqueryGuardrailHelperProvider.class);
           binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
@@ -250,7 +237,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
           LifecycleModule.register(binder, BrokerQueryResource.class);
 
           LifecycleModule.register(binder, Server.class);
-          binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
 
           binder.bind(String.class)
               .annotatedWith(DruidSchemaName.class)

@@ -34,7 +34,7 @@
   svg {
     position: absolute;
 
-    .chart-axis text {
+    text {
       user-select: none;
     }
 
@@ -55,7 +55,7 @@
       stroke-width: 1px;
       opacity: 0.8;
 
-      &.done {
+      &.finalized {
         opacity: 1;
       }
     }
@@ -81,8 +81,9 @@
       }
     }
 
-    .gridline-x {
+    .h-gridline {
       line {
+        stroke: $white;
         stroke-dasharray: 5, 5;
         opacity: 0.5;
       }

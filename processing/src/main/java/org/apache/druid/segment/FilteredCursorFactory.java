@@ -20,15 +20,10 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 public class FilteredCursorFactory implements CursorFactory
 {
@@ -45,32 +40,10 @@ public class FilteredCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
-    final Filter newFilter;
-    final Set<String> physicalColumns;
-    if (filter != null) {
-      if (spec.getFilter() == null) {
-        newFilter = filter.toFilter();
-      } else {
-        newFilter = Filters.and(Arrays.asList(spec.getFilter(), filter.toFilter()));
-      }
-      if (spec.getPhysicalColumns() != null) {
-        physicalColumns = new HashSet<>(spec.getPhysicalColumns());
-        for (String column : filter.getRequiredColumns()) {
-          if (!spec.getVirtualColumns().exists(column)) {
-            physicalColumns.add(column);
-          }
-        }
-      } else {
-        physicalColumns = null;
-      }
-    } else {
-      newFilter = spec.getFilter();
-      physicalColumns = spec.getPhysicalColumns();
+    if (filter == null) {
+      return delegate.makeCursorHolder(spec);
     }
-    buildSpecBuilder.setFilter(newFilter)
-                    .setPhysicalColumns(physicalColumns);
-    return delegate.makeCursorHolder(buildSpecBuilder.build());
+    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
   }
 
   @Override

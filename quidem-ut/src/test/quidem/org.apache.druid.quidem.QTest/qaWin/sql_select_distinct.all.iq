@@ -1,0 +1,1016 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++-----+
+| cnt |
++-----+
+| 768 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT server_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++--------------+
+| server_ip    |
++--------------+
+| 172.31.11.5  |
+| 172.31.57.89 |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT server_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++--------------+
+| server_ip    |
++--------------+
+| 172.31.11.5  |
+| 172.31.57.89 |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT server_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++--------------+
+| server_ip    |
++--------------+
+| 172.31.11.5  |
+| 172.31.57.89 |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT server_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++--------------+
+| server_ip    |
++--------------+
+| 172.31.11.5  |
+| 172.31.57.89 |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT client_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++---------------+
+| client_ip     |
++---------------+
+| 107.13.54.103 |
+| 99.9.55.22    |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT client_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++---------------+
+| client_ip     |
++---------------+
+| 107.13.54.103 |
+| 99.9.55.22    |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT client_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++---------------+
+| client_ip     |
++---------------+
+| 107.13.54.103 |
+| 99.9.55.22    |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT client_ip
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++---------------+
+| client_ip     |
++---------------+
+| 107.13.54.103 |
+| 99.9.55.22    |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT timezone
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++----------+
+| timezone |
++----------+
+| EDT      |
+| N/A      |
++----------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT timezone
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++----------+
+| timezone |
++----------+
+| EDT      |
+| N/A      |
++----------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT timezone
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++----------+
+| timezone |
++----------+
+| EDT      |
+| N/A      |
++----------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT timezone
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++----------+
+| timezone |
++----------+
+| EDT      |
+| N/A      |
++----------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT t
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++---------------------+
+| t                   |
++---------------------+
+| 2019-08-25 00:00:00 |
+| 2019-08-25 12:00:00 |
++---------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT t
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++---------------------+
+| t                   |
++---------------------+
+| 2019-08-25 00:00:00 |
+| 2019-08-25 12:00:00 |
++---------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT t
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++---------------------+
+| t                   |
++---------------------+
+| 2019-08-25 00:00:00 |
+| 2019-08-25 12:00:00 |
++---------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT t
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++---------------------+
+| t                   |
++---------------------+
+| 2019-08-25 00:00:00 |
+| 2019-08-25 12:00:00 |
++---------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A5_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT FIRST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++-------+
+| FIRST |
++-------+
+| EDT   |
+| N/A   |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A5_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT FIRST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++-------+
+| FIRST |
++-------+
+| EDT   |
+| N/A   |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A5_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT FIRST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++-------+
+| FIRST |
++-------+
+| EDT   |
+| N/A   |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A5_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT FIRST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++-------+
+| FIRST |
++-------+
+| EDT   |
+| N/A   |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A6_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT LAST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++------+
+| LAST |
++------+
+| EDT  |
+| N/A  |
++------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A6_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT LAST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++------+
+| LAST |
++------+
+| EDT  |
+| N/A  |
++------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A6_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT LAST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++------+
+| LAST |
++------+
+| EDT  |
+| N/A  |
++------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A6_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT LAST
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++------+
+| LAST |
++------+
+| EDT  |
+| N/A  |
++------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A7_G1_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22'));
++-----+
+| cnt |
++-----+
+|   1 |
+|   2 |
+|   3 |
+|   4 |
+|   5 |
+|   6 |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A7_G1_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM
+     (SELECT server_ip,
+             client_ip,
+             timezone,
+             time_floor(__time, 'PT12H') __time
+      FROM test_win
+      GROUP BY server_ip,
+               client_ip,
+               timezone,
+               time_floor(__time, 'PT12H'))
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H')));
++-----+
+| cnt |
++-----+
+|   1 |
+|   2 |
+|   3 |
+|   4 |
+|   5 |
+|   6 |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A7_G2_Q1
+#-------------------------------------------------------------------------
+SELECT DISTINCT cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER (PARTITION BY client_ip
+                                      ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                         last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                    ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                       count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'));
++-----+
+| cnt |
++-----+
+|   1 |
+|   2 |
+|   3 |
+|   4 |
+|   5 |
+|   6 |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_select_distinct TEST_ID: A7_G2_Q2
+#-------------------------------------------------------------------------
+SELECT DISTINCT cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          cast(time_floor(__time, 'PT12H') AS char) t,
+          first_value(timezone) OVER w FIRST,
+                                       last_value(timezone) OVER w LAST,
+                                                                   count(timezone) OVER w cnt
+   FROM test_win
+   WHERE client_ip IN ('107.13.54.103',
+                       '99.9.55.22')
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                     ORDER BY server_ip ASC,
+                                                              length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                     timezone,
+                                                                                     time_floor(__time, 'PT12H')));
++-----+
+| cnt |
++-----+
+|   1 |
+|   2 |
+|   3 |
+|   4 |
+|   5 |
+|   6 |
++-----+
+(6 rows)
+
+!ok
+

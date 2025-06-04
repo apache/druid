@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -77,6 +76,7 @@ public @interface NotYetSupported
   enum Modes
   {
     // @formatter:off
+    NOT_ENOUGH_RULES(DruidException.class, "There are not enough rules to produce a node"),
     DISTINCT_AGGREGATE_NOT_SUPPORTED(DruidException.class, "DISTINCT is not supported"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
@@ -90,9 +90,11 @@ public @interface NotYetSupported
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules"),
-    REQUIRE_TIME_CONDITION(CannotBuildQueryException.class, "requireTimeCondition is enabled"),
     UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
-    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)");
+    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    SUPPORT_SORT(DruidException.class, "Unable to process relNode.*DruidSort"),
+    SUPPORT_AGGREGATE(DruidException.class, "Unable to process relNode.*DruidAggregate"),
+    RESTRICTED_DATASOURCE_SUPPORT(DruidException.class, "ForbiddenException: Unauthorized");
     // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
@@ -107,6 +109,12 @@ public @interface NotYetSupported
     Pattern getPattern()
     {
       return Pattern.compile(regex, Pattern.MULTILINE | Pattern.DOTALL);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name() + "{" + regex + "}";
     }
   };
 

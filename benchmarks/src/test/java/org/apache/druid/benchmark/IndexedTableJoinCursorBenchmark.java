@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
@@ -92,10 +92,6 @@ import java.util.stream.Collectors;
 @Measurement(iterations = 5)
 public class IndexedTableJoinCursorBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final List<Set<String>> PROJECTIONS = ImmutableList.of(
       // 0 string key rhs
       ImmutableSet.of("j0.stringKey"),
@@ -238,7 +234,7 @@ public class IndexedTableJoinCursorBenchmark
 
   private CursorHolder makeCursorHolder()
   {
-    return hashJoinSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+    return hashJoinSegment.as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN);
   }
 
 

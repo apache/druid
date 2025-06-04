@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -265,11 +264,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     for (int i = 0; i < data.size(); i++) {
       String row = data.get(i);
 
-      // in default value mode, even though the input row had an empty string, the selector spits out null, so we want
-      // to take the null checking path
-      final boolean isStringAndNullEquivalent = NullHandling.isNullOrEquivalent(row);
-
-      if (row != null && !isStringAndNullEquivalent) {
+      if (row != null) {
         Assert.assertEquals(row, valueSelector.getObject());
         Assert.assertEquals(row, dimSelector.getObject());
         String dimSelectorLookupVal = dimSelector.lookupName(dimSelector.getRow().get(0));

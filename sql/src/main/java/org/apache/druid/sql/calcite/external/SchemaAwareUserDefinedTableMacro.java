@@ -37,10 +37,8 @@ import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.table.ExternalTable;
 
@@ -169,8 +167,7 @@ public abstract class SchemaAwareUserDefinedTableMacro
       if (table instanceof ExternalTable && inputSourceTypeSecurityEnabled) {
         resourceActions.addAll(((ExternalTable) table)
                                    .getInputSourceTypeSupplier().get().stream()
-                                   .map(inputSourceType ->
-                                 new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ))
+                                   .map(AuthorizationUtils::createExternalResourceReadAction)
                                    .collect(Collectors.toSet()));
       } else {
         resourceActions.addAll(base.computeResources(call, inputSourceTypeSecurityEnabled));

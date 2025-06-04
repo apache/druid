@@ -45,7 +45,6 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -55,6 +54,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -223,16 +223,21 @@ public class IndexBuilder
   public IncrementalIndex buildIncrementalIndex()
   {
     if (inputSource != null) {
-      return buildIncrementalIndexWithInputSource(
+      InputSourceReader reader = buildIncrementalIndexWithInputSource(
           schema,
           inputSource,
           inputFormat,
           transformSpec,
-          inputSourceTmpDir,
-          maxRows
+          inputSourceTmpDir
       );
+      try (CloseableIterator<InputRow> it = reader.read()) {
+        return buildIncrementalIndexWithRows(schema, maxRows, it);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
-    return buildIncrementalIndexWithRows(schema, maxRows, rows);
+    return buildIncrementalIndexWithRows(schema, maxRows, rows.iterator());
   }
 
   public File buildMMappedIndexFile()
@@ -400,7 +405,6 @@ public class IndexBuilder
   public RowBasedSegment<InputRow> buildRowBasedSegmentWithoutTypeSignature()
   {
     return new RowBasedSegment<>(
-        SegmentId.dummy("IndexBuilder"),
         Sequences.simple(rows),
         RowAdapters.standardRow(),
         RowSignature.empty()
@@ -414,7 +418,6 @@ public class IndexBuilder
       final RowSignature signature = new QueryableIndexCursorFactory(index).getRowSignature();
 
       return new RowBasedSegment<>(
-          SegmentId.dummy("IndexBuilder"),
           Sequences.simple(rows),
           RowAdapters.standardRow(),
           signature
@@ -428,8 +431,7 @@ public class IndexBuilder
     try (final QueryableIndex index = buildMMappedIndex()) {
       return FrameTestUtil.cursorFactoryToFrameSegment(
           new QueryableIndexCursorFactory(index),
-          frameType,
-          SegmentId.dummy("IndexBuilder")
+          frameType
       );
     }
   }
@@ -437,7 +439,7 @@ public class IndexBuilder
   private static IncrementalIndex buildIncrementalIndexWithRows(
       IncrementalIndexSchema schema,
       int maxRows,
-      Iterable<InputRow> rows
+      Iterator<InputRow> rows
   )
   {
     Preconditions.checkNotNull(schema, "schema");
@@ -446,8 +448,9 @@ public class IndexBuilder
         .setMaxRowCount(maxRows)
         .build();
 
-    for (InputRow row : rows) {
+    while (rows.hasNext()) {
       try {
+        InputRow row = rows.next();
         incrementalIndex.add(row);
       }
       catch (IndexSizeExceededException e) {
@@ -457,39 +460,23 @@ public class IndexBuilder
     return incrementalIndex;
   }
 
-  private static IncrementalIndex buildIncrementalIndexWithInputSource(
+  public static InputSourceReader buildIncrementalIndexWithInputSource(
       IncrementalIndexSchema schema,
       InputSource inputSource,
       InputFormat inputFormat,
       @Nullable TransformSpec transformSpec,
-      File inputSourceTmpDir,
-      int maxRows
-  )
+      File inputSourceTmpDir)
   {
     Preconditions.checkNotNull(schema, "schema");
     Preconditions.checkNotNull(inputSource, "inputSource");
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
-
-    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
-        .setIndexSchema(schema)
-        .setMaxRowCount(maxRows)
-        .build();
     TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
     InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
     InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
     InputSourceReader transformingReader = tranformer.decorate(reader);
-    try (CloseableIterator<InputRow> rowIterator = transformingReader.read()) {
-      while (rowIterator.hasNext()) {
-        incrementalIndex.add(rowIterator.next());
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return incrementalIndex;
+    return transformingReader;
   }
-
 
   @FunctionalInterface
   interface IteratorSupplier

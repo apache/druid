@@ -23,7 +23,7 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import java.util.Arrays;
 
-public final class ExprEvalDoubleVector extends ExprEvalVector<double[]>
+public final class ExprEvalDoubleVector extends BaseExprEvalVector<double[]>
 {
   public ExprEvalDoubleVector(double[] values, boolean[] nulls)
   {

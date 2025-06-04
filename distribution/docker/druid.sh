@@ -138,7 +138,15 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+if [ -z "${KUBERNETES_SERVICE_HOST}" ]
+then
+  # Running outside kubernetes, use IP addresses
+  DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-1}
+else
+  # Running in kubernetes, so use canonical names
+  DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+fi
+
 if [ "${DRUID_SET_HOST_IP}" = "1" ]
 then
     setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')

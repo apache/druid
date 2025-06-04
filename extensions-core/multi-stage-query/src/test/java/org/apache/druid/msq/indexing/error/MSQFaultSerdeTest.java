@@ -54,7 +54,8 @@ public class MSQFaultSerdeTest
   {
     assertFaultSerde(new BroadcastTablesTooLargeFault(10, null));
     assertFaultSerde(new BroadcastTablesTooLargeFault(10, JoinAlgorithm.SORT_MERGE));
-    assertFaultSerde(CanceledFault.INSTANCE);
+    assertFaultSerde(CanceledFault.shutdown());
+    assertFaultSerde(CanceledFault.timeout());
     assertFaultSerde(new CannotParseExternalDataFault("the message"));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", ColumnType.STRING_ARRAY));
@@ -94,8 +95,10 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyAttemptsForJob(2, 2, "taskId", "rootError"));
     assertFaultSerde(UnknownFault.forMessage(null));
     assertFaultSerde(UnknownFault.forMessage("the message"));
+    assertFaultSerde(new WorkerFailedFault("the worker task", null));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));
-    assertFaultSerde(new WorkerRpcFailedFault("the worker task"));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", null));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", "the error msg"));
     assertFaultSerde(new NotEnoughTemporaryStorageFault(250, 2));
   }
 

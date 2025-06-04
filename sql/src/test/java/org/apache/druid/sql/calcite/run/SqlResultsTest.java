@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
@@ -205,7 +204,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   @Test
   public void testCoerceString()
   {
-    assertCoerce(NullHandling.defaultStringValue(), null, SqlTypeName.VARCHAR);
+    assertCoerce(null, null, SqlTypeName.VARCHAR);
     assertCoerce("1", 1, SqlTypeName.VARCHAR);
     assertCoerce("true", true, SqlTypeName.VARCHAR);
     assertCoerce("abc", "abc", SqlTypeName.VARCHAR);

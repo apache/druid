@@ -920,7 +920,7 @@ public class DeterminePartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.JSON_MAPPER
-            .writerWithType(
+            .writerFor(
                 new TypeReference<List<ShardSpec>>()
                 {
                 }
@@ -956,7 +956,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     public void checkOutputSpecs(JobContext job) throws IOException
     {
-      Path outDir = getOutputPath(job);
+      Path outDir = FileOutputFormat.getOutputPath(job);
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }

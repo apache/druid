@@ -35,9 +35,12 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
+import org.apache.calcite.rel.rules.FilterCorrelateRule;
 import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule.FilterIntoJoinRuleConfig;
+import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
@@ -45,7 +48,6 @@ import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
-import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
@@ -278,14 +280,26 @@ public class CalciteRulesManager
   private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+    builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+
+    final HepProgramBuilder cleanupRules = HepProgram.builder();
+    cleanupRules.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
+    cleanupRules.addRuleInstance(CoreRules.PROJECT_MERGE);
+    cleanupRules.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
+    return Programs.sequence(
+        Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
+        new DruidTrimFieldsProgram(),
+        Programs.of(cleanupRules.build(), true, DefaultRelMetadataProvider.INSTANCE)
+    );
   }
 
   /**
@@ -331,7 +345,7 @@ public class CalciteRulesManager
   private Program buildPreVolcanoManipulationProgram(final PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
 
     // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
@@ -351,7 +365,7 @@ public class CalciteRulesManager
   private Program buildReductionProgram(final PlannerContext plannerContext, final boolean isDruid)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
 
     if (isDruid) {
       // COALESCE rules must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may
@@ -541,7 +555,24 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+      return ret;
+    }
+
+  }
+
+  /** Program that trims fields. */
+  private static class DruidTrimFieldsProgram implements Program
+  {
+    @Override
+    public RelNode run(RelOptPlanner planner, RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices)
+    {
+      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder).trim(rel);
+      return ret;
     }
   }
 }

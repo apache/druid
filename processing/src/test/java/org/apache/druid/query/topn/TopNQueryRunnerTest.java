@@ -29,7 +29,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -93,6 +92,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
@@ -4150,13 +4150,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     Map<String, String> extractionMap = new HashMap<>();
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-      extractionMap.put("", "NULL");
-    } else {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, false);
-    }
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, false);
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -4216,14 +4210,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     Map<String, String> extractionMap = new HashMap<>();
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
-      extractionMap.put("", "NULL");
-    } else {
-      extractionMap.put("", "NOT_USED");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, true);
-    }
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, true);
+    extractionMap.put("", "NOT_USED");
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -5791,9 +5779,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("longNumericNull", 10L)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeRowWithNulls("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeRowWithNulls("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                    makeRowWithNulls("index_alias", 114L, "longNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "longNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "longNumericNull", null)
                 )
             )
         )
@@ -5859,9 +5847,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("floatNumericNull", 10f)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
+                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", null)
                 )
             )
         )
@@ -5927,9 +5915,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("doubleNumericNull", 10d)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
+                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", null)
                 )
             )
         )
@@ -5956,7 +5944,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultLongValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10L, "count", 93L),
                     makeRowWithNulls("dim", 20L, "count", 93L),
                     makeRowWithNulls("dim", 40L, "count", 93L),
@@ -5988,7 +5976,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultDoubleValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10.0, "count", 93L),
                     makeRowWithNulls("dim", 20.0, "count", 93L),
                     makeRowWithNulls("dim", 40.0, "count", 93L),
@@ -6020,7 +6008,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultFloatValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10.0f, "count", 93L),
                     makeRowWithNulls("dim", 20.0f, "count", 93L),
                     makeRowWithNulls("dim", 40.0f, "count", 93L),
@@ -7304,7 +7292,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             runner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             runner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

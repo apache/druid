@@ -30,14 +30,10 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -93,9 +89,6 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
   @Nonnull
   public Set<ResourceAction> getInputSourceResources() throws UOE
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(KafkaIndexTaskModule.SCHEME, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return KafkaIndexTask.INPUT_SOURCE_RESOURCES;
   }
 }

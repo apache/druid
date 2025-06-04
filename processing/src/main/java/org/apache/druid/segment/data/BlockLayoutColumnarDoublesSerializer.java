@@ -26,7 +26,6 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -57,6 +56,7 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression,
+      int fileSizeLimit,
       Closer closer
   )
   {
@@ -66,6 +66,7 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
         filenameBase,
         compression,
         CompressedPools.BUFFER_SIZE,
+        fileSizeLimit,
         closer
     );
     this.compression = compression;

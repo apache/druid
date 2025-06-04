@@ -34,7 +34,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -43,9 +42,11 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -135,6 +136,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
           binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
           binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+          binder.bind(CentralizedDatasourceSchemaConfig.class)
+                .toInstance(CentralizedDatasourceSchemaConfig.create());
         },
         new LifecycleModule(),
         target);

@@ -40,6 +40,7 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.assertj.core.api.Assertions;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -49,6 +50,8 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -57,9 +60,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 {
-  private static final String DATA_SOURCE = "dataSource";
+  private static final String DATA_SOURCE = "wiki";
 
   private TestTaskRunner taskRunner;
 
@@ -67,6 +71,17 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   private DataSegment segment2;
   private DataSegment segment3;
   private DataSegment segment4;
+
+  @Parameterized.Parameters(name = "useSegmentMetadataCache={0}")
+  public static Object[][] testParameters()
+  {
+    return new Object[][]{{true}, {false}};
+  }
+
+  public KillUnusedSegmentsTaskTest(boolean useSegmentMetadataCache)
+  {
+    super(useSegmentMetadataCache);
+  }
 
   @Before
   public void setup()
@@ -88,12 +103,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, announced);
 
     Assert.assertTrue(
-        getSegmentsMetadataManager().markSegmentAsUnused(
+        getMetadataStorageCoordinator().markSegmentAsUnused(
             segment2.getId()
         )
     );
     Assert.assertTrue(
-        getSegmentsMetadataManager().markSegmentAsUnused(
+        getMetadataStorageCoordinator().markSegmentAsUnused(
             segment3.getId()
         )
     );
@@ -133,14 +148,15 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDeleteUnreferencedSiblings() throws Exception
   {
+    final SegmentId nonExistentParent = segment3.getId();
     final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
         segment1.getId().toString(),
-        "nonExistentParent",
+        nonExistentParent.toString(),
         segment2.getId().toString(),
-        "nonExistentParent"
+        nonExistentParent.toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -171,14 +187,15 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   @Test
   public void testKillSegmentsDoNotDeleteReferencedSibling() throws Exception
   {
+    final SegmentId nonExistentParent = segment3.getId();
     final Map<String, String> upgradeSegmentMapping = ImmutableMap.of(
         segment1.getId().toString(),
-        "nonExistentParent",
+        nonExistentParent.toString(),
         segment2.getId().toString(),
-        "nonExistentParent"
+        nonExistentParent.toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2), upgradeSegmentMapping);
-    getStorageCoordinator().markSegmentsAsUnusedWithinInterval(DATA_SOURCE, Intervals.ETERNITY);
+    getStorageCoordinator().markSegmentsWithinIntervalAsUnused(DATA_SOURCE, Intervals.ETERNITY, null);
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -216,8 +233,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         segment3.getId().toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
-    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
-    getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment2.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment3.getId());
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -261,8 +278,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         segment3.getId().toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
-    getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
-    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment1.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment2.getId());
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -306,9 +323,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         segment3.getId().toString()
     );
     insertUsedSegments(ImmutableSet.of(segment1, segment2, segment3), upgradeSegmentMapping);
-    getSegmentsMetadataManager().markSegmentAsUnused(segment1.getId());
-    getSegmentsMetadataManager().markSegmentAsUnused(segment2.getId());
-    getSegmentsMetadataManager().markSegmentAsUnused(segment3.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment1.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment2.getId());
+    getMetadataStorageCoordinator().markSegmentAsUnused(segment3.getId());
 
 
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
@@ -354,7 +371,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
         )
     );
@@ -402,7 +420,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
         )
     );
@@ -450,7 +469,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
         )
     );
@@ -499,7 +519,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         segments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
         )
     );
@@ -553,7 +574,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, getMetadataStorageCoordinator().commitSegments(segments, null));
     Assert.assertEquals(
         unusedSegments.size(),
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             unusedSegments.stream().map(DataSegment::getId).collect(Collectors.toSet())
         )
     );
@@ -621,7 +643,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(segments, announced);
     Assert.assertEquals(
         segments.size(),
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             Intervals.of("2018-01-01/2020-01-01"),
             null
@@ -669,7 +691,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment1.getInterval(),
             null
@@ -678,7 +700,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment4.getInterval(),
             null
@@ -687,7 +709,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment3.getInterval(),
             null
@@ -746,7 +768,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment1.getInterval(),
             null
@@ -755,7 +777,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment4.getInterval(),
             null
@@ -769,7 +791,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     // Now mark the third segment as unused
     Assert.assertEquals(
         1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+        getMetadataStorageCoordinator().markSegmentsWithinIntervalAsUnused(
             DATA_SOURCE,
             segment3.getInterval(),
             null
@@ -857,11 +879,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         2,
-        getSegmentsMetadataManager().markSegmentsAsUnused(
-            ImmutableSet.of(
-                segment1.getId(),
-                segment4.getId()
-            )
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
+            ImmutableSet.of(segment1.getId(), segment4.getId())
         )
     );
 
@@ -871,11 +891,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         2,
-        getSegmentsMetadataManager().markSegmentsAsUnused(
-            ImmutableSet.of(
-                segment2.getId(),
-                segment3.getId()
-            )
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
+            ImmutableSet.of(segment2.getId(), segment3.getId())
         )
     );
 
@@ -953,7 +971,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         3,
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             ImmutableSet.of(segment1.getId(), segment2.getId(), segment4.getId())
         )
     );
@@ -965,7 +984,8 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(
         2,
-        getSegmentsMetadataManager().markSegmentsAsUnused(
+        getMetadataStorageCoordinator().markSegmentsAsUnused(
+            DATA_SOURCE,
             ImmutableSet.of(segment3.getId(), segment5.getId())
         )
     );
@@ -1040,7 +1060,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     for (DataSegment segment : segments) {
       Assert.assertTrue(
-          getSegmentsMetadataManager().markSegmentAsUnused(
+          getMetadataStorageCoordinator().markSegmentAsUnused(
               segment.getId()
           )
       );
@@ -1468,12 +1488,10 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
     IndexerSqlMetadataStorageCoordinatorTestBase.insertUsedSegments(
         segments,
         upgradedFromSegmentIdMap,
-        derbyConnectorRule.getConnector(),
-        table,
+        derbyConnectorRule,
         getObjectMapper()
     );
   }

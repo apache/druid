@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -262,14 +261,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     );
 
     final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
-    final List<ResultRow> expected;
-    if (NullHandling.sqlCompatible()) {
-      expected = Collections.emptyList();
-    } else {
-      expected = ImmutableList.of(
-          new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
-      ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
-    }
+    final List<ResultRow> expected = Collections.emptyList();
 
     Assert.assertEquals(expected, result);
   }
@@ -293,14 +285,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     );
 
     final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
-    final List<ResultRow> expected;
-    if (NullHandling.sqlCompatible()) {
-      expected = Collections.emptyList();
-    } else {
-      expected = ImmutableList.of(
-          new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
-      ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
-    }
+    final List<ResultRow> expected = Collections.emptyList();
 
     Assert.assertEquals(expected, result);
   }

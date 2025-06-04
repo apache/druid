@@ -20,7 +20,6 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -101,7 +100,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueStringContainingNulls()
   {
-    doTest(Arrays.asList("foo", NullHandling.emptyToNullIfNeeded(""), "bar", null));
+    doTest(Arrays.asList("foo", "", "bar", null));
   }
 
   private void doTest(@Nullable final List<String> values)

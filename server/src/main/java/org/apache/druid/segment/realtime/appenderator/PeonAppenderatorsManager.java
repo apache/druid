@@ -30,6 +30,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -80,9 +81,9 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -108,9 +109,9 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           cache,
           cacheConfig,
           cachePopulatorStats,
+          policyEnforcer,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
       );
     }
@@ -129,7 +130,6 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -148,7 +148,6 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           indexMerger,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
       );
       return batchAppenderator;

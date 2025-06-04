@@ -28,11 +28,15 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -88,18 +92,27 @@ public class BrokerQueryResource extends QueryResource
       InputStream in,
       @QueryParam("pretty") String pretty,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
+      @QueryParam("cloneQueryMode") @Nullable String cloneQueryModeString,
       @Context final HttpServletRequest req
   ) throws IOException
   {
     final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
+    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        cloneQueryModeString,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
+    );
     try {
       Query<?> query = ioReaderWriter.getRequestMapper().readValue(in, Query.class);
+      ExecutionVertex ev = ExecutionVertex.of(query);
       return ioReaderWriter.getResponseWriter().ok(
           ServerViewUtil.getTargetLocations(
               brokerServerView,
-              query.getDataSource(),
-              query.getIntervals(),
-              numCandidates
+              ev.getBaseTableDataSource(),
+              ev.getEffectiveQuerySegmentSpec().getIntervals(),
+              numCandidates,
+              cloneQueryMode
           )
       );
     }

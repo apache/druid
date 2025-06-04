@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -179,12 +178,8 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithNulls() throws IOException
   {
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, (String) null), null), ImmutableList.of("0"));
-    } else {
-      assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, (String) null), null), ImmutableList.of());
-      assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, ""), null), ImmutableList.of("0"));
-    }
+    assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, (String) null), null), ImmutableList.of());
+    assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, ""), null), ImmutableList.of("0"));
     assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, "10"), null), ImmutableList.of("1"));
     assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, "2"), null), ImmutableList.of("2"));
     assertFilterMatches(new BloomDimFilter("dim1", bloomKFilter(1000, "1"), null), ImmutableList.of("3"));
@@ -196,21 +191,14 @@ public class BloomDimFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn() throws IOException
   {
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatchesSkipArrays(
-          new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
-          ImmutableList.of("1", "2", "5")
-      );
-    } else {
-      assertFilterMatchesSkipArrays(
-          new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
-          ImmutableList.of("1", "5")
-      );
-      assertFilterMatchesSkipArrays(
-          new BloomDimFilter("dim2", bloomKFilter(1000, ""), null),
-          ImmutableList.of("2")
-      );
-    }
+    assertFilterMatchesSkipArrays(
+        new BloomDimFilter("dim2", bloomKFilter(1000, (String) null), null),
+        ImmutableList.of("1", "5")
+    );
+    assertFilterMatchesSkipArrays(
+        new BloomDimFilter("dim2", bloomKFilter(1000, ""), null),
+        ImmutableList.of("2")
+    );
     assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "a"), null), ImmutableList.of("0", "3"));
     assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "b"), null), ImmutableList.of("0"));
     assertFilterMatchesSkipArrays(new BloomDimFilter("dim2", bloomKFilter(1000, "c"), null), ImmutableList.of("4"));
@@ -320,22 +308,14 @@ public class BloomDimFilterTest extends BaseFilterTest
     );
     LookupExtractor mapExtractor3 = new MapLookupExtractor(stringMap3, false);
     LookupExtractionFn lookupFn3 = new LookupExtractionFn(mapExtractor3, false, null, false, true);
-    if (NullHandling.replaceWithDefault()) {
-      // Nulls and empty strings are considered equivalent
-      assertFilterMatches(
-          new BloomDimFilter("dim0", bloomKFilter(1000, (String) null), lookupFn3),
-          ImmutableList.of("0", "1", "2", "3", "4", "5")
-      );
-    } else {
-      assertFilterMatches(
-          new BloomDimFilter("dim0", bloomKFilter(1000, (String) null), lookupFn3),
-          ImmutableList.of("0", "2", "3", "4", "5")
-      );
-      assertFilterMatches(
-          new BloomDimFilter("dim0", bloomKFilter(1000, ""), lookupFn3),
-          ImmutableList.of("1")
-      );
-    }
+    assertFilterMatches(
+        new BloomDimFilter("dim0", bloomKFilter(1000, (String) null), lookupFn3),
+        ImmutableList.of("0", "2", "3", "4", "5")
+    );
+    assertFilterMatches(
+        new BloomDimFilter("dim0", bloomKFilter(1000, ""), lookupFn3),
+        ImmutableList.of("1")
+    );
   }
 
   @Test

@@ -22,7 +22,6 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -656,12 +655,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         Object x = xExprSelector.getObject();
         Object y = yExprSelector.getObject();
         String expectedFoo = "foofoo";
-        String expectedNull = NullHandling.replaceWithDefault() ? "foo" : null;
         if (rowCount == 0) {
           Assert.assertEquals(expectedFoo, x);
-          Assert.assertEquals(expectedNull, y);
+          Assert.assertNull(y);
         } else {
-          Assert.assertEquals(expectedNull, x);
+          Assert.assertNull(x);
           Assert.assertEquals(expectedFoo, y);
         }
         rowCount++;

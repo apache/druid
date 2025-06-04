@@ -52,12 +52,13 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -69,6 +70,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -160,6 +162,14 @@ public class DataSourcePlan
     if (dataSource instanceof TableDataSource) {
       return forTable(
           (TableDataSource) dataSource,
+          querySegmentSpecIntervals(querySegmentSpec),
+          filter,
+          filterFields,
+          broadcast
+      );
+    } else if (dataSource instanceof RestrictedDataSource) {
+      return forRestricted(
+          (RestrictedDataSource) dataSource,
           querySegmentSpecIntervals(querySegmentSpec),
           filter,
           filterFields,
@@ -329,7 +339,7 @@ public class DataSourcePlan
 
   /**
    * Checks if the sortMerge algorithm can execute a particular join condition.
-   *
+   * <p>
    * One check: join condition on two tables "table1" and "table2" is of the form
    * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
    */
@@ -360,6 +370,24 @@ public class DataSourcePlan
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter, filterFields)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
+    );
+  }
+
+  private static DataSourcePlan forRestricted(
+      final RestrictedDataSource dataSource,
+      final List<Interval> intervals,
+      @Nullable final DimFilter filter,
+      @Nullable final Set<String> filterFields,
+      final boolean broadcast
+  )
+  {
+    return new DataSourcePlan(
+        (broadcast && dataSource.isGlobal())
+        ? dataSource
+        : new RestrictedInputNumberDataSource(0, dataSource.getPolicy()),
+        Collections.singletonList(new TableInputSpec(dataSource.getBase().getName(), intervals, filter, filterFields)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -524,7 +552,7 @@ public class DataSourcePlan
   )
   {
     // This is done to prevent loss of generality since MSQ can plan any type of DataSource.
-    List<DataSource> children = unionDataSource.getDataSources();
+    List<DataSource> children = unionDataSource.getChildren();
 
     final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final List<DataSource> newChildren = new ArrayList<>();
@@ -573,7 +601,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
-    final DataSourceAnalysis analysis = dataSource.getAnalysis();
+    final JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKitSpec,
@@ -581,7 +609,7 @@ public class DataSourcePlan
         analysis.getBaseDataSource(),
         querySegmentSpec,
         filter,
-        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis),
+        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis::isBaseColumn),
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -764,9 +792,6 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   *
-   * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
    *
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See

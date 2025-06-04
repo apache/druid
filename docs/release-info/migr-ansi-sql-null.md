@@ -25,44 +25,34 @@ sidebar_label: SQL compliant mode
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-In Apache Druid 28.0.0, the default [null handling](../querying/sql-data-types.md#null-values) mode changed to be compliant with the ANSI SQL standard.
-This guide provides strategies for Druid operators who rely on legacy Druid null handling behavior in their applications to transition to SQL compliant mode.
-Legacy mode is planned for removal from Druid. 
+In Apache Druid 32.0.0, legacy configurations which were incompatible with the ANSI SQL standard were removed. 
+
+These configurations were:
+* `druid.generic.useDefaultValueForNull`
+* `druid.expressions.useStrictBooleans`
+* `druid.generic.useThreeValueLogicForNativeFilters`
+
+This guide provides strategies for Druid operators who rely on legacy Druid null handling behavior in their applications to transition to Druid 32.0.0 or later.
 
 ## SQL compliant null handling
 
-As of Druid 28.0.0, Druid writes segments in an ANSI SQL compatible null handling mode by default.
-This means that Druid stores null values distinctly from empty strings for string dimensions and distinctly from 0 for numeric dimensions.
+As of Druid 28.0.0, Druid writes segments in an ANSI SQL compatible null handling mode by default, and in Druid 32.0.0 this is no longer configurable.
+This is a change of legacy behavior and means that Druid stores null values distinctly from empty strings for string dimensions and distinctly from 0 for numeric dimensions.
 
 This can impact your application behavior because the ANSI SQL standard defines any comparison to null to be unknown.
 According to this three-valued logic, `x <> 'some value'` only returns non-null values.
 
-The default Druid configurations for 28.0.0 and later that enable ANSI SQL compatible null handling mode are the following:
+Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how null handling works in Druid.
 
-* `druid.generic.useDefaultValueForNull=false`
-* `druid.expressions.useStrictBooleans=true`
-* `druid.generic.useThreeValueLogicForNativeFilters=true` 
-
-Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
-
-## Legacy null handling and two-valued logic
+## Legacy null handling and two-valued filter logic
 
 Prior to Druid 28.0.0, Druid defaulted to a legacy mode which stored default values instead of nulls.
-In legacy mode, Druid created segments with the following characteristics at ingestion time:
+In this mode, Druid created segments with the following characteristics at ingestion time:
 
 - String columns couldn't distinguish an empty string, `''`, from null.
-    Therefore, Druid treated them both as interchangeable values.
+    Therefore, Druid treated both values as interchangeable.
 - Numeric columns couldn't represent null valued rows.
-    Therefore, Druid stored `0` instead of `null`. 
-
-The Druid configurations for the deprecated legacy mode were the following:
-
-* `druid.generic.useDefaultValueForNull=true`
-* `druid.expressions.useStrictBooleans=false`
-* `druid.generic.useThreeValueLogicForNativeFilters=true`
-
-These configurations are deprecated and scheduled for removal.
-After the configurations are removed, Druid will ignore them if they exist in your configuration files and use the default SQL compliant mode.
+    Therefore, Druid stored `0` instead of `null`.
 
 ## Migrate to SQL compliant mode
 
@@ -217,7 +207,7 @@ The following example shows how to coerce empty strings into null to accommodate
 
 <Tabs>
 
-<TabItem value="0" label="SQL-based batcn">
+<TabItem value="0" label="SQL-based batch">
 
 ```sql
 REPLACE INTO "null_string" OVERWRITE ALL
@@ -296,7 +286,7 @@ PARTITIONED BY MONTH
 
 Druid ingests the data with no empty strings as follows:
 
-| `__time` | `string_examle` |
+| `__time` | `string_example` |
 | -- | -- | -- |
 | `2024-01-01T00:00:00.000Z`| `my_string`|
 | `2024-01-02T00:00:00.000Z`| `null`|
@@ -315,7 +305,7 @@ If you want to maintain null values in your data within Druid, you can use the f
 
 Consider the following Druid datasource `null_example`:
 
-| `__time` | `string_examle` | `number_example`|
+| `__time` | `string_example` | `number_example`|
 | -- | -- | -- |
 | `2024-01-01T00:00:00.000Z`| `my_string`| 99 |
 | `2024-01-02T00:00:00.000Z`| `empty`| 0 |
@@ -382,5 +372,5 @@ Druid returns the following:
 
 See the following topics for more information:
  - [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
- - [Null values](../querying/sql-data-types.md#null-values) for a description of Druid's behavior with null values.
+ - [Null values](../querying/sql-data-types.md#null-values) for a description of Druid's null values.
  - [Handling null values](../design/segments.md#handling-null-values) for details about how Druid stores null values.

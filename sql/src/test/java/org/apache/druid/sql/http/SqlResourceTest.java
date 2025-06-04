@@ -30,7 +30,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -64,6 +63,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -77,9 +77,9 @@ import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -119,7 +119,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -261,6 +260,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -352,17 +352,36 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testUnauthorized()
   {
-    try {
-      postForAsyncResponse(
-          createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
-          request()
-      );
-      Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
-    }
-    catch (ForbiddenException e) {
-      // expected
-    }
+    ForbiddenException e = Assert.assertThrows(ForbiddenException.class, () -> {
+      postForAsyncResponse(createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"), request());
+    });
+    Assert.assertEquals("Unauthorized", e.getMessage());
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testRestricted() throws Exception
+  {
+    req = makeSuperUserReq();
+    final List<Map<String, Object>> resultAsSuperUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 6)), resultAsSuperUser);
+
+    checkSqlRequestLog(true, CalciteTests.TEST_SUPERUSER_NAME);
+    testRequestLogger.clear();
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+
+    req = makeRegularUserReq();
+    final List<Map<String, Object>> resultAsRegularUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 1)), resultAsRegularUser);
+    checkSqlRequestLog(true);
+    testRequestLogger.clear();
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -555,11 +574,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z")
-            // t2 represents Long.MIN converted to a timestamp
-        ) :
         ImmutableList.of(
             Maps.transformValues(
                 ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""),
@@ -609,12 +623,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("x", "", "y", ""),
-            ImmutableMap.of("x", "a", "y", "a"),
-            ImmutableMap.of("x", "abc", "y", "abc")
-        ) :
         ImmutableList.of(
             // x and y both should be null instead of empty string
             Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
@@ -626,11 +634,113 @@ public class SqlResourceTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testPivotRowTypePreservedInDecoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='DECOUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
+    );
+  }
+
+  @Test
+  public void testPivotRowTypePreservedInCoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='COUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
+    );
+  }
+
   @Test
   public void testArrayResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -643,18 +753,18 @@ public class SqlResourceTest extends CalciteTestBase
                 1.0,
                 1.0,
                 "\"AQAAAEAAAA==\"",
-                nullStr
+                null
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
                 "10.1",
-                nullStr,
+                null,
                 "[\"b\",\"c\"]",
                 1,
                 2.0,
                 2.0,
                 "\"AQAAAQAAAAHNBA==\"",
-                nullStr
+                null
             )
         ),
         doPost(
@@ -741,11 +851,10 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     List[] expectedQueryResults = new List[]{
-        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, "\"AQAAAEAAAA==\"", nullStr),
-        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", nullStr, "[\"b\",\"c\"]", 1, 2.0, 2.0, "\"AQAAAQAAAAHNBA==\"", nullStr)
+        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, "\"AQAAAEAAAA==\"", null),
+        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", null, "[\"b\",\"c\"]", 1, 2.0, 2.0, "\"AQAAAQAAAAHNBA==\"", null)
     };
 
     MockHttpServletResponse response = postForAsyncResponse(
@@ -865,7 +974,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(4, lines.size());
@@ -879,7 +987,7 @@ public class SqlResourceTest extends CalciteTestBase
             1.0,
             1.0,
             "\"AQAAAEAAAA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(0), List.class)
     );
@@ -887,13 +995,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
             "\"AQAAAQAAAAHNBA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(1), List.class)
     );
@@ -910,7 +1018,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(7, lines.size());
@@ -927,7 +1034,7 @@ public class SqlResourceTest extends CalciteTestBase
             1.0,
             1.0,
             "\"AQAAAEAAAA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(3), List.class)
     );
@@ -935,13 +1042,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
             "\"AQAAAQAAAAHNBA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(4), List.class)
     );
@@ -981,10 +1088,9 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo  LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
 
     Assert.assertEquals(
@@ -1032,11 +1138,10 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
           m,
-          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
       );
     };
     final List<String> lines = Splitter.on('\n').splitToList(response);
@@ -1088,10 +1193,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, false, false, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -1148,10 +1252,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -1576,7 +1679,7 @@ public class SqlResourceTest extends CalciteTestBase
   /**
    * See class-level javadoc for {@link org.apache.druid.sql.calcite.util.testoperator.AssertionErrorOperatorConversion}
    * for rationale as to why this test exists.
-   *
+   * <p>
    * If this test starts failing, it could be indicative of us not handling the AssertionErrors well anymore,
    * OR it could be indicative of this specific code path not throwing an AssertionError anymore.  If we run
    * into the latter case, we should seek out a new code path that generates the error from Calcite.  In the best
@@ -1899,15 +2002,22 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
   }
 
-  @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
+  {
+    checkSqlRequestLog(success, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void checkSqlRequestLog(boolean success, String user)
   {
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
 
     final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-    final Map<String, Object> queryContext = (Map<String, Object>) stats.get("context");
+    final Map<String, Object> queryContext = (Map<String, Object>) testRequestLogger.getSqlQueryLogs()
+                                                                                    .get(0)
+                                                                                    .getSqlQueryContext();
     Assert.assertEquals(success, stats.get("success"));
-    Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
+    Assert.assertEquals(user, stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
     Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
@@ -2184,7 +2294,7 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     protected void authorize(
         DruidPlanner planner,
-        Function<Set<ResourceAction>, Access> authorizer
+        Function<Set<ResourceAction>, AuthorizationResult> authorizer
     )
     {
       if (validateAndAuthorizeLatchSupplier.get() != null) {

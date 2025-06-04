@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
@@ -74,8 +73,7 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
   private Optional<ReferenceCountingIndexedTable> getOnlyIndexedTable(DataSource dataSource)
   {
     GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
-    DataSourceAnalysis analysis = dataSource.getAnalysis();
-    return segmentManager.getIndexedTables(analysis).flatMap(tables -> {
+    return segmentManager.getIndexedTables(broadcastDataSource).flatMap(tables -> {
       Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
       if (!tableIterator.hasNext()) {
         return Optional.empty();

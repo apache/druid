@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
@@ -50,7 +51,6 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -63,6 +63,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -92,13 +93,13 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, useSegmentCache={2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.SEGMENT, true}
+        new Object[]{LockGranularity.TIME_CHUNK, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true, true},
+        new Object[]{LockGranularity.SEGMENT, true, false}
     );
   }
 
@@ -110,9 +111,13 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   private File inputDir;
 
-  public SinglePhaseParallelIndexingTest(LockGranularity lockGranularity, boolean useInputFormatApi)
+  public SinglePhaseParallelIndexingTest(
+      LockGranularity lockGranularity,
+      boolean useInputFormatApi,
+      boolean useSegmentMetadataCache
+  )
   {
-    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE, useSegmentMetadataCache);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
   }
@@ -378,9 +383,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testRunInParallelIngestNullColumn()
   {
-    if (!useInputFormatApi) {
-      return;
-    }
+    Assume.assumeTrue(useInputFormatApi);
     // Ingest all data.
     final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
         Arrays.asList("ts", "unknownDim", "dim")
@@ -430,9 +433,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Test
   public void testRunInParallelIngestNullColumn_storeEmptyColumnsOff_shouldNotStoreEmptyColumns()
   {
-    if (!useInputFormatApi) {
-      return;
-    }
+    Assume.assumeTrue(useInputFormatApi);
     // Ingest all data.
     final List<DimensionSchema> dimensionSchemas = DimensionsSpec.getDefaultSchemas(
         Arrays.asList("ts", "unknownDim", "dim")
@@ -629,9 +630,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(interval, Granularities.DAY, true, true);
     final ParallelIndexSupervisorTask task2 = newTask(interval, Granularities.DAY, true, true);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task.addToContext(Tasks.USE_CONCURRENT_LOCKS, true);
     task2.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task2.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task2.addToContext(Tasks.USE_CONCURRENT_LOCKS, true);
     getIndexingServiceClient().runTask(task.getId(), task);
     getIndexingServiceClient().runTask(task2.getId(), task2);
 

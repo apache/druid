@@ -23,6 +23,7 @@ $shpitz-size: 9px;
 .portal-bubble {
   position: absolute;
   @include card-like;
+  z-index: 1000;
 
   .#{$bp-ns}-dark & {
     background: $dark-gray1;

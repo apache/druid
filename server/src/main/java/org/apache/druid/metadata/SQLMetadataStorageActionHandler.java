@@ -119,8 +119,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.connector = connector;
     //fully qualified references required below due to identical package names across project modules.
     //noinspection UnnecessaryFullyQualifiedName
-    this.jsonMapper = jsonMapper.copy().addMixIn(org.apache.druid.metadata.PasswordProvider.class,
-            org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
+    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.lockType = types.getLockType();
@@ -378,7 +377,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           }
           return tasks;
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -437,7 +436,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           }
           return taskMetadataInfos;
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -841,7 +840,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
           return addLock(handle, entryId, newLock);
         },
-        3,
+        SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
@@ -850,16 +849,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void removeLock(final long lockId)
   {
     connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            removeLock(handle, lockId);
-
-            return null;
-          }
-        }
+        handle -> removeLock(handle, lockId)
     );
   }
 

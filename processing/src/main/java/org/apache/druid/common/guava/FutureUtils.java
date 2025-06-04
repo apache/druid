@@ -73,7 +73,7 @@ public class FutureUtils
   public static <T> T getUnchecked(final ListenableFuture<T> future, final boolean cancelIfInterrupted)
   {
     try {
-      return get(future, cancelIfInterrupted);
+      return FutureUtils.get(future, cancelIfInterrupted);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -103,7 +103,7 @@ public class FutureUtils
   /**
    * Like {@link Futures#transform}, but works better with lambdas due to not having overloads.
    *
-   * One can write {@code transform(future, v -> ...)} instead of
+   * One can write {@code FutureUtils.transform(future, v -> ...)} instead of
    * {@code Futures.transform(future, (Function<? super T, ?>) v -> ...)}
    */
   public static <T, R> ListenableFuture<R> transform(final ListenableFuture<T> future, final Function<T, R> fn)
@@ -115,7 +115,7 @@ public class FutureUtils
    * Like {@link Futures#transformAsync(ListenableFuture, AsyncFunction, java.util.concurrent.Executor)}, but works better with lambdas due to not having
    * overloads.
    *
-   * One can write {@code transformAsync(future, v -> ...)} instead of
+   * One can write {@code FutureUtils.transformAsync(future, v -> ...)} instead of
    * {@code Futures.transform(future, (Function<? super T, ?>) v -> ...)}
    */
   public static <T, R> ListenableFuture<R> transformAsync(final ListenableFuture<T> future, final AsyncFunction<T, R> fn)

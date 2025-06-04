@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -55,7 +54,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     T selector = selector(columnSelectorFactory);
     BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    return NullHandling.sqlCompatible() ? new NullableNumericAggregator(aggregator, nullSelector) : aggregator;
+    return new NullableNumericAggregator(aggregator, nullSelector);
   }
 
   @Override
@@ -64,7 +63,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     T selector = selector(columnSelectorFactory);
     BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    return NullHandling.sqlCompatible() ? new NullableNumericBufferAggregator(aggregator, nullSelector) : aggregator;
+    return new NullableNumericBufferAggregator(aggregator, nullSelector);
   }
 
   @Override
@@ -73,20 +72,20 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    return NullHandling.sqlCompatible() ? new NullableNumericVectorAggregator(aggregator, selector) : aggregator;
+    return new NullableNumericVectorAggregator(aggregator, selector);
   }
 
   @Override
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
     AggregateCombiner<?> combiner = makeAggregateCombiner();
-    return NullHandling.sqlCompatible() ? new NullableNumericAggregateCombiner<>(combiner) : combiner;
+    return new NullableNumericAggregateCombiner<>(combiner);
   }
 
   @Override
   public final int getMaxIntermediateSizeWithNulls()
   {
-    return getMaxIntermediateSize() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
+    return getMaxIntermediateSize() + Byte.BYTES;
   }
 
   /**

@@ -22,6 +22,7 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.Intervals;
@@ -30,10 +31,12 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -74,7 +77,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public byte[] getCacheKey()
     {
-      return new byte[] {(byte) this.ordinal()};
+      return new byte[]{(byte) this.ordinal()};
     }
   }
 
@@ -107,18 +110,18 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
     this.analysisTypes = analysisTypes;
-    if (!(dataSource instanceof TableDataSource || dataSource instanceof UnionDataSource)) {
-      throw InvalidInput.exception("Invalid dataSource type [%s]. "
-                                   + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
-    }
+
+    validateDataSource(dataSource);
     // We validate that there's only one parameter specified by the user. While the deprecated property is still
     // supported in the API, we only set the new member variable either using old or new property, so we've a single source
     // of truth for consumers of this class variable. The defaults are to preserve backwards compatibility.
     // In a future release, 28.0+, we can remove the deprecated property lenientAggregatorMerge.
     if (lenientAggregatorMerge != null && aggregatorMergeStrategy != null) {
-      throw InvalidInput.exception("Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set."
-                                   + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
-                                   lenientAggregatorMerge, aggregatorMergeStrategy);
+      throw InvalidInput.exception(
+          "Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set. Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
+          lenientAggregatorMerge,
+          aggregatorMergeStrategy
+      );
     }
     if (lenientAggregatorMerge != null) {
       this.aggregatorMergeStrategy = lenientAggregatorMerge
@@ -164,7 +167,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return SEGMENT_METADATA;
+    return Query.SEGMENT_METADATA;
   }
 
   @JsonProperty
@@ -245,18 +248,46 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     return this.getQuerySegmentSpec().getIntervals();
   }
 
+  private static void validateDataSource(DataSource dataSource)
+  {
+    if (dataSource instanceof TableDataSource) {
+      // do nothing
+    } else if (dataSource instanceof RestrictedDataSource) {
+      validateWithNoRestrictionPolicy((RestrictedDataSource) dataSource);
+    } else if (dataSource instanceof UnionDataSource) {
+      for (DataSource child : dataSource.getChildren()) {
+        validateDataSource(child);
+      }
+    } else {
+      throw InvalidInput.exception("Invalid dataSource type [%s]. "
+                                   + "SegmentMetadataQuery only supports table or union datasources.", dataSource);
+    }
+  }
+
+  private static void validateWithNoRestrictionPolicy(RestrictedDataSource restricted)
+  {
+    if (!(restricted.getPolicy() instanceof NoRestrictionPolicy)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "You do not have permission to run a segmentMetadata query on table[%s].",
+                              restricted.getBase()
+                          );
+    }
+  }
+
   @Override
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", toInclude=" + toInclude +
-        ", merge=" + merge +
-        ", usingDefaultInterval=" + usingDefaultInterval +
-        ", analysisTypes=" + analysisTypes +
-        ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", toInclude=" + toInclude +
+           ", merge=" + merge +
+           ", usingDefaultInterval=" + usingDefaultInterval +
+           ", analysisTypes=" + analysisTypes +
+           ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
+           '}';
   }
 
   @Override
@@ -273,10 +304,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-        usingDefaultInterval == that.usingDefaultInterval &&
-        Objects.equals(toInclude, that.toInclude) &&
-        Objects.equals(analysisTypes, that.analysisTypes) &&
-        Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
+           usingDefaultInterval == that.usingDefaultInterval &&
+           Objects.equals(toInclude, that.toInclude) &&
+           Objects.equals(analysisTypes, that.analysisTypes) &&
+           Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
   }
 
   @Override

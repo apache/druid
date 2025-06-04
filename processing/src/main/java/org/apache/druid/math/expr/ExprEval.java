@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -166,14 +166,14 @@ public abstract class ExprEval<T>
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
-          array[i++] = o != null ? ofType(ExpressionType.LONG, o).value() : null;
+          array[i++] = o != null ? ExprEval.ofType(ExpressionType.LONG, o).value() : null;
         }
         return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
       } else if (coercedType == Float.class || coercedType == Double.class) {
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
-          array[i++] = o != null ? ofType(ExpressionType.DOUBLE, o).value() : null;
+          array[i++] = o != null ? ExprEval.ofType(ExpressionType.DOUBLE, o).value() : null;
         }
         return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
       } else if (coercedType == Object.class) {
@@ -184,7 +184,7 @@ public abstract class ExprEval<T>
         ExpressionType elementType = null;
         for (Object o : val) {
           if (o != null) {
-            ExprEval<?> eval = bestEffortOf(o);
+            ExprEval<?> eval = ExprEval.bestEffortOf(o);
             elementType = ExpressionTypeConversion.leastRestrictiveType(elementType, eval.type());
             evals[i++] = eval;
           } else {
@@ -196,7 +196,7 @@ public abstract class ExprEval<T>
           if (eval != null) {
             array[i++] = eval.castTo(elementType).value();
           } else {
-            array[i++] = ofType(elementType, null).value();
+            array[i++] = ExprEval.ofType(elementType, null).value();
           }
         }
         ExpressionType arrayType = elementType == null
@@ -208,7 +208,7 @@ public abstract class ExprEval<T>
       Object[] array = new Object[val.size()];
       int i = 0;
       for (Object o : val) {
-        array[i++] = o != null ? ofType(ExpressionType.STRING, o).value() : null;
+        array[i++] = o != null ? ExprEval.ofType(ExpressionType.STRING, o).value() : null;
       }
       return new NonnullPair<>(ExpressionType.STRING_ARRAY, array);
     }
@@ -389,7 +389,7 @@ public abstract class ExprEval<T>
       return new StringExprEval((String) val);
     }
     if (val instanceof Number) {
-      if (val instanceof Float || val instanceof Double) {
+      if (val instanceof Float || val instanceof Double || val instanceof BigDecimal) {
         return new DoubleExprEval((Number) val);
       }
       return new LongExprEval((Number) val);
@@ -530,7 +530,7 @@ public abstract class ExprEval<T>
           return ofLongBoolean((Boolean) value);
         }
         if (value instanceof String) {
-          return ofLong(computeNumber((String) value));
+          return ofLong(ExprEval.computeNumber((String) value));
         }
         return ofLong(null);
       case DOUBLE:
@@ -541,7 +541,7 @@ public abstract class ExprEval<T>
           return ofDouble(Evals.asDouble((Boolean) value));
         }
         if (value instanceof String) {
-          return ofDouble(computeNumber((String) value));
+          return ofDouble(ExprEval.computeNumber((String) value));
         }
         return ofDouble(null);
       case COMPLEX:
@@ -576,7 +576,7 @@ public abstract class ExprEval<T>
           Object[] array = new Object[theList.size()];
           int i = 0;
           for (Object o : theList) {
-            array[i++] = ofType(elementType, o).value();
+            array[i++] = ExprEval.ofType(elementType, o).value();
           }
           return ofArray(type, array);
         }
@@ -586,7 +586,7 @@ public abstract class ExprEval<T>
           Object[] array = new Object[inputArray.length];
           int i = 0;
           for (Object o : inputArray) {
-            array[i++] = ofType(elementType, o).value();
+            array[i++] = ExprEval.ofType(elementType, o).value();
           }
           return ofArray(type, array);
         }
@@ -733,10 +733,6 @@ public abstract class ExprEval<T>
    *
    * If a type cannot sanely convert into a primitive numeric value, then this method should always return true so that
    * these primitive numeric getters are not called, since returning false is assumed to mean these values are valid.
-   *
-   * Note that all types must still return values for {@link #asInt()}, {@link #asLong()}}, and {@link #asDouble()},
-   * since this can still happen if {@link NullHandling#sqlCompatible()} is false, but it should be assumed that this
-   * can only happen in that mode and 0s are typical and expected for values that would otherwise be null.
    */
   public abstract boolean isNumericNull();
 
@@ -747,22 +743,19 @@ public abstract class ExprEval<T>
 
   /**
    * Get the primitive integer value. Callers should check {@link #isNumericNull()} prior to calling this method,
-   * otherwise it may improperly return placeholder a value (typically zero, which is expected if
-   * {@link NullHandling#sqlCompatible()} is false)
+   * otherwise it may improperly return placeholder a value (typically zero)
    */
   public abstract int asInt();
 
   /**
    * Get the primitive long value. Callers should check {@link #isNumericNull()} prior to calling this method,
-   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
-   * {@link NullHandling#sqlCompatible()} is false)
+   * otherwise it may improperly return a placeholder value (typically zero)
    */
   public abstract long asLong();
 
   /**
    * Get the primitive double value. Callers should check {@link #isNumericNull()} prior to calling this method,
-   * otherwise it may improperly return a placeholder value (typically zero, which is expected if
-   * {@link NullHandling#sqlCompatible()} is false)
+   * otherwise it may improperly return a placeholder value (typically zero)
    */
   public abstract double asDouble();
 
@@ -812,7 +805,7 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNumericNull()
     {
-      return NullHandling.sqlCompatible() && value == null;
+      return value == null;
     }
   }
 
@@ -835,7 +828,7 @@ public abstract class ExprEval<T>
     public Number valueOrDefault()
     {
       if (value == null) {
-        return NullHandling.defaultDoubleValue();
+        return null;
       }
       return value.doubleValue();
     }
@@ -861,20 +854,20 @@ public abstract class ExprEval<T>
           return this;
         case LONG:
           if (value == null) {
-            return ofLong(null);
+            return ExprEval.ofLong(null);
           } else {
-            return of(asLong());
+            return ExprEval.of(asLong());
           }
         case STRING:
-          return of(asString());
+          return ExprEval.of(asString());
         case ARRAY:
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ofDoubleArray(asArray());
+              return ExprEval.ofDoubleArray(asArray());
             case LONG:
-              return ofLongArray(value == null ? null : new Object[]{value.longValue()});
+              return ExprEval.ofLongArray(value == null ? null : new Object[]{value.longValue()});
             case STRING:
-              return ofStringArray(value == null ? null : new Object[]{value.toString()});
+              return ExprEval.ofStringArray(value == null ? null : new Object[]{value.toString()});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
               return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
@@ -918,7 +911,7 @@ public abstract class ExprEval<T>
     public Number valueOrDefault()
     {
       if (value == null) {
-        return NullHandling.defaultLongValue();
+        return null;
       }
       return value.longValue();
     }
@@ -942,25 +935,25 @@ public abstract class ExprEval<T>
       switch (castTo.getType()) {
         case DOUBLE:
           if (value == null) {
-            return ofDouble(null);
+            return ExprEval.ofDouble(null);
           } else {
-            return of(asDouble());
+            return ExprEval.of(asDouble());
           }
         case LONG:
           return this;
         case STRING:
-          return of(asString());
+          return ExprEval.of(asString());
         case ARRAY:
           if (value == null) {
             return new ArrayExprEval(castTo, null);
           }
           switch (castTo.getElementType().getType()) {
             case DOUBLE:
-              return ofDoubleArray(new Object[]{value.doubleValue()});
+              return ExprEval.ofDoubleArray(new Object[]{value.doubleValue()});
             case LONG:
-              return ofLongArray(asArray());
+              return ExprEval.ofLongArray(asArray());
             case STRING:
-              return ofStringArray(new Object[]{value.toString()});
+              return ExprEval.ofStringArray(new Object[]{value.toString()});
             default:
               ExpressionType elementType = (ExpressionType) castTo.getElementType();
               return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
@@ -1002,7 +995,7 @@ public abstract class ExprEval<T>
 
     private StringExprEval(@Nullable String value)
     {
-      super(NullHandling.emptyToNullIfNeeded(value));
+      super(value);
     }
 
     @Override
@@ -1121,10 +1114,10 @@ public abstract class ExprEval<T>
     {
       switch (castTo.getType()) {
         case DOUBLE:
-          return ofDouble(computeNumber());
+          return ExprEval.ofDouble(computeNumber());
 
         case LONG:
-          return ofLong(computeNumber());
+          return ExprEval.ofLong(computeNumber());
 
         case STRING:
           return this;
@@ -1136,12 +1129,12 @@ public abstract class ExprEval<T>
           ExprType type = castTo.getElementType().getType();
           if (type == ExprType.DOUBLE) {
             final Number number = computeNumber();
-            return ofDoubleArray(new Object[]{number == null ? null : number.doubleValue()});
+            return ExprEval.ofDoubleArray(new Object[]{number == null ? null : number.doubleValue()});
           } else if (type == ExprType.LONG) {
             final Number number = computeNumber();
-            return ofLongArray(new Object[]{number == null ? null : number.longValue()});
+            return ExprEval.ofLongArray(new Object[]{number == null ? null : number.longValue()});
           } else if (type == ExprType.STRING) {
-            return ofStringArray(new Object[]{value});
+            return ExprEval.ofStringArray(new Object[]{value});
           }
 
           ExpressionType elementType = (ExpressionType) castTo.getElementType();
@@ -1306,7 +1299,7 @@ public abstract class ExprEval<T>
         if (castTo.isArray()) {
           return new ArrayExprEval(castTo, null);
         }
-        return ofType(castTo, null);
+        return ExprEval.ofType(castTo, null);
       }
       if (type().equals(castTo)) {
         return this;
@@ -1314,26 +1307,26 @@ public abstract class ExprEval<T>
       switch (castTo.getType()) {
         case STRING:
           if (value.length == 1) {
-            return of(asString());
+            return ExprEval.of(asString());
           }
           break;
         case LONG:
           if (value.length == 1) {
-            return isNumericNull() ? ofLong(null) : ofLong(asLong());
+            return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
           }
           break;
         case DOUBLE:
           if (value.length == 1) {
-            return isNumericNull() ? ofDouble(null) : ofDouble(asDouble());
+            return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
           }
           break;
         case ARRAY:
           ExpressionType elementType = (ExpressionType) castTo.getElementType();
           Object[] cast = new Object[value.length];
           for (int i = 0; i < value.length; i++) {
-            cast[i] = ofType(elementType(), value[i]).castTo(elementType).value();
+            cast[i] = ExprEval.ofType(elementType(), value[i]).castTo(elementType).value();
           }
-          return ofArray(castTo, cast);
+          return ExprEval.ofArray(castTo, cast);
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
             return new NestedDataExprEval(value);
@@ -1507,7 +1500,7 @@ public abstract class ExprEval<T>
         } else if (val instanceof Boolean) {
           number = Evals.asLong((Boolean) val);
         } else if (val instanceof String) {
-          number = computeNumber((String) val);
+          number = ExprEval.computeNumber((String) val);
         }
       }
     }
@@ -1517,7 +1510,7 @@ public abstract class ExprEval<T>
     public Object[] asArray()
     {
       Object val = StructuredData.unwrap(value);
-      ExprEval maybeArray = bestEffortOf(val);
+      ExprEval maybeArray = ExprEval.bestEffortOf(val);
       if (maybeArray.type().isPrimitive() || maybeArray.isArray()) {
         return maybeArray.asArray();
       }
@@ -1532,7 +1525,7 @@ public abstract class ExprEval<T>
       }
 
       Object val = StructuredData.unwrap(value);
-      ExprEval bestEffortOf = bestEffortOf(val);
+      ExprEval bestEffortOf = ExprEval.bestEffortOf(val);
 
       if (bestEffortOf.type().isPrimitive() || bestEffortOf.type().isArray()) {
         return bestEffortOf.castTo(castTo);

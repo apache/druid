@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.movingaverage;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -50,8 +49,6 @@ public class PostAveragerAggregatorCalculatorTest
   @Before
   public void setup()
   {
-    System.setProperty("druid.generic.useDefaultValueForNull", "true");
-    NullHandling.initializeForTests();
     MovingAverageQuery query = new MovingAverageQuery(
         new TableDataSource("d"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval(
@@ -100,7 +97,7 @@ public class PostAveragerAggregatorCalculatorTest
 
     Row result = pac.apply(row);
 
-    Assert.assertEquals(0.0, result.getMetric("avgCountRatio").floatValue(), 0.0);
+    Assert.assertNull(result.getMetric("avgCountRatio"));
     Assert.assertNull(result.getRaw("avgCountRatio"));
   }
 }

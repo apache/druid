@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.hll.vector;
 
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildBufferAggregatorHelper;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -50,7 +49,7 @@ public class DoubleHllSketchBuildVectorProcessor implements HllSketchBuildVector
     final HllSketch sketch = helper.getSketchAtPosition(buf, position);
 
     for (int i = startRow; i < endRow; i++) {
-      if (NullHandling.replaceWithDefault() || nullVector == null || !nullVector[i]) {
+      if (nullVector == null || !nullVector[i]) {
         sketch.update(vector[i]);
       }
     }
@@ -64,7 +63,7 @@ public class DoubleHllSketchBuildVectorProcessor implements HllSketchBuildVector
 
     for (int i = 0; i < numRows; i++) {
       final int idx = rows != null ? rows[i] : i;
-      if (NullHandling.replaceWithDefault() || nullVector == null || !nullVector[idx]) {
+      if (nullVector == null || !nullVector[idx]) {
         final int position = positions[i] + positionOffset;
         final HllSketch sketch = helper.getSketchAtPosition(buf, position);
         sketch.update(vector[idx]);

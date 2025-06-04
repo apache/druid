@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -29,7 +28,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -59,7 +58,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -232,20 +230,11 @@ public class MSQArraysTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of(
+            ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
                 new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{""}},
-                new Object[]{0L, new Object[]{"b", "c"}},
-                new Object[]{0L, new Object[]{"d"}}
-            )
-            : ImmutableList.of(
-                new Object[]{0L, null},
-                new Object[]{0L, null},
-                new Object[]{0L, null},
-                new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{"b", "c"}},
                 new Object[]{0L, new Object[]{"d"}}
             )
@@ -283,7 +272,7 @@ public class MSQArraysTest extends MSQTestBase
             ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
-                new Object[]{0L, NullHandling.sqlCompatible() ? "" : null},
+                new Object[]{0L, ""},
                 new Object[]{0L, ImmutableList.of("a", "b")},
                 new Object[]{0L, ImmutableList.of("b", "c")},
                 new Object[]{0L, "d"}
@@ -304,20 +293,12 @@ public class MSQArraysTest extends MSQTestBase
                                             .add("dim3", ColumnType.STRING_ARRAY)
                                             .build();
 
-    List<Object[]> expectedRows = new ArrayList<>(
-        ImmutableList.of(
-            new Object[]{0L, null},
-            new Object[]{0L, new Object[]{"a", "b"}}
-        )
-    );
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, new Object[]{""}});
-    }
-    expectedRows.addAll(
-        ImmutableList.of(
-            new Object[]{0L, new Object[]{"b", "c"}},
-            new Object[]{0L, new Object[]{"d"}}
-        )
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{0L, null},
+        new Object[]{0L, new Object[]{"a", "b"}},
+        new Object[]{0L, new Object[]{""}},
+        new Object[]{0L, new Object[]{"b", "c"}},
+        new Object[]{0L, new Object[]{"d"}}
     );
 
     testIngestQuery().setSql(
@@ -800,7 +781,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(adjustedContext)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -871,7 +852,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayString DESC")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -935,7 +916,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayLong")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -999,7 +980,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ")\n"
                              + "ORDER BY arrayDouble")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1048,7 +1029,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1097,7 +1078,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ")")
                      .setQueryContext(context)
-                     .setExpectedMSQSpec(MSQSpec
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(expectedQuery)
                                              .columnMappings(new ColumnMappings(ImmutableList.of(

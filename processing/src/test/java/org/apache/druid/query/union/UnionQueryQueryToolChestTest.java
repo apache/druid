@@ -21,7 +21,6 @@ package org.apache.druid.query.union;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -43,7 +42,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -57,12 +55,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 
 public class UnionQueryQueryToolChestTest
 {
-  @BeforeAll
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
-
   final UnionQueryLogic queryLogic;
   private ScanQueryQueryToolChest scanToolChest;
 

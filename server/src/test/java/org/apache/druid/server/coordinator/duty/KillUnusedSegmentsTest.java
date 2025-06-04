@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
@@ -27,21 +26,22 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerTestBase;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -51,7 +51,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -64,18 +63,20 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class KillUnusedSegmentsTest
 {
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
   private static final Interval MONTH_OLD = new Interval(Period.days(1), NOW.minusDays(30));
+  private static final Interval FIFTEEN_DAY_OLD = new Interval(Period.days(1), NOW.minusDays(15));
   private static final Interval DAY_OLD = new Interval(Period.days(1), NOW.minusDays(1));
   private static final Interval HOUR_OLD = new Interval(Period.days(1), NOW.minusHours(1));
   private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
@@ -99,8 +100,10 @@ public class KillUnusedSegmentsTest
   private KillUnusedSegments killDuty;
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
+
+  private IndexerMetadataStorageCoordinator storageCoordinator;
   private SQLMetadataConnector connector;
   private MetadataStorageTablesConfig config;
 
@@ -108,18 +111,14 @@ public class KillUnusedSegmentsTest
   public void setup()
   {
     connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.millis(1));
-    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
-        TestHelper.makeJsonMapper(),
-        Suppliers.ofInstance(config),
-        derbyConnectorRule.metadataTablesConfigSupplier(),
+    storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        null,
+        TestHelper.JSON_MAPPER,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector,
         null,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
+        CentralizedDatasourceSchemaConfig.create()
     );
-    sqlSegmentsMetadataManager.start();
 
     this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSegmentTable();
@@ -129,6 +128,7 @@ public class KillUnusedSegmentsTest
         .withCleanupPeriod(Duration.standardSeconds(0))
         .withDurationToRetain(Duration.standardHours(36))
         .withMaxSegmentsToKill(10)
+        .withMaxIntervalToKill(Period.ZERO)
         .withBufferPeriod(Duration.standardSeconds(1));
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
         .withKillTaskSlotRatio(1.0);
@@ -140,6 +140,33 @@ public class KillUnusedSegmentsTest
   public void testKillWithDefaultCoordinatorConfig()
   {
     configBuilder = KillUnusedSegmentsConfig.builder();
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
+
+    final DateTime sixtyDaysAgo = NOW.minusDays(60);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, sixtyDaysAgo);
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
+  }
+
+  @Test
+  public void testKillWithDefaultCoordinatorConfigPlusZeroMaxIntervalToKill()
+  {
+    configBuilder = KillUnusedSegmentsConfig.builder().withMaxIntervalToKill(Period.ZERO);
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
@@ -556,6 +583,95 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
+  public void testLowerMaxIntervalToKill()
+  {
+    configBuilder.withMaxIntervalToKill(Period.hours(1));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
+  }
+
+  @Test
+  public void testMaxIntervalToKillOverridesDurationToRetain()
+  {
+    configBuilder.withDurationToRetain(Period.hours(6).toStandardDuration())
+            .withMaxIntervalToKill(Period.days(20));
+
+    initDuty();
+
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(29));
+    CoordinatorRunStats newDatasourceStats = runDutyAndGetStats();
+
+    // For a new datasource, the duration to retain is used to determine kill interval
+    Assert.assertEquals(1, newDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, MONTH_OLD);
+
+    // For a datasource where kill has already happened, maxIntervalToKill is used
+    // if it leads to a smaller kill interval than durationToRetain
+    createAndAddUnusedSegment(DS1, FIFTEEN_DAY_OLD, VERSION, NOW.minusDays(14));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusHours(2));
+    CoordinatorRunStats oldDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, oldDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, FIFTEEN_DAY_OLD);
+  }
+
+  @Test
+  public void testDurationToRetainOverridesMaxIntervalToKill()
+  {
+    configBuilder.withDurationToRetain(Period.days(20).toStandardDuration())
+            .withMaxIntervalToKill(Period.days(350));
+
+    initDuty();
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(29));
+    CoordinatorRunStats newDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, newDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
+
+    // For a datasource where (now - durationToRetain) < (lastKillTime(year old segment) + maxInterval)
+    // Fifteen day old segment will be rejected
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(29));
+    createAndAddUnusedSegment(DS1, FIFTEEN_DAY_OLD, VERSION, NOW.minusDays(14));
+    CoordinatorRunStats oldDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, oldDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, MONTH_OLD);
+  }
+
+  @Test
+  public void testHigherMaxIntervalToKill()
+  {
+    configBuilder.withMaxIntervalToKill(Period.days(360));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, JodaUtils.umbrellaInterval(Arrays.asList(YEAR_OLD, MONTH_OLD)));
+  }
+
+  @Test
   public void testKillDatasourceWithNoUnusedSegmentsInInitialRun()
   {
     configBuilder.withMaxSegmentsToKill(1);
@@ -878,6 +994,51 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
 
+  @Test
+  public void testLimitToPeriod_empty()
+  {
+    Assert.assertEquals(
+        Collections.emptyList(),
+        KillUnusedSegments.limitToPeriod(Collections.emptyList(), Period.ZERO)
+    );
+  }
+
+  @Test
+  public void testLimitToPeriod_zeroPeriod()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD),
+        KillUnusedSegments.limitToPeriod(ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD), Period.ZERO)
+    );
+  }
+
+  @Test
+  public void testLimitToPeriod_oneSecondPeriod()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(YEAR_OLD),
+        KillUnusedSegments.limitToPeriod(ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD), Period.seconds(1))
+    );
+  }
+
+  @Test
+  public void testLimitToPeriod_360DayPeriod()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(YEAR_OLD, MONTH_OLD),
+        KillUnusedSegments.limitToPeriod(ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD), Period.days(360))
+    );
+  }
+
+  @Test
+  public void testLimitToPeriod_1YearPeriod()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD),
+        KillUnusedSegments.limitToPeriod(ImmutableList.of(DAY_OLD, YEAR_OLD, MONTH_OLD), Period.years(1))
+    );
+  }
+
   private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)
   {
     final Interval observedLastKillInterval = overlordClient.getLastKillInterval(dataSource);
@@ -904,12 +1065,7 @@ public class KillUnusedSegmentsTest
   private DataSegment createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
-    try {
-      SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
     return segment;
   }
 
@@ -921,8 +1077,14 @@ public class KillUnusedSegmentsTest
   )
   {
     final DataSegment segment = createAndAddUsedSegment(dataSource, interval, version);
-    sqlSegmentsMetadataManager.markSegmentsAsUnused(ImmutableSet.of(segment.getId()));
-    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
+    int numUpdatedSegments = SqlSegmentsMetadataManagerTestBase.markSegmentsAsUnused(
+        Set.of(segment.getId()),
+        derbyConnectorRule.getConnector(),
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        TestHelper.JSON_MAPPER,
+        lastUpdatedTime
+    );
+    Assert.assertEquals(1, numUpdatedSegments);
   }
 
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
@@ -942,7 +1104,7 @@ public class KillUnusedSegmentsTest
 
   private void initDuty()
   {
-    killDuty = new KillUnusedSegments(sqlSegmentsMetadataManager, overlordClient, configBuilder.build());
+    killDuty = new KillUnusedSegments(storageCoordinator, overlordClient, configBuilder.build());
   }
 
   private CoordinatorRunStats runDutyAndGetStats()

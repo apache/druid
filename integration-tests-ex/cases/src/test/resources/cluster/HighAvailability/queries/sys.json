@@ -5,12 +5,12 @@
       "query": "SELECT host, server_type, is_leader FROM sys.servers ORDER BY host"
     },
     "expectedResults": [
-      {"host":"%%BROKER%%","server_type":"broker", "is_leader": %%NON_LEADER%%},
+      {"host":"%%BROKER%%","server_type":"broker", "is_leader": null},
       {"host":"%%COORDINATOR_ONE%%","server_type":"coordinator", "is_leader": %%COORDINATOR_ONE_LEADER%%},
       {"host":"%%COORDINATOR_TWO%%","server_type":"coordinator", "is_leader": %%COORDINATOR_TWO_LEADER%%},
       {"host":"%%OVERLORD_ONE%%","server_type":"overlord", "is_leader": %%OVERLORD_ONE_LEADER%%},
       {"host":"%%OVERLORD_TWO%%","server_type":"overlord", "is_leader": %%OVERLORD_TWO_LEADER%%},
-      {"host":"%%ROUTER%%","server_type":"router", "is_leader": %%NON_LEADER%%}
+      {"host":"%%ROUTER%%","server_type":"router", "is_leader": null}
     ]
   },
   {

@@ -22,7 +22,6 @@ import {
   ButtonGroup,
   Callout,
   FormGroup,
-  Icon,
   Intent,
   Menu,
   MenuDivider,
@@ -48,7 +47,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import {
   ClearableInput,
-  ENABLE_DISABLE_OPTIONS_TEXT,
+  ENABLED_DISABLED_OPTIONS_TEXT,
   LearnMore,
   Loader,
   MenuBoolean,
@@ -83,6 +82,7 @@ import {
   dataTypeToIcon,
   deepSet,
   DruidError,
+  EXPERIMENTAL_ICON,
   filterMap,
   oneOf,
   queryDruidSql,
@@ -106,8 +106,6 @@ import { PreviewTable } from './preview-table/preview-table';
 import { RollupAnalysisPane } from './rollup-analysis-pane/rollup-analysis-pane';
 
 import './schema-step.scss';
-
-const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 const queryRunner = new QueryRunner();
 
@@ -257,8 +255,6 @@ interface EditorColumn {
 export interface SchemaStepProps {
   queryString: string;
   onQueryStringChange(queryString: string): void;
-  forceSegmentSortByTime: boolean;
-  changeForceSegmentSortByTime(forceSegmentSortByTime: boolean): void;
   enableAnalyze: boolean;
   goToQuery: () => void;
   onBack(): void;
@@ -270,8 +266,6 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const {
     queryString,
     onQueryStringChange,
-    forceSegmentSortByTime,
-    changeForceSegmentSortByTime,
     enableAnalyze,
     goToQuery,
     onBack,
@@ -676,7 +670,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                         <MenuItem
                           key={i}
                           text={outputName}
-                          disabled={outputName === TIME_COLUMN && forceSegmentSortByTime}
+                          disabled={
+                            outputName === TIME_COLUMN && ingestQueryPattern.forceSegmentSortByTime
+                          }
                           onClick={() =>
                             updatePattern({
                               ...ingestQueryPattern,
@@ -692,9 +688,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   <MenuBoolean
                     icon={IconNames.GEOTIME}
                     text="Force segment sort by time"
-                    value={forceSegmentSortByTime}
-                    onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    value={ingestQueryPattern.forceSegmentSortByTime}
+                    onValueChange={v =>
+                      updatePattern({ ...ingestQueryPattern, forceSegmentSortByTime: Boolean(v) })
+                    }
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                   />
                 </Menu>
@@ -833,7 +831,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 className="column-filter-control"
                 value={columnSearch}
                 placeholder="Search columns"
-                onChange={setColumnSearch}
+                onValueChange={setColumnSearch}
               />
             </div>
           )}

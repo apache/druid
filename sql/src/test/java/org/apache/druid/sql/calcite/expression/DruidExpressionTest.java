@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
@@ -168,7 +167,7 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
     Assert.assertEquals(ColumnType.STRING, expression.getDruidType());
     Assert.assertEquals("''", expression.getExpression());
     Assert.assertEquals(
-        NullHandling.emptyToNullIfNeeded(s),
+        s,
         Parser.parse(expression.getExpression(), ExprMacroTable.nil()).getLiteralValue()
     );
   }

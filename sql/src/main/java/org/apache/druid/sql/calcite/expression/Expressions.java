@@ -34,7 +34,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -418,42 +417,21 @@ public class Expressions
         || kind == SqlKind.IS_NOT_TRUE
         || kind == SqlKind.IS_FALSE
         || kind == SqlKind.IS_NOT_FALSE) {
-      if (NullHandling.useThreeValueLogic()) {
-        final DimFilter baseFilter = toFilter(
-            plannerContext,
-            rowSignature,
-            virtualColumnRegistry,
-            Iterables.getOnlyElement(((RexCall) expression).getOperands())
-        );
+      final DimFilter baseFilter = toFilter(
+          plannerContext,
+          rowSignature,
+          virtualColumnRegistry,
+          Iterables.getOnlyElement(((RexCall) expression).getOperands())
+      );
 
-        if (kind == SqlKind.IS_TRUE) {
-          return IsTrueDimFilter.of(baseFilter);
-        } else if (kind == SqlKind.IS_NOT_TRUE) {
-          return NotDimFilter.of(IsTrueDimFilter.of(baseFilter));
-        } else if (kind == SqlKind.IS_FALSE) {
-          return IsFalseDimFilter.of(baseFilter);
-        } else { // SqlKind.IS_NOT_FALSE
-          return NotDimFilter.of(IsFalseDimFilter.of(baseFilter));
-        }
-      } else {
-        // legacy behavior
-        if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-          return toFilter(
-              plannerContext,
-              rowSignature,
-              virtualColumnRegistry,
-              Iterables.getOnlyElement(((RexCall) expression).getOperands())
-          );
-        } else { // SqlKind.IS_FALSE || SqlKind.IS_NOT_TRUE
-          return new NotDimFilter(
-              toFilter(
-                  plannerContext,
-                  rowSignature,
-                  virtualColumnRegistry,
-                  Iterables.getOnlyElement(((RexCall) expression).getOperands())
-              )
-          );
-        }
+      if (kind == SqlKind.IS_TRUE) {
+        return IsTrueDimFilter.of(baseFilter);
+      } else if (kind == SqlKind.IS_NOT_TRUE) {
+        return NotDimFilter.of(IsTrueDimFilter.of(baseFilter));
+      } else if (kind == SqlKind.IS_FALSE) {
+        return IsFalseDimFilter.of(baseFilter);
+      } else { // SqlKind.IS_NOT_FALSE
+        return NotDimFilter.of(IsFalseDimFilter.of(baseFilter));
       }
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
@@ -544,32 +522,9 @@ public class Expressions
   {
     final SqlKind kind = rexNode.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      if (NullHandling.useThreeValueLogic()) {
-        // use expression filter to get istrue or notfalse expressions for correct 3vl behavior
-        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
-      }
-      // legacy behavior
-      return toSimpleLeafFilter(
-          plannerContext,
-          rowSignature,
-          virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
-      );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
-      if (NullHandling.useThreeValueLogic()) {
-        // use expression filter to get isfalse or nottrue expressions for correct 3vl behavior
-        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
-      }
-      // legacy behavior
-      return new NotDimFilter(
-          toSimpleLeafFilter(
-              plannerContext,
-              rowSignature,
-              virtualColumnRegistry,
-              Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
-          )
-      );
+    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE || kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      // use expression filter to get istrue/notfalse/isfalse/nottrue expressions for correct 3vl behavior
+      return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
     } else if (kind == SqlKind.IS_NULL || kind == SqlKind.IS_NOT_NULL) {
       final RexNode operand = Iterables.getOnlyElement(((RexCall) rexNode).getOperands());
 
@@ -591,7 +546,7 @@ public class Expressions
         if (plannerContext.isUseBoundsAndSelectors()) {
           equalFilter = new SelectorDimFilter(
               druidExpression.getSimpleExtraction().getColumn(),
-              NullHandling.defaultStringValue(),
+              null,
               druidExpression.getSimpleExtraction().getExtractionFn()
           );
         } else {
@@ -617,7 +572,7 @@ public class Expressions
         );
 
         if (plannerContext.isUseBoundsAndSelectors()) {
-          equalFilter = new SelectorDimFilter(virtualColumn, NullHandling.defaultStringValue(), null);
+          equalFilter = new SelectorDimFilter(virtualColumn, null, null);
         } else {
           equalFilter = NullFilter.forColumn(virtualColumn);
         }
@@ -693,12 +648,19 @@ public class Expressions
         return null;
       }
 
-      // Special handling for filters on FLOOR(__time TO granularity).
+      // Special handling for filters like FLOOR(__time TO granularity).
       final Granularity queryGranularity =
           toQueryGranularity(lhsExpression, plannerContext.getExpressionParser());
-      if (queryGranularity != null) {
-        // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
-        final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
+      if (queryGranularity != null && !RexLiteral.isNullLiteral(rhs)) {
+        // lhs is a time-floor expression; rhs must be a timestamp or millis
+        final long rhsMillis;
+
+        if (rhs.getType().getSqlTypeName() == SqlTypeName.BIGINT) {
+          rhsMillis = ((Number) RexLiteral.value(rhs)).longValue();
+        } else {
+          rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
+        }
+
         return buildTimeFloorFilter(
             ColumnHolder.TIME_COLUMN_NAME,
             queryGranularity,
@@ -746,7 +708,7 @@ public class Expressions
         final String stringVal;
 
         if (rhsParsed.getLiteralValue() == null) {
-          stringVal = NullHandling.defaultStringValue();
+          stringVal = null;
         } else if (RexUtil.isLiteral(rhs, true) && SqlTypeName.NUMERIC_TYPES.contains(rhs.getType().getSqlTypeName())) {
           // Peek inside the original rhs for numerics, rather than using the parsed version, for highest fidelity
           // to what the query originally contained. (It may be a BigDecimal.)
@@ -762,6 +724,11 @@ public class Expressions
 
         // Numeric lhs needs a numeric comparison.
         final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
+        if (comparator == null) {
+          // Type is not comparable.
+          return null;
+        }
+
         final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
         final DimFilter filter;
 

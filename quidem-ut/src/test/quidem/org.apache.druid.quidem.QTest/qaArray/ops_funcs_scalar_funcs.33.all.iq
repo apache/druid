@@ -1,0 +1,404 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_null, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[4]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_empty, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[5]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_mixed, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[6]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(a_nested, 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B6_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_shift(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'P1D', 1) AS col
+FROM test_array;
+Cannot apply 'TIME_SHIFT' to arguments of type 'TIME_SHIFT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_bool, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[0]' RETURNING boolean array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_int, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[1]' RETURNING bigint array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_float, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[2]' RETURNING decimal array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_str, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[3]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_null, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[4]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_empty, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[5]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_mixed, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[6]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(a_nested, 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B7_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_extract(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'HOUR') AS col
+FROM test_array;
+Cannot apply 'TIME_EXTRACT' to arguments of type 'TIME_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_bool) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_int) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_float) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_str) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_null) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+

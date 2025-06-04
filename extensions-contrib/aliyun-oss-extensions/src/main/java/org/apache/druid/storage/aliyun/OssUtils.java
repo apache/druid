@@ -227,7 +227,7 @@ public class OssUtils
       throws Exception
   {
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-    retry(() -> {
+    OssUtils.retry(() -> {
       client.deleteObjects(deleteRequest);
       return null;
     });

@@ -23,23 +23,25 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 
-import java.util.Comparator;
-
 /**
  * Policy used by {@link CompactSegments} duty to pick segments for compaction.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class)
+    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
+    @JsonSubTypes.Type(name = "fixedIntervalOrder", value = FixedIntervalOrderPolicy.class)
 })
-public interface CompactionCandidateSearchPolicy extends Comparator<CompactionCandidate>
+public interface CompactionCandidateSearchPolicy
 {
   /**
    * Compares between two compaction candidates. Used to determine the
    * order in which segments and intervals should be picked for compaction.
+   *
+   * @return A positive value if {@code candidateA} should be picked first, a
+   * negative value if {@code candidateB} should be picked first or zero if the
+   * order does not matter.
    */
-  @Override
-  int compare(CompactionCandidate o1, CompactionCandidate o2);
+  int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
 
   /**
    * Checks if the given {@link CompactionCandidate} is eligible for compaction

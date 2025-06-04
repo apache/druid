@@ -35,7 +35,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.server.TestSegmentUtils;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -1251,7 +1251,7 @@ public class SegmentLocalCacheManagerTest
     Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());
 
-    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
     Assert.assertNotNull(cursorFactory);
     Assert.assertTrue(segment.isTombstone());
 

@@ -152,7 +152,6 @@ public class StreamAppenderator implements Appenderator
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
-  private final boolean useMaxMemoryEstimates;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -230,7 +229,6 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -251,7 +249,6 @@ public class StreamAppenderator implements Appenderator
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
 
@@ -340,6 +337,9 @@ public class StreamAppenderator implements Appenderator
       throw e;
     }
 
+    final long currTs = System.currentTimeMillis();
+    metrics.reportMessageGap(currTs - row.getTimestampFromEpoch());
+
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
     }
@@ -363,11 +363,11 @@ public class StreamAppenderator implements Appenderator
       persist = true;
       persistReasons.add("No more rows can be appended to sink");
     }
-    if (System.currentTimeMillis() > nextFlush) {
+    if (currTs > nextFlush) {
       persist = true;
       persistReasons.add(StringUtils.format(
           "current time[%d] is greater than nextFlush[%d]",
-          System.currentTimeMillis(),
+          currTs,
           nextFlush
       ));
     }
@@ -523,10 +523,12 @@ public class StreamAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig,
-          useMaxMemoryEstimates
+          maxBytesTuningConfig
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
+
+      // Add sink prior to announcing it, to ensure it is immediately queryable.
+      addSink(identifier, retVal);
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -536,8 +538,6 @@ public class StreamAppenderator implements Appenderator
            .addData("interval", retVal.getInterval())
            .emit();
       }
-
-      addSink(identifier, retVal);
     }
 
     return retVal;
@@ -1410,7 +1410,6 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getAppendableIndexSpec(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
-            useMaxMemoryEstimates,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();

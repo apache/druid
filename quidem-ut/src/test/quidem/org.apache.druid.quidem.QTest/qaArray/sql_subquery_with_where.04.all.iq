@@ -1,0 +1,804 @@
+!set dartQueryId 00000000-0000-0000-0000-000000000000
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B15_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_float=a_null
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_float=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_float=a_empty
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_empty);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_empty)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_empty
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_empty)
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_empty)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_float=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B16_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_float=a_empty
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_float=a_mixed;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_float=a_mixed
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_mixed);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_mixed)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_mixed;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_mixed
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_mixed)
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_mixed)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_float=a_mixed;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B17_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_float=a_mixed
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_float=a_nested;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_float=a_nested
+GROUP BY a_int;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_nested);
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_nested)
+GROUP BY a_int;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_nested;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float=a_nested
+GROUP BY a_int;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_nested)
+SELECT a_int
+FROM t1;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float=a_nested)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_float=a_nested;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B18_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_float=a_nested
+GROUP BY a_int;
+Cannot apply '=' to arguments of type '<DOUBLE ARRAY> = <COMPLEX<JSON>>'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_str=a_null;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_str=a_null
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_null);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_null)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str=a_null;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str=a_null
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_null)
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_null)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_str=a_null;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B19_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_str=a_null
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_str=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_str=a_empty
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_empty);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_empty)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_str=a_empty
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_empty)
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_str=a_empty)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A0_B20_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_str=a_empty;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+

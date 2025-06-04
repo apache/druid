@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -91,10 +90,6 @@ public class IndexMergeBenchmark
 
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private List<QueryableIndex> indexesToMerge;
   private GeneratorSchemaInfo schemaInfo;

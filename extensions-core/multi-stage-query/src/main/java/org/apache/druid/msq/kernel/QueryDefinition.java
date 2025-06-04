@@ -20,6 +20,7 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -29,7 +30,13 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -49,18 +56,31 @@ public class QueryDefinition
 {
   private final Map<StageId, StageDefinition> stageDefinitions;
   private final StageId finalStage;
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  private final QueryContext context;
+
+  private QueryDefinition()
+  {
+    this.stageDefinitions = null;
+    this.finalStage = null;
+    this.context = QueryContext.empty();
+  }
 
   private QueryDefinition(
       final Map<StageId, StageDefinition> stageDefinitions,
-      final StageId finalStage
+      final StageId finalStage,
+      final QueryContext context
   )
   {
     this.stageDefinitions = stageDefinitions;
     this.finalStage = finalStage;
+    this.context = context;
   }
 
   @JsonCreator
-  static QueryDefinition create(@JsonProperty("stages") final List<StageDefinition> stageDefinitions)
+  public static QueryDefinition create(
+      @JsonProperty("stages") final List<StageDefinition> stageDefinitions,
+      @Nullable @JsonProperty("context") final QueryContext context)
   {
     final Map<StageId, StageDefinition> stageMap = new HashMap<>();
     final Set<StageId> nonFinalStages = new HashSet<>();
@@ -87,9 +107,11 @@ public class QueryDefinition
     final int finalStageCandidates = stageMap.size() - nonFinalStages.size();
 
     if (finalStageCandidates == 1) {
+
       return new QueryDefinition(
           stageMap,
-          Iterables.getOnlyElement(Sets.difference(stageMap.keySet(), nonFinalStages))
+          Iterables.getOnlyElement(Sets.difference(stageMap.keySet(), nonFinalStages)),
+          context == null ? QueryContext.empty() : context
       );
     } else {
       throw new IAE("Must have a single final stage, but found [%d] candidates", finalStageCandidates);
@@ -122,6 +144,12 @@ public class QueryDefinition
     return ImmutableList.copyOf(stageDefinitions.values());
   }
 
+  @JsonProperty("context")
+  public QueryContext getContext()
+  {
+    return context;
+  }
+
   public StageDefinition getStageDefinition(final int stageNumber)
   {
     return getStageDefinition(new StageId(getQueryId(), stageNumber));
@@ -150,20 +178,41 @@ public class QueryDefinition
       return false;
     }
     QueryDefinition that = (QueryDefinition) o;
-    return Objects.equals(stageDefinitions, that.stageDefinitions) && Objects.equals(finalStage, that.finalStage);
+    return Objects.equals(stageDefinitions, that.stageDefinitions) &&
+        Objects.equals(finalStage, that.finalStage) &&
+        Objects.equals(context, that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stageDefinitions, finalStage);
+    return Objects.hash(stageDefinitions, finalStage, context);
   }
 
   @Override
   public String toString()
   {
     return "QueryDefinition{" +
-           "stageDefinitions=" + stageDefinitions +
-           '}';
+        "context=" + context + "," +
+        "stageDefinitions=" + stageDefinitions +
+        '}';
+  }
+
+  /**
+   * Returns the final stage's output signature.
+   *
+   * This signature should align with the plan's output signature - and it should be free from helper columns.
+   */
+  public RowSignature getOutputRowSignature()
+  {
+    RowSignature signature = stageDefinitions.get(finalStage).getSignature();
+    List<String> names = new ArrayList<>(signature.getColumnNames());
+    names.remove(QueryKitUtils.PARTITION_BOOST_COLUMN);
+    return signature.buildSafeSignature(names);
+  }
+
+  public QueryDefinition withOverriddenContext(Map<String, Object> contextOverride)
+  {
+    return new QueryDefinition(stageDefinitions, finalStage, context.override(contextOverride));
   }
 }

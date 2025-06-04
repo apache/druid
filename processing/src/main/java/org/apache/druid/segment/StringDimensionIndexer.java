@@ -23,12 +23,12 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -54,30 +54,21 @@ import java.util.List;
 
 public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[], String>
 {
-  @Nullable
-  private static String emptyToNullIfNeeded(@Nullable Object o)
-  {
-    return o != null ? NullHandling.emptyToNullIfNeeded(o.toString()) : null;
-  }
-
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
   private final boolean hasSpatialIndexes;
-  private final boolean useMaxMemoryEstimates;
   private volatile boolean hasMultipleValues = false;
 
   public StringDimensionIndexer(
       @Nullable MultiValueHandling multiValueHandling,
       boolean hasBitmapIndexes,
-      boolean hasSpatialIndexes,
-      boolean useMaxMemoryEstimates
+      boolean hasSpatialIndexes
   )
   {
-    super(new StringDimensionDictionary(!useMaxMemoryEstimates));
+    super(new StringDimensionDictionary());
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
   }
 
   @Override
@@ -85,7 +76,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
-    final long oldDictSizeInBytes = useMaxMemoryEstimates ? 0 : dimLookup.sizeInBytes();
+    final long oldDictSizeInBytes = dimLookup.sizeInBytes();
 
     // expressions which operate on multi-value string inputs as arrays might spit out arrays, coerce to list
     if (dimValues instanceof Object[]) {
@@ -101,12 +92,12 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
         dimLookup.add(null);
         encodedDimensionValues = IntArrays.EMPTY_ARRAY;
       } else if (dimValuesList.size() == 1) {
-        encodedDimensionValues = new int[]{dimLookup.add(emptyToNullIfNeeded(dimValuesList.get(0)))};
+        encodedDimensionValues = new int[]{dimLookup.add(Evals.asString(dimValuesList.get(0)))};
       } else {
         hasMultipleValues = true;
         final String[] dimensionValues = new String[dimValuesList.size()];
         for (int i = 0; i < dimValuesList.size(); i++) {
-          dimensionValues[i] = emptyToNullIfNeeded(dimValuesList.get(i));
+          dimensionValues[i] = Evals.asString(dimValuesList.get(i));
         }
         if (multiValueHandling.needSorting()) {
           // Sort multival row by their unencoded values first.
@@ -132,9 +123,9 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       }
     } else if (dimValues instanceof byte[]) {
       encodedDimensionValues =
-          new int[]{dimLookup.add(emptyToNullIfNeeded(StringUtils.encodeBase64String((byte[]) dimValues)))};
+          new int[]{dimLookup.add(Evals.asString(StringUtils.encodeBase64String((byte[]) dimValues)))};
     } else {
-      encodedDimensionValues = new int[]{dimLookup.add(emptyToNullIfNeeded(dimValues))};
+      encodedDimensionValues = new int[]{dimLookup.add(Evals.asString(dimValues))};
     }
 
     // If dictionary size has changed, the sorted lookup is no longer valid.
@@ -142,14 +133,9 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       sortedLookup = null;
     }
 
-    long effectiveSizeBytes;
-    if (useMaxMemoryEstimates) {
-      effectiveSizeBytes = estimateEncodedKeyComponentSize(encodedDimensionValues);
-    } else {
-      // size of encoded array + dictionary size change
-      effectiveSizeBytes = 16L + (long) encodedDimensionValues.length * Integer.BYTES
-                           + (dimLookup.sizeInBytes() - oldDictSizeInBytes);
-    }
+    // size of encoded array + dictionary size change
+    final long effectiveSizeBytes = 16L + ((long) encodedDimensionValues.length * Integer.BYTES)
+                                    + (dimLookup.sizeInBytes() - oldDictSizeInBytes);
     return new EncodedKeyComponent<>(encodedDimensionValues, effectiveSizeBytes);
   }
 
@@ -549,7 +535,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       String[] rowArray = new String[key.length];
       for (int i = 0; i < key.length; i++) {
         String val = getActualValue(key[i], false);
-        rowArray[i] = NullHandling.nullToEmptyIfNeeded(val);
+        rowArray[i] = val;
       }
       return Arrays.asList(rowArray);
     }

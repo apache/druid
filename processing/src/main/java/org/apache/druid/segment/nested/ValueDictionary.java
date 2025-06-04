@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
@@ -82,12 +81,6 @@ public class ValueDictionary
     this.stringArrays = new TreeSet<>(ColumnType.STRING_ARRAY.getNullableStrategy());
     this.longArrays = new TreeSet<>(ColumnType.LONG_ARRAY.getNullableStrategy());
     this.doubleArrays = new TreeSet<>(ColumnType.DOUBLE_ARRAY.getNullableStrategy());
-
-    // always add default values in default value mode. they don't cost much even if they aren't used
-    if (NullHandling.replaceWithDefault()) {
-      longDictionary.add(NullHandling.defaultLongValue());
-      doubleDictionary.add(NullHandling.defaultDoubleValue());
-    }
   }
 
   public int addLongValue(@Nullable Long value)

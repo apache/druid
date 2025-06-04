@@ -42,4 +42,8 @@ class Template(BaseTemplate):
     def define_data_dir(self, service):
         self.add_volume(service, '../data', '/resources')
 
+    # No kafka dependency in this cluster
+    def define_kafka(self):
+        pass
+
 generate(__file__, Template())

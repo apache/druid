@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
-
 public class TestNullableLongColumnSelector extends TestLongColumnSelector
 {
   private final Long[] longs;
@@ -37,8 +35,6 @@ public class TestNullableLongColumnSelector extends TestLongColumnSelector
   {
     if (longs[index] != null) {
       return longs[index];
-    } else if (NullHandling.replaceWithDefault()) {
-      return NullHandling.ZERO_LONG;
     } else {
       throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
     }
@@ -47,7 +43,7 @@ public class TestNullableLongColumnSelector extends TestLongColumnSelector
   @Override
   public boolean isNull()
   {
-    return !NullHandling.replaceWithDefault() && longs[index] == null;
+    return longs[index] == null;
   }
 
   public void increment()

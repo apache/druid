@@ -20,7 +20,6 @@
 package org.apache.druid.frame.read.columnar;
 
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.DoubleFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
@@ -67,7 +66,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
     return new ColumnPlus(
         frameCol,
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
-                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+                              .setHasNulls(frameCol.hasNulls),
         frame.numRows()
     );
   }
@@ -139,7 +138,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
         @Override
         public double getDouble()
         {
-          assert NullHandling.replaceWithDefault() || !isNull();
+          assert !isNull();
           return DoubleFrameColumn.this.getDoublePhysical(frame.physicalRow(offset.getOffset()));
         }
 

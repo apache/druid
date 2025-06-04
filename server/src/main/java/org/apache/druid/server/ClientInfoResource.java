@@ -34,7 +34,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.LocatedSegmentDescriptor;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -49,6 +51,7 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -155,7 +158,7 @@ public class ClientInfoResource
     }
 
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline =
-        timelineServerView.getTimeline((new TableDataSource(dataSourceName)).getAnalysis());
+        timelineServerView.getTimeline(new TableDataSource(dataSourceName));
     final Optional<Iterable<TimelineObjectHolder<String, ServerSelector>>> maybeServersLookup =
         maybeTimeline.map(timeline -> timeline.lookup(theInterval));
     if (!maybeServersLookup.isPresent() || Iterables.isEmpty(maybeServersLookup.get())) {
@@ -300,15 +303,22 @@ public class ClientInfoResource
       @PathParam("dataSourceName") String datasource,
       @QueryParam("intervals") String intervals,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
+      @QueryParam("cloneQueryMode") @Nullable String cloneQueryModeString,
       @Context final HttpServletRequest req
   )
   {
+    final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        cloneQueryModeString,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
+    );
     List<Interval> intervalList = new ArrayList<>();
     for (String interval : intervals.split(",")) {
       intervalList.add(Intervals.of(interval.trim()));
     }
     List<Interval> condensed = JodaUtils.condenseIntervals(intervalList);
-    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates);
+    return ServerViewUtil.getTargetLocations(timelineServerView, datasource, condensed, numCandidates, cloneQueryMode);
   }
 
   protected DateTime getCurrentTime()

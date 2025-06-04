@@ -32,8 +32,7 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
 
   public static <T> ExprVectorProcessor<T> cast(
       ExprVectorProcessor<?> castInput,
-      ExpressionType castToType,
-      int maxVectorSize
+      ExpressionType castToType
   )
   {
     final ExprVectorProcessor<?> caster;
@@ -49,9 +48,15 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
           caster = new CastToDoubleVectorProcessor(castInput);
           break;
         default:
-          caster = new CastToObjectVectorProcessor(castInput, castToType, maxVectorSize);
+          caster = new CastToObjectVectorProcessor(castInput, castToType);
       }
     }
     return (ExprVectorProcessor<T>) caster;
+  }
+
+  @Override
+  public int maxVectorSize()
+  {
+    return delegate.maxVectorSize();
   }
 }

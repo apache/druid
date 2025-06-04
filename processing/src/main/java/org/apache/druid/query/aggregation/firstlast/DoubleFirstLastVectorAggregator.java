@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -60,7 +60,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
+        TypeStrategies.IS_NULL_BYTE
     );
     buf.putDouble(position + VALUE_OFFSET, 0.0D);
   }
@@ -70,7 +70,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   public Object get(ByteBuffer buf, int position)
   {
     long time = buf.getLong(position);
-    if (buf.get(position + NULLITY_OFFSET) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position + NULLITY_OFFSET) == TypeStrategies.IS_NULL_BYTE) {
       return new SerializablePairLongDouble(time, null);
     }
     return new SerializablePairLongDouble(time, buf.getDouble(position + VALUE_OFFSET));
@@ -80,7 +80,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   protected void putValue(ByteBuffer buf, int position, long time, Double value)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     buf.putDouble(position + VALUE_OFFSET, value);
   }
 
@@ -88,7 +88,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   protected void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     buf.putDouble(position + VALUE_OFFSET, valueSelector.getDoubleVector()[index]);
   }
 
@@ -96,17 +96,9 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
   protected void putNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NULL_BYTE);
     buf.putDouble(position + VALUE_OFFSET, 0.0D);
 
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    buf.putDouble(position, 0.0D);
   }
 
   @Override

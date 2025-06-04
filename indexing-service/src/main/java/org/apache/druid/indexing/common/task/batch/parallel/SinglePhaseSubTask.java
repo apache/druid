@@ -25,12 +25,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -38,9 +39,10 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -55,8 +57,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -65,11 +65,9 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
-import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -94,6 +92,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -163,7 +162,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        computeBatchIngestionMode(ingestionSchema.getIOConfig()),
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig()),
         supervisorTaskId
     );
 
@@ -199,7 +198,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
-                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .map(AuthorizationUtils::createExternalResourceReadAction)
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -389,10 +388,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         useLineageBasedSegmentAllocation
     );
 
-    final boolean useMaxMemoryEstimates = getContextValue(
-        Tasks.USE_MAX_MEMORY_ESTIMATES,
-        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
-    );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
@@ -401,13 +396,12 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         dataSchema,
         tuningConfig,
         rowIngestionMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates
+        parseExceptionHandler
     );
     boolean exceptionOccurred = false;
     try (
         final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
-        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             tmpDir,
             dataSchema,
             inputSource,
@@ -486,15 +480,13 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     Map<String, List<ParseExceptionReport>> events = new HashMap<>();
 
     if (addBuildSegmentStatsToReport(full != null, ingestionState)) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getReportListFromSavedParseExceptions(
-              parseExceptionHandler.getSavedParseExceptionReports()
-          )
+          parseExceptionHandler.getSavedParseExceptionReports()
       );
     }
 
@@ -531,7 +523,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
@@ -552,7 +544,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       @QueryParam("full") String full
   )
   {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    AuthorizationUtils.verifyUnrestrictedAccessToDatasource(req, getDataSource(), authorizerMapper);
     return Response.ok(doGetLiveReports(full != null)).build();
   }
 
@@ -576,17 +568,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptionReports()
+    List<ParseExceptionReport> parseExceptionMessages = Objects.requireNonNullElse(
+        parseExceptionHandler.getSavedParseExceptionReports(),
+        List.of()
     );
 
-    if (parseExceptionMessages != null) {
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, parseExceptionMessages);
-    } else {
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, ImmutableList.of());
-    }
-
-    return unparseableEventsMap;
+    return Map.of(RowIngestionMeters.BUILD_SEGMENTS, parseExceptionMessages);
   }
 }

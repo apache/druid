@@ -16,33 +16,34 @@
  * limitations under the License.
  */
 
-import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { ContextMenu, FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { CancelToken } from 'axios';
 import type { QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
-import { C, F, SqlExpression } from 'druid-query-toolkit';
+import { C, F, L, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
 import { useQueryManager } from '../../../../../../hooks';
-import { caseInsensitiveContains, filterMap } from '../../../../../../utils';
+import { caseInsensitiveContains, copyAndAlert, filterMap, toggle } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
-import { toggle } from '../../../../utils';
-import { ColumnValue } from '../../column-value/column-value';
+import { ColumnValue } from '../../../column-value/column-value';
 
 import './values-filter-control.scss';
 
 export interface ValuesFilterControlProps {
   querySource: QuerySource;
-  filter: SqlExpression | undefined;
+  extraFilter: SqlExpression;
+  filter: SqlExpression;
   filterPattern: ValuesFilterPattern;
   setFilterPattern(filterPattern: ValuesFilterPattern): void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
 }
 
 export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   props: ValuesFilterControlProps,
 ) {
-  const { querySource, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
+  const { querySource, extraFilter, filter, filterPattern, setFilterPattern, runSqlQuery } = props;
   const { column, negated, values: selectedValues } = filterPattern;
   const [initValues] = useState(selectedValues);
   const [searchString, setSearchString] = useState('');
@@ -52,6 +53,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
       querySource
         .getInitQuery(
           SqlExpression.and(
+            extraFilter,
             filter,
             searchString ? F('ICONTAINS_STRING', C(column), searchString) : undefined,
           ),
@@ -61,15 +63,15 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [querySource.query, filter, column, searchString],
+    [querySource.query, extraFilter, filter, column, searchString],
   );
 
   const [valuesState] = useQueryManager<string, any[]>({
     query: valuesQuery,
     debounceIdle: 100,
     debounceLoading: 500,
-    processQuery: async query => {
-      const vs = await runSqlQuery(query);
+    processQuery: async (query, cancelToken) => {
+      const vs = await runSqlQuery(query, cancelToken);
       return vs.getColumnByName('c') || [];
     },
   });
@@ -84,30 +86,45 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   return (
     <FormGroup className="values-filter-control">
       {showSearch && (
-        <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
+        <ClearableInput value={searchString} onValueChange={setSearchString} placeholder="Search" />
       )}
       <Menu className="value-list">
         {filterMap(valuesToShow, (v, i) => {
           if (!caseInsensitiveContains(v, searchString)) return;
           return (
-            <MenuItem
+            <ContextMenu
               key={i}
-              icon={
-                selectedValues.includes(v)
-                  ? negated
-                    ? IconNames.DELETE
-                    : IconNames.TICK_CIRCLE
-                  : IconNames.CIRCLE
+              content={
+                <Menu>
+                  <MenuItem
+                    text="Copy"
+                    onClick={() => copyAndAlert(String(v), `Copied to clipboard`)}
+                  />
+                  <MenuItem
+                    text="Copy as SQL value"
+                    onClick={() => copyAndAlert(String(L(v)), `Copied to clipboard`)}
+                  />
+                </Menu>
               }
-              text={<ColumnValue value={v} />}
-              shouldDismissPopover={false}
-              onClick={e => {
-                setFilterPattern({
-                  ...filterPattern,
-                  values: e.altKey ? [v] : toggle(selectedValues, v),
-                });
-              }}
-            />
+            >
+              <MenuItem
+                icon={
+                  selectedValues.includes(v)
+                    ? negated
+                      ? IconNames.DELETE
+                      : IconNames.TICK_CIRCLE
+                    : IconNames.CIRCLE
+                }
+                text={<ColumnValue value={v} />}
+                shouldDismissPopover={false}
+                onClick={e => {
+                  setFilterPattern({
+                    ...filterPattern,
+                    values: e.altKey ? [v] : toggle(selectedValues, v),
+                  });
+                }}
+              />
+            </ContextMenu>
           );
         })}
         {valuesState.loading && <MenuItem icon={IconNames.BLANK} text="Loading..." disabled />}

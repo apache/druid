@@ -56,6 +56,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -93,28 +94,32 @@ public class SegmentAllocateActionTest
 
   private SegmentAllocationQueue allocationQueue;
 
-  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}, skipSegmentPayloadFetchForAllocation = {2}")
+  @Parameterized.Parameters(name = "lock={0}, useBatch={1}, useSegmentCache={2}, reduceMetadataIO={3}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    // reduceMetadataIO is applicable only with batch allocation
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT, true, true},
-        new Object[]{LockGranularity.SEGMENT, true, false},
-        new Object[]{LockGranularity.SEGMENT, false, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true, true},
-        new Object[]{LockGranularity.TIME_CHUNK, true, false},
-        new Object[]{LockGranularity.TIME_CHUNK, false, false}
+        new Object[]{LockGranularity.SEGMENT, true, true, true},
+        new Object[]{LockGranularity.SEGMENT, true, false, false},
+        new Object[]{LockGranularity.SEGMENT, false, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true, true, true},
+        new Object[]{LockGranularity.TIME_CHUNK, true, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, false, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, false, true, false}
     );
   }
 
   public SegmentAllocateActionTest(
       LockGranularity lockGranularity,
       boolean useBatch,
+      boolean useSegmentMetadataCache,
       boolean skipSegmentPayloadFetchForAllocation
   )
   {
     this.lockGranularity = lockGranularity;
     this.useBatch = useBatch;
     this.taskActionTestKit.setSkipSegmentPayloadFetchForAllocation(skipSegmentPayloadFetchForAllocation);
+    this.taskActionTestKit.setUseSegmentMetadataCache(useSegmentMetadataCache);
   }
 
   @Before
@@ -141,9 +146,7 @@ public class SegmentAllocateActionTest
   @Test
   public void testManySegmentsSameInterval_noLineageCheck() throws Exception
   {
-    if (lockGranularity == LockGranularity.SEGMENT) {
-      return;
-    }
+    Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
 
     final Task task = NoopTask.create();
     final int numTasks = 2;
@@ -1165,12 +1168,12 @@ public class SegmentAllocateActionTest
     coordinator.deletePendingSegmentsForTaskAllocatorId(task1.getDataSource(), task1.getTaskAllocatorId());
 
     // Drop all segments
-    coordinator.markSegmentsAsUnusedWithinInterval(task0.getDataSource(), Intervals.ETERNITY);
+    coordinator.markSegmentsWithinIntervalAsUnused(task0.getDataSource(), Intervals.ETERNITY, null);
 
     // Allocate another id and ensure that it doesn't exist in the druid_segments table
     final SegmentIdWithShardSpec theId =
         allocate(task1, DateTimes.nowUtc(), Granularities.NONE, Granularities.ALL, "seq", "3");
-    Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId().toString(), true));
+    Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId()));
 
     lockbox.unlock(task1, Intervals.ETERNITY);
   }

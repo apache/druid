@@ -29,12 +29,6 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.js.JavaScriptConfig;
 
-import javax.script.Compilable;
-import javax.script.Invocable;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
 public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 {
   public interface SelectorFunction
@@ -59,18 +53,6 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
     this.function = fn;
   }
 
-  private SelectorFunction compileSelectorFunction()
-  {
-    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
-    try {
-      ((Compilable) engine).compile("var apply = " + function).eval();
-      return ((Invocable) engine).getInterface(SelectorFunction.class);
-    }
-    catch (ScriptException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public ImmutableWorkerInfo findWorkerForTask(
       WorkerTaskRunnerConfig config,
@@ -78,7 +60,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
       Task task
   )
   {
-    fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;
+    fnSelector = fnSelector == null ? JavaScriptUtil.compileSelectorFunction(SelectorFunction.class, function) : fnSelector;
     String worker = fnSelector.apply(config, zkWorkers, task);
     return worker == null ? null : zkWorkers.get(worker);
   }

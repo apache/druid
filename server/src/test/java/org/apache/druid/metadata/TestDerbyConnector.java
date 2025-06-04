@@ -19,22 +19,31 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 public class TestDerbyConnector extends DerbyConnector
@@ -164,6 +173,74 @@ public class TestDerbyConnector extends DerbyConnector
     {
       return new SegmentsTable(this);
     }
+
+    public PendingSegmentsTable pendingSegments()
+    {
+      return new PendingSegmentsTable(this);
+    }
+  }
+
+  /**
+   * Wrapper class for interacting with the pending segments table.
+   */
+  public static class PendingSegmentsTable
+  {
+    private final DerbyConnectorRule rule;
+
+    private PendingSegmentsTable(DerbyConnectorRule rule)
+    {
+      this.rule = rule;
+    }
+
+    public int insert(
+        List<PendingSegmentRecord> records,
+        boolean skipSegmentLineageCheck,
+        ObjectMapper objectMapper
+    )
+    {
+      final TestDerbyConnector connector = rule.getConnector();
+      final String sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+          + "sequence_name_prev_id_sha1, payload, task_allocator_id, upgraded_from_segment_id) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+          + ":sequence_name_prev_id_sha1, :payload, :task_allocator_id, :upgraded_from_segment_id)",
+          rule.metadataTablesConfigSupplier().get().getPendingSegmentsTable(),
+          connector.getQuoteString()
+      );
+
+      return connector.retryWithHandle(handle -> {
+        final PreparedBatch insertBatch = handle.prepareBatch(sql);
+
+        final Set<SegmentIdWithShardSpec> processedSegmentIds = new HashSet<>();
+        for (PendingSegmentRecord pendingSegment : records) {
+          final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
+          if (processedSegmentIds.contains(segmentId)) {
+            continue;
+          }
+          final Interval interval = segmentId.getInterval();
+
+          insertBatch.add()
+                     .bind("id", segmentId.toString())
+                     .bind("dataSource", segmentId.getDataSource())
+                     .bind("created_date", pendingSegment.getCreatedDate().toString())
+                     .bind("start", interval.getStart().toString())
+                     .bind("end", interval.getEnd().toString())
+                     .bind("sequence_name", pendingSegment.getSequenceName())
+                     .bind("sequence_prev_id", pendingSegment.getSequencePrevId())
+                     .bind(
+                         "sequence_name_prev_id_sha1",
+                         pendingSegment.computeSequenceNamePrevIdSha1(skipSegmentLineageCheck)
+                     )
+                     .bind("payload", JacksonUtils.toBytes(objectMapper, segmentId))
+                     .bind("task_allocator_id", pendingSegment.getTaskAllocatorId())
+                     .bind("upgraded_from_segment_id", pendingSegment.getUpgradedFromSegmentId());
+
+          processedSegmentIds.add(segmentId);
+        }
+        int[] updated = insertBatch.execute();
+        return Arrays.stream(updated).sum();
+      });
+    }
   }
 
   /**
@@ -173,7 +250,7 @@ public class TestDerbyConnector extends DerbyConnector
   {
     private final DerbyConnectorRule rule;
 
-    public SegmentsTable(DerbyConnectorRule rule)
+    private SegmentsTable(DerbyConnectorRule rule)
     {
       this.rule = rule;
     }

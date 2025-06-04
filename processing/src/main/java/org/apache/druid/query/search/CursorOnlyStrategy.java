@@ -75,7 +75,7 @@ public class CursorOnlyStrategy extends SearchStrategy
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
-      final CursorFactory adapter = segment.asCursorFactory();
+      final CursorFactory adapter = segment.as(CursorFactory.class);
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(query.getSingleInterval())
                                                        .setFilter(

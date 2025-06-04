@@ -46,7 +46,7 @@ public class SegmentReplicaCountMap
 
   private void initReplicaCounts(DruidCluster cluster)
   {
-    cluster.getHistoricals().forEach(
+    cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
               // Add segments already loaded on this server

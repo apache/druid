@@ -21,6 +21,11 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -28,12 +33,14 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -42,6 +49,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 public class CompactionStatusTest
 {
@@ -105,41 +113,34 @@ public class CompactionStatusTest
   @Test
   public void testFindPartitionsSpecFromConfigWithDeprecatedMaxRowsPerSegmentAndMaxTotalRowsReturnGivenValues()
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "datasource",
-        null,
-        null,
-        100,
-        null,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            1000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final DataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource("datasource")
+                                              .withMaxRowsPerSegment(100)
+                                              .withTuningConfig(
+                                            new UserCompactionTaskQueryTuningConfig(
+                                                null,
+                                                null,
+                                                null,
+                                                1000L,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null
+                                            )
+                                        )
+                                              .build();
     Assert.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
         CompactionStatus.findPartitionsSpecFromConfig(
@@ -192,7 +193,7 @@ public class CompactionStatusTest
   {
     verifyCompactionStatusIsPendingBecause(
         null,
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "not compacted yet"
     );
   }
@@ -201,8 +202,8 @@ public class CompactionStatusTest
   public void testStatusWhenLastCompactionStateIsEmpty()
   {
     verifyCompactionStatusIsPendingBecause(
-        new CompactionState(null, null, null, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        new CompactionState(null, null, null, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows], current[null]"
     );
   }
@@ -213,9 +214,9 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
 
     final CompactionState lastCompactionState
-        = new CompactionState(currentPartitionsSpec, null, null, null, null, null);
+        = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null);
     final DataSourceCompactionConfig compactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
 
     verifyCompactionStatusIsPendingBecause(
         lastCompactionState,
@@ -237,10 +238,11 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
+        currentIndexSpec,
+        null,
         null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, null))
@@ -275,10 +277,11 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
-        currentGranularitySpec.asMap(OBJECT_MAPPER)
+        currentIndexSpec,
+        currentGranularitySpec,
+        null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
@@ -305,10 +308,11 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
-        currentGranularitySpec.asMap(OBJECT_MAPPER)
+        currentIndexSpec,
+        currentGranularitySpec,
+        null
     );
-    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
@@ -322,6 +326,109 @@ public class CompactionStatusTest
         OBJECT_MAPPER
     );
     Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenProjectionsMatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
+        "foo",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        List.of(
+            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+            new StringDimensionSchema("a")
+        ),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec,
+        currentGranularitySpec,
+        List.of(projection1)
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(List.of(projection1))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenProjectionsMismatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
+        "1",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        List.of(
+            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+            new StringDimensionSchema("a")
+        ),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+    final AggregateProjectionSpec projection2 = new AggregateProjectionSpec(
+        "2",
+        VirtualColumns.EMPTY,
+        Collections.emptyList(),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long")
+        }
+    );
+
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec,
+        currentGranularitySpec,
+        List.of(projection1)
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(List.of(projection1, projection2))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertFalse(status.isComplete());
   }
 
   private void verifyCompactionStatusIsPendingBecause(
@@ -348,10 +455,10 @@ public class CompactionStatusTest
       PartitionsSpec partitionsSpec
   )
   {
-    return DataSourceCompactionConfig.builder()
-                                     .forDataSource(TestDataSource.WIKI)
-                                     .withTuningConfig(createTuningConfig(partitionsSpec, null))
-                                     .build();
+    return InlineSchemaDataSourceCompactionConfig.builder()
+                                                 .forDataSource(TestDataSource.WIKI)
+                                                 .withTuningConfig(createTuningConfig(partitionsSpec, null))
+                                                 .build();
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(

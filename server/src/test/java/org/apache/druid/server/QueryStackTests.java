@@ -62,6 +62,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -194,11 +195,10 @@ public class QueryStackTests
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      GroupByQueryConfig groupByQueryConfig,
       Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, groupByQueryConfig, injector.getInstance(EtagProvider.KEY));
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -214,6 +214,7 @@ public class QueryStackTests
         segmentWrangler,
         joinableFactoryWrapper,
         scheduler,
+        NoopPolicyEnforcer.instance(),
         emitter
     );
   }

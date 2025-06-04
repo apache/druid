@@ -46,7 +46,7 @@ public class DynamicPartitionsSpec implements PartitionsSpec
 
   @JsonCreator
   public DynamicPartitionsSpec(
-      @JsonProperty(MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
+      @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT) @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows
   )
   {

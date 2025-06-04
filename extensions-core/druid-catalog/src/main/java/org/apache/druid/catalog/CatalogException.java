@@ -79,7 +79,7 @@ public class CatalogException extends Exception
   public static CatalogException badRequest(String msg, Object...args)
   {
     return new CatalogException(
-        INVALID_ERROR,
+        CatalogException.INVALID_ERROR,
         Response.Status.BAD_REQUEST,
         msg,
         args

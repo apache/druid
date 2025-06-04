@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -281,7 +279,7 @@ public class RunWorkOrder
 
       try {
         // notifyListener will ignore this error if work has already succeeded.
-        notifyListener(Either.error(t != null ? t : new MSQException(CanceledFault.instance())));
+        notifyListener(Either.error(t != null ? t : new MSQException(CanceledFault.unknown())));
       }
       catch (Throwable e2) {
         if (t == null) {
@@ -1020,19 +1018,7 @@ public class RunWorkOrder
         throw new ISE("Not initialized");
       }
 
-      return Futures.transformAsync(
-          pipelineFuture,
-          resultAndChannels ->
-              Futures.transform(
-                  resultAndChannels.getResultFuture(),
-                  (Function<Object, OutputChannels>) input -> {
-                    sanityCheckOutputChannels(resultAndChannels.getOutputChannels());
-                    return resultAndChannels.getOutputChannels();
-                  },
-                  Execs.directExecutor()
-              ),
-          Execs.directExecutor()
-      );
+      return Futures.transformAsync(pipelineFuture, ResultAndChannels::waitResultReady, Execs.directExecutor());
     }
 
     /**
@@ -1143,25 +1129,6 @@ public class RunWorkOrder
           )
       );
     }
-
-    /**
-     * Verifies there is exactly one channel per partition.
-     */
-    private void sanityCheckOutputChannels(final OutputChannels outputChannels)
-    {
-      for (int partitionNumber : outputChannels.getPartitionNumbers()) {
-        final List<OutputChannel> outputChannelsForPartition =
-            outputChannels.getChannelsForPartition(partitionNumber);
-
-        Preconditions.checkState(partitionNumber >= 0, "Expected partitionNumber >= 0, but got [%s]", partitionNumber);
-        Preconditions.checkState(
-            outputChannelsForPartition.size() == 1,
-            "Expected one channel for partition [%s], but got [%s]",
-            partitionNumber,
-            outputChannelsForPartition.size()
-        );
-      }
-    }
   }
 
   private static class ResultAndChannels<T>
@@ -1186,6 +1153,11 @@ public class RunWorkOrder
     public OutputChannels getOutputChannels()
     {
       return outputChannels;
+    }
+
+    public ListenableFuture<OutputChannels> waitResultReady()
+    {
+      return Futures.transform(resultFuture, unused -> outputChannels.verifySingleChannel(), Execs.directExecutor());
     }
   }
 

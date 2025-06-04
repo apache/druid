@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.druid.java.util.common.CompressionUtilsTest;
 import org.apache.druid.java.util.common.ISE;
@@ -38,7 +39,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -173,7 +173,6 @@ public class JobHelperTest
                 null,
                 null,
                 null,
-                false,
                 false,
                 false,
                 false,

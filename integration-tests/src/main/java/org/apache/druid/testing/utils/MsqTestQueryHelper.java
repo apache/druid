@@ -209,9 +209,9 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   }
 
   /**
-   * Compares the results for a given taskId. It is required that the task has produced some results that can be verified
+   * Fetches the results for a given taskId.
    */
-  private void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
+  public List<Map<String, Object>> getTaskResult(String taskId)
   {
     Map<String, TaskReport> statusReport = fetchStatusReports(taskId);
     MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
@@ -226,11 +226,8 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
         taskReportPayload.getResults(),
         "Results report for the task id is empty"
     );
-
     List<Map<String, Object>> actualResults = new ArrayList<>();
-
     List<MSQResultsReport.ColumnAndType> rowSignature = resultsReport.getSignature();
-
     for (final Object[] row : resultsReport.getResults()) {
       Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
@@ -238,6 +235,15 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       }
       actualResults.add(rowWithFieldNames);
     }
+    return actualResults;
+  }
+
+  /**
+   * Compares the results for a given taskId. It is required that the task has produced some results that can be verified
+   */
+  private void compareResults(String taskId, MsqQueryWithResults expectedQueryWithResults)
+  {
+    List<Map<String, Object>> actualResults = getTaskResult(taskId);
 
     QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
         actualResults,

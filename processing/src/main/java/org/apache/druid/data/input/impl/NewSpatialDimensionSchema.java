@@ -59,7 +59,7 @@ public class NewSpatialDimensionSchema extends DimensionSchema
   @Override
   public String getTypeName()
   {
-    return SPATIAL_TYPE_NAME;
+    return DimensionSchema.SPATIAL_TYPE_NAME;
   }
 
   @Override

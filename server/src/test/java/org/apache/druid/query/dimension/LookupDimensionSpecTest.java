@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -179,7 +178,7 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {
       Assert.assertEquals(
-          NullHandling.emptyToNullIfNeeded(entry.getValue()),
+          entry.getValue(),
           dimensionSpec.getExtractionFn().apply(entry.getKey())
       );
     }

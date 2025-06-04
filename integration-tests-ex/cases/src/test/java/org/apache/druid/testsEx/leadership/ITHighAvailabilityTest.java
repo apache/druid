@@ -21,7 +21,6 @@ package org.apache.druid.testsEx.leadership;
 
 import com.google.inject.Inject;
 import org.apache.druid.cli.CliCustomNodeRole;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -178,12 +177,12 @@ public class ITHighAvailabilityTest
   private String fillTemplate(String template, String overlordLeader, String coordinatorLeader)
   {
     /*
-      {"host":"%%BROKER%%","server_type":"broker", "is_leader": %%NON_LEADER%%},
+      {"host":"%%BROKER%%","server_type":"broker", "is_leader": null},
       {"host":"%%COORDINATOR_ONE%%","server_type":"coordinator", "is_leader": %%COORDINATOR_ONE_LEADER%%},
       {"host":"%%COORDINATOR_TWO%%","server_type":"coordinator", "is_leader": %%COORDINATOR_TWO_LEADER%%},
       {"host":"%%OVERLORD_ONE%%","server_type":"overlord", "is_leader": %%OVERLORD_ONE_LEADER%%},
       {"host":"%%OVERLORD_TWO%%","server_type":"overlord", "is_leader": %%OVERLORD_TWO_LEADER%%},
-      {"host":"%%ROUTER%%","server_type":"router", "is_leader": %%NON_LEADER%%},
+      {"host":"%%ROUTER%%","server_type":"router", "is_leader": null},
      */
     String working = template;
     working = StringUtils.replace(working, "%%OVERLORD_ONE%%", config.getOverlordInternalHost());
@@ -206,7 +205,6 @@ public class ITHighAvailabilityTest
       working = StringUtils.replace(working, "%%COORDINATOR_ONE_LEADER%%", "0");
       working = StringUtils.replace(working, "%%COORDINATOR_TWO_LEADER%%", "1");
     }
-    working = StringUtils.replace(working, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return working;
   }
 

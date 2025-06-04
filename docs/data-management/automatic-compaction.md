@@ -52,7 +52,7 @@ The automatic compaction system uses the following syntax:
 }
 ```
 
-:::info Experimental
+:::info[Experimental]
 
 The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
 
@@ -173,7 +173,7 @@ You can use concurrent append and replace to safely replace the existing data in
 To do this, you need to update your datasource to allow concurrent append and replace tasks:
 
 * If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
-* If you're using the UI, enable **Use concurrent locks (experimental)** in the **Compaction config** for your datasource.
+* If you're using the UI, enable **Use concurrent locks** in the **Compaction config** for your datasource.
 
 You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
 
@@ -230,7 +230,7 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 
 ## Auto-compaction using compaction supervisors  
 
-:::info Experimental
+:::info[Experimental]
 Compaction supervisors are experimental. For production use, we recommend [auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
 :::
 
@@ -243,11 +243,12 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
 
 
-To use compaction supervisors, set the following properties in your Overlord runtime properties:
-  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as supervisor tasks
-  *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine. This is the default engine if the `engine` field is omitted from your compaction config
+To use compaction supervisors, update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
 
-Compaction supervisors use the same syntax as auto-compaction using  Coordinator duties with one key difference: you submit the auto-compaction as a a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec`.
+*  `useSupervisors` to `true` so that compaction tasks can be run as supervisor tasks
+*  `engine` to `msq` to use the MSQ task engine as the compaction engine or to `native` (default value) to use the native engine.
+
+Compaction supervisors use the same syntax as auto-compaction using Coordinator duties with one key difference: you submit the auto-compaction as a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec`.
 
 To submit an automatic compaction task, you can submit a supervisor spec through the [web console](#manage-compaction-supervisors-with-the-web-console) or the [supervisor API](#manage-compaction-supervisors-with-supervisor-apis).
 

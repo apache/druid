@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.common.utils.IntArrayUtils;
 import org.apache.druid.error.DruidException;
@@ -81,6 +80,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -449,7 +449,7 @@ public class RowBasedGrouperHelper
     final ColumnSelectorFactory columnSelectorFactory =
         query.getVirtualColumns()
              .wrap(
-                 createResultRowBasedColumnSelectorFactory(
+                 RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
                      subquery,
                      rowSupplier,
                      RowSignature.Finalization.UNKNOWN
@@ -644,10 +644,7 @@ public class RowBasedGrouperHelper
           for (int i = resultRowDimensionStart; i < entry.getKey().getKey().length; i++) {
             if (dimsToInclude == null || dimsToIncludeBitSet.get(i - resultRowDimensionStart)) {
               final Object dimVal = entry.getKey().getKey()[i];
-              resultRow.set(
-                  i,
-                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-              );
+              resultRow.set(i, dimVal);
             }
           }
 
@@ -1571,19 +1568,15 @@ public class RowBasedGrouperHelper
         @Nullable StringComparator stringComparator
     )
     {
-      if (NullHandling.sqlCompatible()) {
-        return new NullableRowBasedKeySerdeHelper(
-            makeNumericSerdeHelper(
-                valueType,
-                keyBufferPosition + Byte.BYTES,
-                pushLimitDown,
-                stringComparator
-            ),
-            keyBufferPosition
-        );
-      } else {
-        return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
-      }
+      return new NullableRowBasedKeySerdeHelper(
+          makeNumericSerdeHelper(
+              valueType,
+              keyBufferPosition + Byte.BYTES,
+              pushLimitDown,
+              stringComparator
+          ),
+          keyBufferPosition
+      );
     }
 
     private RowBasedKeySerdeHelper makeNumericSerdeHelper(
@@ -2173,9 +2166,9 @@ public class RowBasedGrouperHelper
       {
         Object val = key.getKey()[idx];
         if (val == null) {
-          keyBuffer.put(NullHandling.IS_NULL_BYTE);
+          keyBuffer.put(TypeStrategies.IS_NULL_BYTE);
         } else {
-          keyBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
+          keyBuffer.put(TypeStrategies.IS_NOT_NULL_BYTE);
         }
         return delegate.putToKeyBuffer(key, idx);
       }
@@ -2183,7 +2176,7 @@ public class RowBasedGrouperHelper
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
-        if (buffer.get(initialOffset + keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
+        if (buffer.get(initialOffset + keyBufferPosition) == TypeStrategies.IS_NULL_BYTE) {
           dimValues[dimValIdx] = null;
         } else {
           delegate.getFromByteBuffer(buffer, initialOffset, dimValIdx, dimValues);

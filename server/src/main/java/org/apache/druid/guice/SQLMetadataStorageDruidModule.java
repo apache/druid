@@ -23,24 +23,10 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
-import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataRuleManagerProvider;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLMetadataRuleManager;
-import org.apache.druid.metadata.SQLMetadataRuleManagerProvider;
-import org.apache.druid.metadata.SQLMetadataSupervisorManager;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
-import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
 import org.apache.druid.server.audit.AuditManagerConfig;
 import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
@@ -68,14 +54,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
 
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataManager.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataManagerProvider.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManager.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManagerProvider.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(IndexerMetadataStorageCoordinator.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageUpdaterJobHandler.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
 
     configureAuditManager(binder);
   }
@@ -83,40 +62,7 @@ public class SQLMetadataStorageDruidModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManager.class))
-            .addBinding(type)
-            .to(SqlSegmentsMetadataManager.class)
-            .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataManagerProvider.class))
-            .addBinding(type)
-            .to(SqlSegmentsMetadataManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))
-            .addBinding(type)
-            .to(SQLMetadataRuleManager.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
-            .addBinding(type)
-            .to(SQLMetadataRuleManagerProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))
-            .addBinding(type)
-            .to(IndexerSQLMetadataStorageCoordinator.class)
-            .in(ManageLifecycle.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
-            .addBinding(type)
-            .to(SQLMetadataStorageUpdaterJobHandler.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
-            .addBinding(type)
-            .to(SQLMetadataSupervisorManager.class)
-            .in(LazySingleton.class);
   }
 
   private void configureAuditManager(Binder binder)

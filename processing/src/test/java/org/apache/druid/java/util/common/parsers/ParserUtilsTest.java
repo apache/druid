@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -35,10 +34,6 @@ import static org.junit.Assert.assertNull;
 
 public class ParserUtilsTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testFindDuplicatesMixedCases()
   {
@@ -60,7 +55,7 @@ public class ParserUtilsTest
         getTransformationFunction("|", Splitter.on("|"), true).apply(null)
     );
     assertEquals(
-        NullHandling.emptyToNullIfNeeded(""),
+        "",
         getTransformationFunction("|", Splitter.on("|"), true).apply("")
     );
     assertEquals(
@@ -122,7 +117,7 @@ public class ParserUtilsTest
         getTransformationFunction("|", Splitter.on("|"), true).apply(null)
     );
     assertEquals(
-        NullHandling.emptyToNullIfNeeded(""),
+        "",
         getTransformationFunction("|", Splitter.on("|"), true).apply("")
     );
     assertEquals(
@@ -184,7 +179,7 @@ public class ParserUtilsTest
         getTransformationFunction("|", Splitter.on("$"), false).apply(null)
     );
     assertEquals(
-        NullHandling.emptyToNullIfNeeded(""),
+        "",
         getTransformationFunction("|", Splitter.on("$"), false).apply("")
     );
     assertEquals(
@@ -238,7 +233,7 @@ public class ParserUtilsTest
         getTransformationFunction("$", Splitter.on("$"), true).apply(null)
     );
     assertEquals(
-        NullHandling.emptyToNullIfNeeded(""),
+        "",
         getTransformationFunction("$", Splitter.on("$"), true).apply("")
     );
     assertEquals(

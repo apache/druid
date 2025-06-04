@@ -19,7 +19,7 @@
 
 package org.apache.druid.msq.rpc;
 
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -41,10 +41,14 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getAdminPermissions();
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(request, resourceActions, authorizerMapper);
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        resourceActions,
+        authorizerMapper
+    );
 
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
   }
 
@@ -57,10 +61,14 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getQueryPermissions(queryId);
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(request, resourceActions, authorizerMapper);
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        resourceActions,
+        authorizerMapper
+    );
 
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
   }
 }

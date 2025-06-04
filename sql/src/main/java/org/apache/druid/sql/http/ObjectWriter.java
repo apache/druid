@@ -126,14 +126,14 @@ public class ObjectWriter implements ResultFormat.Writer
 
         if (includeTypes) {
           jsonGenerator.writeStringField(
-              TYPE_HEADER_NAME,
+              ObjectWriter.TYPE_HEADER_NAME,
               signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
           );
         }
 
         if (includeSqlTypes) {
           jsonGenerator.writeStringField(
-              SQL_TYPE_HEADER_NAME,
+              ObjectWriter.SQL_TYPE_HEADER_NAME,
               rowType.getFieldList().get(i).getType().getSqlTypeName().getName()
           );
         }
@@ -162,7 +162,7 @@ public class ObjectWriter implements ResultFormat.Writer
         jsonGenerator.writeStartObject();
 
         jsonGenerator.writeStringField(
-            TYPE_HEADER_NAME,
+            ObjectWriter.TYPE_HEADER_NAME,
             signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
         );
 

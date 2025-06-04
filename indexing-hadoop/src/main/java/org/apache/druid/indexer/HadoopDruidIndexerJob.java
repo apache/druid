@@ -21,6 +21,7 @@ package org.apache.druid.indexer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -46,7 +47,7 @@ public class HadoopDruidIndexerJob implements Jobby
   @Inject
   public HadoopDruidIndexerJob(
       HadoopDruidIndexerConfig config,
-      MetadataStorageUpdaterJobHandler handler
+      SegmentMetadataPublisher handler
   )
   {
     config.verify();
@@ -85,14 +86,9 @@ public class HadoopDruidIndexerJob implements Jobby
     }
 
     jobs.add(
-        new Jobby()
-        {
-          @Override
-          public boolean run()
-          {
-            publishedSegmentAndIndexZipFilePaths = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
-            return true;
-          }
+        () -> {
+          publishedSegmentAndIndexZipFilePaths = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+          return true;
         }
     );
 
