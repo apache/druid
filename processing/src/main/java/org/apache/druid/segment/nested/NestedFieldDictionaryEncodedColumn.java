@@ -252,11 +252,11 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
 
   private Object lookupGlobalScalarObject(int globalId)
   {
-    if (globalId < globalDictionary.size()) {
+    if (globalId < adjustLongId) {
       return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-    } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
+    } else if (globalId < adjustDoubleId) {
       return globalLongDictionary.get(globalId - adjustLongId);
-    } else if (globalId < globalDictionary.size() + globalLongDictionary.size() + globalDoubleDictionary.size()) {
+    } else if (globalId < adjustArrayId) {
       return globalDoubleDictionary.get(globalId - adjustDoubleId);
     }
     throw new IllegalArgumentException("not a scalar in the dictionary");
