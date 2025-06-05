@@ -49,6 +49,7 @@ import java.util.Optional;
  * During translation all stages have access to {@link DruidNodeStack} which
  * contain all current parents of the current stage.
  */
+// FIXME: rename; update apidoc/etc
 public class DruidLogicalToQueryDefinitionTranslator
 {
   private PlannerContext plannerContext;

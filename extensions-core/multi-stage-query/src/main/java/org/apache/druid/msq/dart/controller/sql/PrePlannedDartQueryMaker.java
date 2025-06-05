@@ -66,10 +66,19 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
       throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
     }
     DruidLogicalToQueryDefinitionTranslator qdt = new DruidLogicalToQueryDefinitionTranslator(plannerContext);
-    LogicalStage q1 = qdt.translate(rootRel);
-    QueryDefinition queryDef = q1.build();
+    LogicalStage logicalStage = qdt.translate(rootRel);
+
+    QueryDefinition queryDef;
+    if (true) {
+      queryDef = logicalStage.build();
+    } else {
+      LogicalStageToQueryDefinitionTranslator sdt = new LogicalStageToQueryDefinitionTranslator();
+      queryDef = sdt.translate(logicalStage);
+    }
+    // FIXME final MSQDestination related things should happen here at
+
     QueryContext context = plannerContext.queryContext();
-    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, q1.getLogicalRowSignature());
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, logicalStage.getLogicalRowSignature());
     QueryDefMSQSpec querySpec = MSQTaskQueryMaker.makeQueryDefMSQSpec(
         null,
         context,
