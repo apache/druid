@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -66,7 +65,6 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -84,7 +82,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 @SqlTestFrameworkConfig.ComponentSupplier(ThetaSketchComponentSupplier.class)
