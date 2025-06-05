@@ -256,12 +256,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        responseContextConfig,
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            responseContextConfig,
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
   }
 
@@ -292,12 +297,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -367,12 +377,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -460,12 +475,14 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
     );
 
     expectPermissiveHappyPathAuth();
@@ -506,12 +523,14 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
     );
 
     expectPermissiveHappyPathAuth();
@@ -601,12 +620,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -696,12 +720,17 @@ public class QueryResourceTest
           }
         },
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -739,12 +768,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -977,12 +1011,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
 
@@ -1053,12 +1092,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        jsonMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            jsonMapper
+        )
     );
     expectPermissiveHappyPathAuth();
 
@@ -1150,12 +1194,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1258,12 +1307,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1613,12 +1667,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         scheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
   }
 
