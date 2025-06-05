@@ -301,6 +301,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
+      final ColumnType logicalType = column.getFieldLogicalType(fieldSpec.parts);
+      if (logicalType != null && logicalType.isArray()) {
+        return new FieldDimensionSelector(column.makeColumnValueSelector(fieldSpec.parts, offset));
+      }
       return column.makeDimensionSelector(fieldSpec.parts, offset, extractionFn);
     }
 
