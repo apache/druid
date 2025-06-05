@@ -84,12 +84,16 @@ export class SqlInput extends React.PureComponent<SqlInputProps> {
     const cmp: Ace.Completer[] = [
       {
         getCompletions: (_state, session, pos, prefix, callback) => {
-          const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
+          const allText = session.getValue();
+          const line = session.getLine(pos.row);
+          const charBeforePrefix = line[pos.column - prefix.length - 1];
+          const lineBefore = line.slice(0, pos.column - prefix.length - 1);
+          const keywordMatch = /(\w+)\s*$/.exec(lineBefore) || [];
           callback(
             null,
             getSqlCompletions({
-              allText: session.getValue(),
-              keywordBeforePrefix: undefined,
+              allText,
+              keywordBeforePrefix: keywordMatch[1],
               charBeforePrefix,
               prefix,
               columns: getColumns(),
