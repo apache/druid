@@ -147,6 +147,8 @@ public class GlobalTaskLockboxTest
     );
 
     lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    lockbox.syncFromStorage();
+
     validator = new TaskLockboxValidator(lockbox, taskStorage);
   }
 
@@ -343,6 +345,8 @@ public class GlobalTaskLockboxTest
   public void testSyncFromStorage()
   {
     final GlobalTaskLockbox originalBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    originalBox.syncFromStorage();
+
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -489,7 +493,9 @@ public class GlobalTaskLockboxTest
     );
 
     GlobalTaskLockbox theBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    theBox.syncFromStorage();
     GlobalTaskLockbox loadedBox = new GlobalTaskLockbox(loadedTaskStorage, loadedMetadataStorageCoordinator);
+    loadedBox.syncFromStorage();
 
     Task aTask = NoopTask.create();
     taskStorage.insert(aTask, TaskStatus.running(aTask.getId()));
@@ -515,6 +521,7 @@ public class GlobalTaskLockboxTest
   public void testRevokedLockSyncFromStorage()
   {
     final GlobalTaskLockbox originalBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    originalBox.syncFromStorage();
 
     final Task task1 = NoopTask.ofPriority(10);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
@@ -1876,6 +1883,8 @@ public class GlobalTaskLockboxTest
     taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
 
     GlobalTaskLockbox testLockbox = new NullLockPosseGlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.syncFromStorage();
+
     testLockbox.add(taskWithFailingLockAcquisition0);
     testLockbox.add(taskWithFailingLockAcquisition1);
     testLockbox.add(taskWithSuccessfulLockAcquisition);
@@ -2031,6 +2040,7 @@ public class GlobalTaskLockboxTest
     EasyMock.replay(coordinator);
 
     final GlobalTaskLockbox taskLockbox = new GlobalTaskLockbox(taskStorage, coordinator);
+    taskLockbox.syncFromStorage();
 
     taskLockbox.add(replaceTask);
     taskLockbox.tryLock(

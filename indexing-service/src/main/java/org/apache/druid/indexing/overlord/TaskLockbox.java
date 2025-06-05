@@ -130,8 +130,7 @@ public class TaskLockbox
 
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
-   * This method must be called only by the GlobalTaskLockbox after acquiring
-   * a WRITE globalLock.
+   * This method must be called only from {@link GlobalTaskLockbox#syncFromStorage()}.
    *
    * @return SyncResult which needs to be processed by the caller
    */

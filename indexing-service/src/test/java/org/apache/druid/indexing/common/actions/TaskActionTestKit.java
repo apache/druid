@@ -137,6 +137,7 @@ public class TaskActionTestKit extends ExternalResource
         CentralizedDatasourceSchemaConfig.create()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    taskLockbox.syncFromStorage();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override

@@ -41,14 +41,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Maintains a {@link TaskLockbox} for each datasource.
+ * A {@link TaskLockbox} is used to maintain locks over intervals of a datasource
+ * to ensure data consistency while various types of ingestion tasks append,
+ * overwrite or delete data.
  */
 public class GlobalTaskLockbox
 {
@@ -56,7 +61,7 @@ public class GlobalTaskLockbox
 
   private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final ConcurrentHashMap<String, TaskLockbox> datasourceToLockbox = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, DatasourceLockboxResource> datasourceToLockbox = new ConcurrentHashMap<>();
 
   private final AtomicBoolean syncComplete = new AtomicBoolean(false);
 
@@ -70,79 +75,176 @@ public class GlobalTaskLockbox
     this.metadataStorageCoordinator = metadataStorageCoordinator;
   }
 
-  private TaskLockbox getDatasourceLockbox(Task task)
+  /**
+   * Gets the {@link DatasourceLockboxResource} for the given datasource and
+   * increments the number of references currently in use.
+   * This resource must be closed once it is not needed anymore.
+   */
+  private DatasourceLockboxResource getLockboxResource(String datasource)
   {
-    return getDatasourceLockbox(task.getDataSource());
+    return datasourceToLockbox.compute(
+        datasource,
+        (ds, existingResource) -> {
+          final DatasourceLockboxResource resource = Objects.requireNonNullElseGet(
+              existingResource,
+              () -> new DatasourceLockboxResource(
+                  new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
+              )
+          );
+          resource.acquireReference();
+          return resource;
+        }
+    );
   }
 
-  private TaskLockbox getDatasourceLockbox(String datasource)
+  /**
+   * Performs a computation using the {@link TaskLockbox} corresponding to the
+   * given datasource and returns the result.
+   */
+  private <R, T extends Throwable> R computeForDatasource(
+      String datasource,
+      LockComputation<R, T> computation
+  ) throws T
   {
     // Verify that sync is complete
     if (!syncComplete.get()) {
-      throw new ISE("Cannot get TaskLockbox for datasource[%s]. Sync with storage is not complete yet.", datasource);
+      throw new ISE(
+          "Cannot get TaskLockbox for datasource[%s] as sync with storage has not happened.",
+          datasource
+      );
     }
 
-    return datasourceToLockbox.computeIfAbsent(
-        datasource,
-        ds -> new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
+    try (final DatasourceLockboxResource lockbox = getLockboxResource(datasource)) {
+      return computation.perform(lockbox.delegate);
+    }
+  }
+
+  /**
+   * Performs a computation using the {@link TaskLockbox} corresponding to the
+   * given task and returns the result.
+   */
+  private <R, T extends Throwable> R computeForTask(
+      Task task,
+      LockComputation<R, T> computation
+  ) throws T
+  {
+    return computeForDatasource(task.getDataSource(), computation);
+  }
+
+  /**
+   * Executes an operation on the {@link TaskLockbox} corresponding to the given
+   * task.
+   */
+  private <T extends Throwable> void executeForTask(
+      Task task,
+      LockOperation<T> operation
+  ) throws T
+  {
+    computeForDatasource(
+        task.getDataSource(),
+        lockbox -> {
+          operation.perform(lockbox);
+          return 0;
+        }
     );
+  }
+
+  @FunctionalInterface
+  private interface LockComputation<R, T extends Throwable>
+  {
+    R perform(TaskLockbox lockbox) throws T;
+  }
+
+  @FunctionalInterface
+  private interface LockOperation<T extends Throwable>
+  {
+    void perform(TaskLockbox lockbox) throws T;
   }
 
   /**
    * Result of metadata store sync for a single datasource.
    */
-  private static class DatasourceSync
+  private static class DatasourceSyncResult
   {
     final Set<Task> storedActiveTasks = new HashSet<>();
     final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
   }
 
+  private static class DatasourceLockboxResource implements AutoCloseable
+  {
+    final AtomicInteger references;
+    final TaskLockbox delegate;
+
+    DatasourceLockboxResource(TaskLockbox delegate)
+    {
+      this.delegate = delegate;
+      this.references = new AtomicInteger(0);
+    }
+
+    void acquireReference()
+    {
+      references.incrementAndGet();
+    }
+
+    @Override
+    public void close()
+    {
+      references.decrementAndGet();
+    }
+  }
+
   /**
    * Syncs the current in-memory state with the {@link TaskStorage}.
-   * This method should be called only once when the {@link TaskQueue#start()}
-   * is invoked.
+   * This method should be called only from {@link TaskQueue#start()}.
+   * If the sync fails, no other operation can be performed on this lockbox.
    *
    * @return SyncResult which needs to be processed by the caller
    */
   public TaskLockboxSyncResult syncFromStorage()
   {
-    // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-    final Map<String, DatasourceSync> datasourceSyncs = new HashMap<>();
+    // TODO: While sync from storage is in progress, should anything else be allowed
+    //  Can sync ever be called in parallel with anything else?
+
+    // Retrieve all active tasks and locks associated with them
+    final Map<String, DatasourceSyncResult> datasourceToSyncResult = new HashMap<>();
     int activeTaskCount = 0;
     int totalLockCount = 0;
     for (Task task : taskStorage.getActiveTasks()) {
       ++activeTaskCount;
-      final DatasourceSync sync = datasourceSyncs.computeIfAbsent(
+      final DatasourceSyncResult result = datasourceToSyncResult.computeIfAbsent(
           task.getDataSource(),
-          ds -> new DatasourceSync()
+          ds -> new DatasourceSyncResult()
       );
-      sync.storedActiveTasks.add(task);
+      result.storedActiveTasks.add(task);
       for (TaskLock taskLock : taskStorage.getLocks(task.getId())) {
         ++totalLockCount;
-        sync.storedLocks.add(Pair.of(task, taskLock));
+        result.storedLocks.add(Pair.of(task, taskLock));
       }
     }
 
-    // Set of task groups in which at least one task failed to re-acquire a lock
+    // Identify task groups in which at least one task failed to re-acquire a lock
     final Set<Task> tasksToFail = new HashSet<>();
-    int taskLockCount = 0;
+    final AtomicInteger taskLockCount = new AtomicInteger(0);
 
     datasourceToLockbox.clear();
-    for (String dataSource : datasourceSyncs.keySet()) {
-      final DatasourceSync sync = datasourceSyncs.get(dataSource);
-      final TaskLockboxSyncResult result = getDatasourceLockbox(dataSource)
-          .resetState(sync.storedActiveTasks, sync.storedLocks);
-      tasksToFail.addAll(result.getTasksToFail());
-      taskLockCount += result.getTaskLockCount();
-    }
+    datasourceToSyncResult.forEach((dataSource, syncResult) -> {
+      try (final DatasourceLockboxResource lockboxResource = getLockboxResource(dataSource)) {
+        final TaskLockboxSyncResult lockboxSyncResult = lockboxResource.delegate.resetState(
+            syncResult.storedActiveTasks,
+            syncResult.storedLocks
+        );
+        tasksToFail.addAll(lockboxSyncResult.getTasksToFail());
+        taskLockCount.addAndGet(lockboxSyncResult.getTaskLockCount());
+      }
+    });
 
     log.info(
-        "Synced [%,d] locks for [%,d] activeTasks from storage ([%,d] locks ignored).",
-        taskLockCount, activeTaskCount, totalLockCount - taskLockCount
+        "Synced [%,d] locks for [%,d] active tasks from storage ([%,d] locks ignored).",
+        taskLockCount.get(), activeTaskCount, totalLockCount - taskLockCount.get()
     );
 
     syncComplete.set(true);
-    return new TaskLockboxSyncResult(tasksToFail, taskLockCount);
+    return new TaskLockboxSyncResult(tasksToFail, taskLockCount.get());
   }
 
   /**
@@ -154,7 +256,10 @@ public class GlobalTaskLockbox
    */
   public LockResult lock(final Task task, final LockRequest request) throws InterruptedException
   {
-    return getDatasourceLockbox(task).lock(task, request);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.lock(task, request)
+    );
   }
 
   /**
@@ -166,7 +271,10 @@ public class GlobalTaskLockbox
    */
   public LockResult lock(final Task task, final LockRequest request, long timeoutMs) throws InterruptedException
   {
-    return getDatasourceLockbox(task).lock(task, request, timeoutMs);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.lock(task, request, timeoutMs)
+    );
   }
 
   /**
@@ -179,7 +287,10 @@ public class GlobalTaskLockbox
    */
   public LockResult tryLock(final Task task, final LockRequest request)
   {
-    return getDatasourceLockbox(task).tryLock(task, request);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.tryLock(task, request)
+    );
   }
 
   /**
@@ -207,13 +318,16 @@ public class GlobalTaskLockbox
       boolean reduceMetadataIO
   )
   {
-    return getDatasourceLockbox(dataSource).allocateSegments(
-        requests,
+    return computeForDatasource(
         dataSource,
-        interval,
-        skipSegmentLineageCheck,
-        lockGranularity,
-        reduceMetadataIO
+        lockbox -> lockbox.allocateSegments(
+            requests,
+            dataSource,
+            interval,
+            skipSegmentLineageCheck,
+            lockGranularity,
+            reduceMetadataIO
+        )
     );
   }
 
@@ -230,7 +344,10 @@ public class GlobalTaskLockbox
    */
   public <T> T doInCriticalSection(Task task, Set<Interval> intervals, CriticalAction<T> action) throws Exception
   {
-    return getDatasourceLockbox(task).doInCriticalSection(task, intervals, action);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.doInCriticalSection(task, intervals, action)
+    );
   }
 
   /**
@@ -245,7 +362,13 @@ public class GlobalTaskLockbox
   @VisibleForTesting
   public void revokeLock(String taskId, TaskLock lock)
   {
-    getDatasourceLockbox(lock.getDataSource()).revokeLock(taskId, lock);
+    computeForDatasource(
+        lock.getDataSource(),
+        lockbox -> {
+          lockbox.revokeLock(taskId, lock);
+          return 0;
+        }
+    );
   }
 
   /**
@@ -254,7 +377,10 @@ public class GlobalTaskLockbox
   @VisibleForTesting
   protected void cleanupPendingSegments(Task task)
   {
-    getDatasourceLockbox(task.getDataSource()).cleanupPendingSegments(task);
+    executeForTask(
+        task,
+        lockbox -> lockbox.cleanupPendingSegments(task)
+    );
   }
 
   /**
@@ -265,7 +391,10 @@ public class GlobalTaskLockbox
    */
   public List<TaskLock> findLocksForTask(final Task task)
   {
-    return getDatasourceLockbox(task).findLocksForTask(task);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.findLocksForTask(task)
+    );
   }
 
   /**
@@ -273,7 +402,10 @@ public class GlobalTaskLockbox
    */
   public Set<ReplaceTaskLock> findReplaceLocksForTask(Task task)
   {
-    return getDatasourceLockbox(task).findReplaceLocksForTask(task);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.findReplaceLocksForTask(task)
+    );
   }
 
   /**
@@ -281,7 +413,10 @@ public class GlobalTaskLockbox
    */
   public Set<ReplaceTaskLock> getAllReplaceLocksForDatasource(String datasource)
   {
-    return getDatasourceLockbox(datasource).getAllReplaceLocksForDatasource(datasource);
+    return computeForDatasource(
+        datasource,
+        lockbox -> lockbox.getAllReplaceLocksForDatasource(datasource)
+    );
   }
 
   /**
@@ -298,7 +433,10 @@ public class GlobalTaskLockbox
 
     final Map<String, List<Interval>> datasourceToLockedIntervals = new HashMap<>();
     datasourceToFilterPolicies.forEach((datasource, policies) -> {
-      final List<Interval> lockedIntervals = getDatasourceLockbox(datasource).getLockedIntervals(policies);
+      final List<Interval> lockedIntervals = computeForDatasource(
+          datasource,
+          lockbox -> lockbox.getLockedIntervals(policies)
+      );
       if (!lockedIntervals.isEmpty()) {
         datasourceToLockedIntervals.put(datasource, lockedIntervals);
       }
@@ -321,7 +459,10 @@ public class GlobalTaskLockbox
 
     final Map<String, List<TaskLock>> datasourceToActiveLocks = new HashMap<>();
     datasourceToFilterPolicies.forEach((datasource, policies) -> {
-      final List<TaskLock> datasourceLocks = getDatasourceLockbox(datasource).getActiveLocks(policies);
+      final List<TaskLock> datasourceLocks = computeForDatasource(
+          datasource,
+          lockbox -> lockbox.getActiveLocks(policies)
+      );
       if (!datasourceLocks.isEmpty()) {
         datasourceToActiveLocks.put(datasource, datasourceLocks);
       }
@@ -332,17 +473,26 @@ public class GlobalTaskLockbox
 
   public void unlock(final Task task, final Interval interval)
   {
-    getDatasourceLockbox(task).unlock(task, interval);
+    executeForTask(
+        task,
+        lockbox -> lockbox.unlock(task, interval)
+    );
   }
 
   public void unlockAll(Task task)
   {
-    getDatasourceLockbox(task).unlockAll(task);
+    executeForTask(
+        task,
+        lockbox -> lockbox.unlockAll(task)
+    );
   }
 
   public void add(Task task)
   {
-    getDatasourceLockbox(task).add(task);
+    executeForTask(
+        task,
+        lockbox -> lockbox.add(task)
+    );
   }
 
   /**
@@ -353,20 +503,34 @@ public class GlobalTaskLockbox
    */
   public void remove(final Task task)
   {
-    getDatasourceLockbox(task).remove(task);
+    executeForTask(
+        task,
+        lockbox -> lockbox.remove(task)
+    );
+
+    // TODO: Clean up the datasource lockbox if it is now empty
   }
 
   @VisibleForTesting
   Optional<TaskLockbox.TaskLockPosse> getOnlyTaskLockPosseContainingInterval(Task task, Interval interval)
   {
-    return getDatasourceLockbox(task).getOnlyTaskLockPosseContainingInterval(task, interval);
+    return computeForTask(
+        task,
+        lockbox -> lockbox.getOnlyTaskLockPosseContainingInterval(task, interval)
+    );
   }
 
   @VisibleForTesting
   Set<String> getActiveTasks()
   {
     final Set<String> allActiveTasks = new HashSet<>();
-    datasourceToLockbox.values().forEach(lockbox -> allActiveTasks.addAll(lockbox.getActiveTasks()));
+
+    final Set<String> datasourceNames = Set.copyOf(datasourceToLockbox.keySet());
+    for (String datasource : datasourceNames) {
+      allActiveTasks.addAll(
+          computeForDatasource(datasource, TaskLockbox::getActiveTasks)
+      );
+    }
 
     return allActiveTasks;
   }
@@ -377,13 +541,14 @@ public class GlobalTaskLockbox
     final Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>>
         allLocks = new HashMap<>();
 
-    datasourceToLockbox.forEach((datasource, lockbox) -> {
+    final Set<String> datasourceNames = Set.copyOf(datasourceToLockbox.keySet());
+    for (String datasource : datasourceNames) {
       final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>
-          locks = lockbox.getAllLocks();
-      if (!locks.isEmpty()) {
-        allLocks.put(datasource, locks);
+          datasourceLocks = computeForDatasource(datasource, TaskLockbox::getAllLocks);
+      if (!datasourceLocks.isEmpty()) {
+        allLocks.put(datasource, datasourceLocks);
       }
-    });
+    }
 
     return allLocks;
   }
