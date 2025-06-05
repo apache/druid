@@ -230,10 +230,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     return segment.get().hasData();
   }
 
-  public boolean isRealtime()
+  /**
+   * Checks if the segment is currently served by a realtime server, and is not served by a historical.
+   */
+  public boolean isRealtimeSegment()
   {
     synchronized (this) {
-      return !realtimeServers.isEmpty();
+      return (!realtimeServers.isEmpty()) && historicalServers.isEmpty();
     }
   }
 }

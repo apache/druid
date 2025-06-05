@@ -25,24 +25,23 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.Set;
 
 /**
- * Decides the types of data servers contacted by MSQ tasks to fetch results.
+ * Decides the types of data servers contacted by MSQ queries to fetch results.
  */
 public enum SegmentSource
 {
   /**
-   * TODO: correct these docs, this won't be accurate for DART
-   * Include only segments from deep storage.
+   * Do not include any other segments.
    */
   NONE(ImmutableSet.of()),
 
   /**
-   * Include segments from realtime tasks as well as segments from deep storage.
+   * Include segments from realtime tasks as well.
    */
   REALTIME(ImmutableSet.of(ServerType.REALTIME, ServerType.INDEXER_EXECUTOR));
 
   /**
-   * The type of dataservers (if any) to include. This does not include segments queried from deep storage, which are
-   * always included in queries.
+   * The type of dataservers (if any) to include. This does not include segments queried from deep storage, for MSQ Task
+   * and segments loaded on historicals for MSQ Dart.
    */
   private final Set<ServerType> usedServerTypes;
 

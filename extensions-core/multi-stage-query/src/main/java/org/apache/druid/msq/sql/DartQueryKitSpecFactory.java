@@ -52,7 +52,7 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
     return new QueryKitSpec(
         queryKit,
         queryId,
-        getNumHistoricals(),
+        getNumWorkers(),
         queryContext.getInt(
             DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
             DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
@@ -64,7 +64,7 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
     );
   }
 
-  private int getNumHistoricals()
+  private int getNumWorkers()
   {
     int cnt = 0;
     for (DruidServerMetadata s : serverView.getDruidServerMetadatas()) {
@@ -72,6 +72,8 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
         cnt++;
       }
     }
+
+    // Even if all segments are realtime, launch at least one worker.
     return Math.max(1, cnt);
   }
 }

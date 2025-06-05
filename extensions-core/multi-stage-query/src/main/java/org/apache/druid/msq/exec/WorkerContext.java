@@ -102,7 +102,7 @@ public interface WorkerContext
   DruidNode selfNode();
 
   /**
-   * Returns the {@link DataServerQueryHandlerFactory} from the context.
+   * Returns the factory for {@link DataServerQueryHandler} from the context. Used to query realtime tasks.
    */
   DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 

@@ -177,6 +177,22 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   );
 
   /**
+   * Segment that's realtime and located at the same host as segment 5
+   */
+  private static final DataSegment SEGMENT6 = new DataSegment(
+      DATASOURCE,
+      Intervals.of("2004/2005"),
+      "1",
+      Collections.emptyMap(),
+      Collections.emptyList(),
+      Collections.emptyList(),
+      new NumberedShardSpec(0, 1),
+      null,
+      null,
+      BYTES_PER_SEGMENT
+  );
+
+  /**
    * Mapping of segment to servers (indexes in {@link #SERVERS}).
    */
   private static final Map<DataSegment, IntList> SEGMENT_SERVERS =
@@ -186,6 +202,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                   .put(SEGMENT3, IntLists.emptyList())
                   .put(SEGMENT4, IntList.of(1))
                   .put(SEGMENT5, IntList.of(2))
+                  .put(SEGMENT6, IntList.of(2))
                   .build();
 
   private AutoCloseable mockCloser;
@@ -502,6 +519,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
 
     final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
+    // Expect segment 2 and then the realtime segments 5 and 6 to be assigned round-robin.
     Assertions.assertEquals(
         ImmutableList.of(
             new SegmentsInputSlice(
@@ -541,6 +559,12 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                 SEGMENT5.getInterval(),
                                 SEGMENT5.getVersion(),
                                 SEGMENT5.getShardSpec().getPartitionNum()
+                            ),
+                            new RichSegmentDescriptor(
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getVersion(),
+                                SEGMENT6.getShardSpec().getPartitionNum()
                             )
                         )
                     )
