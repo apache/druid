@@ -468,6 +468,10 @@ public class ExpressionSelectors
     return eval.valueOrDefault();
   }
 
+  /**
+   * Wraps a {@link ColumnValueSelector<ExprEval>} and calls {@link ExprEval#valueOrDefault()} on the output of
+   * {@link #baseSelector#getObject()} in {@link #getObject()}.
+   */
   private static class EvalUnwrappingColumnValueSelector implements ColumnValueSelector
   {
     private final ColumnValueSelector<ExprEval> baseSelector;
@@ -480,21 +484,18 @@ public class ExpressionSelectors
     @Override
     public double getDouble()
     {
-      // No Assert for null handling as baseSelector already have it.
       return baseSelector.getDouble();
     }
 
     @Override
     public float getFloat()
     {
-      // No Assert for null handling as baseSelector already have it.
       return baseSelector.getFloat();
     }
 
     @Override
     public long getLong()
     {
-      // No Assert for null handling as baseSelector already have it.
       return baseSelector.getLong();
     }
 
