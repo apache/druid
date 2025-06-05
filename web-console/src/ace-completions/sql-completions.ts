@@ -193,15 +193,12 @@ export function getSqlCompletions({
     keywordBeforePrefix = keywordBeforePrefix.toUpperCase();
   }
 
-  console.log(keywordBeforePrefix);
-
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {
     return []; // Don't start completing if the user is typing a number
   }
 
   const possibleReferences = getPossibleSqlReferences(allText, 100);
-  console.log(possibleReferences);
 
   let completions: Ace.Completion[] = possibleReferences.map(value => ({
     value,
@@ -236,7 +233,7 @@ export function getSqlCompletions({
     );
 
     if (
-      keywordBeforePrefix &&
+      !keywordBeforePrefix ||
       !SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION.includes(keywordBeforePrefix)
     ) {
       completions = completions.concat(
@@ -263,7 +260,7 @@ export function getSqlCompletions({
   }
 
   if (
-    keywordBeforePrefix &&
+    !keywordBeforePrefix ||
     !SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_REF.includes(keywordBeforePrefix)
   ) {
     if (columnMetadata?.length) {
@@ -323,7 +320,7 @@ export function getSqlCompletions({
 }
 
 export function getSqlLiterals(sqlText: string, maxWords: number): string[] {
-  const literalRegexp = /'[^']{2,}'/g;
+  const literalRegexp = /'[^'\n]+'/g;
   const matches = (sqlText.match(literalRegexp) || []).map(stripOuterChars);
 
   return uniq(matches).slice(0, maxWords);
@@ -333,8 +330,10 @@ export function getPossibleSqlReferences(sqlText: string, maxWords: number): str
   const quotedRegexp = /"\w+"/g;
   const quotedMatches = (sqlText.match(quotedRegexp) || []).map(stripOuterChars);
 
-  const nakedRegexp = /[\s,([\-+*/][a-z]\w+[\s,)\]\-+*/]/gi;
-  const nakedMatches = (sqlText.match(nakedRegexp) || []).map(stripOuterChars);
+  // Match identifiers that are preceded by whitespace, comma, parenthesis, or operators
+  // and followed by whitespace, comma, parenthesis, operators, or end of string, ensure length of at least 2 chars
+  const nakedRegexp = /(?:^|[\s,([\-+*/])[a-zA-Z]\w+(?=[\s,)\]\-+*/]|$)/g;
+  const nakedMatches = (sqlText.match(nakedRegexp) || []).map(s => s.replace(/^[\s,([\-+*/]/, ''));
 
   return uniq([...quotedMatches, ...nakedMatches.filter(v => !KNOWN_SQL_PARTS[v])]).slice(
     0,
