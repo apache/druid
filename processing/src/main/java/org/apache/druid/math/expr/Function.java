@@ -4237,7 +4237,6 @@ public interface Function extends NamedFunction
     @Override
     public Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
     {
-      final Expr arg1 = args.get(0);
       final Expr arg2 = args.get(1);
 
       if (arg2.isLiteral()) {
@@ -4380,7 +4379,6 @@ public interface Function extends NamedFunction
     @Override
     public Function asSingleThreaded(List<Expr> args, Expr.InputBindingInspector inspector)
     {
-      final Expr arg1 = args.get(0);
       final Expr arg2 = args.get(1);
 
       if (arg2.isLiteral()) {
