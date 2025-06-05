@@ -26,6 +26,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -168,7 +169,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     } else if (globalId < adjustArrayId + globalArrayDictionary.size()) {
       final int[] array = globalArrayDictionary.get(globalId - adjustArrayId);
       if (array != null && array.length == 1) {
-        return String.valueOf(lookupGlobalScalarObject(array[0]));
+        return Evals.asString(lookupGlobalScalarObject(array[0]));
       }
     }
     return null;
