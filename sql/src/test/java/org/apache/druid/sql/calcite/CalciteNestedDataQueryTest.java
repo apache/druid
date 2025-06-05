@@ -7364,7 +7364,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
     // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
     // values, so the object row is rightfully skipped
-    skipVectorize();
     testQuery(
         "SELECT "
         + "COUNT(JSON_VALUE(obj, '$.c')) "
@@ -7456,6 +7455,175 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING_ARRAY))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testSumPathWithArraysRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{112.3d}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    // capturing existing behavior... the count should be 4 if it was counting all non-null primitive values, but that
+    // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
+    // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
+    // values, so the object row is rightfully skipped
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturningNumberRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING DOUBLE)) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturningRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING VARCHAR ARRAY)) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING_ARRAY))
