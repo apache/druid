@@ -207,6 +207,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
 
+  public static final Map<String, Object> QUERY_CONTEXT_LEXICOGRAPHIC_TOPN =
+      QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+
   public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
