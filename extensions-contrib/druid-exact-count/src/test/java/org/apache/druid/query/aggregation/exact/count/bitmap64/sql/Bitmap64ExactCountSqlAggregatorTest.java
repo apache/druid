@@ -116,16 +116,16 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
   public void testExactCountOnHyperUniqueColumnTypeThrowsError()
   {
     DruidException e = Assertions.assertThrows(
-        DruidException.class, () -> testQuery(
+        DruidException.class,
+        () -> testQuery(
             "SELECT BITMAP64_EXACT_COUNT(hyper_unique_m1) FROM " + DATA_SOURCE,
             ImmutableList.of(),
             ImmutableList.of()
         )
     );
 
-    Assertions.assertTrue(
-        e.getMessage().contains("Cannot apply 'BITMAP64_EXACT_COUNT' to arguments of type 'BITMAP64_EXACT_COUNT(<COMPLEX<HYPERUNIQUE>>)'")
-    );
+    Assertions.assertTrue(e.getMessage().contains(
+        "Cannot apply 'BITMAP64_EXACT_COUNT' to arguments of type 'BITMAP64_EXACT_COUNT(<COMPLEX<HYPERUNIQUE>>)'"));
   }
 
   @Test
