@@ -5683,7 +5683,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 new ExpressionDimFilter(
-                                    "array_contains(array_to_mv(\"arrayLongNulls\"),'1')",
+                                    "mv_contains(array_to_mv(\"arrayLongNulls\"),'1')",
                                     queryFramework().macroTable()
                                 )
                             )
@@ -5748,8 +5748,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 or(
-                                    expressionFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
-                                    expressionFilter("array_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
+                                    expressionFilter("mv_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
+                                    expressionFilter("mv_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
                                 )
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -5871,7 +5871,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 new ExpressionDimFilter(
-                                    "array_contains(array_to_mv(\"arrayStringNulls\"),'b')",
+                                    "mv_contains(array_to_mv(\"arrayStringNulls\"),'b')",
                                     queryFramework().macroTable()
                                 )
                             )

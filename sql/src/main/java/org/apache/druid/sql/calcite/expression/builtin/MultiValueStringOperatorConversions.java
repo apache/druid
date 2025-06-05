@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
@@ -46,7 +45,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -59,6 +57,7 @@ public class MultiValueStringOperatorConversions
 {
   public static final SqlOperatorConversion CONTAINS = new Contains();
   public static final SqlOperatorConversion OVERLAP = new Overlap();
+
 
   public static class Append extends ArrayAppendOperatorConversion
   {
@@ -169,9 +168,9 @@ public class MultiValueStringOperatorConversions
     }
 
     @Override
-    protected String getFilterExpression(List<DruidExpression> druidExpressions)
+    public String getDruidFunctionName()
     {
-      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
+      return "mv_contains";
     }
 
     @Override
@@ -188,7 +187,7 @@ public class MultiValueStringOperatorConversions
           druidExpressions -> DruidExpression.ofFunctionCall(
               Calcites.getColumnTypeForRelDataType(rexNode.getType()),
               getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(druidExpressions)
+              druidExpressions
           )
       );
     }
@@ -209,7 +208,7 @@ public class MultiValueStringOperatorConversions
           operands -> DruidExpression.ofFunctionCall(
               Calcites.getColumnTypeForRelDataType(rexNode.getType()),
               getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(operands)
+              operands
           ),
           postAggregatorVisitor
       );
@@ -387,9 +386,9 @@ public class MultiValueStringOperatorConversions
     }
 
     @Override
-    protected String getFilterExpression(List<DruidExpression> druidExpressions)
+    public String getDruidFunctionName()
     {
-      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
+      return "mv_overlap";
     }
 
     @Override
@@ -403,14 +402,12 @@ public class MultiValueStringOperatorConversions
           plannerContext,
           rowSignature,
           rexNode,
-          druidExpressions -> {
-            final List<DruidExpression> newArgs = harmonizeNullsMvdArg0OperandList(druidExpressions);
-            return DruidExpression.ofFunctionCall(
-                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-                getDruidFunctionName(),
-                newArgs
-            );
-          }
+          druidExpressions ->
+              DruidExpression.ofFunctionCall(
+                  Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+                  getDruidFunctionName(),
+                  druidExpressions
+              )
       );
     }
 
@@ -430,7 +427,7 @@ public class MultiValueStringOperatorConversions
           operands -> DruidExpression.ofFunctionCall(
               Calcites.getColumnTypeForRelDataType(rexNode.getType()),
               getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(operands)
+              operands
           ),
           postAggregatorVisitor
       );
@@ -493,7 +490,9 @@ public class MultiValueStringOperatorConversions
             druidExpressions,
             (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                druidExpressions.get(0)
+                                .getSimpleExtraction()
+                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 literals,
                 isAllowList()
             )
@@ -502,10 +501,11 @@ public class MultiValueStringOperatorConversions
         // if the join expression VC registry is present, it means that this expression is part of a join condition
         // and since that's the case, create virtual column here itself for optimized usage in join matching
         if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
-              druidExpression,
-              ColumnType.STRING
-          );
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
           return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
         }
 
@@ -574,27 +574,6 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-
-  private static List<DruidExpression> harmonizeNullsMvdArg0OperandList(List<DruidExpression> druidExpressions)
-  {
-    final List<DruidExpression> newArgs;
-    if (druidExpressions.get(0).isDirectColumnAccess()) {
-      // rewrite first argument to wrap with mv_harmonize_nulls function
-      newArgs = Lists.newArrayListWithCapacity(2);
-      newArgs.add(
-          0,
-          DruidExpression.ofFunctionCall(
-              druidExpressions.get(0).getDruidType(),
-              "mv_harmonize_nulls",
-              Collections.singletonList(druidExpressions.get(0))
-          )
-      );
-      newArgs.add(1, druidExpressions.get(1));
-    } else {
-      newArgs = druidExpressions;
-    }
-    return newArgs;
-  }
 
   private MultiValueStringOperatorConversions()
   {

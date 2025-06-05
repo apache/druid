@@ -391,6 +391,73 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_contains([1, null, 2], null)", 1L);
     assertExpr("array_contains([1, null, 2], [null])", 1L);
     assertExpr("array_contains([1, 2], null)", 0L);
+    assertExpr("array_contains([1, 2, 3], [])", 1L);
+    assertExpr("array_contains([], [])", 1L);
+    assertExpr("array_contains([null], [])", 1L);
+    assertExpr("array_contains(['foo', 'bar'], [])", 1L);
+    assertExpr("array_contains(null, [])", null);
+  }
+
+  @Test
+  public void testMvContains()
+  {
+    // Tests where the first argument is a numeric array that does not contain null
+    assertExpr("mv_contains([1, 2, 3], 2)", 1L);
+    assertExpr("mv_contains([1, 2, 3], 4)", 0L);
+    assertExpr("mv_contains([1, 2, 3], [2, 3])", 1L);
+    assertExpr("mv_contains([1, 2, 3], [3, 4])", 0L);
+    assertExpr("mv_contains([1, 2], null)", 0L);
+    assertExpr("mv_contains(b, y)", 1L);
+    assertExpr("mv_contains(b, x)", 0L);
+
+    // Tests where the first argument is a string array that does not contain null
+    assertExpr("mv_contains(a, str1)", 0L);
+    assertExpr("mv_contains(a, x)", 1L);
+
+    // Tests where the first argument is a numeric array that does contain null
+    assertExpr("mv_contains([1, null, 2], 2)", 1L);
+    assertExpr("mv_contains([1, null, 2], 3)", 0L);
+    assertExpr("mv_contains([1, null, 2], [2, 3])", 0L);
+    assertExpr("mv_contains([1, null, 2], [1, 2])", 1L);
+    assertExpr("mv_contains([1, null, 2], [null])", 1L);
+    assertExpr("mv_contains([null, 1], null)", 1L);
+    assertExpr("mv_contains([null, 1], [null])", 1L);
+    assertExpr("mv_contains([1, null, 2], y)", 1L);
+    assertExpr("mv_contains([null, 1], o)", 0L);
+
+    // Tests where the first argument is a string array that does contain null
+    assertExpr("mv_contains(['foo', null, 'bar'], 'foo')", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], 'baz')", 0L);
+    assertExpr("mv_contains(['foo', null, 'bar'], null)", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo'])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', 'bar'])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', 'baz'])", 0L);
+    assertExpr("mv_contains(['foo', null, 'bar'], [null])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', null])", 1L);
+    assertExpr("mv_contains([null, 'test'], ['test', 'other'])", 0L);
+
+    // Tests where the first argument is a non-null string
+    assertExpr("mv_contains('test', 'test')", 1L);
+    assertExpr("mv_contains('test', 'other')", 0L);
+    assertExpr("mv_contains('test', ['test'])", 1L);
+    assertExpr("mv_contains('test', ['other'])", 0L);
+
+    // Tests where the first argument is null
+    assertExpr("mv_contains(null, [3, 4])", 0L);
+    assertExpr("mv_contains(null, null)", 1L);
+    assertExpr("mv_contains(null, 1)", 0L);
+    assertExpr("mv_contains(null, 'test')", 0L);
+    assertExpr("mv_contains(null, [1, 2])", 0L);
+    assertExpr("mv_contains(null, [])", 1L);
+    assertExpr("mv_contains(null, [null])", 1L);
+    assertExpr("mv_contains(null, [null, 1])", 0L);
+
+    // Tests where the first argument is an empty array
+    assertExpr("mv_contains([], 1)", 0L);
+    assertExpr("mv_contains([], [1, 2])", 0L);
+    assertExpr("mv_contains([], [])", 1L);
+    assertExpr("mv_contains([], null)", 1L);
+    assertExpr("mv_contains([], [null])", 1L);
   }
 
   @Test
@@ -404,6 +471,65 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_overlap([4, 5, 6], [null])", 0L);
     assertExpr("array_overlap([4, 5, null, 6], null)", 0L);
     assertExpr("array_overlap([4, 5, null, 6], [null])", 1L);
+    assertExpr("array_overlap([1, 2, 3], [])", 0L);
+    assertExpr("array_overlap([], [])", 0L);
+    assertExpr("array_overlap([null], [])", 0L);
+    assertExpr("array_overlap(['foo', 'bar'], [])", 0L);
+    assertExpr("array_overlap(null, [])", null);
+    assertExpr("array_overlap([1, null, 3], [])", 0L);
+  }
+
+  @Test
+  public void testMvOverlap()
+  {
+    // Tests where the first argument is a numeric array that does not contain null
+    assertExpr("mv_overlap([1, 2, 3], [2, 4, 6])", 1L);
+    assertExpr("mv_overlap([1, 2, 3], [4, 5, 6])", 0L);
+    assertExpr("mv_overlap([4, 5, 6], null)", 0L);
+    assertExpr("mv_overlap([4, 5, 6], [null])", 0L);
+    assertExpr("mv_overlap(b, c)", 0L);
+    assertExpr("mv_overlap(c, b)", 1L); // (c, b) = 1L even though (b, c) = 0L, because 2nd arg determines match type
+
+    // Tests where the first argument is a string array that does not contain null
+    assertExpr("mv_overlap(a, emptyArray)", 0L);
+    assertExpr("mv_overlap(a, a)", 1L);
+
+    // Tests where the first argument is a numeric array that does contain null
+    assertExpr("mv_overlap([4, null], [4, 5, 6])", 1L);
+    assertExpr("mv_overlap([7, null], [4, 5, 6])", null);
+    assertExpr("mv_overlap([4, 5, null, 6], [null])", 1L);
+    assertExpr("mv_overlap([4, 5, null, 6], null)", 1L);
+    assertExpr("mv_overlap([null, 1], [null, 2])", 1L);
+    assertExpr("mv_overlap([1, null, 2], b)", 1L);
+    assertExpr("mv_overlap([null, 6], c)", null);
+
+    // Tests where the first argument is a string array that does contain null
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['foo', 'baz'])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['baz', 'qux'])", null);
+    assertExpr("mv_overlap(['foo', null, 'bar'], [null])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['foo', null])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], null)", 1L);
+    assertExpr("mv_overlap([null, 'hello'], ['hello', 'world'])", 1L);
+    assertExpr("mv_overlap([null, 'hello'], ['world'])", null);
+
+    // Tests where the first argument is a non-null string
+    assertExpr("mv_overlap('test', ['test', 'other'])", 1L);
+    assertExpr("mv_overlap('test', ['other'])", 0L);
+
+    // Tests where the first argument is null
+    assertExpr("mv_overlap(null, [4, 5, 6])", null);
+    assertExpr("mv_overlap(null, [1, 2])", null);
+    assertExpr("mv_overlap(null, 1)", null);
+    assertExpr("mv_overlap(null, 'test')", null);
+    assertExpr("mv_overlap(null, [])", 0L);
+    assertExpr("mv_overlap(null, [null])", 1L);
+    assertExpr("mv_overlap(null, [null, 1])", 1L);
+
+    // Tests where the first argument is an empty array
+    assertExpr("mv_overlap([], [1, 2])", null);
+    assertExpr("mv_overlap([], [])", 0L);
+    assertExpr("mv_overlap([], [null])", 1L);
+    assertExpr("mv_overlap([], null)", 1L);
   }
 
   @Test

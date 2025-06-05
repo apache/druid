@@ -306,7 +306,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
-                .filters(expressionFilter("array_overlap(mv_harmonize_nulls(\"dim3\"),array(\"dim2\"))"))
+                .filters(expressionFilter("mv_overlap(\"dim3\",array(\"dim2\"))"))
                 .columns("dim3")
                 .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -316,6 +316,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
             new Object[]{null}
         )
     );
@@ -407,7 +408,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
-                .filters(expressionFilter("array_contains(mv_harmonize_nulls(\"dim3\"),array(\"dim2\"))"))
+                .filters(expressionFilter("mv_contains(\"dim3\",array(\"dim2\"))"))
                 .columns("dim3")
                 .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -417,6 +418,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
             new Object[]{null}
         )
     );
@@ -1013,7 +1015,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .filters(expressionFilter(
-                    "array_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
+                    "mv_contains(string_to_array(concat(array_to_string(\"dim3\",','),',d'),','),'d')"))
                 .columns("v0")
                 .columnTypes(ColumnType.STRING)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1995,7 +1997,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .filters(expressionFilter(
-                    "array_overlap(nvl(mv_to_array(\"dim3\"),array('other')),array('a','b','other'))"))
+                    "mv_overlap(nvl(mv_to_array(\"dim3\"),array('other')),array('a','b','other'))"))
                 .columns("v0")
                 .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2180,8 +2182,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .columns("v0", "v1")
                 .columnTypes(ColumnType.LONG, ColumnType.LONG)
                 .virtualColumns(
-                    expressionVirtualColumn("v0", "array_contains(mv_harmonize_nulls(\"dim3\"),array('a','b'))", ColumnType.LONG),
-                    expressionVirtualColumn("v1", "array_overlap(mv_harmonize_nulls(\"dim3\"),array('a','b'))", ColumnType.LONG)
+                    expressionVirtualColumn("v0", "mv_contains(\"dim3\",array('a','b'))", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "mv_overlap(\"dim3\",array('a','b'))", ColumnType.LONG)
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -2193,7 +2195,49 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{false, true},
             new Object[]{false, false},
             new Object[]{false, false},
-            new Object[]{false, false}
+            new Object[]{false, null}
+        )
+    );
+  }
+
+  @Test
+  public void testMvContainsOnMvConcat()
+  {
+    testQuery(
+        "SELECT "
+        + "dim3, "
+        + "MV_CONTAINS(MV_CONCAT(dim3, ARRAY['c']), ARRAY['a', 'b']), "
+        + "MV_OVERLAP(MV_CONCAT(dim3, ARRAY['c']), ARRAY['a', 'b']) "
+        + "FROM druid.numfoo LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim3", "v0", "v1")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "mv_contains(array_concat(\"dim3\",array('c')),array('a','b'))",
+                        ColumnType.LONG
+                    ),
+                    expressionVirtualColumn(
+                        "v1",
+                        "mv_overlap(array_concat(\"dim3\",array('c')),array('a','b'))",
+                        ColumnType.LONG
+                    )
+                )
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", true, true},
+            new Object[]{"[\"b\",\"c\"]", false, true},
+            new Object[]{"d", false, false},
+            new Object[]{"", false, false},
+            new Object[]{null, false, null}
         )
     );
   }
