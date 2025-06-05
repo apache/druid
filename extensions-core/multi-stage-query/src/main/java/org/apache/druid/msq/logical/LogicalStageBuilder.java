@@ -25,7 +25,6 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -135,26 +134,7 @@ public class LogicalStageBuilder
     /** Provides ids for the stages. */
     private int stageIdSeq = 0;
 
-    StageDefinition makeScanStage(
-        VirtualColumns virtualColumns,
-        RowSignature signature,
-        List<InputSpec> inputs,
-        DimFilter dimFilter,
-        List<KeyColumn> keyColumns)
-    {
-      ScanQueryFrameProcessorFactory scanProcessorFactory = makeScanFrameProcessor(
-          virtualColumns, signature, dimFilter
-      );
-      StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
-          .inputs(inputs)
-          .processorFactory(scanProcessorFactory)
-          .signature(signature)
-          .shuffleSpec(shuffleFor(keyColumns));
-
-      return sdb.build(getIdForBuilder());
-    }
-
-    Stack<DagStage> stack = new Stack<>();
+   Stack<DagStage> stack = new Stack<>();
 
     public void pushFrameProcessorStage(
         List<DagInputSpec> inputs,
