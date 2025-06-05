@@ -48,6 +48,7 @@ import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 /**
  * Maintains a {@link TaskLockbox} for each datasource.
@@ -76,124 +77,6 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Gets the {@link DatasourceLockboxResource} for the given datasource and
-   * increments the number of references currently in use.
-   * This resource must be closed once it is not needed anymore.
-   */
-  private DatasourceLockboxResource getLockboxResource(String datasource)
-  {
-    return datasourceToLockbox.compute(
-        datasource,
-        (ds, existingResource) -> {
-          final DatasourceLockboxResource resource = Objects.requireNonNullElseGet(
-              existingResource,
-              () -> new DatasourceLockboxResource(
-                  new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
-              )
-          );
-          resource.acquireReference();
-          return resource;
-        }
-    );
-  }
-
-  /**
-   * Performs a computation using the {@link TaskLockbox} corresponding to the
-   * given datasource and returns the result.
-   */
-  private <R, T extends Throwable> R computeForDatasource(
-      String datasource,
-      LockComputation<R, T> computation
-  ) throws T
-  {
-    // Verify that sync is complete
-    if (!syncComplete.get()) {
-      throw new ISE(
-          "Cannot get TaskLockbox for datasource[%s] as sync with storage has not happened.",
-          datasource
-      );
-    }
-
-    try (final DatasourceLockboxResource lockbox = getLockboxResource(datasource)) {
-      return computation.perform(lockbox.delegate);
-    }
-  }
-
-  /**
-   * Performs a computation using the {@link TaskLockbox} corresponding to the
-   * given task and returns the result.
-   */
-  private <R, T extends Throwable> R computeForTask(
-      Task task,
-      LockComputation<R, T> computation
-  ) throws T
-  {
-    return computeForDatasource(task.getDataSource(), computation);
-  }
-
-  /**
-   * Executes an operation on the {@link TaskLockbox} corresponding to the given
-   * task.
-   */
-  private <T extends Throwable> void executeForTask(
-      Task task,
-      LockOperation<T> operation
-  ) throws T
-  {
-    computeForDatasource(
-        task.getDataSource(),
-        lockbox -> {
-          operation.perform(lockbox);
-          return 0;
-        }
-    );
-  }
-
-  @FunctionalInterface
-  private interface LockComputation<R, T extends Throwable>
-  {
-    R perform(TaskLockbox lockbox) throws T;
-  }
-
-  @FunctionalInterface
-  private interface LockOperation<T extends Throwable>
-  {
-    void perform(TaskLockbox lockbox) throws T;
-  }
-
-  /**
-   * Result of metadata store sync for a single datasource.
-   */
-  private static class DatasourceSyncResult
-  {
-    final Set<Task> storedActiveTasks = new HashSet<>();
-    final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
-  }
-
-  private static class DatasourceLockboxResource implements AutoCloseable
-  {
-    final AtomicInteger references;
-    final TaskLockbox delegate;
-
-    DatasourceLockboxResource(TaskLockbox delegate)
-    {
-      this.delegate = delegate;
-      this.references = new AtomicInteger(0);
-    }
-
-    void acquireReference()
-    {
-      references.incrementAndGet();
-    }
-
-    @Override
-    public void close()
-    {
-      references.decrementAndGet();
-    }
-  }
-
-  /**
    * Syncs the current in-memory state with the {@link TaskStorage}.
    * This method should be called only from {@link TaskQueue#start()}.
    * If the sync fails, no other operation can be performed on this lockbox.
@@ -202,8 +85,9 @@ public class GlobalTaskLockbox
    */
   public TaskLockboxSyncResult syncFromStorage()
   {
-    // TODO: While sync from storage is in progress, should anything else be allowed
-    //  Can sync ever be called in parallel with anything else?
+    // Shutdown to reset the state and ensure that no other operation is
+    // in progress during the sync
+    shutdown();
 
     // Retrieve all active tasks and locks associated with them
     final Map<String, DatasourceSyncResult> datasourceToSyncResult = new HashMap<>();
@@ -226,7 +110,6 @@ public class GlobalTaskLockbox
     final Set<Task> tasksToFail = new HashSet<>();
     final AtomicInteger taskLockCount = new AtomicInteger(0);
 
-    datasourceToLockbox.clear();
     datasourceToSyncResult.forEach((dataSource, syncResult) -> {
       try (final DatasourceLockboxResource lockboxResource = getLockboxResource(dataSource)) {
         final TaskLockboxSyncResult lockboxSyncResult = lockboxResource.delegate.resetState(
@@ -245,6 +128,26 @@ public class GlobalTaskLockbox
 
     syncComplete.set(true);
     return new TaskLockboxSyncResult(tasksToFail, taskLockCount.get());
+  }
+
+  /**
+   * Clears up the state of the lockbox. Should be called when leadership is lost.
+   */
+  public void shutdown()
+  {
+    // Mark sync as incomplete so that no more lockboxes are created
+    syncComplete.set(false);
+
+    // Clean up all existing lockboxes
+    final Set<String> datasourceNames = Set.copyOf(datasourceToLockbox.keySet());
+    for (String dataSource : datasourceNames) {
+      cleanupLockboxResourceIf(dataSource, resource -> true);
+    }
+
+    log.info(
+        "Removed lockboxes for [%d] datasources, [%d] remaining.",
+        datasourceNames.size(), datasourceToLockbox.size()
+    );
   }
 
   /**
@@ -503,12 +406,17 @@ public class GlobalTaskLockbox
    */
   public void remove(final Task task)
   {
-    executeForTask(
+    final boolean isEmpty = computeForTask(
         task,
-        lockbox -> lockbox.remove(task)
+        lockbox -> {
+          lockbox.remove(task);
+          return lockbox.isEmpty();
+        }
     );
 
-    // TODO: Clean up the datasource lockbox if it is now empty
+    if (isEmpty) {
+      cleanupLockboxResourceIf(task.getDataSource(), resource -> resource.references.get() <= 0);
+    }
   }
 
   @VisibleForTesting
@@ -551,6 +459,152 @@ public class GlobalTaskLockbox
     }
 
     return allLocks;
+  }
+
+  /**
+   * Gets the {@link DatasourceLockboxResource} for the given datasource and
+   * increments the number of references currently in use.
+   * This resource must be closed once it is not needed anymore.
+   */
+  private DatasourceLockboxResource getLockboxResource(String datasource)
+  {
+    return datasourceToLockbox.compute(
+        datasource,
+        (ds, existingResource) -> {
+          final DatasourceLockboxResource resource = Objects.requireNonNullElseGet(
+              existingResource,
+              () -> new DatasourceLockboxResource(
+                  new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
+              )
+          );
+          resource.acquireReference();
+          return resource;
+        }
+    );
+  }
+
+  /**
+   * Cleans up the lockbox for the given datasource if the {@link DatasourceLockboxResource}
+   * meets the given criteria.
+   */
+  private void cleanupLockboxResourceIf(
+      String dataSource,
+      Predicate<DatasourceLockboxResource> resourcePredicate
+  )
+  {
+    datasourceToLockbox.compute(
+        dataSource,
+        (ds, resource) -> {
+          if (resource != null && resourcePredicate.test(resource)) {
+            // TODO: what if a bad runaway operation is holding the TaskLockbox.giant?
+            resource.delegate.clear();
+            return null;
+          } else {
+            return resource;
+          }
+        }
+    );
+  }
+
+  /**
+   * Performs a computation using the {@link TaskLockbox} corresponding to the
+   * given datasource and returns the result.
+   */
+  private <R, T extends Throwable> R computeForDatasource(
+      String datasource,
+      LockComputation<R, T> computation
+  ) throws T
+  {
+    // Verify that sync is complete
+    if (!syncComplete.get()) {
+      throw new ISE(
+          "Cannot get TaskLockbox for datasource[%s] as sync with storage has not happened yet.",
+          datasource
+      );
+    }
+
+    try (final DatasourceLockboxResource lockbox = getLockboxResource(datasource)) {
+      return computation.perform(lockbox.delegate);
+    }
+  }
+
+  /**
+   * Performs a computation using the {@link TaskLockbox} corresponding to the
+   * given task and returns the result.
+   */
+  private <R, T extends Throwable> R computeForTask(
+      Task task,
+      LockComputation<R, T> computation
+  ) throws T
+  {
+    return computeForDatasource(task.getDataSource(), computation);
+  }
+
+  /**
+   * Executes an operation on the {@link TaskLockbox} corresponding to the given
+   * task.
+   */
+  private <T extends Throwable> void executeForTask(
+      Task task,
+      LockOperation<T> operation
+  ) throws T
+  {
+    computeForDatasource(
+        task.getDataSource(),
+        lockbox -> {
+          operation.perform(lockbox);
+          return 0;
+        }
+    );
+  }
+
+  @FunctionalInterface
+  private interface LockComputation<R, T extends Throwable>
+  {
+    R perform(TaskLockbox lockbox) throws T;
+  }
+
+  @FunctionalInterface
+  private interface LockOperation<T extends Throwable>
+  {
+    void perform(TaskLockbox lockbox) throws T;
+  }
+
+  /**
+   * Result of metadata store sync for a single datasource.
+   */
+  private static class DatasourceSyncResult
+  {
+    final Set<Task> storedActiveTasks = new HashSet<>();
+    final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
+  }
+
+  /**
+   * Wrapper around a {@link TaskLockbox} for a specific datasource which keeps
+   * track of the number of active references of this resource that are currently
+   * in use.
+   */
+  private static class DatasourceLockboxResource implements AutoCloseable
+  {
+    final AtomicInteger references;
+    final TaskLockbox delegate;
+
+    DatasourceLockboxResource(TaskLockbox delegate)
+    {
+      this.delegate = delegate;
+      this.references = new AtomicInteger(0);
+    }
+
+    void acquireReference()
+    {
+      references.incrementAndGet();
+    }
+
+    @Override
+    public void close()
+    {
+      references.decrementAndGet();
+    }
   }
 
 }

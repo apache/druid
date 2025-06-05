@@ -69,6 +69,7 @@ public class TaskLocksTest
         taskStorage,
         new TestIndexerMetadataStorageCoordinator()
     );
+    lockbox.syncFromStorage();
     task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
     lockbox.add(task);

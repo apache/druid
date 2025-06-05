@@ -128,6 +128,30 @@ public class TaskLockbox
     this.metadataStorageCoordinator = metadataStorageCoordinator;
   }
 
+  void clear()
+  {
+    giant.lock();
+    try {
+      running.clear();
+      activeTasks.clear();
+      activeAllocatorIdToTaskIds.clear();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  boolean isEmpty()
+  {
+    giant.lock();
+    try {
+      return activeTasks.isEmpty() && running.isEmpty() && activeAllocatorIdToTaskIds.isEmpty();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
    * This method must be called only from {@link GlobalTaskLockbox#syncFromStorage()}.

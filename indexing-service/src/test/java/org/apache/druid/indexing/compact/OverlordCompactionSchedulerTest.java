@@ -137,6 +137,7 @@ public class OverlordCompactionSchedulerTest
   private void initScheduler()
   {
     GlobalTaskLockbox taskLockbox = new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
+    taskLockbox.syncFromStorage();
     WorkerBehaviorConfig defaultWorkerConfig
         = new DefaultWorkerBehaviorConfig(WorkerBehaviorConfig.DEFAULT_STRATEGY, null);
     scheduler = new OverlordCompactionScheduler(
