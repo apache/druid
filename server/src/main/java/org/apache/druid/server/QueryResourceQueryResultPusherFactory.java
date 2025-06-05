@@ -33,7 +33,9 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.OutputStream;
 
-// TODO(laksh): javadocs
+/**
+ * Factory for creating instances of {@link QueryResourceQueryResultPusher}.
+ */
 public class QueryResourceQueryResultPusherFactory
 {
   protected final ObjectMapper jsonMapper;
@@ -52,6 +54,9 @@ public class QueryResourceQueryResultPusherFactory
     this.selfNode = selfNode;
   }
 
+  /**
+   * Creates a new instance of {@link QueryResourceQueryResultPusher}.
+   */
   public QueryResourceQueryResultPusher factorize(
       final QueryResource.QueryMetricCounter counter,
       final HttpServletRequest req,
@@ -70,6 +75,11 @@ public class QueryResourceQueryResultPusherFactory
     );
   }
 
+  /**
+   * Handles query results for {@link QueryResource}, pushing the results to the client.
+   * <p>
+   * It uses the provided {@link QueryLifecycle} to execute the query and writes the results via {@link QueryResource.NativeQueryWriter}.
+   */
   public static class QueryResourceQueryResultPusher extends QueryResultPusher
   {
     private final HttpServletRequest req;

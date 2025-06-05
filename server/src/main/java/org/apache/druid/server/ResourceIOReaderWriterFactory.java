@@ -42,7 +42,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 
-// TODO(laksh): javadocs
+/**
+ * Factory for creating instances of {@link ResourceIOReaderWriter}.
+ */
 public class ResourceIOReaderWriterFactory
 {
 
@@ -63,6 +65,10 @@ public class ResourceIOReaderWriterFactory
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
   }
 
+  /**
+   * Creates a {@link ResourceIOReaderWriter} instance. The response writer is based on request accept header, with a
+   * fallback to content type if the accept header is not provided.
+   */
   public ResourceIOReaderWriter factorize(HttpServletRequest req, boolean pretty)
   {
     String requestType = req.getContentType();
@@ -93,7 +99,9 @@ public class ResourceIOReaderWriterFactory
     return mapper.copy().registerModule(new SimpleModule().addSerializer(DateTime.class, new DateTimeSerializer()));
   }
 
-
+  /**
+   * Encapsulates the mapper for the request and the {@link ResourceIOWriter} for the response.
+   */
   public static class ResourceIOReaderWriter
   {
     private final ObjectMapper requestMapper;
@@ -116,6 +124,9 @@ public class ResourceIOReaderWriterFactory
     }
   }
 
+  /**
+   * Handles writing query response to the client in different formats.
+   */
   public static class ResourceIOWriter
   {
     private final String responseType;
@@ -141,6 +152,9 @@ public class ResourceIOReaderWriterFactory
       return responseType;
     }
 
+    /**
+     * Creates a mapper for writing output.
+     */
     ObjectMapper newOutputWriter(
         @Nullable QueryToolChest<?, Query<?>> toolChest,
         @Nullable Query<?> query,
@@ -157,11 +171,17 @@ public class ResourceIOReaderWriterFactory
       return isPretty ? decoratedMapper.copy().enable(SerializationFeature.INDENT_OUTPUT) : decoratedMapper;
     }
 
+    /**
+     * Builds a {@link Response} with ok status and the given object serialized to the response format.
+     */
     public Response ok(Object object) throws IOException
     {
       return Response.ok(newOutputWriter(null, null, false).writeValueAsString(object), responseType).build();
     }
 
+    /**
+     * Builds a {@link Response} with internal server error status and the given exception.
+     */
     public Response gotError(Exception e) throws IOException
     {
       return buildNonOkResponse(
@@ -170,6 +190,9 @@ public class ResourceIOReaderWriterFactory
       );
     }
 
+    /**
+     * Builds a {@link Response} with the given status and the exception.
+     */
     public Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
     {
       return Response.status(status)
