@@ -46,7 +46,7 @@ public class Bitmap64ExactCountModule implements DruidModule
             .registerSubtypes(
                 new NamedType(Bitmap64ExactCountMergeAggregatorFactory.class, MERGE_TYPE_NAME),
                 new NamedType(Bitmap64ExactCountBuildAggregatorFactory.class, BUILD_TYPE_NAME),
-                new NamedType(Bitmap64ExactCountPostAggregator.class, TYPE_NAME)
+                new NamedType(Bitmap64ExactCountPostAggregator.class, "bitmap64ExactCount")
             )
             .addSerializer(
                 RoaringBitmap64Counter.class,

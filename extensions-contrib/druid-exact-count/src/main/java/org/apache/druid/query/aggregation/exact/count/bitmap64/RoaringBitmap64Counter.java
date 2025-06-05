@@ -43,26 +43,19 @@ public class RoaringBitmap64Counter implements Bitmap64
     this.bitmap = bitmap;
   }
 
-  public static RoaringBitmap64Counter fromInputStream(ByteArrayInputStream byteIn)
+  public static RoaringBitmap64Counter fromBytes(byte[] bytes)
   {
+    ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
     try {
-      DataInputStream in = new DataInputStream(byteIn);
+      DataInputStream in = new DataInputStream(inputStream);
       Roaring64NavigableMap bitmap = new Roaring64NavigableMap();
       bitmap.deserialize(in);
       return new RoaringBitmap64Counter(bitmap);
     }
     catch (Exception e) {
       log.error(e, "Failed to deserialize RoaringBitmap64Counter from bytes");
-      throw new RuntimeException(
-          "Failed to deserialize RoaringBitmap64Counter from bytes. Error: " + e.getMessage(),
-          e
-      );
+      throw new RuntimeException(e);
     }
-  }
-
-  public static RoaringBitmap64Counter fromBytes(byte[] bytes)
-  {
-    return fromInputStream(new ByteArrayInputStream(bytes));
   }
 
   @Override

@@ -47,8 +47,9 @@ public class Bitmap64ExactCountObjectStrategy implements ObjectStrategy<Bitmap64
       throw new BufferUnderflowException();
     }
 
-    ByteArrayInputStream inputStream = new ByteArrayInputStream(readOnlyBuffer.array(), 0, numBytes);
-    return RoaringBitmap64Counter.fromInputStream(inputStream);
+    byte[] bytes = new byte[numBytes];
+    readOnlyBuffer.get(bytes, 0, numBytes);
+    return RoaringBitmap64Counter.fromBytes(bytes);
   }
 
   @Nullable
