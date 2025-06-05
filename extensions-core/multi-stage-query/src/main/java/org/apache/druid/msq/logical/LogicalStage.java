@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.logical;
 
-import org.apache.druid.msq.dart.controller.sql.LogicalStageToQueryDefinitionTranslator.StageMaker2;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
@@ -67,8 +66,6 @@ public interface LogicalStage
    * Logical row signature this node supposed to produce.
    */
   RowSignature getLogicalRowSignature();
-
-  void buildCurrentStage2(StageMaker2 stageMaker2);
 
 
 }
