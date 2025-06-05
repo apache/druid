@@ -78,6 +78,7 @@ public class DruidHttpClientConfig
 
   public int getNumConnections()
   {
+    LOG.info("Requested number of connections: %d", numConnections);
     return numConnections;
   }
 
@@ -88,6 +89,7 @@ public class DruidHttpClientConfig
 
   public int getNumMaxThreads()
   {
+    LOG.info("Requested number of max threads: %d", numMaxThreads);
     return numMaxThreads;
   }
 

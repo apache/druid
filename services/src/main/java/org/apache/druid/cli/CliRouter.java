@@ -38,6 +38,7 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
+import org.apache.druid.server.http.RouterBindingModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupSerdeModule;
@@ -94,6 +95,7 @@ public class CliRouter extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
         JettyHttpClientModule.global(),
+        new RouterBindingModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);

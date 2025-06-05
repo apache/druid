@@ -186,6 +186,12 @@ public class SqlResource
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
+      log.info("Test Received SQL query with id [%s]", sqlQueryId);
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
 
       QueryResultPusher pusher = makePusher(req, stmt, sqlQuery);
       return pusher.push();
