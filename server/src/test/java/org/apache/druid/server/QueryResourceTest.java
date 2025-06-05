@@ -620,12 +620,17 @@ public class QueryResourceTest
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
