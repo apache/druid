@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.dart.controller.sql.LogicalStageToQueryDefinitionTranslator.StageMaker2;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -127,7 +128,6 @@ public class LogicalStageBuilder
       sdb.shuffleSpec(stageMaker.shuffleFor(keyColumns));
       return sdb;
     }
-
   }
 
   class StageMaker
@@ -245,6 +245,10 @@ public class LogicalStageBuilder
     {
       throw DruidException.defensive("This should have been implemented - or not reach this point!");
     }
+    public void buildCurrentStage2(StageMaker2 stageMaker2) {
+      throw DruidException.defensive("This should have been implemented - or not reach this point!");
+
+    };
 
     @Override
     public final QueryDefinition build()
@@ -294,6 +298,14 @@ public class LogicalStageBuilder
       stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
       stageMaker.pushSortStage(signature, Collections.emptyList());
       return null;
+    }
+
+    @Override
+    public void buildCurrentStage2(StageMaker2 stageMaker)
+    {
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
     }
 
     @Override
