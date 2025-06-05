@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.exact.count.bitmap64;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayInputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 

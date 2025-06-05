@@ -20,12 +20,14 @@
 package org.apache.druid.query.aggregation.exact.count.bitmap64.sql;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountMergeAggregatorFactory;
 import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountModule;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -46,6 +48,7 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -84,6 +87,10 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
                                                     new Bitmap64ExactCountBuildAggregatorFactory(
                                                         "unique_m1_values",
                                                         "m1"
+                                                    ),
+                                                    new HyperUniquesAggregatorFactory(
+                                                        "hyper_unique_m1",
+                                                        "m1"
                                                     )
                                                 )
                                                 .withRollup(false)
@@ -103,6 +110,22 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
           index
       );
     }
+  }
+
+  @Test
+  public void testExactCountOnHyperUniqueColumnTypeThrowsError()
+  {
+    DruidException e = Assertions.assertThrows(
+        DruidException.class, () -> testQuery(
+            "SELECT BITMAP64_EXACT_COUNT(hyper_unique_m1) FROM " + DATA_SOURCE,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+
+    Assertions.assertTrue(
+        e.getMessage().contains("Cannot apply 'BITMAP64_EXACT_COUNT' to arguments of type 'BITMAP64_EXACT_COUNT(<COMPLEX<HYPERUNIQUE>>)'")
+    );
   }
 
   @Test
@@ -175,6 +198,7 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
     String sql = "SELECT __time, BITMAP64_EXACT_COUNT(unique_m1_values) FROM " + DATA_SOURCE + " "
                  + "GROUP BY __time "
                  + "ORDER BY __time";
+
     testQuery(
         sql,
         ImmutableList.of(
