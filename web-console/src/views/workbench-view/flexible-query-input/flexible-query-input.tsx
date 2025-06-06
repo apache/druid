@@ -158,13 +158,12 @@ export class FlexibleQueryInput extends React.PureComponent<
           if (allText.trim().startsWith('{')) {
             callback(null, []);
           } else {
-            const lineBefore = line.slice(0, pos.column - prefix.length - 1);
-            const keywordMatch = /(\w+)\s*$/.exec(lineBefore) || [];
+            const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
             callback(
               null,
               getSqlCompletions({
                 allText,
-                keywordBeforePrefix: keywordMatch[1],
+                lineBeforePrefix,
                 charBeforePrefix,
                 prefix,
                 columnMetadata: getColumnMetadata(),

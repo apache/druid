@@ -24,15 +24,71 @@ describe('sql-completions', () => {
   describe('getSqlCompletions', () => {
     const baseOptions = {
       allText: '',
-      keywordBeforePrefix: undefined,
+      lineBeforePrefix: '',
       charBeforePrefix: '',
       prefix: '',
     };
+
+    it('returns empty array when in a single line comment', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: '-- This is a comment',
+        prefix: 'SEL',
+      });
+      expect(completions).toEqual([]);
+    });
+
+    it('returns empty array when typing after comment marker', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: 'SELECT * FROM table -- ',
+        prefix: 'com',
+      });
+      expect(completions).toEqual([]);
+    });
+
+    it('returns empty array when comment is in middle of line', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: 'SELECT -- some comment',
+        prefix: 'FR',
+      });
+      expect(completions).toEqual([]);
+    });
 
     it('returns empty array when prefix is a number', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
         prefix: '123',
+      });
+      expect(completions).toEqual([]);
+    });
+
+    it('returns completions before comment marker on same line', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: 'SELECT ',
+        prefix: 'FR',
+      });
+      expect(completions.length).toBeGreaterThan(0);
+      const keywordCompletions = completions.filter(c => c.meta === 'keyword');
+      expect(keywordCompletions.length).toBeGreaterThan(0);
+    });
+
+    it('returns empty array even when comment contains SQL keywords', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: '-- TODO: need to SELECT * FROM',
+        prefix: 'WHE',
+      });
+      expect(completions).toEqual([]);
+    });
+
+    it('returns empty array for indented comments', () => {
+      const completions = getSqlCompletions({
+        ...baseOptions,
+        lineBeforePrefix: '    -- indented comment',
+        prefix: 'FRO',
       });
       expect(completions).toEqual([]);
     });
@@ -61,7 +117,7 @@ describe('sql-completions', () => {
     it('returns keyword suggestions after SELECT', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
-        keywordBeforePrefix: 'SELECT',
+        lineBeforePrefix: 'SELECT',
       });
 
       const keywordCompletions = completions.filter(c => c.meta === 'keyword');
@@ -75,7 +131,7 @@ describe('sql-completions', () => {
     it('does not include functions after keywords that cannot be followed by functions', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
-        keywordBeforePrefix: 'LIMIT',
+        lineBeforePrefix: 'LIMIT',
       });
 
       const functionCompletions = completions.filter(c => c.meta === 'function');
@@ -88,7 +144,7 @@ describe('sql-completions', () => {
     it('includes functions after keywords that can be followed by functions', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
-        keywordBeforePrefix: 'WHERE',
+        lineBeforePrefix: 'WHERE',
       });
 
       const functionCompletions = completions.filter(c => c.meta === 'function');
@@ -116,7 +172,7 @@ describe('sql-completions', () => {
 
       const completions = getSqlCompletions({
         ...baseOptions,
-        keywordBeforePrefix: 'DESC',
+        lineBeforePrefix: 'DESC',
         columnMetadata,
       });
 
@@ -146,7 +202,7 @@ describe('sql-completions', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
         allText: 'SELECT * FROM "wikipedia"',
-        keywordBeforePrefix: 'WHERE',
+        lineBeforePrefix: 'WHERE',
         columnMetadata,
       });
 
@@ -159,7 +215,7 @@ describe('sql-completions', () => {
     it('includes context keys after SET keyword', () => {
       const completions = getSqlCompletions({
         ...baseOptions,
-        keywordBeforePrefix: 'SET',
+        lineBeforePrefix: 'SET',
       });
 
       const contextCompletions = completions.filter(c => c.meta === 'context');

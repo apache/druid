@@ -164,7 +164,7 @@ const KNOWN_SQL_PARTS: Record<string, boolean> = {
 
 export interface GetSqlCompletionsOptions {
   allText: string;
-  keywordBeforePrefix: string | undefined;
+  lineBeforePrefix: string;
   charBeforePrefix: string;
   prefix: string;
   columnMetadata?: readonly ColumnMetadata[];
@@ -173,12 +173,17 @@ export interface GetSqlCompletionsOptions {
 
 export function getSqlCompletions({
   allText,
-  keywordBeforePrefix,
+  lineBeforePrefix,
   charBeforePrefix,
   prefix,
   columnMetadata,
   columns,
 }: GetSqlCompletionsOptions): Ace.Completion[] {
+  // We are in a single line comment
+  if (lineBeforePrefix.startsWith('--') || lineBeforePrefix.includes(' --')) {
+    return [];
+  }
+
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
   if (charBeforePrefix === "'") {
@@ -189,9 +194,7 @@ export function getSqlCompletions({
     }));
   }
 
-  if (typeof keywordBeforePrefix === 'string') {
-    keywordBeforePrefix = keywordBeforePrefix.toUpperCase();
-  }
+  const keywordBeforePrefix = (/(\w+)\s*$/.exec(lineBeforePrefix) || [])[1]?.toUpperCase();
 
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {

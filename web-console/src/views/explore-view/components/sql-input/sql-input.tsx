@@ -87,13 +87,12 @@ export class SqlInput extends React.PureComponent<SqlInputProps> {
           const allText = session.getValue();
           const line = session.getLine(pos.row);
           const charBeforePrefix = line[pos.column - prefix.length - 1];
-          const lineBefore = line.slice(0, pos.column - prefix.length - 1);
-          const keywordMatch = /(\w+)\s*$/.exec(lineBefore) || [];
+          const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
           callback(
             null,
             getSqlCompletions({
               allText,
-              keywordBeforePrefix: keywordMatch[1],
+              lineBeforePrefix,
               charBeforePrefix,
               prefix,
               columns: getColumns(),
