@@ -542,6 +542,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1 LIMIT 10",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(DATA_SOURCE)
@@ -556,18 +557,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(
             new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
+        )
     );
   }
 
