@@ -149,8 +149,10 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
         }
       }
     }
-    // if the input is a direct array column, we can use sweet array filter
-    if (leftExpr.isDirectColumnAccess() && leftExpr.isArray()) {
+    // if this is really ARRAY_CONTAINS (not the subclass MV_CONTAINS), and the input is a direct array column,
+    // we can use sweet array filter
+    final boolean isArrayContains = SQL_FUNCTION.equals(calciteOperator());
+    if (isArrayContains && leftExpr.isDirectColumnAccess() && leftExpr.isArray()) {
       Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an AND of ArrayContainsElement filters, we need to extract all array
       // elements. For now, we can optimize only when rightExpr is a literal because there is no way to extract the

@@ -138,6 +138,7 @@ public class MultiValueStringOperatorConversions
   }
 
   /**
+   * Extends {@link ArrayContainsOperatorConversion} to get the filter conversion behavior.
    * Private: use singleton {@link #CONTAINS}.
    */
   private static class Contains extends ArrayContainsOperatorConversion
@@ -337,6 +338,7 @@ public class MultiValueStringOperatorConversions
   }
 
   /**
+   * Extends {@link ArrayOverlapOperatorConversion} to get the filter conversion behavior.
    * Private: use singleton {@link #OVERLAP}.
    */
   private static class Overlap extends ArrayOverlapOperatorConversion
