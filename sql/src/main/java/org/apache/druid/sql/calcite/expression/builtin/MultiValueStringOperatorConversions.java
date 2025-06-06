@@ -173,25 +173,6 @@ public class MultiValueStringOperatorConversions
       return "mv_contains";
     }
 
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      return OperatorConversions.convertCall(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              druidExpressions
-          )
-      );
-    }
-
     @Nullable
     @Override
     public DruidExpression toDruidExpressionWithPostAggOperands(
