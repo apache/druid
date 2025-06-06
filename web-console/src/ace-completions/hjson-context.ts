@@ -40,6 +40,13 @@ export interface HjsonContext {
    * Whether the cursor is positioned inside a comment (single-line or multi-line)
    */
   isEditingComment: boolean;
+
+  /**
+   * The current JSON object being edited at the cursor position.
+   * This is the object that contains the property/value being typed.
+   * For completions, this provides context about what properties already exist.
+   */
+  currentObject: any;
 }
 
 /**
@@ -57,6 +64,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
       isEditingKey: true,
       currentKey: undefined,
       isEditingComment: false,
+      currentObject: {},
     };
   }
 
@@ -309,6 +317,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
     isEditingKey: finalIsEditingKey,
     currentKey: finalCurrentKey,
     isEditingComment: finalIsEditingComment,
+    currentObject: {}, // TODO: Implement proper object extraction
   };
 }
 
