@@ -84,6 +84,12 @@ DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
           "type" : "intervals",
           "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
         },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "substring(\"dim1\", 0, 1)",
+          "outputType" : "STRING"
+        } ],
         "filter" : {
           "type" : "not",
           "field" : {
@@ -97,15 +103,10 @@ DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
           "type" : "all"
         },
         "dimensions" : [ {
-          "type" : "extraction",
-          "dimension" : "dim1",
+          "type" : "default",
+          "dimension" : "v0",
           "outputName" : "d0",
-          "outputType" : "STRING",
-          "extractionFn" : {
-            "type" : "substring",
-            "index" : 0,
-            "length" : 1
-          }
+          "outputType" : "STRING"
         } ],
         "limitSpec" : {
           "type" : "NoopLimitSpec"

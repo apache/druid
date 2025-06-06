@@ -54,9 +54,7 @@ import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorF
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -253,14 +251,17 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                             .setDataSource(CalciteTests.DATASOURCE1)
                                                             .setInterval(querySegmentSpec(Filtration.eternity()))
                                                             .setGranularity(Granularities.ALL)
+                                                            .setVirtualColumns(
+                                                                expressionVirtualColumn(
+                                                                    "v0",
+                                                                    "substring(\"dim1\", 0, 1)",
+                                                                    ColumnType.STRING
+                                                                )
+                                                            )
                                                             .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
                                                             .setDimensions(
                                                                 dimensions(
-                                                                    new ExtractionDimensionSpec(
-                                                                        "dim1",
-                                                                        "d0",
-                                                                        new SubstringDimExtractionFn(0, 1)
-                                                                    )
+                                                                    new DefaultDimensionSpec("v0", "d0")
                                                                 )
                                                             )
                                                             .setContext(QUERY_CONTEXT_DEFAULT)
