@@ -221,7 +221,7 @@ describe('getHjsonContext', () => {
         isEditingKey: false,
         currentKey: 'dataSource',
         isEditingComment: false,
-        currentObject: {},
+        currentObject: { queryType: 'scan' },
       });
     });
     it('handles trailing commas (Hjson feature)', () => {
@@ -235,7 +235,7 @@ describe('getHjsonContext', () => {
         isEditingKey: true,
         currentKey: undefined,
         isEditingComment: false,
-        currentObject: {},
+        currentObject: { queryType: 'scan', dataSource: 'wikipedia' },
       });
     });
     it('handles incomplete nested structure', () => {
