@@ -51,9 +51,9 @@ import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 {
@@ -153,7 +153,7 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Dart
     Map<String, Worker> workerMap()
     {
-      return new HashMap<String, Worker>();
+      return new ConcurrentHashMap<>();
     }
   }
 }
