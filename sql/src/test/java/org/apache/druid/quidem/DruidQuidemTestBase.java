@@ -126,7 +126,7 @@ public abstract class DruidQuidemTestBase
     for (String filter : filterStr.split(",")) {
 
       if (!filter.endsWith("*") && !filter.endsWith(IQ_SUFFIX)) {
-        filter = filterStr + IQ_SUFFIX;
+        filter = filter + IQ_SUFFIX;
       }
       fileFilters.add(new WildcardFileFilter(filter));
     }
