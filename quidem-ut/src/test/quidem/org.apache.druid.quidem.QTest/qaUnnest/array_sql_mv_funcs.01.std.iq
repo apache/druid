@@ -793,11 +793,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
+| false |
+| false |
 | true  |
 | true  |
 | true  |
-|       |
-|       |
 +-------+
 (9 rows)
 
@@ -823,11 +823,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
+| false |
+| false |
 | true  |
 | true  |
 | true  |
-|       |
-|       |
 +-------+
 (9 rows)
 
@@ -853,11 +853,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
+| false |
+| false |
 | true  |
 | true  |
 | true  |
-|       |
-|       |
 +-------+
 (9 rows)
 
@@ -883,11 +883,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
+| false |
+| false |
 | true  |
 | true  |
 | true  |
-|       |
-|       |
 +-------+
 (9 rows)
 

@@ -441,6 +441,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_contains('test', 'other')", 0L);
     assertExpr("mv_contains('test', ['test'])", 1L);
     assertExpr("mv_contains('test', ['other'])", 0L);
+    assertExpr("mv_contains('hello', 'hello')", 1L);
+    assertExpr("mv_contains('hello', 'world')", 0L);
+    assertExpr("mv_contains('hello', 42)", 0L);
+    assertExpr("mv_contains('hello', 3.14)", 0L);
+    assertExpr("mv_contains('hello', ['hello'])", 1L);
+    assertExpr("mv_contains('hello', ['hello', 'world'])", 0L);
+    assertExpr("mv_contains('hello', [42])", 0L);
+    assertExpr("mv_contains('hello', [3.14])", 0L);
+    assertExpr("mv_contains('hello', null)", 0L);
 
     // Tests where the first argument is null
     assertExpr("mv_contains(null, [3, 4])", 0L);
@@ -463,11 +472,12 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_contains(42, 42)", 1L);
     assertExpr("mv_contains(42, 43)", 0L);
     assertExpr("mv_contains(42, 'test')", 0L);
-    assertExpr("mv_contains(42, 42.0)", 1L);
+    assertExpr("mv_contains(42, 42.0)", 0L);
     assertExpr("mv_contains(42, [42])", 1L);
     assertExpr("mv_contains(42, [42, 43])", 0L);
+    assertExpr("mv_contains(42, [42, 43, null])", 0L);
     assertExpr("mv_contains(42, ['test'])", 0L);
-    assertExpr("mv_contains(42, [42.0])", 1L);
+    assertExpr("mv_contains(42, [42.0])", 0L);
     assertExpr("mv_contains(42, null)", 0L);
 
     // Tests where the first argument is a double
@@ -476,9 +486,11 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_contains(3.14, 'pi')", 0L);
     assertExpr("mv_contains(3.14, 3.14)", 1L);
     assertExpr("mv_contains(3.14, [3.14])", 1L);
+    assertExpr("mv_contains(3.14, [3.14])", 1L);
     assertExpr("mv_contains(3.14, [3, 3.14])", 0L);
-    assertExpr("mv_contains(3.14, ['3.14'])", 0L);
+    assertExpr("mv_contains(3.14, ['3.14'])", 1L);
     assertExpr("mv_contains(3.14, [3.14, 6.28])", 0L);
+    assertExpr("mv_contains(3.14, [3.14, 6.28, null])", 0L);
     assertExpr("mv_contains(3.14, null)", 0L);
   }
 
@@ -510,7 +522,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_overlap([4, 5, 6], null)", 0L);
     assertExpr("mv_overlap([4, 5, 6], [null])", 0L);
     assertExpr("mv_overlap(b, c)", 0L);
-    assertExpr("mv_overlap(c, b)", 1L); // (c, b) = 1L even though (b, c) = 0L, because 2nd arg determines match type
+    assertExpr("mv_overlap(c, b)", 0L); // (c, b) = 0L now that 2nd arg is cast to string array
 
     // Tests where the first argument is a string array that does not contain null
     assertExpr("mv_overlap(a, emptyArray)", 0L);
@@ -537,6 +549,18 @@ public class FunctionTest extends InitializedNullHandlingTest
     // Tests where the first argument is a non-null string
     assertExpr("mv_overlap('test', ['test', 'other'])", 1L);
     assertExpr("mv_overlap('test', ['other'])", 0L);
+    assertExpr("mv_overlap('hello', 'hello')", 1L);
+    assertExpr("mv_overlap('hello', 'world')", 0L);
+    assertExpr("mv_overlap('hello', 42)", 0L);
+    assertExpr("mv_overlap('hello', 3.14)", 0L);
+    assertExpr("mv_overlap('hello', ['hello', 'world'])", 1L);
+    assertExpr("mv_overlap('hello', ['foo', 'bar'])", 0L);
+    assertExpr("mv_overlap('hello', ['foo', 'bar', null])", 0L);
+    assertExpr("mv_overlap('hello', [42, 43])", 0L);
+    assertExpr("mv_overlap('hello', [42, 43, null])", 0L);
+    assertExpr("mv_overlap('hello', [3.14, 6.28])", 0L);
+    assertExpr("mv_overlap('hello', [3.14, 6.28, null])", 0L);
+    assertExpr("mv_overlap('hello', null)", 0L);
 
     // Tests where the first argument is null
     assertExpr("mv_overlap(null, [4, 5, 6])", null);
@@ -557,12 +581,12 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_overlap(42, 42)", 1L);
     assertExpr("mv_overlap(42, 43)", 0L);
     assertExpr("mv_overlap(42, 'test')", 0L);
-    assertExpr("mv_overlap(42, 42.0)", 1L);
+    assertExpr("mv_overlap(42, 42.0)", 0L);
     assertExpr("mv_overlap(42, [41, 42, 43])", 1L);
     assertExpr("mv_overlap(42, [40, 41])", 0L);
     assertExpr("mv_overlap(42, ['test', 'foo'])", 0L);
-    assertExpr("mv_overlap(42, [41.0, 42.0, 43.0])", 1L);
-    assertExpr("mv_overlap(42, null)", null);
+    assertExpr("mv_overlap(42, [41.0, 42.0, 43.0])", 0L);
+    assertExpr("mv_overlap(42, null)", 0L);
 
     // Tests where the first argument is a double
     assertExpr("mv_overlap(3.14, 3.14)", 1L);
@@ -570,10 +594,11 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_overlap(3.14, 'pi')", 0L);
     assertExpr("mv_overlap(3.14, 3)", 0L);
     assertExpr("mv_overlap(3.14, [3.14, 6.28])", 1L);
+    assertExpr("mv_overlap(3.14, [3.14, 6.28, null])", 1L);
     assertExpr("mv_overlap(3.14, [1, 2, 3])", 0L);
-    assertExpr("mv_overlap(3.14, ['pi', '3.14'])", 0L);
+    assertExpr("mv_overlap(3.14, ['pi', '3.14'])", 1L);
     assertExpr("mv_overlap(3.14, [1.0, 2.0, 3.14])", 1L);
-    assertExpr("mv_overlap(3.14, null)", null);
+    assertExpr("mv_overlap(3.14, null)", 0L);
   }
 
   @Test

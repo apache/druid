@@ -456,14 +456,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(a_float, 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -473,14 +473,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -490,14 +490,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -507,14 +507,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(a_str, 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -524,14 +524,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -541,14 +541,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -558,14 +558,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(a_null, 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -575,14 +575,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -592,14 +592,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -609,14 +609,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(a_empty, 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -626,14 +626,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -643,14 +643,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -719,14 +719,14 @@ Cannot apply 'MV_CONTAINS' to arguments of type 'MV_CONTAINS(
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -736,14 +736,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok

@@ -4192,11 +4192,8 @@ public interface Function extends NamedFunction
     {
       final ExprEval<?> arg1 = Function.harmonizeMultiValue(args.get(0).eval(bindings));
       final ExprEval<?> arg2 = args.get(1).eval(bindings);
-
-      // Cast arg1 to arg2's type.
-      final Object[] array2 = arg2.asArray();
-      final ExpressionType array2Type = arg2.asArrayType();
-      final Object[] array1 = arg1.castTo(array2Type).asArray();
+      final Object[] array1 = arg1.asArray();
+      final Object[] array2 = arg2.castTo(ExpressionType.STRING_ARRAY).asArray();
 
       // If the second argument is null, check if the first argument contains null.
       if (array2 == null) {
@@ -4255,7 +4252,7 @@ public interface Function extends NamedFunction
 
       if (arg2.isLiteral()) {
         final ExprEval<?> rhsEval = args.get(1).eval(InputBindings.nilBindings());
-        final Object[] rhsArray = rhsEval.asArray();
+        final Object[] rhsArray = rhsEval.castTo(ExpressionType.STRING_ARRAY).asArray();
 
         if (rhsArray == null) {
           return new MvOverlapConstantNull();
@@ -4264,8 +4261,7 @@ public interface Function extends NamedFunction
         } else if (rhsEval.elementType().isPrimitive()) {
           return new MvOverlapConstantArray(
               new ObjectOpenHashSet<>(rhsArray),
-              arrayContainsNull(rhsArray),
-              rhsEval.asArrayType()
+              arrayContainsNull(rhsArray)
           );
         }
       }
@@ -4296,20 +4292,18 @@ public interface Function extends NamedFunction
     {
       final Set<Object> matchValues;
       final boolean rhsHasNull;
-      final ExpressionType matchArrayType;
 
-      public MvOverlapConstantArray(Set<Object> matchValues, boolean rhsHasNull, ExpressionType matchArrayType)
+      public MvOverlapConstantArray(Set<Object> matchValues, boolean rhsHasNull)
       {
         this.matchValues = matchValues;
         this.rhsHasNull = rhsHasNull;
-        this.matchArrayType = matchArrayType;
       }
 
       @Override
       public ExprEval<?> apply(List<Expr> args, Expr.ObjectBinding bindings)
       {
         final ExprEval<?> arrayExpr1 = Function.harmonizeMultiValue(args.get(0).eval(bindings));
-        final Object[] array1 = arrayExpr1.castTo(matchArrayType).asArray();
+        final Object[] array1 = arrayExpr1.asArray();
 
         for (final Object check : array1) {
           if (matchValues.contains(check)) {
@@ -4347,11 +4341,8 @@ public interface Function extends NamedFunction
     {
       final ExprEval<?> arg1 = Function.harmonizeMultiValue(args.get(0).eval(bindings));
       final ExprEval<?> arg2 = args.get(1).eval(bindings);
-
-      // Cast arg1 to arg2's type.
-      final Object[] array2 = arg2.asArray();
-      final ExpressionType array2Type = arg2.asArrayType();
-      final Object[] array1 = arg1.castTo(array2Type).asArray();
+      final Object[] array1 = arg1.asArray();
+      final Object[] array2 = arg2.castTo(ExpressionType.STRING_ARRAY).asArray();
 
       // If the second argument is null, check if the first argument contains null.
       if (array2 == null) {
@@ -4397,16 +4388,16 @@ public interface Function extends NamedFunction
 
       if (arg2.isLiteral()) {
         final ExprEval<?> rhsEval = args.get(1).eval(InputBindings.nilBindings());
-        final Object[] rhsArray = rhsEval.asArray();
+        final Object[] rhsArray = rhsEval.castTo(ExpressionType.STRING_ARRAY).asArray();
 
         if (rhsArray == null) {
-          return new MvContainsConstantScalar(null, rhsEval.asArrayType());
+          return new MvContainsConstantScalar(null);
         } else if (rhsArray.length == 0) {
           return new MvContainsConstantEmpty();
         } else if (rhsArray.length == 1) {
-          return new MvContainsConstantScalar(rhsArray[0], rhsEval.asArrayType());
+          return new MvContainsConstantScalar((String) rhsArray[0]);
         } else if (rhsEval.elementType().isPrimitive()) {
-          return new MvContainsConstantArray(rhsArray, rhsEval.asArrayType());
+          return new MvContainsConstantArray(rhsArray);
         }
       }
 
@@ -4416,19 +4407,17 @@ public interface Function extends NamedFunction
     private static final class MvContainsConstantArray extends MvContainsFunction
     {
       private final List<Object> matchValues;
-      private final ExpressionType matchArrayType;
 
-      public MvContainsConstantArray(final Object[] matchValues, final ExpressionType matchArrayType)
+      public MvContainsConstantArray(final Object[] matchValues)
       {
         this.matchValues = Arrays.asList(matchValues);
-        this.matchArrayType = matchArrayType;
       }
 
       @Override
       public ExprEval<?> apply(List<Expr> args, Expr.ObjectBinding bindings)
       {
         final ExprEval<?> arrayExpr1 = Function.harmonizeMultiValue(args.get(0).eval(bindings));
-        final Object[] array1 = arrayExpr1.castTo(matchArrayType).asArray();
+        final Object[] array1 = arrayExpr1.asArray();
         return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(matchValues));
       }
     }
@@ -4436,20 +4425,18 @@ public interface Function extends NamedFunction
     private static final class MvContainsConstantScalar extends MvContainsFunction
     {
       @Nullable
-      private final Object matchValue;
-      private final ExpressionType matchArrayType;
+      private final String matchValue;
 
-      public MvContainsConstantScalar(@Nullable final Object matchValue, final ExpressionType matchArrayType)
+      public MvContainsConstantScalar(@Nullable final String matchValue)
       {
         this.matchValue = matchValue;
-        this.matchArrayType = matchArrayType;
       }
 
       @Override
       public ExprEval<?> apply(List<Expr> args, Expr.ObjectBinding bindings)
       {
         final ExprEval<?> arrayExpr1 = Function.harmonizeMultiValue(args.get(0).eval(bindings));
-        final Object[] array1 = arrayExpr1.castTo(matchArrayType).asArray();
+        final Object[] array1 = arrayExpr1.asArray();
         return ExprEval.ofLongBoolean(Arrays.asList(array1).contains(matchValue));
       }
     }

@@ -378,11 +378,8 @@ WHERE c_long IN (0,
 |  true |
 |  true |
 |  true |
-|       |
-|       |
-|       |
 +-------+
-(15 rows)
+(12 rows)
 
 !ok
 
