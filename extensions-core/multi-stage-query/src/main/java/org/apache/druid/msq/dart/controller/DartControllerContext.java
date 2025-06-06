@@ -34,6 +34,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
@@ -76,6 +77,8 @@ public class DartControllerContext implements ControllerContext
    * Default to scatter/gather style: fan in to a single worker after the leaf stage(s).
    */
   public static final int DEFAULT_MAX_NON_LEAF_WORKER_COUNT = 1;
+
+  public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.REALTIME;
 
   private final Injector injector;
   private final ObjectMapper jsonMapper;

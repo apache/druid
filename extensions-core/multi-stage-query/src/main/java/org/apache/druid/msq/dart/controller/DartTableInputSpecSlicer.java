@@ -95,7 +95,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   {
     this.workerIdToNumber = workerIdToNumber;
     this.serverView = serverView;
-    this.segmentSource = MultiStageQueryContext.getSegmentSources(queryContext, SegmentSource.REALTIME);
+    this.segmentSource = MultiStageQueryContext.getSegmentSources(queryContext, DartControllerContext.DEFAULT_SEGMENT_SOURCE);
     this.cloneQueryMode = queryContext.getCloneQueryMode();
   }
 
