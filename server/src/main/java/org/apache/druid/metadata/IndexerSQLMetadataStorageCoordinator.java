@@ -2200,16 +2200,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // the previous task finishes publishing.
       return SegmentPublishResult.retryableFailure(
           "The new start metadata state[%s] is ahead of the last committed"
-          + " end state[%s]. Try resetting the supervisor.",
-          startMetadata, oldCommitMetadataFromDb
+          + " end state[%s]. Try resetting the supervisor for datasource[%s].",
+          startMetadata, oldCommitMetadataFromDb, dataSource
       );
     }
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
       return SegmentPublishResult.fail(
-          "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
-          oldCommitMetadataFromDb, startMetadata
+          "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor for datasource[%s].",
+          oldCommitMetadataFromDb, startMetadata, dataSource
       );
     }
 
