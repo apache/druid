@@ -392,7 +392,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   private static class TestSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
   {
     private SeekableStreamSupervisor supervisor;
-    private String id;
 
     public TestSeekableStreamSupervisorSpec(
         SeekableStreamSupervisorIngestionSpec ingestionSchema,
@@ -428,19 +427,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       );
 
       this.supervisor = supervisor;
-      this.id = id;
-    }
-
-    @Override
-    public List<String> getDataSources()
-    {
-      return new ArrayList<>();
-    }
-
-    @Override
-    public String getId()
-    {
-      return id;
     }
 
     @Override
@@ -1296,6 +1282,52 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         "id1"
     );
     Assert.assertNull(spec.getContextValue("key_not_exists"));
+  }
+
+  @Test
+  public void testSupervisorIdEqualsDataSourceIfNull()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        null
+    );
+    Assert.assertEquals(spec.getDataSources().get(0), spec.getId());
+  }
+
+  @Test
+  public void testSupervisorIdDifferentFromDataSource()
+  {
+    mockIngestionSchema();
+    TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        ImmutableMap.of("key", "value"),
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        SUPERVISOR
+    );
+    Assert.assertEquals(SUPERVISOR, spec.getId());
   }
 
   @Test
