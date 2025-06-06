@@ -26,6 +26,7 @@ import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
 
+import { getHjsonCompletions } from '../../../ace-completions/hjson-completions';
 import { getSqlCompletions } from '../../../ace-completions/sql-completions';
 import { AppToaster } from '../../../singletons';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
@@ -156,7 +157,18 @@ export class FlexibleQueryInput extends React.PureComponent<
           const line = session.getLine(pos.row);
           const charBeforePrefix = line[pos.column - prefix.length - 1];
           if (allText.trim().startsWith('{')) {
-            callback(null, []);
+            const lines = allText.split('\n').slice(0, pos.row + 1);
+            const lastLineIndex = lines.length - 1;
+            lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
+            console.log(lines);
+            callback(
+              null,
+              getHjsonCompletions({
+                textBefore: lines.join('\n'),
+                charBeforePrefix,
+                prefix,
+              }),
+            );
           } else {
             const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
             callback(

@@ -18,16 +18,14 @@
 
 export interface CompletionItem {
   value: string;
-  label?: string;
   documentation?: string;
-  insertText?: string;
-  type?: 'property' | 'value' | 'template';
 }
 
 export interface CompletionRule {
   path: string | RegExp;
-  completions: CompletionItem[];
+  isObject?: boolean;
   condition?: (currentObject: any) => boolean;
+  completions: CompletionItem[];
 }
 
 /**
@@ -36,12 +34,15 @@ export interface CompletionRule {
 export function getCompletionsForPath(
   rules: readonly CompletionRule[],
   path: string[],
+  isKey: boolean,
   currentObject: any,
 ): CompletionItem[] {
   const pathStr = pathToString(path);
   const completions: CompletionItem[] = [];
 
   for (const rule of rules) {
+    if (Boolean(rule.isObject) !== Boolean(isKey)) continue;
+
     // Check if path matches
     let pathMatches = false;
     if (typeof rule.path === 'string') {

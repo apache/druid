@@ -15,6 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { sane } from 'druid-query-toolkit';
+
 import { getHjsonContext } from './hjson-context';
 
 describe('getHjsonContext', () => {
@@ -29,6 +31,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor after opening brace with whitespace', () => {
       const result = getHjsonContext('{ ');
       expect(result).toEqual({
@@ -39,6 +42,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor at empty array treated as object', () => {
       const result = getHjsonContext('[');
       expect(result).toEqual({
@@ -50,6 +54,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('key editing', () => {
     it('detects cursor while typing a key', () => {
       const result = getHjsonContext('{ que');
@@ -61,6 +66,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor while typing a quoted key', () => {
       const result = getHjsonContext('{ "que');
       expect(result).toEqual({
@@ -71,6 +77,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor after comma expecting new key', () => {
       const result = getHjsonContext('{ "queryType": "scan", ');
       expect(result).toEqual({
@@ -84,6 +91,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('value editing', () => {
     it('detects cursor after colon expecting value', () => {
       const result = getHjsonContext('{ "queryType": ');
@@ -95,6 +103,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor while typing a string value', () => {
       const result = getHjsonContext('{ "queryType": "sc');
       expect(result).toEqual({
@@ -105,6 +114,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in unquoted value (Hjson feature)', () => {
       const result = getHjsonContext('{ queryType: sc');
       expect(result).toEqual({
@@ -116,6 +126,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('nested objects', () => {
     it('detects cursor in nested object key position', () => {
       const result = getHjsonContext('{ "query": { ');
@@ -127,6 +138,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in deeply nested value position', () => {
       const result = getHjsonContext('{ "query": { "dataSource": { "type": ');
       expect(result).toEqual({
@@ -137,6 +149,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in nested object after comma', () => {
       const result = getHjsonContext('{ "query": { "dataSource": "wikipedia", "queryType": ');
       expect(result).toEqual({
@@ -148,6 +161,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('arrays as objects', () => {
     it('detects cursor in array first position', () => {
       const result = getHjsonContext('{ "dimensions": [');
@@ -159,6 +173,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in array after first element', () => {
       const result = getHjsonContext('{ "dimensions": ["page", ');
       expect(result).toEqual({
@@ -169,6 +184,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in nested object within array', () => {
       const result = getHjsonContext('{ "filters": [{ "type": ');
       expect(result).toEqual({
@@ -179,6 +195,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('detects cursor in array element object key position', () => {
       const result = getHjsonContext('{ "filters": [{ "type": "selector", ');
       expect(result).toEqual({
@@ -190,6 +207,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('complex scenarios', () => {
     it('handles multiline Hjson', () => {
       const hjson = `{
@@ -208,14 +226,16 @@ describe('getHjsonContext', () => {
         currentObject: { type: 'default' },
       });
     });
+
     it('handles Hjson comments', () => {
-      const hjson = `{
-  // This is a comment
-  "queryType": "scan",
-  /* Multi-line
-     comment */
-  "dataSource": `;
-      const result = getHjsonContext(hjson);
+      const result = getHjsonContext(sane`
+        {
+          // This is a comment
+          "queryType": "scan",
+          /* Multi-line
+             comment */
+          "dataSource":
+      `);
       expect(result).toEqual({
         path: [],
         isEditingKey: false,
@@ -224,12 +244,13 @@ describe('getHjsonContext', () => {
         currentObject: { queryType: 'scan' },
       });
     });
+
     it('handles trailing commas (Hjson feature)', () => {
-      const hjson = `{
-  "queryType": "scan",
-  "dataSource": "wikipedia",
-  `;
-      const result = getHjsonContext(hjson);
+      const result = getHjsonContext(sane`
+        {
+          "queryType": "scan",
+          "dataSource": "wikipedia",
+      `);
       expect(result).toEqual({
         path: [],
         isEditingKey: true,
@@ -238,17 +259,54 @@ describe('getHjsonContext', () => {
         currentObject: { queryType: 'scan', dataSource: 'wikipedia' },
       });
     });
+
     it('handles incomplete nested structure', () => {
-      const result = getHjsonContext('{ "query": { "filter": { "type": "and", "fields": [{ ');
+      const result = getHjsonContext(sane`
+        {
+          "queryType": "scan",
+          "dataSource": {
+            "type": "restrict",
+            "base": {
+              "type": "table",
+              "name": "wikipedia"
+            },
+            "policy": {
+              "type": "noRestriction"
+            }
+          },
+          "intervals": {
+            "type": "intervals",
+            "intervals": [
+              "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+            ]
+          },
+      `);
       expect(result).toEqual({
-        path: ['query', 'filter', 'fields', '0'],
+        path: [],
         isEditingKey: true,
         currentKey: undefined,
         isEditingComment: false,
-        currentObject: {},
+        currentObject: {
+          queryType: 'scan',
+          dataSource: {
+            type: 'restrict',
+            base: {
+              type: 'table',
+              name: 'wikipedia',
+            },
+            policy: {
+              type: 'noRestriction',
+            },
+          },
+          intervals: {
+            type: 'intervals',
+            intervals: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
+          },
+        },
       });
     });
   });
+
   describe('edge cases', () => {
     it('handles empty string', () => {
       const result = getHjsonContext('');
@@ -260,6 +318,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('handles just whitespace', () => {
       const result = getHjsonContext('   ');
       expect(result).toEqual({
@@ -270,6 +329,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('handles unclosed string', () => {
       const result = getHjsonContext('{ "queryType": "scan');
       expect(result).toEqual({
@@ -280,6 +340,7 @@ describe('getHjsonContext', () => {
         currentObject: {},
       });
     });
+
     it('handles cursor in middle of key', () => {
       // | represents cursor position conceptually
       // Assuming we only get text up to cursor, so:
@@ -294,6 +355,7 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('comment detection', () => {
     it('detects cursor inside single-line comment', () => {
       const result = getHjsonContext('{ "queryType": "scan", // This is a com');
@@ -305,6 +367,7 @@ describe('getHjsonContext', () => {
         currentObject: { queryType: 'scan' },
       });
     });
+
     it('detects cursor inside multi-line comment', () => {
       const result = getHjsonContext('{ "queryType": "scan", /* This is a multi-line\n   com');
       expect(result).toEqual({
@@ -316,11 +379,13 @@ describe('getHjsonContext', () => {
       });
     });
   });
+
   describe('currentObject property', () => {
     it('returns empty object placeholder for now', () => {
       const result = getHjsonContext('{ "queryType": "timeseries", "granularity": ');
       expect(result.currentObject).toEqual({ queryType: 'timeseries' });
     });
+
     it('includes currentObject in all contexts', () => {
       const result = getHjsonContext('{ "filter": { "type": ');
       expect(result).toHaveProperty('currentObject');

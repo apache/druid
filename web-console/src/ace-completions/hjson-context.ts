@@ -159,6 +159,18 @@ export function getHjsonContext(hjson: string): HjsonContext {
       if (char === stringChar) {
         inString = false;
         stringChar = null;
+
+        // If we just completed a string and we're in an array expecting a value, add it immediately
+        if (
+          expectingValue &&
+          containerStack.length > 0 &&
+          containerStack[containerStack.length - 1].type === 'array'
+        ) {
+          const value = parseValue(currentToken.trim());
+          const currentArray = objectStack[objectStack.length - 1] as any[];
+          currentArray.push(value);
+          currentToken = '';
+        }
       }
       continue;
     }
@@ -173,7 +185,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
 
     // Handle structural characters
     switch (char) {
-      case '{':
+      case '{': {
         if (currentToken.trim()) {
           // If we have a token before {, it's a key
           const key = extractKeyFromToken(currentToken);
@@ -191,18 +203,20 @@ export function getHjsonContext(hjson: string): HjsonContext {
           path.push(String(containerStack[containerStack.length - 1].elementCount));
         }
         containerStack.push({ type: 'object', elementCount: 0 });
-        
+
         // Push new object context
-        objectStack.push({});
-        currentObjectProperties = {};
-        
+        const newObject = {};
+        objectStack.push(newObject);
+        currentObjectProperties = newObject;
+
         expectingValue = false;
         afterColon = false;
         currentToken = '';
         currentKey = undefined;
         break;
+      }
 
-      case '[':
+      case '[': {
         if (currentToken.trim()) {
           // If we have a token before [, it's a key
           const key = extractKeyFromToken(currentToken);
@@ -214,40 +228,67 @@ export function getHjsonContext(hjson: string): HjsonContext {
           path.push(currentKey);
         }
         containerStack.push({ type: 'array', elementCount: 0 });
-        
+
         // Push new array context
-        objectStack.push([]);
-        currentObjectProperties = {};
-        
+        const newArray: any[] = [];
+        objectStack.push(newArray);
+        currentObjectProperties = objectStack[objectStack.length - 2]; // Parent object
+
         expectingValue = true;
         afterColon = false;
         currentToken = '';
         currentKey = undefined;
         break;
+      }
 
       case '}':
       case ']': {
         // Complete current token if any
-        if (currentToken.trim() && expectingValue && afterColon && currentKey) {
+        if (currentToken.trim() && expectingValue && currentKey) {
           // We were in the middle of a value - save it
           const value = parseValue(currentToken.trim());
-          currentObjectProperties[currentKey] = value;
+          if (
+            containerStack.length > 0 &&
+            containerStack[containerStack.length - 1].type === 'array'
+          ) {
+            // Add to array
+            const currentArray = objectStack[objectStack.length - 1] as any[];
+            currentArray.push(value);
+          } else if (afterColon) {
+            // Add to object
+            currentObjectProperties[currentKey] = value;
+          }
         }
 
+        // Get the completed object/array before popping
+        const completedObject =
+          char === '}' ? { ...currentObjectProperties } : objectStack[objectStack.length - 1];
+
         const container = containerStack.pop();
+        let poppedKey: string | undefined;
         if (container) {
           if (path.length > 0) {
-            path.pop();
+            poppedKey = path.pop();
           }
         }
 
         // Pop object context
         objectStack.pop();
+
+        // Store the completed object in its parent if we have a key for it
+        if (poppedKey && objectStack.length > 0) {
+          const parentObject = objectStack[objectStack.length - 1];
+          if (typeof parentObject === 'object' && !Array.isArray(parentObject)) {
+            parentObject[poppedKey] = completedObject;
+          }
+        }
+
+        // Update current object properties to the parent's properties
         const parentContext = objectStack[objectStack.length - 1];
         if (parentContext && typeof parentContext === 'object' && !Array.isArray(parentContext)) {
-          currentObjectProperties = { ...parentContext };
+          currentObjectProperties = parentContext;
         } else {
-          currentObjectProperties = {};
+          currentObjectProperties = objectStack[objectStack.length - 2] || {};
         }
 
         expectingValue =
@@ -278,21 +319,37 @@ export function getHjsonContext(hjson: string): HjsonContext {
           if (currentToken.trim() && afterColon && currentKey) {
             // We just completed a key-value pair
             const value = parseValue(currentToken.trim());
-            currentObjectProperties[currentKey] = value;
+            if (
+              containerStack.length > 0 &&
+              containerStack[containerStack.length - 1].type === 'array'
+            ) {
+              // Add to array
+              const currentArray = objectStack[objectStack.length - 1] as any[];
+              currentArray.push(value);
+            } else {
+              // Add to object
+              currentObjectProperties[currentKey] = value;
+            }
           }
-          
+
           if (containerStack.length > 0) {
             const container = containerStack[containerStack.length - 1];
             if (container.type === 'array') {
               container.elementCount++;
               expectingValue = true;
+              currentKey = String(container.elementCount);
             } else {
               expectingValue = false;
             }
           }
           afterColon = false;
           currentToken = '';
-          currentKey = undefined;
+          if (
+            containerStack.length === 0 ||
+            containerStack[containerStack.length - 1].type !== 'array'
+          ) {
+            currentKey = undefined;
+          }
         } else {
           currentToken += char;
         }
@@ -345,7 +402,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
 
   // Calculate the final current object
   let finalCurrentObject = currentObjectProperties;
-  
+
   // If we're in a comment, preserve the object state from before the comment
   if (finalIsEditingComment) {
     // Use the current object properties as they were before the comment
@@ -405,7 +462,7 @@ function extractKeyFromToken(token: string): string {
 
 function parseValue(token: string): any {
   const trimmed = token.trim();
-  
+
   // Handle quoted strings
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
@@ -413,18 +470,18 @@ function parseValue(token: string): any {
   ) {
     return trimmed.slice(1, -1);
   }
-  
+
   // Handle boolean values
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
   if (trimmed === 'null') return null;
-  
+
   // Handle numbers
   const numMatch = /^-?\d+(\.\d+)?$/.exec(trimmed);
   if (numMatch) {
     return trimmed.includes('.') ? parseFloat(trimmed) : parseInt(trimmed, 10);
   }
-  
+
   // Return as unquoted string (Hjson feature)
   return trimmed;
 }
