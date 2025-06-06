@@ -84,22 +84,15 @@ public class DartQueryableSegment
     DartQueryableSegment that = (DartQueryableSegment) o;
     return workerNumber == that.workerNumber
            && Objects.equals(segment, that.segment)
-           && Objects.equals(interval, that.interval);
+           && Objects.equals(interval, that.interval)
+           && Objects.equals(realtimeServer, that.realtimeServer);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segment, interval, workerNumber);
+    return Objects.hash(segment, interval, workerNumber, realtimeServer);
   }
 
-  @Override
-  public String toString()
-  {
-    return "QueryableDataSegment{" +
-           "segment=" + segment +
-           ", interval=" + interval +
-           ", workerNumber=" + workerNumber +
-           '}';
-  }
+
 }
