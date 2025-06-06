@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -162,38 +161,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Contains()
     {
-      return SQL_FUNCTION;
-    }
-
-    @Override
-    public String getDruidFunctionName()
-    {
-      return "mv_contains";
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpressionWithPostAggOperands(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode,
-        PostAggregatorVisitor postAggregatorVisitor
-    )
-    {
-      return OperatorConversions.convertCallWithPostAggOperands(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          operands -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              operands
-          ),
-          postAggregatorVisitor
-      );
+      super(SQL_FUNCTION, "mv_contains");
     }
   }
 
@@ -362,58 +332,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Overlap()
     {
-      return SQL_FUNCTION;
-    }
-
-    @Override
-    public String getDruidFunctionName()
-    {
-      return "mv_overlap";
-    }
-
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      return OperatorConversions.convertCall(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions ->
-              DruidExpression.ofFunctionCall(
-                  Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-                  getDruidFunctionName(),
-                  druidExpressions
-              )
-      );
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpressionWithPostAggOperands(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode,
-        PostAggregatorVisitor postAggregatorVisitor
-    )
-    {
-      return OperatorConversions.convertCallWithPostAggOperands(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          operands -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              operands
-          ),
-          postAggregatorVisitor
-      );
+      super(SQL_FUNCTION, "mv_overlap");
     }
   }
 

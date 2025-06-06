@@ -62,7 +62,7 @@ public class DirectOperatorConversion implements SqlOperatorConversion
     );
   }
 
-  public String getDruidFunctionName()
+  public final String getDruidFunctionName()
   {
     return druidFunctionName;
   }
