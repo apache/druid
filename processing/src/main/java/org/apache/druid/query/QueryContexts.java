@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.setting.QuerySettingRegistry;
+import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -40,7 +42,14 @@ import java.util.stream.Collectors;
 @PublicApi
 public class QueryContexts
 {
-  public static final String FINALIZE_KEY = "finalize";
+  public static final SettingEntry<Boolean> FINALIZE_KEY = QuerySettingRegistry.register(
+      SettingEntry.newBooleanBuilder()
+                  .name("finalize")
+                  .defaultValue(null)
+                  .description(
+                      "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                  .build());
+
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
@@ -98,7 +107,7 @@ public class QueryContexts
   public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
-   *
+   * <p>
    * Controls the rewrite of:
    * <pre>
    *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
@@ -416,12 +425,13 @@ public class QueryContexts
 
   public static HumanReadableBytes getAsHumanReadableBytes(
       final String key,
-      final Object value,
-      final HumanReadableBytes defaultValue
+      final Object value
   )
   {
     if (null == value) {
-      return defaultValue;
+      return null;
+    } else if (value instanceof HumanReadableBytes) {
+      return (HumanReadableBytes) value;
     } else if (value instanceof Number) {
       return HumanReadableBytes.valueOf(Numbers.parseLong(value));
     } else if (value instanceof String) {
@@ -434,6 +444,16 @@ public class QueryContexts
     }
 
     throw badTypeException(key, "a human readable number", value);
+  }
+
+  public static HumanReadableBytes getAsHumanReadableBytes(
+      final String key,
+      final Object value,
+      final HumanReadableBytes defaultValue
+  )
+  {
+    HumanReadableBytes result = getAsHumanReadableBytes(key, value);
+    return result == null ? defaultValue : result;
   }
 
   /**
