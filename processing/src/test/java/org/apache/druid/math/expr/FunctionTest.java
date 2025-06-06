@@ -458,6 +458,28 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_contains([], [])", 1L);
     assertExpr("mv_contains([], null)", 1L);
     assertExpr("mv_contains([], [null])", 1L);
+
+    // Tests where the first argument is a long
+    assertExpr("mv_contains(42, 42)", 1L);
+    assertExpr("mv_contains(42, 43)", 0L);
+    assertExpr("mv_contains(42, 'test')", 0L);
+    assertExpr("mv_contains(42, 42.0)", 1L);
+    assertExpr("mv_contains(42, [42])", 1L);
+    assertExpr("mv_contains(42, [42, 43])", 0L);
+    assertExpr("mv_contains(42, ['test'])", 0L);
+    assertExpr("mv_contains(42, [42.0])", 1L);
+    assertExpr("mv_contains(42, null)", 0L);
+
+    // Tests where the first argument is a double
+    assertExpr("mv_contains(3.14, 3.14)", 1L);
+    assertExpr("mv_contains(3.14, 3)", 0L);
+    assertExpr("mv_contains(3.14, 'pi')", 0L);
+    assertExpr("mv_contains(3.14, 3.14)", 1L);
+    assertExpr("mv_contains(3.14, [3.14])", 1L);
+    assertExpr("mv_contains(3.14, [3, 3.14])", 0L);
+    assertExpr("mv_contains(3.14, ['3.14'])", 0L);
+    assertExpr("mv_contains(3.14, [3.14, 6.28])", 0L);
+    assertExpr("mv_contains(3.14, null)", 0L);
   }
 
   @Test
@@ -530,6 +552,28 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("mv_overlap([], [])", 0L);
     assertExpr("mv_overlap([], [null])", 1L);
     assertExpr("mv_overlap([], null)", 1L);
+
+    // Tests where the first argument is a long
+    assertExpr("mv_overlap(42, 42)", 1L);
+    assertExpr("mv_overlap(42, 43)", 0L);
+    assertExpr("mv_overlap(42, 'test')", 0L);
+    assertExpr("mv_overlap(42, 42.0)", 1L);
+    assertExpr("mv_overlap(42, [41, 42, 43])", 1L);
+    assertExpr("mv_overlap(42, [40, 41])", 0L);
+    assertExpr("mv_overlap(42, ['test', 'foo'])", 0L);
+    assertExpr("mv_overlap(42, [41.0, 42.0, 43.0])", 1L);
+    assertExpr("mv_overlap(42, null)", null);
+
+    // Tests where the first argument is a double
+    assertExpr("mv_overlap(3.14, 3.14)", 1L);
+    assertExpr("mv_overlap(3.14, 2.71)", 0L);
+    assertExpr("mv_overlap(3.14, 'pi')", 0L);
+    assertExpr("mv_overlap(3.14, 3)", 0L);
+    assertExpr("mv_overlap(3.14, [3.14, 6.28])", 1L);
+    assertExpr("mv_overlap(3.14, [1, 2, 3])", 0L);
+    assertExpr("mv_overlap(3.14, ['pi', '3.14'])", 0L);
+    assertExpr("mv_overlap(3.14, [1.0, 2.0, 3.14])", 1L);
+    assertExpr("mv_overlap(3.14, null)", null);
   }
 
   @Test
