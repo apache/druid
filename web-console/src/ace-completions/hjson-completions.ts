@@ -127,7 +127,6 @@ function convertToAceCompletion(
     (completion as any).docHTML = makeDocHtml({
       name: item.value,
       description: item.documentation,
-      syntax: 'xx',
     });
   }
 

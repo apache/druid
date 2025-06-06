@@ -18,15 +18,18 @@
 
 import escape from 'lodash.escape';
 
+import { assemble } from '../utils';
+
 export interface ItemDescription {
   name: string;
-  syntax: string;
+  syntax?: string;
   description: string;
 }
 
 export function makeDocHtml(item: ItemDescription) {
-  return `
-<div class="doc-name">${item.name}</div>
-<div class="doc-syntax">${escape(item.syntax)}</div>
-<div class="doc-description">${item.description}</div>`;
+  return assemble(
+    `<div class="doc-name">${item.name}</div>`,
+    item.syntax ? `<div class="doc-syntax">${escape(item.syntax)}</div>` : undefined,
+    `<div class="doc-description">${item.description}</div>`,
+  );
 }

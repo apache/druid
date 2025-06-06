@@ -160,7 +160,6 @@ export class FlexibleQueryInput extends React.PureComponent<
             const lines = allText.split('\n').slice(0, pos.row + 1);
             const lastLineIndex = lines.length - 1;
             lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-            console.log(lines);
             callback(
               null,
               getHjsonCompletions({
