@@ -172,7 +172,7 @@ public class IndexerControllerContext implements ControllerContext
   public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
   {
     final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext);
+        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext, SegmentSource.NONE);
     return new IndexerTableInputSpecSlicer(
         toolbox.getCoordinatorClient(),
         toolbox.getTaskActionClient(),

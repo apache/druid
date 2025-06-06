@@ -28,12 +28,12 @@ import java.util.List;
 /**
  * Represents the set of segments assigned to a particular dart worker, used by {@link DartTableInputSpecSlicer}.
  */
-public class DartServerAssignment
+public class DartSegmentAssignment
 {
   private final List<DartQueryableSegment> dartQueryableSegments;
   private final List<DataServerRequestDescriptor> dataServerRequestDescriptor;
 
-  public DartServerAssignment(
+  public DartSegmentAssignment(
       List<DartQueryableSegment> dartQueryableSegments,
       List<DataServerRequestDescriptor> dataServerRequestDescriptor
   )
@@ -42,9 +42,9 @@ public class DartServerAssignment
     this.dataServerRequestDescriptor = dataServerRequestDescriptor;
   }
 
-  public static DartServerAssignment empty()
+  public static DartSegmentAssignment empty()
   {
-    return new DartServerAssignment(new ArrayList<>(), new ArrayList<>());
+    return new DartSegmentAssignment(new ArrayList<>(), new ArrayList<>());
   }
 
   public void addSegments(DartQueryableSegment segment)

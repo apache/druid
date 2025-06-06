@@ -48,6 +48,7 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -324,7 +325,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     return new IndexerTableInputSpecSlicer(
         coordinatorClient,
         taskActionClient,
-        MultiStageQueryContext.getSegmentSources(queryContext)
+        MultiStageQueryContext.getSegmentSources(queryContext, SegmentSource.NONE)
     );
   }
 

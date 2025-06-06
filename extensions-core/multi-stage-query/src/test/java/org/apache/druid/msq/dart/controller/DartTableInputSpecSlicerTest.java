@@ -317,7 +317,25 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT3.getShardSpec().getPartitionNum()
                     )
                 ),
-                ImmutableList.of()
+                ImmutableList.of(
+                    new DataServerRequestDescriptor(
+                        SERVERS.get(2),
+                        ImmutableList.of(
+                            new RichSegmentDescriptor(
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getVersion(),
+                                SEGMENT5.getShardSpec().getPartitionNum()
+                            ),
+                            new RichSegmentDescriptor(
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getVersion(),
+                                SEGMENT6.getShardSpec().getPartitionNum()
+                            )
+                        )
+                    )
+                )
             )
         ),
         inputSlices
@@ -361,7 +379,25 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getShardSpec().getPartitionNum()
                     )
                 ),
-                ImmutableList.of()
+                ImmutableList.of(
+                    new DataServerRequestDescriptor(
+                        SERVERS.get(2),
+                        ImmutableList.of(
+                            new RichSegmentDescriptor(
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getVersion(),
+                                SEGMENT5.getShardSpec().getPartitionNum()
+                            ),
+                            new RichSegmentDescriptor(
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getVersion(),
+                                SEGMENT6.getShardSpec().getPartitionNum()
+                            )
+                        )
+                    )
+                )
             )
         ),
         inputSlices
@@ -405,7 +441,25 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getShardSpec().getPartitionNum()
                     )
                 ),
-                ImmutableList.of()
+                ImmutableList.of(
+                    new DataServerRequestDescriptor(
+                        SERVERS.get(2),
+                        ImmutableList.of(
+                            new RichSegmentDescriptor(
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getVersion(),
+                                SEGMENT5.getShardSpec().getPartitionNum()
+                            ),
+                            new RichSegmentDescriptor(
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getVersion(),
+                                SEGMENT6.getShardSpec().getPartitionNum()
+                            )
+                        )
+                    )
+                )
             ),
             NilInputSlice.INSTANCE
         ),
@@ -458,7 +512,29 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                 ),
                 ImmutableList.of()
             ),
-            NilInputSlice.INSTANCE
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(),
+                ImmutableList.of(
+                    new DataServerRequestDescriptor(
+                        SERVERS.get(2),
+                        ImmutableList.of(
+                            new RichSegmentDescriptor(
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getInterval(),
+                                SEGMENT5.getVersion(),
+                                SEGMENT5.getShardSpec().getPartitionNum()
+                            ),
+                            new RichSegmentDescriptor(
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getInterval(),
+                                SEGMENT6.getVersion(),
+                                SEGMENT6.getShardSpec().getPartitionNum()
+                            )
+                        )
+                    )
+                )
+            )
         ),
         inputSlices
     );
@@ -510,9 +586,9 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void test_realTime_twoSlices()
+  void test_withoutRealtime_twoSlices()
   {
-    final QueryContext queryContext = QueryContext.of(Map.of(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString()));
+    final QueryContext queryContext = QueryContext.of(Map.of(MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.NONE.toString()));
     slicer = DartTableInputSpecSlicer.createFromWorkerIds(WORKER_IDS, serverView, queryContext);
 
     // When 2 slices are requested, we assign segments to the servers that have those segments.
@@ -550,25 +626,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getShardSpec().getPartitionNum()
                     )
                 ),
-                ImmutableList.of(
-                    new DataServerRequestDescriptor(
-                        SERVERS.get(2),
-                        ImmutableList.of(
-                            new RichSegmentDescriptor(
-                                SEGMENT5.getInterval(),
-                                SEGMENT5.getInterval(),
-                                SEGMENT5.getVersion(),
-                                SEGMENT5.getShardSpec().getPartitionNum()
-                            ),
-                            new RichSegmentDescriptor(
-                                SEGMENT6.getInterval(),
-                                SEGMENT6.getInterval(),
-                                SEGMENT6.getVersion(),
-                                SEGMENT6.getShardSpec().getPartitionNum()
-                            )
-                        )
-                    )
-                )
+                ImmutableList.of()
             )
         ),
         inputSlices
