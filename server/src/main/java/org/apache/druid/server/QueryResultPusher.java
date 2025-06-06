@@ -404,42 +404,8 @@ public abstract class QueryResultPusher
 
         DirectDruidClient.removeMagicResponseContextFields(responseContext);
 
-        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
-        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        // and encodes the string using ASCII, so 1 char is = 1 byte
-        ResponseContext.SerializationResult serializationResult;
-        try {
-          serializationResult = responseContext.serializeWith(
-              jsonMapper,
-              responseContextConfig.getMaxResponseContextHeaderSize()
-          );
-        }
-        catch (JsonProcessingException e) {
-          log.info(e, "Problem serializing to JSON!?");
-          serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
-        }
+        validateAndWriteResponseContextHeader();
 
-        if (serializationResult.isTruncated()) {
-          final String logToPrint = StringUtils.format(
-              "Response Context truncated for id [%s]. Full context is [%s].",
-              queryId,
-              serializationResult.getFullResult()
-          );
-          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-            log.error(logToPrint);
-            throw new QueryInterruptedException(
-                new TruncatedResponseContextException(
-                    "Serialized response context exceeds the max size[%s]",
-                    responseContextConfig.getMaxResponseContextHeaderSize()
-                ),
-                selfNode.getHostAndPortToUse()
-            );
-          } else {
-            log.warn(logToPrint);
-          }
-        }
-
-        response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
 
         if (response instanceof org.eclipse.jetty.server.Response) {
@@ -466,6 +432,50 @@ public abstract class QueryResultPusher
       }
     }
 
+    /**
+     * Serializes the response context header and sets it in the final {@link #response} header. It enforces the max
+     * header size limit and throws {@link QueryInterruptedException} if truncation is disallowed and the context is too large.
+     */
+    private void validateAndWriteResponseContextHeader()
+    {
+      // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+      // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+      // and encodes the string using ASCII, so 1 char is = 1 byte
+      ResponseContext.SerializationResult serializationResult;
+      try {
+        serializationResult = responseContext.serializeWith(
+            jsonMapper,
+            responseContextConfig.getMaxResponseContextHeaderSize()
+        );
+      }
+      catch (JsonProcessingException e) {
+        log.info(e, "Problem serializing to JSON!?");
+        serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
+      }
+
+      if (serializationResult.isTruncated()) {
+        final String logToPrint = StringUtils.format(
+            "Response Context truncated for id [%s]. Full context is [%s].",
+            queryId,
+            serializationResult.getFullResult()
+        );
+
+        if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
+          log.error(logToPrint);
+          throw new QueryInterruptedException(
+              new TruncatedResponseContextException(
+                  "Serialized response context exceeds the max size[%s]",
+                  responseContextConfig.getMaxResponseContextHeaderSize()
+              ),
+              selfNode.getHostAndPortToUse()
+          );
+        } else {
+          log.warn(logToPrint);
+        }
+      }
+      response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
+    }
+
     @Override
     @Nullable
     public Response accumulate(Response retVal, Object in)
@@ -489,6 +499,9 @@ public abstract class QueryResultPusher
       if (!initialized) {
         initialize();
       }
+
+      // call this again here since we're at the end and everything should have accumulated.
+      validateAndWriteResponseContextHeader();
       writer.writeResponseEnd();
     }
 

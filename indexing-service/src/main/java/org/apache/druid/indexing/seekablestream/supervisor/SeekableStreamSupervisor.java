@@ -2056,8 +2056,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (!inactivePartitionsInTask.isEmpty()) {
           killTaskWithSuccess(
               taskId,
-              "Task[%s] with partition set[%s] has inactive partitions[%s], stopping task.",
-              taskId,
+              "Task partition set[%s] has inactive partitions[%s].",
               taskPartitions,
               inactivePartitionsInTask
           );

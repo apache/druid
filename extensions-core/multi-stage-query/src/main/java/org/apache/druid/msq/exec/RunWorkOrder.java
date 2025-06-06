@@ -823,11 +823,6 @@ public class RunWorkOrder
             final StageDefinition stageDefinition = workOrder.getStageDefinition();
 
             final File sorterTmpDir = frameContext.tempDir("super-sort");
-            FileUtils.mkdirp(sorterTmpDir);
-            if (!sorterTmpDir.isDirectory()) {
-              throw new IOException("Cannot create directory: " + sorterTmpDir);
-            }
-
             final WorkerMemoryParameters memoryParameters = frameContext.memoryParameters();
             final SuperSorter sorter = new SuperSorter(
                 resultAndChannels.getOutputChannels().getAllReadableChannels(),
