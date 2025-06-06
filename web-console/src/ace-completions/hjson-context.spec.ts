@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { getHjsonContext } from './hjson-completions';
+import { getHjsonContext } from './hjson-context';
 
 describe('getHjsonContext', () => {
   describe('root level', () => {
@@ -298,8 +298,8 @@ describe('getHjsonContext', () => {
       const result = getHjsonContext('{ "queryType": "scan", // This is a com');
       expect(result).toEqual({
         path: [],
-        isEditingKey: false,
-        currentKey: 'queryType',
+        isEditingKey: true,
+        currentKey: undefined,
         isEditingComment: true,
       });
     });
@@ -308,8 +308,8 @@ describe('getHjsonContext', () => {
       const result = getHjsonContext('{ "queryType": "scan", /* This is a multi-line\n   com');
       expect(result).toEqual({
         path: [],
-        isEditingKey: false,
-        currentKey: 'queryType',
+        isEditingKey: true,
+        currentKey: undefined,
         isEditingComment: true,
       });
     });

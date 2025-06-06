@@ -60,9 +60,6 @@ export function getHjsonContext(hjson: string): HjsonContext {
     };
   }
 
-  // Remove comments from hjson for easier parsing
-  const cleanedHjson = removeComments(hjson);
-
   // Track our position in the JSON structure
   const path: string[] = [];
   let isEditingKey;
@@ -74,23 +71,74 @@ export function getHjsonContext(hjson: string): HjsonContext {
   let expectingValue = false;
   let afterColon = false;
 
+  // Comment tracking
+  let inSingleLineComment = false;
+  let inMultiLineComment = false;
+
+  // Context state before entering comment (preserved during comment parsing)
+  let preCommentIsEditingKey: boolean | undefined;
+  let preCommentCurrentKey: string | undefined;
+
   // Stack to track whether we're in an object or array
   const containerStack: { type: 'object' | 'array'; elementCount: number }[] = [];
 
-  for (let i = 0; i < cleanedHjson.length; i++) {
-    const char = cleanedHjson[i];
+  for (let i = 0; i < hjson.length; i++) {
+    const char = hjson[i];
+    const nextChar = i < hjson.length - 1 ? hjson[i + 1] : null;
 
     // Handle escape sequences
     if (escapeNext) {
       escapeNext = false;
+      if (!inSingleLineComment && !inMultiLineComment) {
+        currentToken += char;
+      }
+      continue;
+    }
+
+    if (char === '\\' && inString && !inSingleLineComment && !inMultiLineComment) {
+      escapeNext = true;
       currentToken += char;
       continue;
     }
 
-    if (char === '\\' && inString) {
-      escapeNext = true;
-      currentToken += char;
+    // Handle comment detection and parsing
+    if (inSingleLineComment) {
+      // Exit single-line comment on newline
+      if (char === '\n') {
+        inSingleLineComment = false;
+      }
       continue;
+    }
+
+    if (inMultiLineComment) {
+      // Exit multi-line comment on */
+      if (char === '*' && nextChar === '/') {
+        inMultiLineComment = false;
+        i++; // Skip the '/' as well
+      }
+      continue;
+    }
+
+    // Check for comment start (only when not in string)
+    if (!inString) {
+      // Single-line comment
+      if (char === '/' && nextChar === '/') {
+        // Save current context before entering comment
+        preCommentIsEditingKey = determineIsEditingKey(containerStack, afterColon);
+        preCommentCurrentKey = currentKey;
+        inSingleLineComment = true;
+        i++; // Skip the second '/'
+        continue;
+      }
+      // Multi-line comment
+      if (char === '/' && nextChar === '*') {
+        // Save current context before entering comment
+        preCommentIsEditingKey = determineIsEditingKey(containerStack, afterColon);
+        preCommentCurrentKey = currentKey;
+        inMultiLineComment = true;
+        i++; // Skip the '*'
+        continue;
+      }
     }
 
     // Handle strings
@@ -249,22 +297,36 @@ export function getHjsonContext(hjson: string): HjsonContext {
     }
   }
 
+  // If we're in a comment, use the preserved context from before the comment
+  const finalIsEditingComment = inSingleLineComment || inMultiLineComment;
+  const finalIsEditingKey = finalIsEditingComment
+    ? preCommentIsEditingKey ?? isEditingKey
+    : isEditingKey;
+  const finalCurrentKey = finalIsEditingComment ? preCommentCurrentKey : currentKey;
+
   return {
     path,
-    isEditingKey,
-    currentKey,
-    isEditingComment: false,
+    isEditingKey: finalIsEditingKey,
+    currentKey: finalCurrentKey,
+    isEditingComment: finalIsEditingComment,
   };
 }
 
-function removeComments(hjson: string): string {
-  // Remove single-line comments
-  let result = hjson.replace(/\/\/.*$/gm, '');
+function determineIsEditingKey(
+  containerStack: { type: 'object' | 'array'; elementCount: number }[],
+  afterColon: boolean,
+): boolean {
+  if (containerStack.length === 0) {
+    return true;
+  }
 
-  // Remove multi-line comments
-  result = result.replace(/\/\*[\s\S]*?\*\//g, '');
-
-  return result;
+  const currentContainer = containerStack[containerStack.length - 1];
+  if (currentContainer.type === 'array') {
+    return false; // In arrays we're always editing values (even if they're object indices)
+  } else {
+    // In object
+    return !afterColon; // If after colon, we're editing value; otherwise editing key
+  }
 }
 
 function extractKeyFromToken(token: string): string {
