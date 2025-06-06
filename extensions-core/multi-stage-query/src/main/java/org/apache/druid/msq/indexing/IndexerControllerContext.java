@@ -72,6 +72,7 @@ import java.util.concurrent.TimeUnit;
 public class IndexerControllerContext implements ControllerContext
 {
   public static final int DEFAULT_MAX_CONCURRENT_STAGES = 1;
+  public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.NONE;
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
 
@@ -172,7 +173,7 @@ public class IndexerControllerContext implements ControllerContext
   public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
   {
     final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext);
+        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext, DEFAULT_SEGMENT_SOURCE);
     return new IndexerTableInputSpecSlicer(
         toolbox.getCoordinatorClient(),
         toolbox.getTaskActionClient(),
