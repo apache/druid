@@ -1,0 +1,65 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.setting;
+
+
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+
+public class FloatSettingEntry extends SettingEntry<Float>
+{
+  private FloatSettingEntry(Builder builder)
+  {
+    super(builder);
+  }
+
+  @Override
+  public Float from(QueryContext context)
+  {
+    return QueryContexts.getAsFloat(name, context.get(name), defaultValue);
+  }
+
+  @Override
+  public Float from(QueryContext context, Float defaultValue)
+  {
+    return QueryContexts.getAsFloat(name, context.get(name), defaultValue);
+  }
+
+  @Override
+  public Float parse(Object value)
+  {
+    return QueryContexts.getAsFloat(name, value);
+  }
+
+  public static class Builder extends AbstractBuilder<Float>
+  {
+    public Builder()
+    {
+      super(Float.class);
+      this.defaultValue = 0.0f;
+    }
+
+    @Override
+    public FloatSettingEntry build()
+    {
+      return new FloatSettingEntry(this);
+    }
+  }
+} 
