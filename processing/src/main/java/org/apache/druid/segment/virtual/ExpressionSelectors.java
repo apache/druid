@@ -96,14 +96,20 @@ public class ExpressionSelectors
     };
   }
 
-  public static ColumnValueSelector castColumnValueSelector(
+  /**
+   * Wrap the output of {@link ColumnValueSelector#getObject()} in {@link ExprEval#ofType(ExpressionType, Object)}
+   * using the supplied delegate type and cast using {@link ExprEval#castTo} to convert to the target type. If the
+   * delegate selector type is null, {@link ExprEval#ofType} falls back to using {@link ExprEval#bestEffortOf}, however
+   * the target type must be not null, or else this method will fail when attempting to convert to an expression type.
+   */
+  public static ColumnValueSelector<?> castColumnValueSelector(
       RowIdSupplier rowIdSupplier,
-      ColumnValueSelector delegate,
-      ColumnType delegateType,
+      ColumnValueSelector<?> delegate,
+      @Nullable ColumnType delegateType,
       ColumnType castToType
   )
   {
-    final ExpressionType fromType = ExpressionType.fromColumnTypeStrict(delegateType);
+    final ExpressionType fromType = ExpressionType.fromColumnType(delegateType);
     final ExpressionType toType = ExpressionType.fromColumnTypeStrict(castToType);
     final ColumnValueSelector<ExprEval> cast = new BaseExpressionColumnValueSelector(rowIdSupplier)
     {
