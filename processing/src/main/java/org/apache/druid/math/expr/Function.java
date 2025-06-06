@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -3355,19 +3356,32 @@ public interface Function extends NamedFunction
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final int length = args.size();
-      Object[] out = new Object[length];
+      if (length == 0) {
+        return ExprEval.ofLongArray(ObjectArrays.EMPTY_ARRAY);
+      }
 
-      ExpressionType arrayElementType = null;
       final ExprEval[] outEval = new ExprEval[length];
       for (int i = 0; i < length; i++) {
         outEval[i] = args.get(i).eval(bindings);
-        if (outEval[i].value() != null) {
-          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, outEval[i].type());
+      }
+
+      ExpressionType arrayElementType = null;
+
+      // Try first to determine the element type, only considering nonnull values.
+      for (final ExprEval<?> eval : outEval) {
+        if (eval.value() != null) {
+          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
         }
       }
+
       if (arrayElementType == null) {
-        arrayElementType = ExpressionType.LONG;
+        // Try again to determine the element type, this time considering nulls.
+        for (final ExprEval<?> eval : outEval) {
+          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
+        }
       }
+
+      final Object[] out = new Object[length];
       for (int i = 0; i < length; i++) {
         out[i] = outEval[i].castTo(arrayElementType).value();
       }

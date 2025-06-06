@@ -118,8 +118,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             CoreMatchers.containsString(
                 StringUtils.format(
                     "org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException: "
-                        + "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
-                        + " Consider setting '%s' to true in your query context.",
+                    + "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+                    + " Consider setting '%s' to true in your query context.",
                     "v0",
                     GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
                     GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
@@ -301,23 +301,22 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   public void testMultiValueStringOverlapFilterNonLiteral()
   {
     testQuery(
-        "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
+        "SELECT dim2, dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
                 .filters(expressionFilter("mv_overlap(\"dim3\",array(\"dim2\"))"))
-                .columns("dim3")
-                .columnTypes(ColumnType.STRING)
+                .columns("dim2", "dim3")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{"[\"b\",\"c\"]"},
-            new Object[]{null}
+            new Object[]{"a", "[\"a\",\"b\"]"},
+            new Object[]{null, null}
         )
     );
   }
@@ -403,23 +402,24 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   public void testMultiValueStringContainsArrayOfNonLiteral()
   {
     testQuery(
-        "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
+        "SELECT dim2, ARRAY[dim2], dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
+                .virtualColumns(expressionVirtualColumn("v0", "array(\"dim2\")", ColumnType.STRING_ARRAY))
                 .filters(expressionFilter("mv_contains(\"dim3\",array(\"dim2\"))"))
-                .columns("dim3")
-                .columnTypes(ColumnType.STRING)
+                .columns("dim2", "v0", "dim3")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING_ARRAY, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]"},
-            new Object[]{"[\"b\",\"c\"]"},
-            new Object[]{null}
+            new Object[]{"a", Collections.singletonList("a"), "[\"a\",\"b\"]"},
+            new Object[]{null, Collections.singletonList(null), null}
         )
     );
   }
