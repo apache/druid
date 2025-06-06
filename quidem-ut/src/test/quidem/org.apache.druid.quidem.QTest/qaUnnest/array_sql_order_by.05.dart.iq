@@ -1,0 +1,280 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B2
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+GROUP BY c
+ORDER BY 1 DESC;
++---+-----+
+| c | cnt |
++---+-----+
++---+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B3
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY c ASC;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B4
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY 1 DESC;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT c
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY c ASC);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B6
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT c
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY 1 DESC);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B7
+#-------------------------------------------------------------------------
+SELECT __time,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+GROUP BY __time
+ORDER BY __time ASC;
++--------+-----+
+| __time | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B8
+#-------------------------------------------------------------------------
+SELECT __time,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+GROUP BY __time
+ORDER BY __time DESC;
++--------+-----+
+| __time | cnt |
++--------+-----+
++--------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B9
+#-------------------------------------------------------------------------
+SELECT __time
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY __time ASC;
++--------+
+| __time |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B10
+#-------------------------------------------------------------------------
+SELECT __time
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY 1 DESC;
++--------+
+| __time |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B11
+#-------------------------------------------------------------------------
+SELECT __time
+FROM
+  (SELECT __time
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY __time ASC);
++--------+
+| __time |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B12
+#-------------------------------------------------------------------------
+SELECT __time
+FROM
+  (SELECT __time
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY 1 DESC);
++--------+
+| __time |
++--------+
++--------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B13
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+GROUP BY s_int
+ORDER BY s_int ASC;
++-------+-----+
+| s_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B14
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+GROUP BY s_int
+ORDER BY 1 DESC;
++-------+-----+
+| s_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B15
+#-------------------------------------------------------------------------
+SELECT s_int
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY s_int ASC;
++-------+
+| s_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B16
+#-------------------------------------------------------------------------
+SELECT s_int
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+ORDER BY 1 DESC;
++-------+
+| s_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B17
+#-------------------------------------------------------------------------
+SELECT s_int
+FROM
+  (SELECT s_int
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY s_int ASC);
++-------+
+| s_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B18
+#-------------------------------------------------------------------------
+SELECT s_int
+FROM
+  (SELECT s_int
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u(c)
+   ORDER BY 1 DESC);
++-------+
+| s_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+

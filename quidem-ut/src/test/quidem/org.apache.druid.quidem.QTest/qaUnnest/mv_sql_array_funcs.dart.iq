@@ -1,0 +1,999 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B1_C1
+#-------------------------------------------------------------------------
+SELECT array['1',
+             '2',
+             '3'] AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++-----------+
+| col       |
++-----------+
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
+| [1, 2, 3] |
++-----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B1_C2
+#-------------------------------------------------------------------------
+SELECT array[c,
+             c,
+             '3'] AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array[c,
+            c,
+            '3'] IS NOT NULL;
++-----------------+
+| col             |
++-----------------+
+| [, , 3]         |
+| [, , 3]         |
+| [, , 3]         |
+| [1, 1, 3]       |
+| [1, 1, 3]       |
+| [1, 1, 3]       |
+| [2, 2, 3]       |
+| [2, 2, 3]       |
+| [2, 2, 3]       |
+| [3, 3, 3]       |
+| [3, 3, 3]       |
+| [3, 3, 3]       |
+| [null, null, 3] |
+| [null, null, 3] |
+| [null, null, 3] |
++-----------------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B1_C3
+#-------------------------------------------------------------------------
+SELECT array[c,
+             cast(c_long AS char),
+             '3'] AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array[c,
+            cast(c_long AS char),
+            '3'] IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [, 0, 3]     |
+| [, 1, 3]     |
+| [, 2, 3]     |
+| [1, 0, 3]    |
+| [1, 1, 3]    |
+| [1, 2, 3]    |
+| [2, 0, 3]    |
+| [2, 1, 3]    |
+| [2, 2, 3]    |
+| [3, 0, 3]    |
+| [3, 1, 3]    |
+| [3, 2, 3]    |
+| [null, 0, 3] |
+| [null, 1, 3] |
+| [null, 2, 3] |
++--------------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B1_C4
+#-------------------------------------------------------------------------
+SELECT array[cast(c_long AS char),
+             c,
+             '3'] AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array[cast(c_long AS char),
+            c,
+            '3'] IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [0, , 3]     |
+| [0, 1, 3]    |
+| [0, 2, 3]    |
+| [0, 3, 3]    |
+| [0, null, 3] |
+| [1, , 3]     |
+| [1, 1, 3]    |
+| [1, 2, 3]    |
+| [1, 3, 3]    |
+| [1, null, 3] |
+| [2, , 3]     |
+| [2, 1, 3]    |
+| [2, 2, 3]    |
+| [2, 3, 3]    |
+| [2, null, 3] |
++--------------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B1_C5
+#-------------------------------------------------------------------------
+SELECT array[cast(c_long AS char),
+             cast(c_long AS char),
+             '3'] AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array[cast(c_long AS char),
+            cast(c_long AS char),
+            '3'] IS NOT NULL;
++-----------+
+| col       |
++-----------+
+| [0, 0, 3] |
+| [0, 0, 3] |
+| [0, 0, 3] |
+| [0, 0, 3] |
+| [0, 0, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
++-----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B2_C1
+#-------------------------------------------------------------------------
+SELECT array_length(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_length(c) IS NULL
+       OR array_length(c) IN (1));
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B2_C2
+#-------------------------------------------------------------------------
+SELECT array_length(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_length(c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B3_C1
+#-------------------------------------------------------------------------
+SELECT array_offset(c, 0) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_offset(c, 0)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B3_C2
+#-------------------------------------------------------------------------
+SELECT array_offset(c_long, 0) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_offset(c_long, 0)<>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B4_C1
+#-------------------------------------------------------------------------
+SELECT array_ordinal(c, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_ordinal(c, 1)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B4_C2
+#-------------------------------------------------------------------------
+SELECT array_ordinal(c_long, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_ordinal(c_long, 1)<>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C1
+#-------------------------------------------------------------------------
+SELECT array_contains(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_contains(c, '1') IS NULL
+       OR array_contains(c, '1') IS TRUE
+       OR array_contains(c, '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+|       |
+|       |
+|       |
++-------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C2
+#-------------------------------------------------------------------------
+SELECT array_contains(c_long, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_contains(c_long, '1') IS NULL
+       OR array_contains(c_long, '1') IS TRUE
+       OR array_contains(c_long, '1') IS FALSE);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C1
+#-------------------------------------------------------------------------
+SELECT array_overlap(c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_overlap(c, c) IS NULL
+       OR array_overlap(c, c) IS TRUE
+       OR array_overlap(c, c) IS FALSE);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+|      |
+|      |
+|      |
++------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C2
+#-------------------------------------------------------------------------
+SELECT array_overlap(c, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_overlap(c, c_long) IS NULL
+       OR array_overlap(c, c_long) IS TRUE
+       OR array_overlap(c, c_long) IS FALSE);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C3
+#-------------------------------------------------------------------------
+SELECT array_overlap(c_long, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_overlap(c_long, c) IS NULL
+       OR array_overlap(c_long, c) IS TRUE
+       OR array_overlap(c_long, c) IS FALSE);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C4
+#-------------------------------------------------------------------------
+SELECT array_overlap(c_long, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_overlap(c_long, c_long) IS NULL
+       OR array_overlap(c_long, c_long) IS TRUE
+       OR array_overlap(c_long, c_long) IS FALSE);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT array_offset_of(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_offset_of(c, '1') IS NULL
+       OR array_offset_of(c, '1') IN (0,
+                                      -1));
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B7_C2
+#-------------------------------------------------------------------------
+SELECT array_offset_of(c_long, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_offset_of(c_long, '1') <>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT array_ordinal_of(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_ordinal_of(c, '1') IS NULL
+       OR array_ordinal_of(c, '1') IN (1,
+                                       -1));
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B8_C2
+#-------------------------------------------------------------------------
+SELECT array_ordinal_of(c_long, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_ordinal_of(c_long, '1') <>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B9_C1
+#-------------------------------------------------------------------------
+SELECT array_prepend(c, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_contains(array_prepend(c, 'Z'), 'Z') IS TRUE;
++-----------+
+| col       |
++-----------+
+| [, Z]     |
+| [, Z]     |
+| [, Z]     |
+| [1, Z]    |
+| [1, Z]    |
+| [1, Z]    |
+| [2, Z]    |
+| [2, Z]    |
+| [2, Z]    |
+| [3, Z]    |
+| [3, Z]    |
+| [3, Z]    |
+| [null, Z] |
+| [null, Z] |
+| [null, Z] |
++-----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B9_C2
+#-------------------------------------------------------------------------
+SELECT array_prepend(c_long, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_contains(array_prepend(c_long, 'Z'), 'Z') IS TRUE;
++--------+
+| col    |
++--------+
+| [0, Z] |
+| [0, Z] |
+| [0, Z] |
+| [0, Z] |
+| [0, Z] |
+| [1, Z] |
+| [1, Z] |
+| [1, Z] |
+| [1, Z] |
+| [1, Z] |
+| [2, Z] |
+| [2, Z] |
+| [2, Z] |
+| [2, Z] |
+| [2, Z] |
++--------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B10_C1
+#-------------------------------------------------------------------------
+SELECT array_append('Z', c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_contains(array_append('Z', c), 'Z') IS TRUE;
++-----------+
+| col       |
++-----------+
+| [Z, 1]    |
+| [Z, 1]    |
+| [Z, 1]    |
+| [Z, 2]    |
+| [Z, 2]    |
+| [Z, 2]    |
+| [Z, 3]    |
+| [Z, 3]    |
+| [Z, 3]    |
+| [Z, ]     |
+| [Z, ]     |
+| [Z, ]     |
+| [Z, null] |
+| [Z, null] |
+| [Z, null] |
++-----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B10_C2
+#-------------------------------------------------------------------------
+SELECT array_append('Z', c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_contains(array_append('Z', c_long), 'Z') IS TRUE;
++--------+
+| col    |
++--------+
+| [Z, 0] |
+| [Z, 0] |
+| [Z, 0] |
+| [Z, 0] |
+| [Z, 0] |
+| [Z, 1] |
+| [Z, 1] |
+| [Z, 1] |
+| [Z, 1] |
+| [Z, 1] |
+| [Z, 2] |
+| [Z, 2] |
+| [Z, 2] |
+| [Z, 2] |
+| [Z, 2] |
++--------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B11_C1
+#-------------------------------------------------------------------------
+SELECT array_concat(c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_concat(c, c) IS NULL
+       OR array_concat(c, c) IS NOT NULL);
++--------+
+| col    |
++--------+
+| [, ]   |
+| [, ]   |
+| [, ]   |
+| [1, 1] |
+| [1, 1] |
+| [1, 1] |
+| [2, 2] |
+| [2, 2] |
+| [2, 2] |
+| [3, 3] |
+| [3, 3] |
+| [3, 3] |
+|        |
+|        |
+|        |
++--------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B11_C2
+#-------------------------------------------------------------------------
+SELECT array_concat(c, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_concat(c, c_long) IS NULL
+       OR array_concat(c, c_long) IS NOT NULL);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B11_C3
+#-------------------------------------------------------------------------
+SELECT array_concat(c_long, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_concat(c_long, c) IS NULL
+       OR array_concat(c_long, c) IS NOT NULL);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B11_C4
+#-------------------------------------------------------------------------
+SELECT array_concat(c_long, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_concat(c_long, c_long) IS NULL
+       OR array_concat(c_long, c_long) IS NOT NULL);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C1
+#-------------------------------------------------------------------------
+SELECT array_slice(c, 0, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (array_slice(c, 0, 1) IS NULL
+       OR array_slice(c, 0, 1) IS NOT NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+| [3] |
+| [3] |
+| [3] |
+| []  |
+| []  |
+| []  |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C2
+#-------------------------------------------------------------------------
+SELECT array_slice(c_long, 0, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_slice(c_long, 0, 1)<>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C1
+#-------------------------------------------------------------------------
+SELECT array_to_string(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_to_string(c, '|') IN ('',
+                                  '1',
+                                  '2',
+                                  '3');
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C2
+#-------------------------------------------------------------------------
+SELECT array_to_string(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_to_string(c_long, '|')<>'ABCD';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C1
+#-------------------------------------------------------------------------
+SELECT string_to_array(c, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (string_to_array(c, '|') IS NULL
+       OR string_to_array(c, '|') IS NOT NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+| [3] |
+| [3] |
+| [3] |
+| []  |
+| []  |
+| []  |
+|     |
+|     |
+|     |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C2
+#-------------------------------------------------------------------------
+SELECT string_to_array(c_long, '|') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (string_to_array(c_long, '|') IS NULL
+       OR string_to_array(c_long, '|') IS NOT NULL);
++-----+
+| col |
++-----+
+| [0] |
+| [0] |
+| [0] |
+| [0] |
+| [0] |
+| [1] |
+| [1] |
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+| [2] |
+| [2] |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C1
+#-------------------------------------------------------------------------
+SELECT array_to_mv(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_to_mv(c) IN ('',
+                         '1',
+                         '2',
+                         '3');
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C2
+#-------------------------------------------------------------------------
+SELECT array_to_mv(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND array_to_mv(c_long)<>'ABCD';
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+

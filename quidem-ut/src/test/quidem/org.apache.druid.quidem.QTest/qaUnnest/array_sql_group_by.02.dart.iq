@@ -1,0 +1,784 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array&numMergeBuffers=3
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B8
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY rollup(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B9
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY rollup(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B10
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B11
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY cube(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B12
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY cube(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B13
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY c
+HAVING c = 1;
++---+-----+
+| c | cnt |
++---+-----+
+| 1 |   3 |
++---+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B14
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+GROUP BY s_int
+HAVING s_int=1;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY c;
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
+| 0.2 |   3 |
+|     |   3 |
++-----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B2
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY s_int,
+         c;
++-------+-----+-----+
+| s_int | c   | cnt |
++-------+-----+-----+
+|     1 | 0.1 |   1 |
+|     1 | 0.2 |   1 |
+|     1 |     |   1 |
+|     2 | 0.1 |   1 |
+|     2 | 0.2 |   1 |
+|     2 |     |   1 |
+|       | 0.1 |   1 |
+|       | 0.2 |   1 |
+|       |     |   1 |
++-------+-----+-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B3
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY s_int;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B4
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
+| 0.2 |   3 |
+|     |   3 |
++-----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B5
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY GROUPING
+SETS (s_int,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B6
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY GROUPING
+SETS (s_int);
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B7
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B8
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY rollup(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B9
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY rollup(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B10
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B11
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY cube(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B12
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY cube(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B13
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY c
+HAVING c = 0.1;
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
++-----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B14
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+GROUP BY s_int
+HAVING s_int=1;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY c;
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
+| 0.2 |   3 |
+|     |   3 |
++-----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B2
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY s_int,
+         c;
++-------+-----+-----+
+| s_int | c   | cnt |
++-------+-----+-----+
+|     1 | 0.1 |   1 |
+|     1 | 0.2 |   1 |
+|     1 |     |   1 |
+|     2 | 0.1 |   1 |
+|     2 | 0.2 |   1 |
+|     2 |     |   1 |
+|       | 0.1 |   1 |
+|       | 0.2 |   1 |
+|       |     |   1 |
++-------+-----+-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B3
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY s_int;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B4
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
+| 0.2 |   3 |
+|     |   3 |
++-----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B5
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY GROUPING
+SETS (s_int,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B6
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY GROUPING
+SETS (s_int);
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B7
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B8
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY rollup(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B9
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY rollup(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B10
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B11
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY cube(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B12
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY cube(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B13
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY c
+HAVING c = 0.1;
++-----+-----+
+| c   | cnt |
++-----+-----+
+| 0.1 |   3 |
++-----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B14
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u(c)
+GROUP BY s_int
+HAVING s_int=1;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY c;
++----+-----+
+| c  | cnt |
++----+-----+
+| S1 |   3 |
+| S2 |   3 |
+|    |   3 |
++----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B2
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY s_int,
+         c;
++-------+----+-----+
+| s_int | c  | cnt |
++-------+----+-----+
+|     1 | S1 |   1 |
+|     1 | S2 |   1 |
+|     1 |    |   1 |
+|     2 | S1 |   1 |
+|     2 | S2 |   1 |
+|     2 |    |   1 |
+|       | S1 |   1 |
+|       | S2 |   1 |
+|       |    |   1 |
++-------+----+-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B3
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY s_int;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B4
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++----+-----+
+| c  | cnt |
++----+-----+
+| S1 |   3 |
+| S2 |   3 |
+|    |   3 |
++----+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B5
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY GROUPING
+SETS (s_int,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B6
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY GROUPING
+SETS (s_int);
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
+|     2 |   3 |
+|       |   3 |
++-------+-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B7
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B8
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY rollup(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B9
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY rollup(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B10
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B11
+#-------------------------------------------------------------------------
+SELECT s_int,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY cube(s_int, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B12
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY cube(s_int);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B13
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY c
+HAVING c = 'S1';
++----+-----+
+| c  | cnt |
++----+-----+
+| S1 |   3 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B14
+#-------------------------------------------------------------------------
+SELECT s_int,
+       count(*) cnt
+FROM test_unnest,
+     unnest(a_str) AS u(c)
+GROUP BY s_int
+HAVING s_int=1;
++-------+-----+
+| s_int | cnt |
++-------+-----+
+|     1 |   3 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A8_B1
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u(c)
+GROUP BY c;
++----+-----+
+| c  | cnt |
++----+-----+
+| S1 |   3 |
+| S2 |   3 |
+|    |   3 |
++----+-----+
+(3 rows)
+
+!ok
+

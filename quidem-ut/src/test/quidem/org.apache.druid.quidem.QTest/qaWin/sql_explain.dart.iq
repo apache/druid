@@ -1,0 +1,221 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_explain TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++-----+
+| cnt |
++-----+
+| 768 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_explain TEST_ID: A1_G1_Q1
+#-------------------------------------------------------------------------
+
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                      last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                 ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                    count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-------+------+-----+
+| server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
++--------------+---------------+----------+---------------------+-------+------+-----+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
++--------------+---------------+----------+---------------------+-------+------+-----+
+(8 rows)
+
+!ok
+
+LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$4], $4=[$7], $5=[$8], $6=[$9])
+  LogicalWindow(window#0=[window(partition {1} order by [0, 5, 6, 2, 3] aggs [FIRST_VALUE($2), LAG($2, $7), COUNT($2)])])
+    LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[TIME_FLOOR($3, 'PT12H')], $4=[CAST(TIME_FLOOR($3, 'PT12H')):CHAR(1) NOT NULL], $5=[LENGTH($0)], $6=[+(CAST(LENGTH($0)):DOUBLE, 0.123:DECIMAL(4, 3))])
+      LogicalFilter(condition=[SEARCH($1, Sarg['107.13.54.103':VARCHAR, '99.9.55.22':VARCHAR]:VARCHAR)])
+        LogicalAggregate(group=[{0, 1, 2, 3}])
+          LogicalProject(server_ip=[$14], client_ip=[$5], timezone=[$18], __time=[TIME_FLOOR($0, 'PT12H')])
+            LogicalTableScan(table=[[druid, test_win]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_explain TEST_ID: A1_G1_Q2
+#-------------------------------------------------------------------------
+
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w FIRST,
+                                    last_value(timezone) OVER w LAST,
+                                                                count(timezone) OVER w cnt
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+-------+------+-----+
+| server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
++--------------+---------------+----------+---------------------+-------+------+-----+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
++--------------+---------------+----------+---------------------+-------+------+-----+
+(8 rows)
+
+!ok
+
+LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$4], $4=[$7], $5=[$8], $6=[$9])
+  LogicalWindow(window#0=[window(partition {1} order by [0, 5, 6, 2, 3] aggs [FIRST_VALUE($2), LAG($2, $7), COUNT($2)])])
+    LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[TIME_FLOOR($3, 'PT12H')], $4=[CAST(TIME_FLOOR($3, 'PT12H')):CHAR(1) NOT NULL], $5=[LENGTH($0)], $6=[+(CAST(LENGTH($0)):DOUBLE, 0.123:DECIMAL(4, 3))])
+      LogicalFilter(condition=[SEARCH($1, Sarg['107.13.54.103':VARCHAR, '99.9.55.22':VARCHAR]:VARCHAR)])
+        LogicalAggregate(group=[{0, 1, 2, 3}])
+          LogicalProject(server_ip=[$14], client_ip=[$5], timezone=[$18], __time=[TIME_FLOOR($0, 'PT12H')])
+            LogicalTableScan(table=[[druid, test_win]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_explain TEST_ID: A1_G2_Q1
+#-------------------------------------------------------------------------
+
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) FIRST,
+                                                                                                                                                                      last_value(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                 ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) LAST,
+                                                                                                                                                                                                                                                                                                                                    count(timezone) OVER (PARTITION BY client_ip
+                                                                                                                                                                                                                                                                                                                                                          ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H')) cnt
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-------+------+-----+
+| server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
++--------------+---------------+----------+---------------------+-------+------+-----+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
++--------------+---------------+----------+---------------------+-------+------+-----+
+(8 rows)
+
+!ok
+
+LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$4], $4=[$7], $5=[$8], $6=[$9])
+  LogicalWindow(window#0=[window(partition {1} order by [0, 5, 6, 2, 3] aggs [FIRST_VALUE($2), LAG($2, $7), COUNT($2)])])
+    LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$3], $4=[CAST($3):CHAR(1) NOT NULL], $5=[LENGTH($0)], $6=[+(CAST(LENGTH($0)):DOUBLE, 0.123:DECIMAL(4, 3))])
+      LogicalAggregate(group=[{0, 1, 2, 3}])
+        LogicalProject(server_ip=[$2], client_ip=[$1], timezone=[$3], $f3=[TIME_FLOOR($0, 'PT12H')])
+          LogicalFilter(condition=[SEARCH($1, Sarg['107.13.54.103':VARCHAR, '99.9.55.22':VARCHAR]:VARCHAR)])
+            LogicalProject(__time=[$0], client_ip=[$5], server_ip=[$14], timezone=[$18])
+              LogicalTableScan(table=[[druid, test_win]])
+
+!druidPlan
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_sql_test_explain TEST_ID: A1_G2_Q2
+#-------------------------------------------------------------------------
+
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       first_value(timezone) OVER w FIRST,
+                                    last_value(timezone) OVER w LAST,
+                                                                count(timezone) OVER w cnt
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+-------+------+-----+
+| server_ip    | client_ip     | timezone | t                   | FIRST | LAST | cnt |
++--------------+---------------+----------+---------------------+-------+------+-----+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 | EDT   | EDT  |   4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 | EDT   | EDT  |   5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 | EDT   | N/A  |   6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 | N/A   | N/A  |   2 |
++--------------+---------------+----------+---------------------+-------+------+-----+
+(8 rows)
+
+!ok
+
+LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$4], $4=[$7], $5=[$8], $6=[$9])
+  LogicalWindow(window#0=[window(partition {1} order by [0, 5, 6, 2, 3] aggs [FIRST_VALUE($2), LAG($2, $7), COUNT($2)])])
+    LogicalProject(server_ip=[$0], client_ip=[$1], timezone=[$2], $3=[$3], $4=[CAST($3):CHAR(1) NOT NULL], $5=[LENGTH($0)], $6=[+(CAST(LENGTH($0)):DOUBLE, 0.123:DECIMAL(4, 3))])
+      LogicalAggregate(group=[{0, 1, 2, 3}])
+        LogicalProject(server_ip=[$2], client_ip=[$1], timezone=[$3], $f3=[TIME_FLOOR($0, 'PT12H')])
+          LogicalFilter(condition=[SEARCH($1, Sarg['107.13.54.103':VARCHAR, '99.9.55.22':VARCHAR]:VARCHAR)])
+            LogicalProject(__time=[$0], client_ip=[$5], server_ip=[$14], timezone=[$18])
+              LogicalTableScan(table=[[druid, test_win]])
+
+!druidPlan
+
