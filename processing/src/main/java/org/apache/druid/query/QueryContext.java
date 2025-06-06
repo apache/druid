@@ -309,7 +309,7 @@ public class QueryContext
   public boolean isFinalize(boolean defaultValue)
 
   {
-    return getBoolean(QueryContexts.FINALIZE_KEY, defaultValue);
+    return getBoolean(QueryContexts.FINALIZE_KEY.name(), defaultValue);
   }
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
