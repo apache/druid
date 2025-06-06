@@ -1309,17 +1309,17 @@ public abstract class ExprEval<T>
           if (value.length == 1) {
             return ExprEval.of(asString());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case LONG:
           if (value.length == 1) {
             return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case DOUBLE:
           if (value.length == 1) {
             return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case ARRAY:
           ExpressionType elementType = (ExpressionType) castTo.getElementType();
           Object[] cast = new Object[value.length];

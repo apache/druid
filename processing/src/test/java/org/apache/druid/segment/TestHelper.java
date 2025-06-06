@@ -395,7 +395,9 @@ public class TestHelper
 
       final Object actualValue = actualMap.get(key);
 
-      if (expectedValue != null && expectedValue.getClass().isArray()) {
+      if ((expectedValue != null && actualValue == null) || (expectedValue == null && actualValue != null)) {
+        Assert.assertEquals(StringUtils.format("%s: key[%s]", msg, key), expectedValue, actualValue);
+      } else if (expectedValue != null && expectedValue.getClass().isArray()) {
         Assert.assertArrayEquals((Object[]) expectedValue, (Object[]) actualValue);
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(

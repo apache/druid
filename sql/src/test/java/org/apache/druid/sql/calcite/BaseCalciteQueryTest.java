@@ -1502,7 +1502,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           outprint(col);
           outprint("F");
         } else if (col instanceof Object[]) {
-          printArray(array);
+          printArray((Object[]) col);
         } else if (col instanceof List) {
           printList((List<?>) col);
         } else {
