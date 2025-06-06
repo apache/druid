@@ -966,19 +966,19 @@ WHERE (s_int IN (0,
   AND (mv_overlap(cast(c AS char), cast(c AS char)) IS TRUE
        OR mv_overlap(cast(c AS char), cast(c AS char)) IS FALSE
        OR mv_overlap(cast(c AS char), cast(c AS char)) IS NULL);
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-+-------+
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
 (9 rows)
 
 !ok
@@ -996,19 +996,19 @@ WHERE (s_int IN (0,
   AND (mv_overlap(cast(c AS char), cast(c AS char)) IS TRUE
        OR mv_overlap(cast(c AS char), cast(c AS char)) IS FALSE
        OR mv_overlap(cast(c AS char), cast(c AS char)) IS NULL);
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-+-------+
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
 (9 rows)
 
 !ok
@@ -1033,11 +1033,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
-| false |
-| false |
-| false |
 | true  |
 | true  |
+| true  |
+|       |
+|       |
 +-------+
 (9 rows)
 
@@ -1063,11 +1063,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
-| false |
-| false |
-| false |
 | true  |
 | true  |
+| true  |
+|       |
+|       |
 +-------+
 (9 rows)
 
@@ -1093,11 +1093,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
-| false |
-| false |
-| false |
 | true  |
 | true  |
+| true  |
+|       |
+|       |
 +-------+
 (9 rows)
 
@@ -1123,11 +1123,11 @@ WHERE (s_int IN (0,
 | false |
 | false |
 | false |
-| false |
-| false |
-| false |
 | true  |
 | true  |
+| true  |
+|       |
+|       |
 +-------+
 (9 rows)
 
@@ -1146,19 +1146,19 @@ WHERE (s_int IN (0,
   AND (mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS TRUE
        OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS FALSE
        OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS NULL);
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-+-------+
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
 (9 rows)
 
 !ok
@@ -1176,19 +1176,19 @@ WHERE (s_int IN (0,
   AND (mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS TRUE
        OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS FALSE
        OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS NULL);
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-| true  |
-+-------+
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
 (9 rows)
 
 !ok
