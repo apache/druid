@@ -26,6 +26,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -35,6 +36,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -44,6 +46,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: '0',
+        isEditingComment: false,
       });
     });
   });
@@ -55,6 +58,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -64,6 +68,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -73,6 +78,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
   });
@@ -84,6 +90,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: 'queryType',
+        isEditingComment: false,
       });
     });
 
@@ -93,6 +100,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: 'queryType',
+        isEditingComment: false,
       });
     });
 
@@ -102,6 +110,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: 'queryType',
+        isEditingComment: false,
       });
     });
   });
@@ -113,6 +122,7 @@ describe('getHjsonContext', () => {
         path: ['query'],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -122,6 +132,7 @@ describe('getHjsonContext', () => {
         path: ['query', 'dataSource'],
         isEditingKey: false,
         currentKey: 'type',
+        isEditingComment: false,
       });
     });
 
@@ -131,6 +142,7 @@ describe('getHjsonContext', () => {
         path: ['query'],
         isEditingKey: false,
         currentKey: 'queryType',
+        isEditingComment: false,
       });
     });
   });
@@ -142,6 +154,7 @@ describe('getHjsonContext', () => {
         path: ['dimensions'],
         isEditingKey: false,
         currentKey: '0',
+        isEditingComment: false,
       });
     });
 
@@ -151,6 +164,7 @@ describe('getHjsonContext', () => {
         path: ['dimensions'],
         isEditingKey: false,
         currentKey: '1',
+        isEditingComment: false,
       });
     });
 
@@ -160,6 +174,7 @@ describe('getHjsonContext', () => {
         path: ['filters', '0'],
         isEditingKey: false,
         currentKey: 'type',
+        isEditingComment: false,
       });
     });
 
@@ -169,6 +184,7 @@ describe('getHjsonContext', () => {
         path: ['filters', '0'],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
   });
@@ -187,6 +203,7 @@ describe('getHjsonContext', () => {
         path: ['dimensions', '0'],
         isEditingKey: false,
         currentKey: 'dimension',
+        isEditingComment: false,
       });
     });
 
@@ -202,6 +219,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: 'dataSource',
+        isEditingComment: false,
       });
     });
 
@@ -215,6 +233,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -224,6 +243,7 @@ describe('getHjsonContext', () => {
         path: ['query', 'filter', 'fields', '0'],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
   });
@@ -235,6 +255,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -244,6 +265,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
       });
     });
 
@@ -253,6 +275,7 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: false,
         currentKey: 'queryType',
+        isEditingComment: false,
       });
     });
 
@@ -265,6 +288,29 @@ describe('getHjsonContext', () => {
         path: [],
         isEditingKey: true,
         currentKey: undefined,
+        isEditingComment: false,
+      });
+    });
+  });
+
+  describe('comment detection', () => {
+    it('detects cursor inside single-line comment', () => {
+      const result = getHjsonContext('{ "queryType": "scan", // This is a com');
+      expect(result).toEqual({
+        path: [],
+        isEditingKey: false,
+        currentKey: 'queryType',
+        isEditingComment: true,
+      });
+    });
+
+    it('detects cursor inside multi-line comment', () => {
+      const result = getHjsonContext('{ "queryType": "scan", /* This is a multi-line\n   com');
+      expect(result).toEqual({
+        path: [],
+        isEditingKey: false,
+        currentKey: 'queryType',
+        isEditingComment: true,
       });
     });
   });

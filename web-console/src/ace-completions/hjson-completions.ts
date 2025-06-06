@@ -35,6 +35,11 @@ export interface HjsonContext {
    * If editing a key (isEditingKey === true), this is undefined
    */
   currentKey?: string;
+
+  /**
+   * Whether the cursor is positioned inside a comment (single-line or multi-line)
+   */
+  isEditingComment: boolean;
 }
 
 /**
@@ -51,6 +56,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
       path: [],
       isEditingKey: true,
       currentKey: undefined,
+      isEditingComment: false,
     };
   }
 
@@ -247,6 +253,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
     path,
     isEditingKey,
     currentKey,
+    isEditingComment: false,
   };
 }
 
