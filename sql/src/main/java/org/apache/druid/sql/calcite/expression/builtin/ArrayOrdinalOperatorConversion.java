@@ -22,20 +22,23 @@ package org.apache.druid.sql.calcite.expression.builtin;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
 {
+  public static final String FUNCTION_NAME = "array_ordinal";
   static final SqlReturnTypeInference ARG0_ELEMENT_INFERENCE = new ArrayElementReturnTypeInference();
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("ARRAY_ORDINAL")
+      .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypeChecker(
           OperandTypes.sequence(
               "'ARRAY_ORDINAL(array, expr)'",
@@ -52,7 +55,12 @@ public class ArrayOrdinalOperatorConversion extends DirectOperatorConversion
 
   public ArrayOrdinalOperatorConversion()
   {
-    super(SQL_FUNCTION, "array_ordinal");
+    super(SQL_FUNCTION, FUNCTION_NAME);
+  }
+
+  protected ArrayOrdinalOperatorConversion(SqlOperator operator, String druidFunctionName)
+  {
+    super(operator, druidFunctionName);
   }
 
   static class ArrayElementReturnTypeInference implements SqlReturnTypeInference

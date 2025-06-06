@@ -23,7 +23,6 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.guice.BloomFilterSerializersModule;
@@ -56,12 +55,6 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
   public BloomFilterOperatorConversion()
   {
     super(SQL_FUNCTION, BloomFilterExpressions.TestExprMacro.FN_NAME);
-  }
-
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return SQL_FUNCTION;
   }
 
   @Nullable

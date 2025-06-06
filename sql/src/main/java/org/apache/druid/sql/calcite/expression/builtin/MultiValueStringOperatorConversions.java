@@ -76,10 +76,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Append()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayAppendOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -101,10 +100,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Prepend()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayPrependOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -129,10 +127,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Concat()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayConcatOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -185,10 +182,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Offset()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayOffsetOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -210,10 +206,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Ordinal()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayOrdinalOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -246,10 +241,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Slice()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArraySliceOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -268,10 +262,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public StringToMultiString()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, StringToArrayOperatorConversion.FUNCTION_NAME);
     }
   }
 
