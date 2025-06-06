@@ -42,6 +42,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.setting.QuerySettingRegistry;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.parser.ParseException;
@@ -323,16 +324,21 @@ public class DruidPlanner implements Closeable
             );
           }
           final SqlLiteral value = (SqlLiteral) sqlSetOption.getValue();
-          contextMap.put(
-              sqlSetOption.getName().getSimple(),
-              SqlResults.coerce(
-                  plannerContext.getJsonMapper(),
-                  SqlResults.Context.fromPlannerContext(plannerContext),
-                  value.getValue(),
-                  value.getTypeName(),
-                  "set"
-              )
-          );
+          String name = sqlSetOption.getName().getSimple();
+
+          // Validate the SET parameter and parse the value into the value with appropriate type.
+          Object val = QuerySettingRegistry.getInstance()
+                                           .validateAndParse(
+                                               name,
+                                               SqlResults.coerce(
+                                                   plannerContext.getJsonMapper(),
+                                                   SqlResults.Context.fromPlannerContext(plannerContext),
+                                                   value.getValue(),
+                                                   value.getTypeName(),
+                                                   "set"
+                                               )
+                                           );
+          contextMap.put(name, val);
         } else if (i < nodeList.size() - 1) {
           // only SET statements can appear before the last statement
           throw InvalidSqlInput.exception(
