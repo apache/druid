@@ -885,4 +885,32 @@ export const DRUID_QUERY_COMPLETIONS: CompletionRule[] = [
       { value: 'join', documentation: 'Join data source' },
     ],
   },
+
+  // Intervals object properties (when intervals is an object)
+  {
+    path: '$.intervals',
+    isObject: true,
+    condition: obj => typeof obj === 'object' && obj !== null && !Array.isArray(obj),
+    completions: [
+      { value: 'type', documentation: 'Type of interval specification' },
+      { value: 'intervals', documentation: 'Array of ISO-8601 interval strings' },
+    ],
+  },
+
+  // Intervals object types
+  {
+    path: '$.intervals.type',
+    completions: [
+      { value: 'intervals', documentation: 'Standard intervals specification' },
+      { value: 'segments', documentation: 'Segment-based intervals' },
+    ],
+  },
+
+  // Segments intervals properties
+  {
+    path: '$.intervals',
+    isObject: true,
+    condition: obj => obj.type === 'segments',
+    completions: [{ value: 'segments', documentation: 'Array of segment specifications' }],
+  },
 ];

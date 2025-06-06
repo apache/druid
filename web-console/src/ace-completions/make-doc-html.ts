@@ -31,5 +31,5 @@ export function makeDocHtml(item: ItemDescription) {
     `<div class="doc-name">${item.name}</div>`,
     item.syntax ? `<div class="doc-syntax">${escape(item.syntax)}</div>` : undefined,
     `<div class="doc-description">${item.description}</div>`,
-  );
+  ).join('\n');
 }
