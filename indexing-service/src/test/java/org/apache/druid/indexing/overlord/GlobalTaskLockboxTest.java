@@ -1877,38 +1877,28 @@ public class GlobalTaskLockboxTest
     // Please refer to NullLockPosseTaskLockbox
     final Task taskWithFailingLockAcquisition0 = new NoopTask(null, "FailingLockAcquisition", null, 0, 0, null);
     final Task taskWithFailingLockAcquisition1 = new NoopTask(null, "FailingLockAcquisition", null, 0, 0, null);
-    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
+    final Task taskWithSuccessfulLockAcquisition = new NoopTask(null, "successGroup", "foo", 0L, 0L, Map.of());
     taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
     taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
     taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
-
-    GlobalTaskLockbox testLockbox = new NullLockPosseGlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
-    testLockbox.syncFromStorage();
-
-    testLockbox.add(taskWithFailingLockAcquisition0);
-    testLockbox.add(taskWithFailingLockAcquisition1);
-    testLockbox.add(taskWithSuccessfulLockAcquisition);
-
-    testLockbox.tryLock(taskWithFailingLockAcquisition0,
-                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                 taskWithFailingLockAcquisition0,
-                                                 Intervals.of("2017-07-01/2017-08-01"),
-                                                 null
-                        )
-    );
-
-    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
-                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                 taskWithSuccessfulLockAcquisition,
-                                                 Intervals.of("2017-07-01/2017-08-01"),
-                                                 null
-                        )
-    );
-
     Assert.assertEquals(3, taskStorage.getActiveTasks().size());
 
-    // The tasks must be marked for failure
+    final TaskLock lock = new TimeChunkLock(
+        null,
+        taskWithSuccessfulLockAcquisition.getGroupId(),
+        taskWithSuccessfulLockAcquisition.getDataSource(),
+        Intervals.of("2025-01-01/P1D"),
+        "v1",
+        taskWithSuccessfulLockAcquisition.getPriority()
+    );
+    taskStorage.addLock(taskWithSuccessfulLockAcquisition.getId(), lock);
+    taskStorage.addLock(taskWithFailingLockAcquisition0.getId(), lock);
+    taskStorage.addLock(taskWithFailingLockAcquisition1.getId(), lock);
+
+    GlobalTaskLockbox testLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     TaskLockboxSyncResult result = testLockbox.syncFromStorage();
+
+    // The tasks must be marked for failure
     Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
                         result.getTasksToFail());
   }
@@ -2281,20 +2271,6 @@ public class GlobalTaskLockboxTest
     public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
-    }
-  }
-
-  /**
-   * Extends TaskLockbox to return a null TaskLockPosse when the task's group name contains "FailingLockAcquisition".
-   */
-  private static class NullLockPosseGlobalTaskLockbox extends GlobalTaskLockbox
-  {
-    public NullLockPosseGlobalTaskLockbox(
-        TaskStorage taskStorage,
-        IndexerMetadataStorageCoordinator metadataStorageCoordinator
-    )
-    {
-      super(taskStorage, metadataStorageCoordinator);
     }
   }
 }
