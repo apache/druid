@@ -135,6 +135,9 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               }
               LOG.debug("Scheduled userMap cache poll is done");
             }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedUserMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
@@ -161,6 +164,9 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               }
               LOG.debug("Scheduled groupMappingMap cache poll is done");
             }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedGroupMappingMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedGroupMappingMaps.").emit();
             }
@@ -183,7 +189,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     }
 
     LOG.info("CoordinatorPollingBasicAuthorizerCacheManager is stopping.");
-    exec.shutdown();
+    exec.shutdownNow();
     LOG.info("CoordinatorPollingBasicAuthorizerCacheManager is stopped.");
   }
 
@@ -326,15 +332,17 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   {
     try {
       return RetryUtils.retry(
-          () -> {
-            return tryFetchUserMapsFromCoordinator(prefix);
-          },
-          e -> true,
+          () -> tryFetchUserMapsFromCoordinator(prefix),
+          e -> !(e instanceof InterruptedException),
           commonCacheConfig.getMaxSyncRetries()
       );
     }
+    catch (InterruptedException e) {
+      LOG.noStackTrace().info(e, "Interrupted while fetching user and role map for authorizer[%s].", prefix);
+      return null;
+    }
     catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching user and role map for authorizer [%s]", prefix).emit();
+      LOG.makeAlert(e, "Encountered exception while fetching user and role map for authorizer[%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {
@@ -343,7 +351,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
           }
           catch (Exception e2) {
             e2.addSuppressed(e);
-            LOG.makeAlert(e2, "Encountered exception while loading user-role map snapshot for authorizer [%s]", prefix)
+            LOG.makeAlert(e2, "Encountered exception while loading user-role map snapshot for authorizer[%s]", prefix)
                .emit();
           }
         }
@@ -357,15 +365,17 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   {
     try {
       return RetryUtils.retry(
-          () -> {
-            return tryFetchGroupMappingMapsFromCoordinator(prefix);
-          },
-          e -> true,
+          () -> tryFetchGroupMappingMapsFromCoordinator(prefix),
+          e -> !(e instanceof InterruptedException),
           commonCacheConfig.getMaxSyncRetries()
       );
     }
+    catch (InterruptedException e) {
+      LOG.noStackTrace().info(e, "Interrupted while fetching group and role map for authorizer[%s].", prefix);
+      return null;
+    }
     catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching group and role map for authorizer [%s]", prefix).emit();
+      LOG.makeAlert(e, "Encountered exception while fetching group and role map for authorizer[%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {
@@ -374,7 +384,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
           }
           catch (Exception e2) {
             e2.addSuppressed(e);
-            LOG.makeAlert(e2, "Encountered exception while loading group-role map snapshot for authorizer [%s]", prefix)
+            LOG.makeAlert(e2, "Encountered exception while loading group-role map snapshot for authorizer[%s]", prefix)
                .emit();
           }
         }
