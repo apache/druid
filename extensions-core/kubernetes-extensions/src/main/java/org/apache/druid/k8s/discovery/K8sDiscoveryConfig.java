@@ -60,6 +60,12 @@ public class K8sDiscoveryConfig
   @JsonProperty
   private final Duration retryPeriod;
 
+  @JsonProperty
+  private final Duration ignoreTerminatingStateDuration;
+
+  @JsonProperty
+  private final Duration pollDuration;
+
   @JsonCreator
   public K8sDiscoveryConfig(
       @JsonProperty("clusterIdentifier") String clusterIdentifier,
@@ -69,7 +75,9 @@ public class K8sDiscoveryConfig
       @JsonProperty("overlordLeaderElectionConfigMapNamespace") String overlordLeaderElectionConfigMapNamespace,
       @JsonProperty("leaseDuration") Duration leaseDuration,
       @JsonProperty("renewDeadline") Duration renewDeadline,
-      @JsonProperty("retryPeriod") Duration retryPeriod
+      @JsonProperty("retryPeriod") Duration retryPeriod,
+      @JsonProperty("ignoreTerminatingStateDuration") Duration ignoreTerminatingStateDuration,
+      @JsonProperty("pollDuration") Duration pollDuration
   )
   {
     Preconditions.checkArgument(clusterIdentifier != null && !clusterIdentifier.isEmpty(), "null/empty clusterIdentifier");
@@ -97,6 +105,8 @@ public class K8sDiscoveryConfig
     this.leaseDuration = leaseDuration == null ? Duration.millis(60000) : leaseDuration;
     this.renewDeadline = renewDeadline == null ? Duration.millis(17000) : renewDeadline;
     this.retryPeriod = retryPeriod == null ? Duration.millis(5000) : retryPeriod;
+    this.ignoreTerminatingStateDuration = ignoreTerminatingStateDuration == null ? Duration.standardSeconds(30) : ignoreTerminatingStateDuration;
+    this.pollDuration = pollDuration == null ? Duration.standardMinutes(1) : pollDuration;
   }
 
   @JsonProperty
@@ -147,6 +157,18 @@ public class K8sDiscoveryConfig
     return retryPeriod;
   }
 
+  @JsonProperty
+  public Duration getIgnoreTerminatingStateDuration()
+  {
+    return ignoreTerminatingStateDuration;
+  }
+
+  @JsonProperty
+  public Duration getPollDuration()
+  {
+    return pollDuration;
+  }
+
   @Override
   public String toString()
   {
@@ -159,6 +181,8 @@ public class K8sDiscoveryConfig
            ", leaseDuration=" + leaseDuration +
            ", renewDeadline=" + renewDeadline +
            ", retryPeriod=" + retryPeriod +
+           ", ignoreTerminatingStateDuration=" + ignoreTerminatingStateDuration +
+           ", pollDuration=" + pollDuration +
            '}';
   }
 
@@ -185,7 +209,9 @@ public class K8sDiscoveryConfig
            ) &&
            Objects.equals(leaseDuration, that.leaseDuration) &&
            Objects.equals(renewDeadline, that.renewDeadline) &&
-           Objects.equals(retryPeriod, that.retryPeriod);
+           Objects.equals(retryPeriod, that.retryPeriod) &&
+           Objects.equals(ignoreTerminatingStateDuration, that.ignoreTerminatingStateDuration) &&
+           Objects.equals(pollDuration, that.pollDuration);
   }
 
   @Override
@@ -199,7 +225,9 @@ public class K8sDiscoveryConfig
         overlordLeaderElectionConfigMapNamespace,
         leaseDuration,
         renewDeadline,
-        retryPeriod
+        retryPeriod,
+        ignoreTerminatingStateDuration,
+        pollDuration
     );
   }
 }
