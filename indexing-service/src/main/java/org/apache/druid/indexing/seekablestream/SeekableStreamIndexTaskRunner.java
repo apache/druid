@@ -317,10 +317,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     @Nullable
     final String supervisorId = task.getSupervisorId();
     // Backwards compatibility: if task spec from metadata has a null supervisorId field, fall back to dataSource
-    if (supervisorId == null) {
-      return task.getDataSource();
+    if (supervisorId != null) {
+      return supervisorId;
     }
-    return supervisorId;
+    return task.getDataSource();
   }
 
   @VisibleForTesting

@@ -104,26 +104,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, supervisorId, dataSource, segmentSchemaMapping);
   }
 
-  public static SegmentTransactionalInsertAction appendActionWithSupervisorIdAndDataSource(
-      String supervisorId,
-      String dataSource,
-      Set<DataSegment> segments,
-      @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping
-  )
-  {
-    return new SegmentTransactionalInsertAction(
-        null,
-        segments,
-        startMetadata,
-        endMetadata,
-        supervisorId,
-        dataSource,
-        segmentSchemaMapping
-    );
-  }
-
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
       String supervisorId,
       String dataSource,
