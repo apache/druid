@@ -421,7 +421,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
                  ? SegmentTransactionalAppendAction
                      .forSegmentsAndMetadata(runner.getSupervisorId(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping)
                  : SegmentTransactionalInsertAction
-                     .appendActionWithSupervisorIdAndDataSource(runner.getSupervisorId(), runner.getAppenderator().getDataSource(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
+                     .appendAction(runner.getSupervisorId(), runner.getAppenderator().getDataSource(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)

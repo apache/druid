@@ -60,7 +60,7 @@ public class KillDatasourceMetadata extends MetadataCleanupDuty
     // To determine if a supervisor's datasource metadata is still active, we check if the particular supervisor
     // is still active or not
     Map<String, SupervisorSpec> allActiveSupervisor = metadataSupervisorManager.getLatestActiveOnly();
-    Set<String> allInactiveSupervisors
+    Set<String> allValidActiveSupervisors
         = allActiveSupervisor.values()
                              .stream()
                              .map(SupervisorSpec::getId)
@@ -70,7 +70,7 @@ public class KillDatasourceMetadata extends MetadataCleanupDuty
     // We exclude removing datasource metadata with active supervisor
     return indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(
         minCreatedTime.getMillis(),
-        allInactiveSupervisors
+        allValidActiveSupervisors
     );
   }
 }

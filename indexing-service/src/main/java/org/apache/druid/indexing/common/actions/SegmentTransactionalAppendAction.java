@@ -205,14 +205,14 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
-                        .onValidLocks(publishAction)
-                        .onInvalidLocks(
-                            () -> SegmentPublishResult.fail(
-                                "Invalid task locks. Maybe they are revoked by a higher priority task."
-                                + " Please check the overlord log for details."
-                            )
-                        )
-                        .build()
+              .onValidLocks(publishAction)
+              .onInvalidLocks(
+                  () -> SegmentPublishResult.fail(
+                      "Invalid task locks. Maybe they are revoked by a higher priority task."
+                      + " Please check the overlord log for details."
+                  )
+              )
+              .build()
       );
     }
     catch (Exception e) {
