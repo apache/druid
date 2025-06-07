@@ -24,13 +24,13 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 
 public class RabbitStreamSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, Long>
 {
   public RabbitStreamSupervisorReportPayload(
+      String id,
       String dataSource,
       String stream,
       int partitions,
@@ -47,6 +47,7 @@ public class RabbitStreamSupervisorReportPayload extends SeekableStreamSuperviso
       List<SupervisorStateManager.ExceptionEvent> recentErrors)
   {
     super(
+        id,
         dataSource,
         stream,
         partitions,
@@ -69,7 +70,8 @@ public class RabbitStreamSupervisorReportPayload extends SeekableStreamSuperviso
   public String toString()
   {
     return "RabbitStreamSupervisorReportPayload{" +
-        "dataSource='" + getDataSource() + '\'' +
+       "id='" + getId() + '\'' +
+       ", dataSource='" + getDataSource() + '\'' +
         ", stream='" + getStream() + '\'' +
         ", partitions=" + getPartitions() +
         ", replicas=" + getReplicas() +

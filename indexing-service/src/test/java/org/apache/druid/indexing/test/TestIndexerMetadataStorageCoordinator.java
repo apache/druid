@@ -80,25 +80,25 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
+  public DataSourceMetadata retrieveDataSourceMetadata(String supervisorId)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean deleteDataSourceMetadata(String dataSource)
+  public boolean deleteDataSourceMetadata(String supervisorId)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
+  public boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
 
   @Override
-  public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
+  public boolean insertDataSourceMetadata(String supervisorId, String dataSource, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
@@ -239,7 +239,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      SegmentSchemaMapping segmentSchemaMapping
+      SegmentSchemaMapping segmentSchemaMapping,
+      String supervisorId
   )
   {
     return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
@@ -250,7 +251,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      SegmentSchemaMapping segmentSchemaMapping
+      SegmentSchemaMapping segmentSchemaMapping,
+      @Nullable final String supervisorId
   )
   {
     // Don't actually compare metadata, just do it!
@@ -259,6 +261,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentPublishResult commitMetadataOnly(
+      String supervisorId,
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata

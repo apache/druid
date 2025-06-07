@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
@@ -63,6 +64,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return ingestionSchema;
   }
 
+  protected final String id;
   protected final TaskStorage taskStorage;
   protected final TaskMaster taskMaster;
   protected final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
@@ -78,6 +80,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
 
   public SeekableStreamSupervisorSpec(
+      final String id,
       final SeekableStreamSupervisorIngestionSpec ingestionSchema,
       @Nullable Map<String, Object> context,
       Boolean suspended,
@@ -93,6 +96,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   )
   {
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
+    this.id = Preconditions.checkNotNull(Configs.valueOrDefault(id, ingestionSchema.getDataSchema().getDataSource()), "id cannot be null!");
     this.context = context;
 
     this.taskStorage = taskStorage;
@@ -151,9 +155,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @Override
+  @JsonProperty
   public String getId()
   {
-    return ingestionSchema.getDataSchema().getDataSource();
+    return id;
   }
 
   public DruidMonitorSchedulerConfig getMonitorSchedulerConfig()

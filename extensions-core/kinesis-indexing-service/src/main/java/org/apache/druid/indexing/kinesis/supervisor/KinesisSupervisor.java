@@ -52,7 +52,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
@@ -98,7 +97,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   )
   {
     super(
-        StringUtils.format("KinesisSupervisor-%s", spec.getDataSchema().getDataSource()),
+        spec.getId(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -174,7 +173,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
           spec.getSpec().getTuningConfig().isUseListShards(),
-          awsCredentialsConfig
+          awsCredentialsConfig,
+          spec.getId()
       ));
     }
     return taskList;
@@ -249,9 +249,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof KinesisIndexTask;
+    if (!(task instanceof KinesisIndexTask)) {
+      return false;
+    }
+    final String supervisorId = ((KinesisIndexTask) task).getSupervisorId();
+    return supervisorId.equals(spec.getId());
   }
 
   @Override
@@ -263,6 +267,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<String, Long> partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
     return new KinesisSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
