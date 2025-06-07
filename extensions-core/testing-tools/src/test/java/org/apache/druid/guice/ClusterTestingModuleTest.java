@@ -40,7 +40,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -244,7 +244,7 @@ public class ClusterTestingModuleTest
 
       final Injector overlordInjector = overlord.makeInjector(Set.of(NodeRole.OVERLORD));
 
-      TaskLockbox taskLockbox = overlordInjector.getInstance(TaskLockbox.class);
+      GlobalTaskLockbox taskLockbox = overlordInjector.getInstance(GlobalTaskLockbox.class);
       Assert.assertTrue(taskLockbox instanceof FaultyTaskLockbox);
     }
     finally {

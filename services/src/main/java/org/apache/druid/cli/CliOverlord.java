@@ -72,11 +72,11 @@ import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -239,7 +239,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(TaskLockbox.class).in(LazySingleton.class);
+            binder.bind(GlobalTaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(ManageLifecycle.class);
