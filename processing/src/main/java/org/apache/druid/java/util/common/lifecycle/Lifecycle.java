@@ -99,7 +99,6 @@ public class Lifecycle
   private Stage currStage = null;
   private final AtomicBoolean shutdownHookRegistered = new AtomicBoolean(false);
   private final String name;
-  private static final String UNGRACEFUL_SHUTDOWN_WAIT_TIME_PROPERTY = "druid.lifecycle.ungracefulShutDownWaitTimeExperimental";
 
   public Lifecycle()
   {
@@ -114,20 +113,6 @@ public class Lifecycle
     for (Stage stage : Stage.values()) {
       handlers.put(stage, new CopyOnWriteArrayList<>());
     }
-  }
-
-  private Long getUngracefulShutDownWaitTime()
-  {
-    String waitTimeStr = System.getProperty(UNGRACEFUL_SHUTDOWN_WAIT_TIME_PROPERTY);
-    if (waitTimeStr != null) {
-      try {
-        return Long.parseLong(waitTimeStr);
-      }
-      catch (NumberFormatException e) {
-        log.warn("Invalid value for %s: %s", UNGRACEFUL_SHUTDOWN_WAIT_TIME_PROPERTY, waitTimeStr);
-      }
-    }
-    return null;
   }
 
   /**
@@ -402,20 +387,6 @@ public class Lifecycle
     }
   }
 
-  public void stopUngracefully(long waitTimeMin)
-  {
-    handlers.remove(Stage.ANNOUNCEMENTS);
-    stop();
-    System.out.println("waiting for " + waitTimeMin + " minutes");
-    try {
-      Thread.sleep(waitTimeMin * 60 * 1000);
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "Sleep interrupted");
-    }
-    System.out.println("waited for " + waitTimeMin + " minutes, exiting");
-  }
-
   public void ensureShutdownHook()
   {
     if (shutdownHookRegistered.compareAndSet(false, true)) {
@@ -427,12 +398,7 @@ public class Lifecycle
                 public void run()
                 {
                   log.info("Lifecycle [%s] running shutdown hook", name);
-                  Long waitTime = getUngracefulShutDownWaitTime();
-                  if (waitTime != null) {
-                    stopUngracefully(waitTime);
-                  } else {
-                    stop();
-                  }
+                  stop();
                 }
               }
           )
