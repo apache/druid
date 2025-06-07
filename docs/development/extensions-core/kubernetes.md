@@ -52,7 +52,7 @@ Additionally, this extension has following configuration.
 |`druid.discovery.k8s.renewDeadline`|`Duration`|Lease renewal period used by Leader.|PT17S|No|
 |`druid.discovery.k8s.retryPeriod`|`Duration`|Retry wait used by Leader Election algorithm on failed operations.|PT5S|No|
 |`druid.discovery.k8s.pollDuration`|`Duration`|Interval between periodic pod listings for node discovery.|PT1M|No|
-|`druid.discovery.k8s.ignoreTerminatingStateDuration`|`Duration`|The duration for which a pod will be considered running if its in terminating state.(set this to >= terminationGracePeriod)|PT30S|No|
+|`druid.discovery.k8s.ignoreTerminatingStateDuration`|`Duration`|The duration for which a pod will be considered running if its in terminating state. Set this to higher than graceful termination period.|PT30S|No|
 
 ### Gotchas
 
