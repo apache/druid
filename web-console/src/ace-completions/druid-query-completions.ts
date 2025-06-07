@@ -174,13 +174,80 @@ export const DRUID_QUERY_COMPLETIONS: CompletionRule[] = [
     isObject: true,
     condition: obj => obj.queryType === 'segmentMetadata',
     completions: [
-      { value: 'toInclude', documentation: 'Analysis types to include in results' },
-      { value: 'merge', documentation: 'Whether to merge segment metadata' },
-      { value: 'analysisTypes', documentation: 'Types of analysis to perform' },
+      { value: 'toInclude', documentation: 'Columns to include in the result (defaults to "all")' },
+      {
+        value: 'merge',
+        documentation: 'Merge all individual segment metadata results into a single result',
+      },
+      {
+        value: 'analysisTypes',
+        documentation: 'Column properties to calculate and return (e.g. cardinality, size)',
+      },
+      {
+        value: 'aggregatorMergeStrategy',
+        documentation: 'Strategy for merging aggregators: strict, lenient, earliest, or latest',
+      },
       {
         value: 'lenientAggregatorMerge',
-        documentation: 'Whether to be lenient when merging aggregators',
+        documentation: 'Deprecated. Use aggregatorMergeStrategy instead',
       },
+    ],
+  },
+
+  // SegmentMetadata toInclude properties
+  {
+    path: '$.toInclude',
+    isObject: true,
+    condition: obj => obj.queryType === 'segmentMetadata',
+    completions: [
+      { value: 'type', documentation: 'Type of columns to include: all, none, or list' },
+    ],
+  },
+
+  // SegmentMetadata toInclude types
+  {
+    path: '$.toInclude.type',
+    condition: obj => obj.queryType === 'segmentMetadata',
+    completions: [
+      { value: 'all', documentation: 'Include all columns in the result' },
+      { value: 'none', documentation: 'Include no columns in the result' },
+      { value: 'list', documentation: 'Include specific columns listed in the columns array' },
+    ],
+  },
+
+  // SegmentMetadata toInclude list properties
+  {
+    path: '$.toInclude',
+    isObject: true,
+    condition: obj => obj.queryType === 'segmentMetadata' && obj.toInclude?.type === 'list',
+    completions: [{ value: 'columns', documentation: 'Array of column names to include' }],
+  },
+
+  // SegmentMetadata analysisTypes values
+  {
+    path: '$.analysisTypes[]',
+    condition: obj => obj.queryType === 'segmentMetadata',
+    completions: [
+      { value: 'cardinality', documentation: 'Number of unique values in string columns' },
+      { value: 'interval', documentation: 'Time intervals associated with queried segments' },
+      { value: 'minmax', documentation: 'Estimated min/max values for string columns' },
+      { value: 'size', documentation: 'Estimated byte size as if stored in text format' },
+      { value: 'timestampSpec', documentation: 'Timestamp specification of data in segments' },
+      { value: 'queryGranularity', documentation: 'Query granularity of data in segments' },
+      { value: 'aggregators', documentation: 'List of aggregators usable for metric columns' },
+      { value: 'rollup', documentation: 'Whether the segments are rolled up' },
+    ],
+  },
+
+  // SegmentMetadata aggregatorMergeStrategy values
+  {
+    path: '$.aggregatorMergeStrategy',
+    condition: obj => obj.queryType === 'segmentMetadata',
+    completions: [
+      { value: 'strict', documentation: 'Fail if any conflicts or unknown aggregators exist' },
+      { value: 'lenient', documentation: 'Ignore unknown aggregators, set conflicts to null' },
+      { value: 'earliest', documentation: 'Use aggregator from earliest segment in conflicts' },
+      { value: 'latest', documentation: 'Use aggregator from most recent segment in conflicts' },
     ],
   },
 
@@ -854,15 +921,130 @@ export const DRUID_QUERY_COMPLETIONS: CompletionRule[] = [
     completions: [
       { value: 'type', documentation: 'Type of virtual column' },
       { value: 'name', documentation: 'Name of the virtual column' },
-      { value: 'expression', documentation: 'Expression to compute the column value' },
-      { value: 'outputType', documentation: 'Output type of the virtual column' },
     ],
   },
 
   // Virtual column types
   {
     path: '$.virtualColumns[].type',
-    completions: [{ value: 'expression', documentation: 'Expression-based virtual column' }],
+    completions: [
+      {
+        value: 'expression',
+        documentation: 'Expression-based virtual column using Druid expressions',
+      },
+      { value: 'nested-field', documentation: 'Optimized access to nested JSON fields' },
+      { value: 'mv-filtered', documentation: 'Filtered multi-value string column' },
+    ],
+  },
+
+  // Expression virtual column properties
+  {
+    path: '$.virtualColumns[]',
+    isObject: true,
+    condition: obj => obj.type === 'expression',
+    completions: [
+      { value: 'expression', documentation: 'Druid expression that takes a row as input' },
+      {
+        value: 'outputType',
+        documentation: 'Output type: LONG, FLOAT, DOUBLE, STRING, ARRAY, or COMPLEX',
+      },
+    ],
+  },
+
+  // Expression virtual column output types
+  {
+    path: '$.virtualColumns[].outputType',
+    condition: obj => obj.type === 'expression',
+    completions: [
+      { value: 'LONG', documentation: 'Long integer output type' },
+      { value: 'FLOAT', documentation: 'Float output type (default)' },
+      { value: 'DOUBLE', documentation: 'Double precision output type' },
+      { value: 'STRING', documentation: 'String output type' },
+      { value: 'ARRAY<STRING>', documentation: 'Array of strings output type' },
+      { value: 'ARRAY<LONG>', documentation: 'Array of longs output type' },
+      { value: 'ARRAY<DOUBLE>', documentation: 'Array of doubles output type' },
+      { value: 'COMPLEX<json>', documentation: 'Complex JSON output type' },
+    ],
+  },
+
+  // Nested field virtual column properties
+  {
+    path: '$.virtualColumns[]',
+    isObject: true,
+    condition: obj => obj.type === 'nested-field',
+    completions: [
+      { value: 'columnName', documentation: 'Name of the COMPLEX<json> input column' },
+      { value: 'outputName', documentation: 'Name of the virtual column output' },
+      { value: 'expectedType', documentation: 'Expected output type for coercion' },
+      { value: 'path', documentation: 'JSONPath or jq syntax path to nested value' },
+      { value: 'pathParts', documentation: 'Parsed path parts array for nested access' },
+      {
+        value: 'processFromRaw',
+        documentation: 'Process raw JSON data instead of optimized selector',
+      },
+      { value: 'useJqSyntax', documentation: 'Use jq syntax instead of JSONPath for path parsing' },
+    ],
+  },
+
+  // Nested field virtual column expected types
+  {
+    path: '$.virtualColumns[].expectedType',
+    condition: obj => obj.type === 'nested-field',
+    completions: [
+      { value: 'STRING', documentation: 'String output type (default)' },
+      { value: 'LONG', documentation: 'Long integer output type' },
+      { value: 'FLOAT', documentation: 'Float output type' },
+      { value: 'DOUBLE', documentation: 'Double precision output type' },
+      { value: 'COMPLEX<json>', documentation: 'Complex JSON output type' },
+    ],
+  },
+
+  // Nested field path parts properties
+  {
+    path: '$.virtualColumns[].pathParts[]',
+    isObject: true,
+    condition: obj => obj.type === 'nested-field',
+    completions: [{ value: 'type', documentation: 'Type of path part: field or arrayElement' }],
+  },
+
+  // Nested field path part types
+  {
+    path: '$.virtualColumns[].pathParts[].type',
+    completions: [
+      { value: 'field', documentation: 'Access a specific field in nested structure' },
+      { value: 'arrayElement', documentation: 'Access specific array element by index' },
+    ],
+  },
+
+  // Field path part properties
+  {
+    path: '$.virtualColumns[].pathParts[]',
+    isObject: true,
+    condition: obj => obj.type === 'field',
+    completions: [{ value: 'field', documentation: 'Name of the field to access' }],
+  },
+
+  // Array element path part properties
+  {
+    path: '$.virtualColumns[].pathParts[]',
+    isObject: true,
+    condition: obj => obj.type === 'arrayElement',
+    completions: [{ value: 'index', documentation: 'Zero-based array index to access' }],
+  },
+
+  // Multi-value filtered virtual column properties
+  {
+    path: '$.virtualColumns[]',
+    isObject: true,
+    condition: obj => obj.type === 'mv-filtered',
+    completions: [
+      { value: 'delegate', documentation: 'Name of the multi-value STRING input column' },
+      { value: 'values', documentation: 'Array of STRING values to allow or deny' },
+      {
+        value: 'isAllowList',
+        documentation: 'If true, allow only specified values; if false, deny them',
+      },
+    ],
   },
 
   // DataSource specifications
