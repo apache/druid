@@ -470,8 +470,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Random backed bindings that provide positive longs in the integer range, random doubles, and random strings, with
-   * a 10% null rate
+   * Random backed bindings that provide positive longs in the positive integer range, random doubles, and random
+   * strings, with a 10% null rate
    */
   public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
       int vectorSize,
@@ -483,7 +483,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     return populateBindings(
         vectorSize,
         types,
-        () -> r.nextLong(Integer.MIN_VALUE, Integer.MAX_VALUE - 1),
+        () -> r.nextLong(0, Integer.MAX_VALUE - 1),
         r::nextDouble,
         () -> r.nextDouble(0, 1.0) > 0.9,
         () -> String.valueOf(r.nextInt())

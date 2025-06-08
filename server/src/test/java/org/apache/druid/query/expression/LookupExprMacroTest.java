@@ -155,14 +155,14 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
                   @Override
                   public Optional<LookupExtractorFactoryContainer> get(String lookupName)
                   {
-                    if (lookupName.equals("test-lookup")) {
+                    if ("test-lookup".equals(lookupName)) {
                       return Optional.of(
                           new LookupExtractorFactoryContainer(
                               "v0",
                               new MapLookupExtractorFactory(lookup, false)
                           )
                       );
-                    } else if (lookupName.equals("test-lookup-injective")) {
+                    } else if ("test-lookup-injective".equals(lookupName)) {
                       return Optional.of(
                           new LookupExtractorFactoryContainer(
                               "v0",
