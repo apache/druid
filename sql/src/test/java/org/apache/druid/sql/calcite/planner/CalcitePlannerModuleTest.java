@@ -30,7 +30,6 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalTableScan;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.security.PolicyModule;
@@ -61,13 +60,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
 import static org.apache.calcite.plan.RelOptRule.operand;
-import static org.apache.druid.sql.calcite.planner.CalciteRulesManager.BLOAT_PROPERTY;
-import static org.apache.druid.sql.calcite.planner.CalciteRulesManager.DEFAULT_BLOAT;
 
 @ExtendWith(EasyMockExtension.class)
 public class CalcitePlannerModuleTest extends CalciteTestBase
@@ -75,7 +71,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";
   private static final String DRUID_SCHEMA_NAME = "DRUID_SCHEMA_NAME";
-  private static final int BLOAT = 1200;
 
   @Mock
   private NamedSchema druidSchema1;
@@ -198,38 +193,4 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     Assert.assertTrue(containsCustomRule);
   }
 
-  @Test
-  public void testConfigurableBloat()
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
-
-    PlannerContext contextWithBloat = PlannerContext.create(
-            toolbox,
-            "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
-            Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
-            null
-    );
-
-    PlannerContext contextWithoutBloat = PlannerContext.create(
-            toolbox,
-            "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
-            Collections.emptyMap(),
-            null
-    );
-
-    assertBloat(contextWithBloat, BLOAT);
-    assertBloat(contextWithoutBloat, DEFAULT_BLOAT);
-  }
-
-  private void assertBloat(PlannerContext context, int expectedBloat)
-  {
-    Optional<ProjectMergeRule> firstProjectMergeRule = injector.getInstance(CalciteRulesManager.class).baseRuleSet(context).stream()
-            .filter(rule -> rule instanceof ProjectMergeRule)
-            .map(rule -> (ProjectMergeRule) rule)
-            .findAny();
-    Assert.assertTrue(firstProjectMergeRule.isPresent() && firstProjectMergeRule.get().config.bloat() == expectedBloat);
-  }
 }

@@ -43,7 +43,6 @@ import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule.FilterInto
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -54,9 +53,12 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.AggregateExpandDistinctDispatchRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
 import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
+import org.apache.druid.sql.calcite.rule.ContextuallyConditionalRule;
+import org.apache.druid.sql.calcite.rule.DeferredProjectMergeRule;
 import org.apache.druid.sql.calcite.rule.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
@@ -77,7 +79,6 @@ import org.apache.druid.sql.calcite.rule.logical.DruidJoinRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.rule.logical.LogicalUnnestRule;
 import org.apache.druid.sql.calcite.rule.logical.UnnestInputCleanupRule;
-import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
@@ -227,8 +228,6 @@ public class CalciteRulesManager
           CoreRules.PROJECT_JOIN_TRANSPOSE,
           CoreRules.PROJECT_JOIN_REMOVE,
           CoreRules.FILTER_INTO_JOIN,
-          CoreRules.JOIN_PUSH_EXPRESSIONS,
-          CoreRules.SORT_JOIN_TRANSPOSE,
           JoinPushThroughJoinRule.LEFT,
           CoreRules.JOIN_COMMUTE
       );
@@ -247,6 +246,13 @@ public class CalciteRulesManager
     this.extensionCalciteRuleProviderSet = extensionCalciteRuleProviderSet;
   }
 
+  /**
+   * Creates all programs available to the planner.
+   *
+   * Rule construction must not use the query context from {@link PlannerContext} (or anything derived from it),
+   * because context from SET statements is not available at rule construction time. Any such decisions must be
+   * deferred to runtime using techniques like {@link ContextuallyConditionalRule}.
+   */
   public List<Program> programs(final PlannerContext plannerContext)
   {
     final boolean isDebug = plannerContext.queryContext().isDebug();
@@ -286,7 +292,8 @@ public class CalciteRulesManager
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
-    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+    builder.addRuleInstance(
+        FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
@@ -348,9 +355,13 @@ public class CalciteRulesManager
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
 
     // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
-    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
-      builder.addRuleInstance(CoreRules.FILTER_INTO_JOIN);
-    }
+    builder.addRuleInstance(
+        new ContextuallyConditionalRule(
+            CoreRules.FILTER_INTO_JOIN,
+            plannerContext,
+            ctx -> ctx.getJoinAlgorithm().requiresSubquery()
+        )
+    );
 
     // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
     builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
@@ -389,14 +400,22 @@ public class CalciteRulesManager
       builder.addRuleInstance(new FilterDecomposeConcatRule());
 
       // Include rule to split injective LOOKUP across a GROUP BY.
-      if (plannerContext.isPullUpLookup()) {
-        builder.addRuleInstance(new AggregatePullUpLookupRule(plannerContext));
-      }
+      builder.addRuleInstance(
+          new ContextuallyConditionalRule(
+              new AggregatePullUpLookupRule(plannerContext),
+              plannerContext,
+              PlannerContext::isPullUpLookup
+          )
+      );
 
       // Include rule to reduce certain LOOKUP expressions that appear in filters.
-      if (plannerContext.isReverseLookup()) {
-        builder.addRuleInstance(new ReverseLookupRule(plannerContext));
-      }
+      builder.addRuleInstance(
+          new ContextuallyConditionalRule(
+              new ReverseLookupRule(plannerContext),
+              plannerContext,
+              PlannerContext::isReverseLookup
+          )
+      );
     }
 
     // Calcite's builtin reduction rules.
@@ -454,6 +473,9 @@ public class CalciteRulesManager
     }
   }
 
+  /**
+   * Creates the set of rules used for Druid queries in the coupled planner.
+   */
   public List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
@@ -480,7 +502,10 @@ public class CalciteRulesManager
     return retVal.build();
   }
 
-  public List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
+  /**
+   * Creates the set of rules used for Bindable (Calcite interpreter) queries in the coupled planner.
+   */
+  private List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
                         .addAll(baseRuleSet(plannerContext))
@@ -490,43 +515,41 @@ public class CalciteRulesManager
                         .build();
   }
 
-  public List<RelOptRule> configurableRuleSet(PlannerContext plannerContext)
-  {
-    return ImmutableList.of(ProjectMergeRule.Config.DEFAULT.withBloat(getBloatProperty(plannerContext)).toRule());
-  }
-
-  private int getBloatProperty(PlannerContext plannerContext)
-  {
-    final Integer bloat = plannerContext.queryContext().getInt(BLOAT_PROPERTY);
-    return (bloat != null) ? bloat : DEFAULT_BLOAT;
-  }
-
+  /**
+   * Creates the base set of rules, used for all planning runs.
+   */
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
   {
-    final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
 
     // Calcite rules.
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
-    rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
-    rules.addAll(configurableRuleSet(plannerContext));
+    rules.add(new DruidAggregateCaseToFilterRule(plannerContext));
+    rules.add(new DeferredProjectMergeRule(plannerContext));
 
-    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
-      rules.addAll(FANCY_JOIN_RULES);
+    // Add FANCY_JOIN_RULES with conditional execution based on join algorithm
+    for (RelOptRule fancyJoinRule : FANCY_JOIN_RULES) {
+      rules.add(
+          new ContextuallyConditionalRule(
+              fancyJoinRule,
+              plannerContext,
+              ctx -> ctx.getJoinAlgorithm().requiresSubquery()
+          )
+      );
     }
 
     rules.add(DruidAggregateRemoveRedundancyRule.instance());
 
-    if (!plannerConfig.isUseApproximateCountDistinct()) {
-      if (plannerConfig.isUseGroupingSetForExactDistinct()
-          && plannerContext.featureAvailable(EngineFeature.GROUPING_SETS)) {
-        rules.add(CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES);
-      } else {
-        rules.add(CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN);
-      }
-    }
+    // Conditionally execute the correct count-distinct-expansion rule (or none at all) at runtime.
+    rules.add(
+        new ContextuallyConditionalRule(
+            new AggregateExpandDistinctDispatchRule(plannerContext),
+            plannerContext,
+            ctx -> !ctx.getPlannerConfig().isUseApproximateCountDistinct()
+        )
+    );
 
     // Rules that we wrote.
     rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);

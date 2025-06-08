@@ -40,6 +40,7 @@ import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
@@ -75,12 +76,13 @@ import java.util.List;
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
-  private boolean extendedFilteredSumRewrite;
+  private final PlannerContext plannerContext;
+  private Boolean extendedFilteredSumRewrite;
 
-  public DruidAggregateCaseToFilterRule(boolean extendedFilteredSumRewrite)
+  public DruidAggregateCaseToFilterRule(PlannerContext plannerContext)
   {
     super(operand(Aggregate.class, operand(Project.class, any())));
-    this.extendedFilteredSumRewrite = extendedFilteredSumRewrite;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -278,7 +280,7 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     // https://issues.apache.org/jira/browse/CALCITE-5953
     // have restricted this rewrite as in case there are no rows it may not be equvivalent;
     // however it may have some performance impact in Druid
-    if (extendedFilteredSumRewrite &&
+    if (isExtendedFilteredSumRewrite() &&
         kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
       if (isIntLiteral(arg1, BigDecimal.ONE)) { // D2
         newProjects.add(filter);
@@ -345,5 +347,13 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     return rexNode instanceof RexLiteral
         && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName())
         && value.equals(((RexLiteral) rexNode).getValueAs(BigDecimal.class));
+  }
+
+  private boolean isExtendedFilteredSumRewrite()
+  {
+    if (extendedFilteredSumRewrite == null) {
+      extendedFilteredSumRewrite = plannerContext.queryContext().isExtendedFilteredSumRewrite();
+    }
+    return extendedFilteredSumRewrite;
   }
 }

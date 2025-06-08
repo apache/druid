@@ -67,8 +67,8 @@ import java.util.stream.Collectors;
 public class DruidJoinRule extends RelOptRule
 {
 
-  private final boolean enableLeftScanDirect;
   private final PlannerContext plannerContext;
+  private Boolean enableLeftScanDirect;
 
   private DruidJoinRule(final PlannerContext plannerContext)
   {
@@ -79,7 +79,6 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
-    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
     this.plannerContext = plannerContext;
   }
 
@@ -129,7 +128,7 @@ public class DruidJoinRule extends RelOptRule
         rexBuilder
     );
     plannerContext.setPlanningError(conditionAnalysis.errorStr);
-    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
+    final boolean isLeftDirectAccessPossible = isEnableLeftScanDirect() && (left instanceof DruidQueryRel);
 
     final JoinAlgorithm joinAlgorithm = QueryUtils.getJoinAlgorithm(join, plannerContext);
     if (!joinAlgorithm.requiresSubquery()
@@ -279,6 +278,14 @@ public class DruidJoinRule extends RelOptRule
     }
 
     return true;
+  }
+
+  private boolean isEnableLeftScanDirect()
+  {
+    if (enableLeftScanDirect == null) {
+      enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
+    }
+    return enableLeftScanDirect;
   }
 
   public static class ConditionAnalysis
