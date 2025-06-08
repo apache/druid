@@ -121,7 +121,6 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
-import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -14627,63 +14626,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
-  @NotYetSupported(Modes.SORT_REMOVE_CONSTANT_KEYS_CONFLICT)
-  @Test
-  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
-  {
-    // TODO(gianm): this test does not actually test the below thing, b/c the timestamp_floor got baked in
-    msqIncompatible();
-    //msqCompatible();
-
-    // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
-    // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
-    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
-    // with granularity MONTH, to avoid excessive materialization of time grains.
-    //
-    // See DruidQuery#canUseQueryGranularity for the relevant check.
-
-    cannotVectorize();
-
-    testQuery(
-        "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from "
-        + "(VALUES (TIMESTAMP '2000-01-01', 1.0), (TIMESTAMP '2000-01-02', 2.0)) t (__time, m1)\n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 1 DESC",
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(InlineDataSource.fromIterable(
-                            ImmutableList.of(
-                                new Object[]{timestamp("2000-01-01"), 1.0},
-                                // Floor to month is applied while creating inline source, so this is
-                                // 2000-01-01, not 2000-01-02.
-                                new Object[]{timestamp("2000-01-01"), 2.0}
-                            ),
-                            RowSignature.builder()
-                                        .add("EXPR$0", ColumnType.LONG)
-                                        .add("m1", ColumnType.DOUBLE)
-                                        .build()
-                        ))
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("EXPR$0", "d0", ColumnType.LONG))
-                        .addAggregator(new DoubleMaxAggregatorFactory("a0", "m1"))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.NUMERIC)
-                                ),
-                                null
-                            )
-                        )
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), 2.0}
-        )
-    );
-  }
-
 
   @Test
   public void testComplexDecode()
