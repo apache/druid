@@ -77,6 +77,50 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       .put("boolString2", ExpressionType.STRING)
       .build();
 
+
+  @Test
+  public void testConstants()
+  {
+    testExpression("null", types);
+    testExpression("1", types);
+    testExpression("1.1", types);
+    testExpression("NaN", types);
+    testExpression("Infinity", types);
+    testExpression("-Infinity", types);
+    testExpression("'hello'", types);
+    testExpression("json_object('a', 1, 'b', 'abc', 'c', 3.3, 'd', array(1,2,3))", types);
+  }
+
+  @Test
+  public void testIdentifiers()
+  {
+    final List<String> columns = new ArrayList<>(types.keySet());
+    columns.add("unknown");
+    final List<String> template = List.of("%s");
+    testFunctions(types, template, columns);
+  }
+
+
+  @Test
+  public void testCast()
+  {
+    final Set<String> columns = Set.of("d1", "l1", "s1");
+    final Set<String> castTo = Set.of("'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'");
+    final Set<List<String>> args = Sets.cartesianProduct(columns, castTo);
+    final List<String> templates = List.of("cast(%s, %s)");
+    testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testCastArraysRoundTrip()
+  {
+    testExpression("cast(cast(s1, 'ARRAY<STRING>'), 'STRING')", types);
+    testExpression("cast(cast(d1, 'ARRAY<DOUBLE>'), 'DOUBLE')", types);
+    testExpression("cast(cast(d1, 'ARRAY<STRING>'), 'DOUBLE')", types);
+    testExpression("cast(cast(l1, 'ARRAY<LONG>'), 'LONG')", types);
+    testExpression("cast(cast(l1, 'ARRAY<STRING>'), 'LONG')", types);
+  }
+
   @Test
   public void testUnaryOperators()
   {
@@ -244,16 +288,6 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCast()
-  {
-    final Set<String> columns = Set.of("d1", "l1", "s1");
-    final Set<String> castTo = Set.of("'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'");
-    final Set<List<String>> args = Sets.cartesianProduct(columns, castTo);
-    final List<String> templates = List.of("cast(%s, %s)");
-    testFunctions(types, templates, args);
-  }
-
-  @Test
   public void testStringFns()
   {
     testExpression("s1 + s2", types);
@@ -279,33 +313,10 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCastArraysRoundTrip()
-  {
-    testExpression("cast(cast(s1, 'ARRAY<STRING>'), 'STRING')", types);
-    testExpression("cast(cast(d1, 'ARRAY<DOUBLE>'), 'DOUBLE')", types);
-    testExpression("cast(cast(d1, 'ARRAY<STRING>'), 'DOUBLE')", types);
-    testExpression("cast(cast(l1, 'ARRAY<LONG>'), 'LONG')", types);
-    testExpression("cast(cast(l1, 'ARRAY<STRING>'), 'LONG')", types);
-  }
-
-  @Test
   public void testJsonFns()
   {
     Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
     testExpression("json_object('k1', s1, 'k2', l1)", types);
-  }
-
-  @Test
-  public void testConstants()
-  {
-    testExpression("null", types);
-    testExpression("1", types);
-    testExpression("1.1", types);
-    testExpression("NaN", types);
-    testExpression("Infinity", types);
-    testExpression("-Infinity", types);
-    testExpression("'hello'", types);
-    testExpression("json_object('a', 1, 'b', 'abc', 'c', 3.3, 'd', array(1,2,3))", types);
   }
 
   @Test
