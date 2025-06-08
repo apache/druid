@@ -96,7 +96,8 @@ public class WorkerRunRefTest
     // Wait for worker to finish
     try {
       future.get();
-    } catch (Exception ignored) {
+    }
+    catch (Exception ignored) {
       // ignore
     }
 
@@ -127,7 +128,8 @@ public class WorkerRunRefTest
     // Wait for worker to complete
     try {
       future.get();
-    } catch (Exception ignored) {
+    }
+    catch (Exception ignored) {
       // ignore
     }
 
@@ -158,7 +160,8 @@ public class WorkerRunRefTest
     // Wait for worker to finish
     try {
       future.get();
-    } catch (Exception ignored) {
+    }
+    catch (Exception ignored) {
       // ignore
     }
 
@@ -184,7 +187,7 @@ public class WorkerRunRefTest
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
-    
+
     // Cancel before run
     runRef.cancel();
 
@@ -210,7 +213,7 @@ public class WorkerRunRefTest
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
-    
+
     // First run should succeed
     runRef.run(worker, exec);
 
@@ -225,7 +228,7 @@ public class WorkerRunRefTest
   public void testAwaitStopWithoutRun()
   {
     final WorkerRunRef runRef = new WorkerRunRef();
-    
+
     // awaitStop without run should throw
     Assert.assertThrows(
         DruidException.class,
@@ -236,7 +239,7 @@ public class WorkerRunRefTest
   /**
    * Base class for test workers that implements all required methods as no-ops.
    */
-  private static abstract class TestWorker implements Worker
+  private abstract static class TestWorker implements Worker
   {
     private final String id;
 

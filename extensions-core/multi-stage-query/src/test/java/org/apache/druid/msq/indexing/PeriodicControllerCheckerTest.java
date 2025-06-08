@@ -74,13 +74,12 @@ public class PeriodicControllerCheckerTest
     final ServiceLocation anotherValidLocation = new ServiceLocation("localhost", 8081, -1, "/");
 
     // With this sequence, the checker should close on the 4th call to locate()
-    Mockito.when(controllerLocator.locate())
-           .thenReturn(
-               Futures.immediateFuture(ServiceLocations.forLocation(validLocation)),
-               Futures.immediateFuture(ServiceLocations.forLocation(anotherValidLocation)),
-               Futures.immediateFuture(ServiceLocations.forLocations(Collections.emptySet())),
-               Futures.immediateFuture(ServiceLocations.closed())
-           );
+    Mockito.when(controllerLocator.locate()).thenReturn(
+        Futures.immediateFuture(ServiceLocations.forLocation(validLocation)),
+        Futures.immediateFuture(ServiceLocations.forLocation(anotherValidLocation)),
+        Futures.immediateFuture(ServiceLocations.forLocations(Collections.emptySet())),
+        Futures.immediateFuture(ServiceLocations.closed())
+    );
 
     final PeriodicControllerChecker checker = new PeriodicControllerChecker(
         CONTROLLER_ID,
