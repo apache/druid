@@ -21,21 +21,25 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.expression.NestedDataExpressions;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
+import org.apache.druid.query.expression.TimestampShiftExprMacro;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -48,14 +52,16 @@ import java.util.function.Supplier;
  * this is not a replacement for correctness tests, but will ensure that vectorized and non-vectorized expression
  * evaluation is at least self-consistent...
  */
-public class VectorExprSanityTest extends InitializedNullHandlingTest
+public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
-  private static final Logger log = new Logger(VectorExprSanityTest.class);
+  private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
   private static final int VECTOR_SIZE = 512;
 
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
+          new TimestampFloorExprMacro(),
+          new TimestampShiftExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro()
       )
   );
@@ -74,8 +80,8 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testUnaryOperators()
   {
-    final String[] functions = new String[]{"-"};
-    final String[] templates = new String[]{"%sd1", "%sl1"};
+    final List<String> functions = List.of("-");
+    final List<String> templates = List.of("%sd1", "%sl1");
 
     testFunctions(types, templates, functions);
   }
@@ -83,14 +89,14 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryMathOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1"};
-    final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns2);
-    final String[] templates =
-        Arrays.stream(templateInputs)
-              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
-              .toArray(String[]::new);
-    final String[] args = new String[]{"+", "-", "*", "/", "^", "%"};
+    final Set<String> columns = Set.of("d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1");
+    final Set<String> columns2 = Set.of("d1", "d2", "l1", "l2", "1", "1.0");
+    final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
+    final List<String> templates = new ArrayList<>();
+    for (List<String> template : templateInputs) {
+      templates.add(String.format("%s %s %s", template.get(0), "%s", template.get(1)));
+    }
+    final List<String> args = List.of("+", "-", "*", "/", "^", "%");
 
     testFunctions(types, templates, args);
   }
@@ -98,14 +104,14 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryComparisonOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "nonexistent", "null"};
-    final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "null"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns2);
-    final String[] templates =
-        Arrays.stream(templateInputs)
-              .map(i -> StringUtils.format("%s %s %s", i[0], "%s", i[1]))
-              .toArray(String[]::new);
-    final String[] args = new String[]{">", ">=", "<", "<=", "==", "!="};
+    final Set<String> columns = Set.of("d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "nonexistent", "null");
+    final Set<String> columns2 = Set.of("d1", "d2", "l1", "l2", "1", "1.0", "s1", "s2", "null");
+    final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
+    final List<String> templates = new ArrayList<>();
+    for (List<String> template : templateInputs) {
+      templates.add(String.format("%s %s %s", template.get(0), "%s", template.get(1)));
+    }
+    final List<String> args = List.of(">", ">=", "<", "<=", "==", "!=");
 
     testFunctions(types, templates, args);
   }
@@ -113,46 +119,46 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testUnaryLogicOperators()
   {
-    final String[] functions = new String[]{"!"};
-    final String[] templates = new String[]{"%sd1", "%sl1", "%sboolString1"};
+    final List<String> functions = List.of("!");
+    final List<String> templates = List.of("%sd1", "%sl1", "%sboolString1");
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testBinaryLogicOperators()
   {
-    final String[] functions = new String[]{"&&", "||"};
-    final String[] templates = new String[]{"d1 %s d2", "l1 %s l2", "boolString1 %s boolString2", "(d1 == d2) %s (l1 == l2)"};
+    final List<String> functions = List.of("&&", "||");
+    final List<String> templates = List.of("d1 %s d2", "l1 %s l2", "boolString1 %s boolString2", "(d1 == d2) %s (l1 == l2)");
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testBinaryOperatorTrees()
   {
-    final String[] columns = new String[]{"d1", "l1", "1", "1.0", "nonexistent", "null"};
-    final String[] columns2 = new String[]{"d2", "l2", "2", "2.0"};
-    final String[][] templateInputs = makeTemplateArgs(columns, columns2, columns2);
-    final String[] templates =
-        Arrays.stream(templateInputs)
-              .map(i -> StringUtils.format("(%s %s %s) %s %s", i[0], "%s", i[1], "%s", i[2]))
-              .toArray(String[]::new);
-    final String[] ops = new String[]{"+", "-", "*", "/"};
-    final String[][] args = makeTemplateArgs(ops, ops);
+    final Set<String> columns = Set.of("d1", "l1", "1", "1.0", "nonexistent", "null");
+    final Set<String> columns2 = Set.of("d2", "l2", "2", "2.0");
+    final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2, columns2);
+    final List<String> templates = new ArrayList<>();
+    for (List<String> template : templateInputs) {
+      templates.add(StringUtils.format("(%s %s %s) %s %s", template.get(0), "%s", template.get(1), "%s", template.get(2)));
+    }
+    final Set<String> ops = Set.of("+", "-", "*", "/");
+    final Set<List<String>> args = Sets.cartesianProduct(ops, ops);
     testFunctions(types, templates, args);
   }
 
   @Test
   public void testUnivariateFunctions()
   {
-    final String[] functions = new String[]{"parse_long", "isNull", "notNull"};
-    final String[] templates = new String[]{"%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)", "%s(null)"};
+    final List<String> functions = List.of("parse_long", "isNull", "notNull");
+    final List<String> templates = List.of("%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)", "%s(null)");
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testUnivariateMathFunctions()
   {
-    final String[] functions = new String[]{
+    final List<String> functions = List.of(
         "abs",
         "acos",
         "asin",
@@ -183,16 +189,15 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "bitwiseComplement",
         "bitwiseConvertDoubleToLongBits",
         "bitwiseConvertLongBitsToDouble"
-    };
-    final String[] templates;
-    templates = new String[]{"%s(l1)", "%s(d1)", "%s(pi())", "%s(null)", "%s(missing)"};
+    );
+    final List<String> templates = List.of("%s(l1)", "%s(d1)", "%s(pi())", "%s(null)", "%s(missing)");
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testBivariateMathFunctions()
   {
-    final String[] functions = new String[]{
+    final List<String> functions = List.of(
         "atan2",
         "copySign",
         "div",
@@ -208,25 +213,25 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "bitwiseXor",
         "bitwiseShiftLeft",
         "bitwiseShiftRight"
-    };
-    final String[] templates = new String[]{
+    );
+    final List<String> templates = List.of(
         "%s(d1, d2)",
         "%s(d1, l1)",
         "%s(l1, d1)",
         "%s(l1, l2)",
         "%s(nonexistent, l1)",
         "%s(nonexistent, d1)"
-    };
+    );
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testSymmetricalBivariateFunctions()
   {
-    final String[] functions = new String[]{
-        "nvl",
-    };
-    final String[] templates = new String[]{
+    final List<String> functions = List.of(
+        "nvl"
+    );
+    final List<String> templates = List.of(
         "%s(d1, d2)",
         "%s(l1, l2)",
         "%s(s1, s2)",
@@ -234,17 +239,17 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         "%s(nonexistent, d1)",
         "%s(nonexistent, s1)",
         "%s(nonexistent, nonexistent2)"
-    };
+    );
     testFunctions(types, templates, functions);
   }
 
   @Test
   public void testCast()
   {
-    final String[] columns = new String[]{"d1", "l1", "s1"};
-    final String[] castTo = new String[]{"'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'"};
-    final String[][] args = makeTemplateArgs(columns, castTo);
-    final String[] templates = new String[]{"cast(%s, %s)"};
+    final Set<String> columns = Set.of("d1", "l1", "s1");
+    final Set<String> castTo = Set.of("'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'");
+    final Set<List<String>> args = Sets.cartesianProduct(columns, castTo);
+    final List<String> templates = List.of("cast(%s, %s)");
     testFunctions(types, templates, args);
   }
 
@@ -303,7 +308,18 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     testExpression("json_object('a', 1, 'b', 'abc', 'c', 3.3, 'd', array(1,2,3))", types);
   }
 
-  static void testFunctions(Map<String, ExpressionType> types, String[] templates, String[] args)
+  @Test
+  public void testTimeFunctions()
+  {
+    testExpression("timestamp_floor(l1, 'PT1H')", types);
+    testExpression("timestamp_shift(l1, 'P1M', 1)", types);
+  }
+
+  /**
+   * Applies a list of arguments to a list of templates to fill in each template from the argument to generate
+   * expression strings and call {@link #testExpression(String, Map)} for each combination
+   */
+  static void testFunctions(Map<String, ExpressionType> types, List<String> templates, List<String> args)
   {
     for (String template : templates) {
       for (String arg : args) {
@@ -313,63 +329,81 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     }
   }
 
-  static void testFunctions(Map<String, ExpressionType> types, String[] templates, String[][] argsArrays)
+  /**
+   * Applies a set of argument lists to a list of string templates to fill in each template from the argument list to
+   * generate expression strings and call {@link #testExpression(String, Map)} for each combination
+   */
+  static void testFunctions(Map<String, ExpressionType> types, List<String> templates, Set<List<String>> argsArrays)
   {
     for (String template : templates) {
-      for (Object[] args : argsArrays) {
-        String expr = StringUtils.format(template, args);
+      for (List<String> args : argsArrays) {
+        String expr = StringUtils.format(template, args.toArray());
         testExpression(expr, types);
       }
     }
   }
 
+  /**
+   * run an expression both vectorized and non-vectorized, comparing results with randomized bindings and sequential
+   * bindings
+   */
   static void testExpression(String expr, Map<String, ExpressionType> types)
   {
-    log.debug("[%s]", expr);
+    log.debug("running expression [%s]", expr);
     Expr parsed = Parser.parse(expr, MACRO_TABLE);
 
-    testExpression(expr, parsed, types, NUM_ITERATIONS);
-    testSequentialBinding(expr, parsed, types);
+    testExpressionRandomizedBindings(expr, parsed, types, NUM_ITERATIONS);
+    testExpressionSequentialBindings(expr, parsed, types, NUM_ITERATIONS);
   }
 
-  public static void testSequentialBinding(
+  /**
+   * runs expressions against bindings generated by increasing a counter
+   */
+  public static void testExpressionSequentialBindings(
       String expr,
       Expr parsed,
-      Map<String, ExpressionType> types
+      Map<String, ExpressionType> types,
+      int numIterations
   )
   {
-    NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeSequentialBinding(VECTOR_SIZE, types);
-    Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
-    ExpressionType outputType = parsed.getOutputType(bindings.rhs);
-    ExprEvalVector<?> vectorEval = parsed.asVectorProcessor(bindings.rhs).evalVector(bindings.rhs);
-    // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-    if (outputType != null) {
-      Assert.assertEquals(expr, outputType, vectorEval.getType());
-    }
-    final Object[] vectorVals = vectorEval.getObjectVector();
-    for (int i = 0; i < VECTOR_SIZE; i++) {
-      ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
+    for (int iter = 0; iter < numIterations; iter++) {
+      NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeSequentialBinding(
+          VECTOR_SIZE,
+          types,
+          1 + (iter * VECTOR_SIZE) // the plus 1 is because dividing by zero is sad
+      );
+      Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
+      ExpressionType outputType = parsed.getOutputType(bindings.rhs);
+      ExprEvalVector<?> vectorEval = parsed.asVectorProcessor(bindings.rhs).evalVector(bindings.rhs);
       // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-      if (outputType != null && !eval.isNumericNull()) {
-        Assert.assertEquals(eval.type(), outputType);
+      if (outputType != null) {
+        Assert.assertEquals(expr, outputType, vectorEval.getType());
       }
-      if (outputType != null && outputType.isArray()) {
-        Assert.assertArrayEquals(
-            StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-            (Object[]) eval.valueOrDefault(),
-            (Object[]) vectorVals[i]
-        );
-      } else {
-        Assert.assertEquals(
-            StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-            eval.valueOrDefault(),
-            vectorVals[i]
-        );
+      final Object[] vectorVals = vectorEval.getObjectVector();
+      for (int i = 0; i < VECTOR_SIZE; i++) {
+        ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
+        // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
+        if (outputType != null && !eval.isNumericNull()) {
+          Assert.assertEquals(eval.type(), outputType);
+        }
+        if (outputType != null && outputType.isArray()) {
+          Assert.assertArrayEquals(
+              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
+              (Object[]) eval.valueOrDefault(),
+              (Object[]) vectorVals[i]
+          );
+        } else {
+          Assert.assertEquals(
+              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
+              eval.valueOrDefault(),
+              vectorVals[i]
+          );
+        }
       }
     }
   }
 
-  public static void testExpression(
+  public static void testExpressionRandomizedBindings(
       String expr,
       Expr parsed,
       Map<String, ExpressionType> types,
@@ -426,6 +460,10 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     }
   }
 
+  /**
+   * Random backed bindings that provide positive longs in the integer range, random doubles, and random strings, with
+   * a 10% null rate
+   */
   public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
       int vectorSize,
       Map<String, ExpressionType> types
@@ -433,28 +471,32 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   {
 
     final ThreadLocalRandom r = ThreadLocalRandom.current();
-    return makeBindings(
+    return populateBindings(
         vectorSize,
         types,
-        () -> r.nextLong(Integer.MAX_VALUE - 1),
+        () -> r.nextLong(Integer.MIN_VALUE,Integer.MAX_VALUE - 1),
         r::nextDouble,
         () -> r.nextDouble(0, 1.0) > 0.9,
         () -> String.valueOf(r.nextInt())
     );
   }
 
+  /**
+   * expression bindings that use a counter to generate double, long, and string values with a random null rate
+   */
   public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeSequentialBinding(
       int vectorSize,
-      Map<String, ExpressionType> types
+      Map<String, ExpressionType> types,
+      int start
   )
   {
 
-    return makeBindings(
+    return populateBindings(
         vectorSize,
         types,
         new LongSupplier()
         {
-          int counter = 1;
+          int counter = start;
 
           @Override
           public long getAsLong()
@@ -464,7 +506,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         },
         new DoubleSupplier()
         {
-          int counter = 1;
+          int counter = start;
 
           @Override
           public double getAsDouble()
@@ -475,7 +517,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
         () -> ThreadLocalRandom.current().nextBoolean(),
         new Supplier<>()
         {
-          int counter = 1;
+          int counter = start;
 
           @Override
           public String get()
@@ -486,7 +528,10 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     );
   }
 
-  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeBindings(
+  /**
+   * Populates a vectors worth of expression bindings
+   */
+  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> populateBindings(
       int vectorSize,
       Map<String, ExpressionType> types,
       LongSupplier longsFn,
@@ -548,134 +593,4 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
 
-  static String[][] makeTemplateArgs(String[] arg1, String[] arg2)
-  {
-    return Arrays.stream(arg1)
-                 .flatMap(a1 -> Arrays.stream(arg2).map(a2 -> new String[]{a1, a2}))
-                 .toArray(String[][]::new);
-  }
-
-  static String[][] makeTemplateArgs(String[] arg1, String[] arg2, String[] arg3)
-  {
-    return Arrays.stream(arg1)
-                 .flatMap(a1 ->
-                              Arrays.stream(arg2).flatMap(a2 -> Arrays.stream(arg3).map(a3 -> new String[]{a1, a2, a3}))
-                 )
-                 .toArray(String[][]::new);
-  }
-
-  public static class SettableVectorInputBinding implements Expr.VectorInputBinding
-  {
-    private final Map<String, boolean[]> nulls;
-    private final Map<String, long[]> longs;
-    private final Map<String, double[]> doubles;
-    private final Map<String, Object[]> objects;
-    private final Map<String, ExpressionType> types;
-
-    private final int vectorSize;
-
-    private int id = 0;
-
-    public SettableVectorInputBinding(int vectorSize)
-    {
-      this.nulls = new HashMap<>();
-      this.longs = new HashMap<>();
-      this.doubles = new HashMap<>();
-      this.objects = new HashMap<>();
-      this.types = new HashMap<>();
-      this.vectorSize = vectorSize;
-    }
-
-    public SettableVectorInputBinding addBinding(String name, ExpressionType type, boolean[] nulls)
-    {
-      this.nulls.put(name, nulls);
-      this.types.put(name, type);
-      return this;
-    }
-
-    public SettableVectorInputBinding addLong(String name, long[] longs)
-    {
-      return addLong(name, longs, new boolean[longs.length]);
-    }
-
-    public SettableVectorInputBinding addLong(String name, long[] longs, boolean[] nulls)
-    {
-      assert longs.length == vectorSize;
-      this.longs.put(name, longs);
-      this.doubles.put(name, Arrays.stream(longs).asDoubleStream().toArray());
-      return addBinding(name, ExpressionType.LONG, nulls);
-    }
-
-    public SettableVectorInputBinding addDouble(String name, double[] doubles)
-    {
-      return addDouble(name, doubles, new boolean[doubles.length]);
-    }
-
-    public SettableVectorInputBinding addDouble(String name, double[] doubles, boolean[] nulls)
-    {
-      assert doubles.length == vectorSize;
-      this.doubles.put(name, doubles);
-      this.longs.put(name, Arrays.stream(doubles).mapToLong(x -> (long) x).toArray());
-      return addBinding(name, ExpressionType.DOUBLE, nulls);
-    }
-
-    public SettableVectorInputBinding addString(String name, Object[] strings)
-    {
-      assert strings.length == vectorSize;
-      this.objects.put(name, strings);
-      return addBinding(name, ExpressionType.STRING, new boolean[strings.length]);
-    }
-
-    @Override
-    public Object[] getObjectVector(String name)
-    {
-      return objects.getOrDefault(name, new Object[getCurrentVectorSize()]);
-    }
-
-    @Override
-    public ExpressionType getType(String name)
-    {
-      return types.get(name);
-    }
-
-    @Override
-    public long[] getLongVector(String name)
-    {
-      return longs.getOrDefault(name, new long[getCurrentVectorSize()]);
-    }
-
-    @Override
-    public double[] getDoubleVector(String name)
-    {
-      return doubles.getOrDefault(name, new double[getCurrentVectorSize()]);
-    }
-
-    @Nullable
-    @Override
-    public boolean[] getNullVector(String name)
-    {
-      final boolean[] defaultVector = new boolean[getCurrentVectorSize()];
-      Arrays.fill(defaultVector, true);
-      return nulls.getOrDefault(name, defaultVector);
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return vectorSize;
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return vectorSize;
-    }
-
-    @Override
-    public int getCurrentVectorId()
-    {
-      // never cache, this is just for tests anyway
-      return id++;
-    }
-  }
 }
