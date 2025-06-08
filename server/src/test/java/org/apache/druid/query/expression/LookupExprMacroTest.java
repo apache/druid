@@ -19,17 +19,27 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.math.expr.VectorExprResultConsistencyTest;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
@@ -109,6 +119,81 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
       }
       Assert.assertFalse(allEqual);
     }
+  }
+
+  @Test
+  public void testVectorize()
+  {
+    final Map<String, String> lookup = Map.of(
+        "1", "a",
+        "12", "b",
+        "33", "c",
+        "111", "d",
+        "123", "e",
+        "124", "f"
+    );
+    final Map<String, String> one2one = new HashMap<>()
+    {
+      @Override
+      public String get(Object key)
+      {
+        return (String) key;
+      }
+    };
+
+    final ExprMacroTable macroTable = new ExprMacroTable(
+        ImmutableList.of(
+            new LookupExprMacro(
+                new LookupExtractorFactoryContainerProvider()
+                {
+                  @Override
+                  public Set<String> getAllLookupNames()
+                  {
+                    return Set.of("test-lookup", "test-lookup-injective");
+                  }
+
+                  @Override
+                  public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+                  {
+                    if (lookupName.equals("test-lookup")) {
+                      return Optional.of(
+                          new LookupExtractorFactoryContainer(
+                              "v0",
+                              new MapLookupExtractorFactory(lookup, false)
+                          )
+                      );
+                    } else if (lookupName.equals("test-lookup-injective")) {
+                      return Optional.of(
+                          new LookupExtractorFactoryContainer(
+                              "v0",
+                              new MapLookupExtractorFactory(one2one, true)
+                          )
+                      );
+                    }
+                    return Optional.empty();
+                  }
+
+                  @Override
+                  public String getCanonicalLookupName(String lookupName)
+                  {
+                    return "";
+                  }
+                }
+            )
+        )
+    );
+
+    VectorExprResultConsistencyTest.testExpression(
+        "lookup(s1, 'test-lookup')",
+        Map.of("s1", ExpressionType.STRING),
+        macroTable
+    );
+    VectorExprResultConsistencyTest.testExpression(
+        "lookup(s1, 'test-lookup-injective')",
+        Map.of("s1", ExpressionType.STRING),
+        macroTable
+    );
+
   }
 
   private void assertExpr(final String expression, final Object expectedResult)

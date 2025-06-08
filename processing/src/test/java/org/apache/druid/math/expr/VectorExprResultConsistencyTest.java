@@ -317,7 +317,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   /**
    * Applies a list of arguments to a list of templates to fill in each template from the argument to generate
-   * expression strings and call {@link #testExpression(String, Map)} for each combination
+   * expression strings and call {@link #testExpression} for each combination
    */
   static void testFunctions(Map<String, ExpressionType> types, List<String> templates, List<String> args)
   {
@@ -331,7 +331,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   /**
    * Applies a set of argument lists to a list of string templates to fill in each template from the argument list to
-   * generate expression strings and call {@link #testExpression(String, Map)} for each combination
+   * generate expression strings and call {@link #testExpression} for each combination
    */
   static void testFunctions(Map<String, ExpressionType> types, List<String> templates, Set<List<String>> argsArrays)
   {
@@ -347,10 +347,19 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
    * run an expression both vectorized and non-vectorized, comparing results with randomized bindings and sequential
    * bindings
    */
-  static void testExpression(String expr, Map<String, ExpressionType> types)
+  public static void testExpression(String expr, Map<String, ExpressionType> types)
+  {
+    testExpression(expr, types, MACRO_TABLE);
+  }
+
+  /**
+   * run an expression both vectorized and non-vectorized, comparing results with randomized bindings and sequential
+   * bindings
+   */
+  public static void testExpression(String expr, Map<String, ExpressionType> types, ExprMacroTable macroTable)
   {
     log.debug("running expression [%s]", expr);
-    Expr parsed = Parser.parse(expr, MACRO_TABLE);
+    Expr parsed = Parser.parse(expr, macroTable);
 
     testExpressionRandomizedBindings(expr, parsed, types, NUM_ITERATIONS);
     testExpressionSequentialBindings(expr, parsed, types, NUM_ITERATIONS);
