@@ -100,7 +100,6 @@ public @interface NotYetSupported
 
     NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
     SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
-    SORT_REMOVE_CONSTANT_KEYS_CONFLICT(Scope.DECOUPLED, DruidException.class, "not enough rules"),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
     SUPPORT_SORT(Scope.DECOUPLED, DruidException.class, "Unable to process relNode.*DruidSort"),
