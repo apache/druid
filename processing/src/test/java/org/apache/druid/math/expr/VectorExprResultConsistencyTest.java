@@ -94,7 +94,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
     final List<String> templates = new ArrayList<>();
     for (List<String> template : templateInputs) {
-      templates.add(String.format("%s %s %s", template.get(0), "%s", template.get(1)));
+      templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
     }
     final List<String> args = List.of("+", "-", "*", "/", "^", "%");
 
@@ -109,7 +109,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2);
     final List<String> templates = new ArrayList<>();
     for (List<String> template : templateInputs) {
-      templates.add(String.format("%s %s %s", template.get(0), "%s", template.get(1)));
+      templates.add(StringUtils.format("%s %s %s", template.get(0), "%s", template.get(1)));
     }
     final List<String> args = List.of(">", ">=", "<", "<=", "==", "!=");
 
