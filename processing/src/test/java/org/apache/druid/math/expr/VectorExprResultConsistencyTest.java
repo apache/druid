@@ -474,7 +474,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     return populateBindings(
         vectorSize,
         types,
-        () -> r.nextLong(Integer.MIN_VALUE,Integer.MAX_VALUE - 1),
+        () -> r.nextLong(Integer.MIN_VALUE, Integer.MAX_VALUE - 1),
         r::nextDouble,
         () -> r.nextDouble(0, 1.0) > 0.9,
         () -> String.valueOf(r.nextInt())
