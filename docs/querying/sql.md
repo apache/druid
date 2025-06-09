@@ -55,6 +55,7 @@ Druid SQL supports SELECT queries with the following structure:
 ```
 [ EXPLAIN PLAN FOR ]
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
+[ SET <parameter> = <value>;]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))]
@@ -391,7 +392,7 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
-## SET statements
+## SET 
 
 The Druid SQL [JSON API](../api-reference/sql-api.md) supports including 0 or more `SET` statements separated by `;`
 preceding a statement to execute in the `query` string of the request. If present, these `SET` statements
