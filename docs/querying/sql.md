@@ -388,6 +388,8 @@ You can include 0 or more `SET` statements, each separated by a semicolon `;`, p
 
 If present, these `SET` statements assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET` statement of the same request (subsequent requests are not affected).
 
+You can mix `SET` statement (for literal values) and `context parameter` (for expressions or unsupported types), with `SET` overriding on key conflicts.
+
 The syntax of a `SET` statement is:
 
 ```sql
@@ -402,6 +404,13 @@ SET sqlTimeZone = 'America/Los_Angeles';
 SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
+
+### Current Limitations
+
+- `SET` statements currently support **literal values only**  - For exmaple - numbers, strings, booleans.
+- Complex values such as **arrays** or **JSON objects** must still be provided via the `context` field.
+- `Set` statements support for **constant expressions** (for example, using `ARRAY` or `JSON_OBJECT`) is under consideration, as these require evaluation rather than simple assignment.
+
 
 ## Identifiers and literals
 
