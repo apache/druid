@@ -1893,7 +1893,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 
-### Metrics monitors
+## Metrics monitors
 
 You can configure Druid services to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors-for-each-service) via [emitters](#metrics-emitters). The following table lists general configurations for metrics:
 
@@ -1903,7 +1903,7 @@ You can configure Druid services to emit [metrics](../operations/metrics.md) reg
 |[`druid.monitoring.monitors`](#metrics-monitors-for-each-service)|Sets list of Druid monitors used by a service.|none (no monitors)|
 |[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
 
-#### Metrics monitors for each service
+### Metrics monitors for each service
 
 :::caution
 
@@ -1947,7 +1947,7 @@ druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.
 
 You can override cluster-wide configuration by amending the `runtime.properties` of individual services.
 
-#### Metrics emitters
+### Metrics emitters
 
 There are several emitters available:
 
@@ -1959,7 +1959,7 @@ There are several emitters available:
 * [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
 * [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
 
-##### Logging emitter module
+#### Logging emitter module
 
 The use this emitter module, set `druid.emitter=logging`. The `logging` emitter uses a Log4j2 logger named
 `druid.emitter.logging.loggerClass` to emit events. Each event is logged as a single `json` object with a
@@ -1971,7 +1971,7 @@ log4j config to route these logs to different sources based on the feed of the e
 |`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
 
-##### HTTP emitter module
+#### HTTP emitter module
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1985,7 +1985,7 @@ log4j config to route these logs to different sources based on the feed of the e
 |`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
 
-##### HTTP emitter module TLS overrides
+#### HTTP emitter module TLS overrides
 
 By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the service described at [Druid's internal communication over TLS](../operations/tls-support.md), that is the same SSLContext that would be used for internal communications between Druid services.
 
@@ -2002,7 +2002,7 @@ The following properties allow the HTTP Emitter to use its own truststore config
 |`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
 |`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
 
-##### Parametrized HTTP emitter module
+#### Parametrized HTTP emitter module
 
 The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
 For example:
@@ -2018,17 +2018,17 @@ Instead use `recipientBaseUrlPattern` described in the table below.
 |--------|-----------|-------|
 |`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. For example, `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
 
-##### Composing emitter module
+#### Composing emitter module
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.composing.emitters`|List of emitter modules to load, such as ["logging","http"].|[]|
 
-##### Graphite emitter
+#### Graphite emitter
 
 To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
-##### Switching emitter
+#### Switching emitter
 
 To use switching as emitter set `druid.emitter=switching`.
 
