@@ -238,6 +238,55 @@ public class SqlSegmentsMetadataQueryTest
     );
   }
 
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsCondition() {
+    Interval queryInterval = new Interval("2025-01-03T00:00:00.000Z/2025-01-05T00:00:00.000Z");
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+
+    Assert.assertEquals(4, result.size());
+    for (DataSegment segment : result) {
+      Assert.assertTrue(
+          "Segment interval " + segment.getInterval() + " should overlap query interval " + queryInterval,
+          segment.getInterval().overlaps(queryInterval)
+      );
+    }
+  }
+
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsConditionAndUnusedSegments() {
+    final Set<DataSegment> segmentsToUpdate = Set.of(WIKI_SEGMENTS_2X5D.get(2));
+    int numUpdatedSegments = update(
+            sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc()));
+    Assert.assertEquals(1, numUpdatedSegments);
+
+    Interval queryInterval = new Interval("2025-01-01T00:00:00.000Z/2025-01-03T00:00:00.000Z");
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+
+    Assert.assertEquals(3, result.size());
+    for (DataSegment segment : result) {
+      Assert.assertTrue(
+              "Segment interval " + segment.getInterval() + " should overlap query interval " + queryInterval,
+              segment.getInterval().overlaps(queryInterval)
+      );
+    }
+  }
+
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsCondition_near_end_date() {
+    Interval queryInterval = new Interval("2025-01-05T00:00:00.000Z/2025-01-06T00:00:00.000Z");
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+    Assert.assertEquals(2, result.size());
+    for (DataSegment segment : result) {
+      Assert.assertTrue(
+          "Segment interval " + segment.getInterval() + " should overlap query interval " + queryInterval,
+          segment.getInterval().overlaps(queryInterval)
+      );
+    }
+  }
+
   /**
    * Reads segments from the metadata store using a
    * {@link SqlSegmentsMetadataQuery} object.
