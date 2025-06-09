@@ -40,8 +40,6 @@ export function getCompletionsForPath(
   const pathStr = pathToString(path);
   const completions: JsonCompletionItem[] = [];
 
-  console.log('pathStr', pathStr);
-
   for (const rule of rules) {
     if (Boolean(rule.isObject) !== Boolean(isKey)) continue;
 
