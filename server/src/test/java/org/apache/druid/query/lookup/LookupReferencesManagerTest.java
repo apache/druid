@@ -46,6 +46,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -850,14 +851,14 @@ public class LookupReferencesManagerTest
   }
 
   @Test
-  public void testAddWithLoadingSpec() throws Exception
+  public void testAddWithRequiredLoadingSpec() throws Exception
   {
     LookupLoadingSpec loadingSpec = LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1"));
     getLookupMapForSelectiveLoadingOfLookups(loadingSpec);
 
     LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
         "0",
-        new MapLookupExtractorFactory(ImmutableMap.of("key2", "value2"), true
+        new MapLookupExtractorFactory(Map.of("key2", "value2"), true
         )
     );
     EasyMock.reset(config);
@@ -866,7 +867,26 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("testLookup2", container2);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(ImmutableSet.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
+    Assert.assertEquals(Set.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
+  }
+
+  @Test
+  public void testAddWithNoneLoadingSpec() throws Exception
+  {
+    getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.NONE);
+
+    LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(Map.of("key2", "value2"), true
+        )
+    );
+    EasyMock.reset(config);
+    EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.NONE);
+    EasyMock.replay(config);
+    lookupReferencesManager.add("testLookup", container);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertTrue(lookupReferencesManager.getAllLookupNames().isEmpty());
   }
 
   @Test

@@ -282,11 +282,11 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   public void add(String lookupName, LookupExtractorFactoryContainer lookupExtractorFactoryContainer)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
+    final LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
     if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE ||
         (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED
          && !lookupLoadingSpec.getLookupsToLoad().contains(lookupName))) {
-      LOG.warn("Skipping notice to add lookup [%s] : current lookup loading mode does not allow it.", lookupName);
+      LOG.info("Skipping notice to add lookup [%s] since current lookup loading mode [%s] does not allow it.", lookupName, lookupLoadingSpec.getMode());
       return;
     }
     addNotice(new LoadNotice(lookupName, lookupExtractorFactoryContainer, lookupConfig.getLookupStartRetries()));
