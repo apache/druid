@@ -1,0 +1,1432 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B1_C1_D2
+#-------------------------------------------------------------------------
+SELECT concat(c, c)||concat(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((concat(c, c)||concat(c, c))<'99999'
+       OR (concat(c, c)||concat(c, c)) IS NULL);
++------+
+| col  |
++------+
+| 1111 |
+| 1111 |
+| 1111 |
+| 2222 |
+| 2222 |
+| 2222 |
+|      |
+|      |
+|      |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B1_C2_D2
+#-------------------------------------------------------------------------
+SELECT concat(c, s_int)||concat(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((concat(c, s_int)||concat(c, s_int))<'99999'
+       OR (concat(c, s_int)||concat(c, s_int)) IS NULL);
++------+
+| col  |
++------+
+| 1111 |
+| 1212 |
+| 2121 |
+| 2222 |
+|      |
+|      |
+|      |
+|      |
+|      |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B2_C1_D2
+#-------------------------------------------------------------------------
+SELECT textcat(cast(c AS char), cast(c AS char))||textcat(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((textcat(cast(c AS char), cast(c AS char))||textcat(cast(c AS char), cast(c AS char)))<'99999'
+       OR (textcat(cast(c AS char), cast(c AS char))||textcat(cast(c AS char), cast(c AS char))) IS NULL);
++------+
+| col  |
++------+
+| 1111 |
+| 1111 |
+| 1111 |
+| 2222 |
+| 2222 |
+| 2222 |
+|      |
+|      |
+|      |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B2_C2_D2
+#-------------------------------------------------------------------------
+SELECT textcat(cast(c AS char), cast(s_int AS char))||textcat(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((textcat(cast(c AS char), cast(s_int AS char))||textcat(cast(c AS char), cast(s_int AS char)))<'99999'
+       OR (textcat(cast(c AS char), cast(s_int AS char))||textcat(cast(c AS char), cast(s_int AS char))) IS NULL);
++------+
+| col  |
++------+
+| 1111 |
+| 1212 |
+| 2121 |
+| 2222 |
+|      |
+|      |
+|      |
+|      |
+|      |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B3_C1_D2
+#-------------------------------------------------------------------------
+SELECT string_format('%sZ', c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_format('%sZ', c)<'0'
+       OR string_format('%sZ', c)>'0'
+       OR string_format('%sZ', c) IS NULL);
++-------+
+| col   |
++-------+
+| 1Z    |
+| 1Z    |
+| 1Z    |
+| 2Z    |
+| 2Z    |
+| 2Z    |
+| nullZ |
+| nullZ |
+| nullZ |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B3_C2_D2
+#-------------------------------------------------------------------------
+SELECT string_format('%sZ', s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_format('%sZ', s_int)<'0'
+       OR string_format('%sZ', s_int)>'0'
+       OR string_format('%sZ', s_int) IS NULL);
++-------+
+| col   |
++-------+
+| 1Z    |
+| 1Z    |
+| 1Z    |
+| 2Z    |
+| 2Z    |
+| 2Z    |
+| nullZ |
+| nullZ |
+| nullZ |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B4_C1_D2
+#-------------------------------------------------------------------------
+SELECT length(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (length(c)<99999
+       OR length(c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B4_C2_D2
+#-------------------------------------------------------------------------
+SELECT length(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (length(s_int)<99999
+       OR length(s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B5_C1_D2
+#-------------------------------------------------------------------------
+SELECT char_length(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (char_length(c)<99999
+       OR char_length(c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B5_C2_D2
+#-------------------------------------------------------------------------
+SELECT char_length(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (char_length(s_int)<99999
+       OR char_length(s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B6_C1_D2
+#-------------------------------------------------------------------------
+SELECT character_length(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (character_length(c)<99999
+       OR character_length(c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B6_C2_D2
+#-------------------------------------------------------------------------
+SELECT character_length(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (character_length(s_int)<99999
+       OR character_length(s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B7_C1_D2
+#-------------------------------------------------------------------------
+SELECT strlen(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strlen(c)<99999
+       OR strlen(c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B7_C2_D2
+#-------------------------------------------------------------------------
+SELECT strlen(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strlen(s_int)<99999
+       OR strlen(s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B8_C1_D2
+#-------------------------------------------------------------------------
+SELECT lower(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (lower(c)<'99999'
+       OR lower(c) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B8_C2_D2
+#-------------------------------------------------------------------------
+SELECT lower(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (lower(s_int)<'99999'
+       OR lower(s_int) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B9_C1_D2
+#-------------------------------------------------------------------------
+SELECT upper(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (upper(c)<'99999'
+       OR upper(c) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B9_C2_D2
+#-------------------------------------------------------------------------
+SELECT upper(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (upper(s_int)<'99999'
+       OR upper(s_int) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B10_C1_D2
+#-------------------------------------------------------------------------
+SELECT parse_long(cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (parse_long(cast(c AS char))<99999
+       OR parse_long(cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B10_C2_D2
+#-------------------------------------------------------------------------
+SELECT parse_long(cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (parse_long(cast(s_int AS char))<99999
+       OR parse_long(cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C1_D2
+#-------------------------------------------------------------------------
+SELECT position(c IN c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (position(c IN c)<99999
+       OR position(c IN c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C2_D2
+#-------------------------------------------------------------------------
+SELECT position(s_int IN c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (position(s_int IN c)<99999
+       OR position(s_int IN c) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C3_D2
+#-------------------------------------------------------------------------
+SELECT position(c IN s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (position(c IN s_int)<99999
+       OR position(c IN s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C4_D2
+#-------------------------------------------------------------------------
+SELECT position(s_int IN s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (position(s_int IN s_int)<99999
+       OR position(s_int IN s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B12_C1_D2
+#-------------------------------------------------------------------------
+SELECT regexp_extract(cast(c AS char), '.*') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (regexp_extract(cast(c AS char), '.*')<'99999'
+       OR regexp_extract(cast(c AS char), '.*') IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B12_C2_D2
+#-------------------------------------------------------------------------
+SELECT regexp_extract(cast(s_int AS char), '.*') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (regexp_extract(cast(s_int AS char), '.*')<99999
+       OR regexp_extract(cast(s_int AS char), '.*') IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B13_C1_D2
+#-------------------------------------------------------------------------
+SELECT regexp_like(cast(c AS char), '.*') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (regexp_like(cast(c AS char), '.*') IS TRUE
+       OR regexp_like(cast(c AS char), '.*') IS FALSE);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B13_C2_D2
+#-------------------------------------------------------------------------
+SELECT regexp_like(cast(s_int AS char), '.*') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (regexp_like(cast(s_int AS char), '.*') IS TRUE
+       OR regexp_like(cast(s_int AS char), '.*') IS FALSE);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B14_C1_D2
+#-------------------------------------------------------------------------
+SELECT contains_string(cast(c AS char), '1') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (contains_string(cast(c AS char), '1') IS TRUE
+       OR contains_string(cast(c AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B14_C2_D2
+#-------------------------------------------------------------------------
+SELECT contains_string(cast(s_int AS char), '1') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (contains_string(cast(s_int AS char), '1') IS TRUE
+       OR contains_string(cast(s_int AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B15_C1_D2
+#-------------------------------------------------------------------------
+SELECT icontains_string(cast(c AS char), '1') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (icontains_string(cast(c AS char), '1') IS TRUE
+       OR icontains_string(cast(c AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B15_C2_D2
+#-------------------------------------------------------------------------
+SELECT icontains_string(cast(s_int AS char), '1') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (icontains_string(cast(s_int AS char), '1') IS TRUE
+       OR icontains_string(cast(s_int AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B16_C1_D2
+#-------------------------------------------------------------------------
+SELECT replace(c, '1', 'Z') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (replace(c, '1', 'Z')<'0'
+       OR replace(c, '1', 'Z')>'0'
+       OR replace(c, '1', 'Z') IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+| Z   |
+| Z   |
+| Z   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B16_C2_D2
+#-------------------------------------------------------------------------
+SELECT replace(s_int, '1', 'Z') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (replace(s_int, '1', 'Z')<'0'
+       OR replace(s_int, '1', 'Z')>'0'
+       OR replace(s_int, '1', 'Z') IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+| Z   |
+| Z   |
+| Z   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C1_D2
+#-------------------------------------------------------------------------
+SELECT strpos(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strpos(cast(c AS char), cast(c AS char))<99999
+       OR strpos(cast(c AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C2_D2
+#-------------------------------------------------------------------------
+SELECT strpos(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strpos(cast(s_int AS char), cast(c AS char))<99999
+       OR strpos(cast(s_int AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C3_D2
+#-------------------------------------------------------------------------
+SELECT strpos(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strpos(cast(c AS char), cast(s_int AS char))<99999
+       OR strpos(cast(c AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C4_D2
+#-------------------------------------------------------------------------
+SELECT strpos(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (strpos(cast(s_int AS char), cast(s_int AS char))<99999
+       OR strpos(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B18_C1_D2
+#-------------------------------------------------------------------------
+SELECT substring(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (substring(cast(c AS char), 1)<'99999'
+       OR substring(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B18_C2_D2
+#-------------------------------------------------------------------------
+SELECT substring(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (substring(cast(s_int AS char), 1)<'99999'
+       OR substring(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B19_C1_D2
+#-------------------------------------------------------------------------
+SELECT right(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (right(cast(c AS char), 1)<'99999'
+       OR right(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B19_C2_D2
+#-------------------------------------------------------------------------
+SELECT right(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (right(cast(s_int AS char), 1)<'99999'
+       OR right(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B20_C1_D2
+#-------------------------------------------------------------------------
+SELECT left(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (left(cast(c AS char), 1)<'99999'
+       OR left(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B20_C2_D2
+#-------------------------------------------------------------------------
+SELECT left(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (left(cast(s_int AS char), 1)<'99999'
+       OR left(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B21_C1_D2
+#-------------------------------------------------------------------------
+SELECT substr(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (substr(cast(c AS char), 1)<'99999'
+       OR substr(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B21_C2_D2
+#-------------------------------------------------------------------------
+SELECT substr(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (substr(cast(s_int AS char), 1)<'99999'
+       OR substr(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B22_C1_D2
+#-------------------------------------------------------------------------
+SELECT trim(BOTH '1'
+            FROM c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (trim(BOTH '1'
+            FROM c)<'99999'
+       OR trim(BOTH '1'
+               FROM c) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B22_C2_D2
+#-------------------------------------------------------------------------
+SELECT trim(BOTH '1'
+            FROM s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (trim(BOTH '1'
+            FROM s_int)<'99999'
+       OR trim(BOTH '1'
+               FROM s_int) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B23_C1_D2
+#-------------------------------------------------------------------------
+SELECT btrim(cast(c AS char), '1') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (btrim(cast(c AS char), '1')<'99999'
+       OR btrim(cast(c AS char), '1') IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+

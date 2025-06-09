@@ -1,0 +1,241 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql&numMergeBuffers=3
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A22_B9
+#-------------------------------------------------------------------------
+SELECT a_nested c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_nested
+HAVING a_nested=ARRAY[NULL,
+                      NULL,
+                      NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B1
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7]');
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B3
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_query(a_nested, '$[7]'));
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                                                                                                                                   | cnt |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]] |   2 |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B5
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_query(a_nested, '$[7]'));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B7
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_query(a_nested, '$[7]'));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A23_B9
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7]')
+HAVING json_query(a_nested, '$[7]')=ARRAY[NULL,
+                                          NULL,
+                                          NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B1
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7][7]');
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B3
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (json_query(a_nested, '$[7][7]'));
++-----------------------------------------------------------------------------------------------------------+-----+
+| c                                                                                                         | cnt |
++-----------------------------------------------------------------------------------------------------------+-----+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]] |   2 |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]] |   2 |
++-----------------------------------------------------------------------------------------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B5
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(json_query(a_nested, '$[7][7]'));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B7
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(json_query(a_nested, '$[7][7]'));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A24_B9
+#-------------------------------------------------------------------------
+SELECT json_query(a_nested, '$[7][7]') c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_query(a_nested, '$[7][7]')
+HAVING json_query(a_nested, '$[7][7]')=ARRAY[NULL,
+                                             NULL,
+                                             NULL];
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B1
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int,
+         json_value(a_nested, '$[2]' RETURNING decimal array),
+         json_value(a_nested, '$[7][3]' RETURNING varchar array);
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
+| [null, 2, 1] | [null, 0.2, 0.1] | [null, S2, S1] |   2 |
++--------------+------------------+----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B3
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY GROUPING
+SETS (a_int,
+      json_value(a_nested, '$[2]' RETURNING decimal array),
+      json_value(a_nested, '$[7][3]' RETURNING varchar array));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B5
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY rollup(a_int, json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[7][3]' RETURNING varchar array));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B7
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY cube(a_int, json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[7][3]' RETURNING varchar array));
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A25_B9
+#-------------------------------------------------------------------------
+SELECT a_int,
+       json_value(a_nested, '$[2]' RETURNING decimal array),
+       json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_int,
+         json_value(a_nested, '$[2]' RETURNING decimal array),
+         json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING a_int=ARRAY[1,
+                   2,
+                   NULL]
+AND json_value(a_nested, '$[2]' RETURNING decimal array)=ARRAY[0.1,
+                                                               0.2,
+                                                               NULL]
+AND json_value(a_nested, '$[7][3]' RETURNING varchar array)=ARRAY['S1',
+                                                                  'S2',
+                                                                  NULL];
++--------------+------------------+----------------+-----+
+| a_int        | EXPR$1           | c              | cnt |
++--------------+------------------+----------------+-----+
+| [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] |   2 |
++--------------+------------------+----------------+-----+
+(1 row)
+
+!ok
+
