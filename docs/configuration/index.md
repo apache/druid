@@ -1942,7 +1942,7 @@ Metric monitoring is an essential part of Druid operations. The following table 
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
 
 ```properties
-druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
 You can override cluster-wide configuration by amending the `runtime.properties` of individual services.
