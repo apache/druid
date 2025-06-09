@@ -428,7 +428,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
       } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
         SegmentTransactionalReplaceAction replaceAction = (SegmentTransactionalReplaceAction) taskAction;
         publishedSegments.addAll(replaceAction.getSegments());
-        segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
+        if (replaceAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
+        }
       }
       return result;
     }
