@@ -382,10 +382,11 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 ## SET 
 
-The Druid SQL [JSON API](../api-reference/sql-api.md) supports including 0 or more `SET` statements separated by `;`
-preceding a statement to execute in the `query` string of the request. If present, these `SET` statements
-assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET`
-statement of the same request (subsequent requests are not affected).
+`SET` statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. These statements can be included before the main SQL query and are supported in multiple query interfaces, including the The Druid SQL [JSON API](../api-reference/sql-api.md) and the Druid Web Console. 
+
+You can include 0 or more `SET` statements, each separated by a semicolon `;`, preceding a statement to execute in the `query` string of the request. 
+
+If present, these `SET` statements assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET` statement of the same request (subsequent requests are not affected).
 
 The syntax of a `SET` statement is:
 
