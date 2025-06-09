@@ -364,7 +364,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     columns.add("unknown");
     final List<String> templates = List.of(
         "lookup(%s, 'test-lookup')",
-        "lookkup(%s, 'test-lookup', 'missing')",
+        "lookup(%s, 'test-lookup', 'missing')",
         "lookup(%s, 'test-lookup-injective')",
         "lookup(%s, 'test-lookup-injective', 'missing')"
     );
