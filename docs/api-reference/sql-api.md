@@ -234,7 +234,7 @@ Content-Length: 201
 </TabItem>
 </Tabs>
 
-You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET statements](../querying/sql.md#set-statements).
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET statements](../querying/sql.md#set).
 
 The following request body is functionally equivalent to the previous example and uses SET instead of the `context` parameter:
 
