@@ -115,7 +115,8 @@ Keep the following in mind when using EXTERN to export rows:
 - You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
-When you export data, use SET to restrict `rowsPerPage` to control the size of exported files. For example: 
+When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
+When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
 The following statement shows the format of a SQL query using EXTERN to export rows:
 
 ```sql
