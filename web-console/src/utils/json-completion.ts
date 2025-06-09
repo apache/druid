@@ -40,6 +40,8 @@ export function getCompletionsForPath(
   const pathStr = pathToString(path);
   const completions: JsonCompletionItem[] = [];
 
+  console.log('pathStr', pathStr);
+
   for (const rule of rules) {
     if (Boolean(rule.isObject) !== Boolean(isKey)) continue;
 
@@ -69,18 +71,16 @@ export function getCompletionsForPath(
  * e.g., ['filter', 'fields', '1', 'type'] -> '$.filter.fields[].type'
  */
 function pathToString(path: string[]): string {
-  if (path.length === 0) return '$';
-
-  let result = '$';
+  const resultParts = ['$'];
   for (let i = 0; i < path.length; i++) {
     const segment = path[i];
 
     if (/^\d+$/.test(segment)) {
       // This is an array index, replace with []
-      result += '[]';
+      resultParts.push('[]');
     } else {
-      result += `.${segment}`;
+      resultParts.push(segment);
     }
   }
-  return result;
+  return resultParts.join('.');
 }

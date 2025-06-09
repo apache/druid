@@ -225,7 +225,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // SegmentMetadata analysisTypes values
   {
-    path: '$.analysisTypes[]',
+    path: '$.analysisTypes.[]',
     condition: obj => obj.queryType === 'segmentMetadata',
     completions: [
       { value: 'cardinality', documentation: 'Number of unique values in string columns' },
@@ -329,7 +329,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Aggregation properties
   {
-    path: '$.aggregations[]',
+    path: '$.aggregations.[]',
     isObject: true,
     completions: [
       { value: 'type', documentation: 'Type of aggregation' },
@@ -339,7 +339,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Aggregation types
   {
-    path: '$.aggregations[].type',
+    path: '$.aggregations.[].type',
     completions: [
       { value: 'count', documentation: 'Count aggregator' },
       { value: 'longSum', documentation: 'Sum aggregator for long values' },
@@ -393,7 +393,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Aggregation properties for field-based aggregators
   {
-    path: '$.aggregations[]',
+    path: '$.aggregations.[]',
     isObject: true,
     condition: obj =>
       obj.type &&
@@ -417,7 +417,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Aggregation properties for first/last aggregators
   {
-    path: '$.aggregations[]',
+    path: '$.aggregations.[]',
     isObject: true,
     condition: obj =>
       obj.type &&
@@ -446,7 +446,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Filtered aggregator properties
   {
-    path: '$.aggregations[]',
+    path: '$.aggregations.[]',
     isObject: true,
     condition: obj => obj.type === 'filtered',
     completions: [
@@ -644,7 +644,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Nested filter fields for logical operators (AND/OR)
   {
-    path: '$.filter.fields[]',
+    path: '$.filter.fields.[]',
     isObject: true,
     completions: [{ value: 'type', documentation: 'Type of this filter' }],
   },
@@ -658,7 +658,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Dimension spec properties (when dimension is an object)
   {
-    path: '$.dimensions[]',
+    path: '$.dimensions.[]',
     isObject: true,
     condition: obj => typeof obj === 'object' && obj !== null,
     completions: [
@@ -670,7 +670,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Dimension spec types
   {
-    path: '$.dimensions[].type',
+    path: '$.dimensions.[].type',
     completions: [
       { value: 'default', documentation: 'Default dimension spec' },
       {
@@ -773,7 +773,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     completions: [
       { value: 'type', documentation: 'Type of post-aggregation' },
@@ -783,7 +783,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Post-aggregation types
   {
-    path: '$.postAggregations[].type',
+    path: '$.postAggregations.[].type',
     completions: [
       { value: 'arithmetic', documentation: 'Arithmetic operations on fields' },
       { value: 'fieldAccess', documentation: 'Access raw aggregation result' },
@@ -800,7 +800,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Arithmetic post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     condition: obj => obj.type === 'arithmetic',
     completions: [
@@ -812,7 +812,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Field access post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     condition: obj => obj.type === 'fieldAccess' || obj.type === 'finalizingFieldAccess',
     completions: [{ value: 'fieldName', documentation: 'Name of aggregator to reference' }],
@@ -820,7 +820,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Constant post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     condition: obj => obj.type === 'constant',
     completions: [{ value: 'value', documentation: 'Constant value to return' }],
@@ -828,7 +828,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Expression post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     condition: obj => obj.type === 'expression',
     completions: [
@@ -840,7 +840,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Greatest/Least post-aggregation properties
   {
-    path: '$.postAggregations[]',
+    path: '$.postAggregations.[]',
     isObject: true,
     condition: obj =>
       ['doubleGreatest', 'doubleLeast', 'longGreatest', 'longLeast'].includes(obj.type),
@@ -916,7 +916,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Virtual columns properties
   {
-    path: '$.virtualColumns[]',
+    path: '$.virtualColumns.[]',
     isObject: true,
     completions: [
       { value: 'type', documentation: 'Type of virtual column' },
@@ -926,7 +926,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Virtual column types
   {
-    path: '$.virtualColumns[].type',
+    path: '$.virtualColumns.[].type',
     completions: [
       {
         value: 'expression',
@@ -939,7 +939,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Expression virtual column properties
   {
-    path: '$.virtualColumns[]',
+    path: '$.virtualColumns.[]',
     isObject: true,
     condition: obj => obj.type === 'expression',
     completions: [
@@ -953,7 +953,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Expression virtual column output types
   {
-    path: '$.virtualColumns[].outputType',
+    path: '$.virtualColumns.[].outputType',
     condition: obj => obj.type === 'expression',
     completions: [
       { value: 'LONG', documentation: 'Long integer output type' },
@@ -969,7 +969,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Nested field virtual column properties
   {
-    path: '$.virtualColumns[]',
+    path: '$.virtualColumns.[]',
     isObject: true,
     condition: obj => obj.type === 'nested-field',
     completions: [
@@ -988,7 +988,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Nested field virtual column expected types
   {
-    path: '$.virtualColumns[].expectedType',
+    path: '$.virtualColumns.[].expectedType',
     condition: obj => obj.type === 'nested-field',
     completions: [
       { value: 'STRING', documentation: 'String output type (default)' },
@@ -1001,7 +1001,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Nested field path parts properties
   {
-    path: '$.virtualColumns[].pathParts[]',
+    path: '$.virtualColumns.[].pathParts.[]',
     isObject: true,
     condition: obj => obj.type === 'nested-field',
     completions: [{ value: 'type', documentation: 'Type of path part: field or arrayElement' }],
@@ -1009,7 +1009,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Nested field path part types
   {
-    path: '$.virtualColumns[].pathParts[].type',
+    path: '$.virtualColumns.[].pathParts.[].type',
     completions: [
       { value: 'field', documentation: 'Access a specific field in nested structure' },
       { value: 'arrayElement', documentation: 'Access specific array element by index' },
@@ -1018,7 +1018,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Field path part properties
   {
-    path: '$.virtualColumns[].pathParts[]',
+    path: '$.virtualColumns.[].pathParts.[]',
     isObject: true,
     condition: obj => obj.type === 'field',
     completions: [{ value: 'field', documentation: 'Name of the field to access' }],
@@ -1026,7 +1026,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Array element path part properties
   {
-    path: '$.virtualColumns[].pathParts[]',
+    path: '$.virtualColumns.[].pathParts.[]',
     isObject: true,
     condition: obj => obj.type === 'arrayElement',
     completions: [{ value: 'index', documentation: 'Zero-based array index to access' }],
@@ -1034,7 +1034,7 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
 
   // Multi-value filtered virtual column properties
   {
-    path: '$.virtualColumns[]',
+    path: '$.virtualColumns.[]',
     isObject: true,
     condition: obj => obj.type === 'mv-filtered',
     completions: [

@@ -20,8 +20,11 @@ import type { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
+
+import { getHjsonCompletions } from '../../ace-completions/hjson-completions';
+import type { JsonCompletionRule } from '../../utils';
 
 import './json-input.scss';
 
@@ -72,10 +75,21 @@ interface JsonInputProps {
   width?: string;
   height?: string;
   issueWithValue?: (value: any) => string | undefined;
+  jsonCompletions?: JsonCompletionRule[];
 }
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
-  const { onChange, setError, placeholder, focus, width, height, value, issueWithValue } = props;
+  const {
+    onChange,
+    setError,
+    placeholder,
+    focus,
+    width,
+    height,
+    value,
+    issueWithValue,
+    jsonCompletions,
+  } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
     value,
     stringified: stringifyJson(value),
@@ -90,6 +104,32 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
       stringified: stringifyJson(value),
     });
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cmp: false | Ace.Completer[] = useMemo(() => {
+    if (!jsonCompletions) return false;
+    return [
+      {
+        getCompletions: (_state, session, pos, prefix, callback) => {
+          const allText = session.getValue();
+          const line = session.getLine(pos.row);
+          const charBeforePrefix = line[pos.column - prefix.length - 1];
+
+          const lines = allText.split('\n').slice(0, pos.row + 1);
+          const lastLineIndex = lines.length - 1;
+          lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
+          callback(
+            null,
+            getHjsonCompletions({
+              jsonCompletions,
+              textBefore: lines.join('\n'),
+              charBeforePrefix,
+              prefix,
+            }),
+          );
+        },
+      },
+    ];
+  }, [jsonCompletions]);
 
   const internalValueError = internalValue.error;
   return (
@@ -139,12 +179,12 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
         showGutter={false}
         value={internalValue.stringified}
         placeholder={placeholder}
+        enableBasicAutocompletion={cmp as any}
+        enableLiveAutocompletion={cmp as any}
         editorProps={{
           $blockScrolling: Infinity,
         }}
         setOptions={{
-          enableBasicAutocompletion: false,
-          enableLiveAutocompletion: false,
           showLineNumbers: false,
           tabSize: 2,
           newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
