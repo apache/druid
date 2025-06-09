@@ -1,5 +1,6 @@
 {
   "type": "%%STREAM_TYPE%%",
+  "id": "%%SUPERVISOR_ID%%",
   "dataSchema": {
     "dataSource": "%%DATASOURCE%%",
     "parser": %%PARSER%%,
