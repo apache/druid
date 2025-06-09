@@ -57,6 +57,7 @@ import {
   PopoverText,
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
+import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import type {
   ArrayIngestMode,
   DimensionSpec,
@@ -3598,6 +3599,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               this.updateSpec(s);
             }}
             height="100%"
+            jsonCompletions={INGESTION_SPEC_COMPLETIONS}
           />
         </div>
         <div className="control">
