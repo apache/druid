@@ -24,34 +24,53 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     completions: [
-      { value: 'selectStrategy', documentation: 'Configuration for how to assign tasks to Middle Managers' },
-      { value: 'autoScaler', documentation: 'Auto-scaling configuration (only used if autoscaling is enabled)' },
+      {
+        value: 'selectStrategy',
+        documentation: 'Configuration for how to assign tasks to Middle Managers',
+      },
+      {
+        value: 'autoScaler',
+        documentation: 'Auto-scaling configuration (only used if autoscaling is enabled)',
+      },
     ],
   },
   // selectStrategy object properties
   {
     path: '$.selectStrategy',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Worker selection strategy type' },
-    ],
+    completions: [{ value: 'type', documentation: 'Worker selection strategy type' }],
   },
   // selectStrategy.type values
   {
     path: '$.selectStrategy.type',
     completions: [
-      { value: 'equalDistribution', documentation: 'Evenly distribute tasks across Middle Managers (default)' },
-      { value: 'equalDistributionWithCategorySpec', documentation: 'Equal distribution with worker category specification' },
-      { value: 'fillCapacity', documentation: 'Fill workers to capacity (useful for auto-scaling)' },
-      { value: 'fillCapacityWithCategorySpec', documentation: 'Fill capacity with worker category specification' },
-      { value: 'javascript', documentation: 'Custom JavaScript-based worker selection (prototyping only)' },
+      {
+        value: 'equalDistribution',
+        documentation: 'Evenly distribute tasks across Middle Managers (default)',
+      },
+      {
+        value: 'equalDistributionWithCategorySpec',
+        documentation: 'Equal distribution with worker category specification',
+      },
+      {
+        value: 'fillCapacity',
+        documentation: 'Fill workers to capacity (useful for auto-scaling)',
+      },
+      {
+        value: 'fillCapacityWithCategorySpec',
+        documentation: 'Fill capacity with worker category specification',
+      },
+      {
+        value: 'javascript',
+        documentation: 'Custom JavaScript-based worker selection (prototyping only)',
+      },
     ],
   },
   // affinityConfig for equalDistribution and fillCapacity
   {
     path: '$.selectStrategy',
     isObject: true,
-    condition: (obj) => obj.type === 'equalDistribution' || obj.type === 'fillCapacity',
+    condition: obj => obj.type === 'equalDistribution' || obj.type === 'fillCapacity',
     completions: [
       { value: 'affinityConfig', documentation: 'Affinity configuration for worker assignment' },
     ],
@@ -62,7 +81,10 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     isObject: true,
     completions: [
       { value: 'affinity', documentation: 'Map of datasource names to preferred worker hosts' },
-      { value: 'strong', documentation: 'Whether affinity is strong (tasks wait for preferred workers)' },
+      {
+        value: 'strong',
+        documentation: 'Whether affinity is strong (tasks wait for preferred workers)',
+      },
     ],
   },
   // affinityConfig.strong values
@@ -70,16 +92,25 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$.selectStrategy.affinityConfig.strong',
     completions: [
       { value: 'true', documentation: 'Strong affinity - tasks wait for preferred workers' },
-      { value: 'false', documentation: 'Weak affinity - use any available worker if preferred unavailable (default)' },
+      {
+        value: 'false',
+        documentation:
+          'Weak affinity - use any available worker if preferred unavailable (default)',
+      },
     ],
   },
   // workerCategorySpec for category-based strategies
   {
     path: '$.selectStrategy',
     isObject: true,
-    condition: (obj) => obj.type === 'equalDistributionWithCategorySpec' || obj.type === 'fillCapacityWithCategorySpec',
+    condition: obj =>
+      obj.type === 'equalDistributionWithCategorySpec' ||
+      obj.type === 'fillCapacityWithCategorySpec',
     completions: [
-      { value: 'workerCategorySpec', documentation: 'Worker category specification for task assignment' },
+      {
+        value: 'workerCategorySpec',
+        documentation: 'Worker category specification for task assignment',
+      },
     ],
   },
   // workerCategorySpec object properties
@@ -95,15 +126,22 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.selectStrategy.workerCategorySpec.strong',
     completions: [
-      { value: 'true', documentation: 'Strong category affinity - tasks wait for preferred category workers' },
-      { value: 'false', documentation: 'Weak category affinity - use any available worker if preferred unavailable (default)' },
+      {
+        value: 'true',
+        documentation: 'Strong category affinity - tasks wait for preferred category workers',
+      },
+      {
+        value: 'false',
+        documentation:
+          'Weak category affinity - use any available worker if preferred unavailable (default)',
+      },
     ],
   },
   // function for javascript strategy
   {
     path: '$.selectStrategy',
     isObject: true,
-    condition: (obj) => obj.type === 'javascript',
+    condition: obj => obj.type === 'javascript',
     completions: [
       { value: 'function', documentation: 'JavaScript function for custom worker selection logic' },
     ],
@@ -151,7 +189,7 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.autoScaler.envConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'ec2',
+    condition: obj => obj.type === 'ec2',
     completions: [
       { value: 'availabilityZone', documentation: 'AWS availability zone' },
       { value: 'nodeData', documentation: 'Node configuration data for EC2 instances' },
@@ -162,7 +200,7 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.autoScaler.envConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'gce',
+    condition: obj => obj.type === 'gce',
     completions: [
       { value: 'numInstances', documentation: 'Number of instances to create' },
       { value: 'projectId', documentation: 'Google Cloud project ID' },
