@@ -86,15 +86,7 @@ As long as the service is set to populate the cache, you can set cache options f
 
 In this example the user has set `populateCache` to `false` to avoid filling the result cache with results for segments that are over a year old. For more information, see [Druid SQL client APIs](../api-reference/sql-api.md).
 
-You can also use the SET command to specify cache options directly within your SQL query string. For example: 
-
-```
-{
-  "query" : "SET useCache=true; SET populateCache=false; SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2020-01-01 00:00:00'"
-}
-```
-
-For details about SET, see [SET statements](../querying/sql.md#set-statements). 
+You can also use the SET command to specify cache options directly within your SQL query string. For details about SET, see [SET statements](../querying/sql.md#set). 
 
 
 
