@@ -77,13 +77,12 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
    */
   public static LookupExtractorFactoryContainerProvider createTestLookupProvider(final Map<String, LookupExtractor> lookups)
   {
-    final Set<String> allLookups = ImmutableSet.<String>builder().addAll(lookups.keySet()).add(LOOKYLOO).build();
     return new LookupExtractorFactoryContainerProvider()
     {
       @Override
       public Set<String> getAllLookupNames()
       {
-        return allLookups;
+        return ImmutableSet.of(LOOKYLOO);
       }
 
       @Override
