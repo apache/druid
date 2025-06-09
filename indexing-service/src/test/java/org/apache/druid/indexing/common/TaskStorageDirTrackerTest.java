@@ -218,6 +218,9 @@ public class TaskStorageDirTrackerTest
         Arrays.asList("task1", "task2", "task3", "task4")
     );
 
+    // Ensure that task count is correctly updated
+    Assert.assertEquals(2, tracker.getNumUsedSlots());
+
     Assert.assertNull(dirs.get("task3"));
     Assert.assertNull(dirs.get("task4"));
 
@@ -234,6 +237,43 @@ public class TaskStorageDirTrackerTest
     verifier.validate(tracker.pickStorageSlot("task2"), "A", "slot0");
     verifier.validate(tracker.pickStorageSlot("task4"), "B", "slot0");
     verifier.validate(tracker.pickStorageSlot("task5"), "A", "slot1");
+  }
+
+  @Test
+  public void testGetNumUsedSlots() throws IOException
+  {
+    File tmpFolder = TMP.newFolder();
+    List<File> files = ImmutableList.of(
+        new File(tmpFolder, "A"),
+        new File(tmpFolder, "B"),
+        new File(tmpFolder, "C")
+    );
+    final int workerCapacity = 7;
+    final int baseTaskDirSize = 100_000_000;
+
+    final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromBaseDirs(files, workerCapacity, baseTaskDirSize);
+    tracker.ensureDirectories();
+
+    Assert.assertEquals(0, tracker.getNumUsedSlots());
+
+    tracker.pickStorageSlot("task0");
+    tracker.pickStorageSlot("task1");
+    tracker.pickStorageSlot("task2");
+
+    Assert.assertEquals(3, tracker.getNumUsedSlots());
+
+    tracker.returnStorageSlot(tracker.pickStorageSlot("task0"));
+
+    Assert.assertEquals(2, tracker.getNumUsedSlots());
+
+    tracker.pickStorageSlot("task3");
+    tracker.pickStorageSlot("task4");
+    tracker.pickStorageSlot("task5");
+    tracker.pickStorageSlot("task6");
+
+    Assert.assertEquals(6, tracker.getNumUsedSlots());
+
+    FileUtils.deleteDirectory(tmpFolder);
   }
 
   public static class StorageSlotVerifier

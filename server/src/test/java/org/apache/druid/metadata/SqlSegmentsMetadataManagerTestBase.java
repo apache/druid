@@ -72,7 +72,7 @@ public class SqlSegmentsMetadataManagerTestBase
 
   protected void setUp(TestDerbyConnector.DerbyConnectorRule derbyConnectorRule) throws Exception
   {
-    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null, null);
     connector = derbyConnectorRule.getConnector();
     storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 

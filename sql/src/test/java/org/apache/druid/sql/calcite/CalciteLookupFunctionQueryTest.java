@@ -727,8 +727,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo'), NULL)"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(expressionFilter("array_contains(lookup(\"dim1\",'lookyloo'),null)")),
-        Collections.emptyList()
+        buildFilterTestExpectedQuery(
+            expressionFilter("mv_contains(lookup(\"dim1\",'lookyloo'),null)")),
+        ImmutableList.of(new Object[]{null, 5L})
     );
   }
 
@@ -740,7 +741,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(expressionFilter("array_contains(mv_harmonize_nulls(\"dim1\"),null)")),
+        buildFilterTestExpectedQuery(expressionFilter("mv_contains(\"dim1\",null)")),
         ImmutableList.of()
     );
   }

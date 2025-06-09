@@ -729,8 +729,9 @@ by time.
 
 - [TopN](topnquery.md) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
 clauses, do not have HAVING clauses, and are not nested. However, the TopN query type will deliver approximate ranking
-and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". TopN results are always
-computed in memory. See the TopN documentation for more details.
+and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". Additionally, TopN queries
+with lexicographic ordering (sorting by dimension values) can be disabled by setting "useLexicographicTopN" to "false".
+TopN results are always computed in memory. See the TopN documentation for more details.
 
 - [GroupBy](groupbyquery.md) is used for all other aggregations, including any nested aggregation queries. Druid's
 GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of

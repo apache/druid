@@ -25,14 +25,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -108,6 +109,9 @@ import java.util.Set;
  */
 public class NestedFieldVirtualColumn implements VirtualColumn
 {
+  private static final NestedDataExpressions.JsonQueryExprMacro JSON_QUERY = new NestedDataExpressions.JsonQueryExprMacro();
+  private static final NestedDataExpressions.JsonValueExprMacro JSON_VALUE = new NestedDataExpressions.JsonValueExprMacro();
+
   private final String outputName;
   private final NestedFieldSpec fieldSpec;
 
@@ -177,6 +181,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     this(columnName, outputName, expectedType, null, null, path, false);
   }
 
+  @Nullable
   @Override
   public byte[] getCacheKey()
   {
@@ -208,6 +213,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return fieldSpec.parts;
   }
 
+  @Nullable
   @JsonProperty
   public ColumnType getExpectedType()
   {
@@ -239,14 +245,27 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       ColumnSelectorFactory factory
   )
   {
-    // this column value selector is used for realtime queries, so we always process StructuredData
-    final ColumnValueSelector<?> baseSelector = factory.makeColumnValueSelector(fieldSpec.columnName);
-
-    // processFromRaw is true that means JSON_QUERY, which can return partial results, otherwise this virtual column
-    // is JSON_VALUE which only returns literals, so use the literal value selector instead
-    return fieldSpec.processFromRaw
-           ? new RawFieldColumnSelector(baseSelector, fieldSpec.parts)
-           : new RawFieldLiteralColumnValueSelector(baseSelector, fieldSpec.parts);
+    // realtime selectors have no optimization, fallback to json_query/json_value expressions
+    final Expr identifier = Parser.identifier(fieldSpec.columnName);
+    final Expr path = Parser.constant(NestedPathFinder.toNormalizedJsonPath(fieldSpec.parts));
+    final Expr jsonExpr;
+    if (fieldSpec.processFromRaw) {
+      // processFromRaw is true that means JSON_QUERY, which can return partial object results
+      jsonExpr = JSON_QUERY.apply(List.of(identifier, path));
+    } else {
+      // otherwise, this virtual column is JSON_VALUE which only returns primitives
+      final List<Expr> args;
+      if (fieldSpec.expectedType != null) {
+        final Expr castType = Parser.constant(
+            ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType).asTypeString()
+        );
+        args = List.of(identifier, path, castType);
+      } else {
+        args = List.of(identifier, path);
+      }
+      jsonExpr = JSON_VALUE.apply(args);
+    }
+    return ExpressionSelectors.makeColumnValueSelector(factory, jsonExpr);
   }
 
   @Nullable
@@ -282,6 +301,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
+      final ColumnType logicalType = column.getFieldLogicalType(fieldSpec.parts);
+      if (logicalType != null && logicalType.isArray()) {
+        return new FieldDimensionSelector(column.makeColumnValueSelector(fieldSpec.parts, offset));
+      }
       return column.makeDimensionSelector(fieldSpec.parts, offset, extractionFn);
     }
 
@@ -302,7 +325,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       );
     }
 
-    if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+    if (isRootArrayElementPathAndArrayColumn(theColumn)) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) fieldSpec.parts.get(0)).getIndex();
@@ -364,8 +387,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
 
     // "JSON_VALUE", which only returns literals, on a NestedDataComplexColumn, so we can use the fields value selector
+
     if (theColumn instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
+      final ColumnType fieldType = column.getFieldLogicalType(fieldSpec.parts);
+      if (fieldType != null && fieldSpec.expectedType != null && !fieldSpec.expectedType.equals(fieldType)) {
+        return ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            column.makeColumnValueSelector(fieldSpec.parts, offset),
+            fieldType,
+            fieldSpec.expectedType
+        );
+      }
       return column.makeColumnValueSelector(fieldSpec.parts, offset);
     }
 
@@ -382,69 +415,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return theColumn.makeColumnValueSelector(offset);
     }
 
-    if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+    if (isRootArrayElementPathAndArrayColumn(theColumn)) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) fieldSpec.parts.get(0)).getIndex();
       if (elementNumber < 0) {
         throw new IAE("Cannot make array element selector, negative array index not supported");
       }
-      return new ColumnValueSelector<>()
-      {
-        @Override
-        public boolean isNull()
-        {
-          Object o = getObject();
-          return !(o instanceof Number);
-        }
-
-        @Override
-        public long getLong()
-        {
-          Object o = getObject();
-          return o instanceof Number ? ((Number) o).longValue() : 0L;
-        }
-
-        @Override
-        public float getFloat()
-        {
-          Object o = getObject();
-          return o instanceof Number ? ((Number) o).floatValue() : 0f;
-        }
-
-        @Override
-        public double getDouble()
-        {
-          Object o = getObject();
-          return o instanceof Number ? ((Number) o).doubleValue() : 0.0;
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          arraySelector.inspectRuntimeShape(inspector);
-        }
-
-        @Nullable
-        @Override
-        public Object getObject()
-        {
-          Object o = arraySelector.getObject();
-          if (o instanceof Object[]) {
-            Object[] array = (Object[]) o;
-            if (elementNumber < array.length) {
-              return array[elementNumber];
-            }
-          }
-          return null;
-        }
-
-        @Override
-        public Class<?> classOfObject()
-        {
-          return Object.class;
-        }
-      };
+      return new ArrayElementColumnValueSelector(arraySelector, elementNumber);
     }
 
     // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
@@ -529,17 +507,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         );
       }
       final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(fieldSpec.parts, offset);
-      if (leastRestrictiveType != null &&
-          leastRestrictiveType.isArray() &&
-          fieldSpec.expectedType != null &&
-          !fieldSpec.expectedType.isArray()
-      ) {
-        final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType());
-        final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType);
-        return makeVectorArrayToScalarObjectSelector(offset, objectSelector, elementType, castTo);
-      }
 
-      return objectSelector;
+      return castVectorObjectSelectorIfNeeded(columnName, offset, leastRestrictiveType, objectSelector);
     }
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
     if (fieldSpec.parts.isEmpty()) {
@@ -559,19 +528,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
             fieldSpec.expectedType
         );
       }
-      // if the underlying column is array typed, the vector object selector it spits out will homogenize stuff to
-      // make all of the objects a consistent type, which is typically a good thing, but if we are doing mixed type
-      // stuff and expect the output type to be scalar typed, then we should coerce things to only extract the scalars
-      if (capabilities.isArray() && !fieldSpec.expectedType.isArray()) {
-        final VectorObjectSelector delegate = column.makeVectorObjectSelector(offset);
-        final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(capabilities.getElementType());
-        final ExpressionType castTo = ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType);
-        return makeVectorArrayToScalarObjectSelector(offset, delegate, elementType, castTo);
-      }
-      return column.makeVectorObjectSelector(offset);
+      final VectorObjectSelector delegate = column.makeVectorObjectSelector(offset);
+      return castVectorObjectSelectorIfNeeded(columnName, offset, capabilities.toColumnType(), delegate);
     }
 
-    if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
+    if (isRootArrayElementPathAndArrayColumn(column)) {
       final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
       final ExpressionType elementType = ExpressionType.fromColumnTypeStrict(
           arrayColumn.getLogicalType().isArray() ? arrayColumn.getLogicalType().getElementType() : arrayColumn.getLogicalType()
@@ -584,46 +545,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (elementNumber < 0) {
         throw new IAE("Cannot make array element selector, negative array index not supported");
       }
-      return new VectorObjectSelector()
-      {
-        private final Object[] elements = new Object[arraySelector.getMaxVectorSize()];
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-        public Object[] getObjectVector()
-        {
-          if (offset.getId() != id) {
-            final Object[] delegate = arraySelector.getObjectVector();
-            for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-              Object maybeArray = delegate[i];
-              if (maybeArray instanceof Object[]) {
-                Object[] anArray = (Object[]) maybeArray;
-                if (elementNumber < anArray.length) {
-                  elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
-                } else {
-                  elements[i] = null;
-                }
-              } else {
-                elements[i] = null;
-              }
-            }
-            id = offset.getId();
-          }
-          return elements;
-        }
-
-        @Override
-        public int getMaxVectorSize()
-        {
-          return arraySelector.getMaxVectorSize();
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return arraySelector.getCurrentVectorSize();
-        }
-      };
+      return new ArrayElementVectorObjectSelector(arraySelector, offset, elementNumber, elementType, castTo);
     }
 
     // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
@@ -652,147 +574,20 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         // ... revisit this if that ever changes)
         if (theColumn instanceof DictionaryEncodedColumn) {
           final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
-          if (fieldSpec.expectedType != null && fieldSpec.expectedType.is(ValueType.LONG)) {
-            return new BaseLongVectorValueSelector(offset)
-            {
-              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
-              private final long[] longs = new long[delegate.getMaxVectorSize()];
-              @Nullable
-              private boolean[] nulls = null;
-
-              @Override
-              public long[] getLongVector()
-              {
-                computeLongs();
-                return longs;
-              }
-
-              @Nullable
-              @Override
-              public boolean[] getNullVector()
-              {
-                computeLongs();
-                return nulls;
-              }
-
-              private void computeLongs()
-              {
-                if (currentOffsetId != offset.getId()) {
-                  currentOffsetId = offset.getId();
-                  final Object[] values = delegate.getObjectVector();
-                  for (int i = 0; i < values.length; i++) {
-                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
-                    if (n != null) {
-                      longs[i] = n.longValue();
-                      if (nulls != null) {
-                        nulls[i] = false;
-                      }
-                    } else {
-                      if (nulls == null) {
-                        nulls = new boolean[offset.getMaxVectorSize()];
-                      }
-                      nulls[i] = true;
-                    }
-                  }
-                }
-              }
-            };
-          } else if (fieldSpec.expectedType != null && fieldSpec.expectedType.is(ValueType.FLOAT)) {
-            return new BaseFloatVectorValueSelector(offset)
-            {
-              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
-              private final float[] floats = new float[delegate.getMaxVectorSize()];
-              @Nullable
-              private boolean[] nulls = null;
-
-              @Override
-              public float[] getFloatVector()
-              {
-                computeFloats();
-                return floats;
-              }
-
-              @Nullable
-              @Override
-              public boolean[] getNullVector()
-              {
-                computeFloats();
-                return nulls;
-              }
-
-              private void computeFloats()
-              {
-                if (currentOffsetId != offset.getId()) {
-                  currentOffsetId = offset.getId();
-                  final Object[] values = delegate.getObjectVector();
-                  for (int i = 0; i < values.length; i++) {
-                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
-                    if (n != null) {
-                      floats[i] = n.floatValue();
-                      if (nulls != null) {
-                        nulls[i] = false;
-                      }
-                    } else {
-                      if (nulls == null) {
-                        nulls = new boolean[offset.getMaxVectorSize()];
-                      }
-                      nulls[i] = true;
-                    }
-                  }
-                }
-              }
-            };
-          } else {
-            return new BaseDoubleVectorValueSelector(offset)
-            {
-              private int currentOffsetId = ReadableVectorInspector.NULL_ID;
-              private final double[] doubles = new double[delegate.getMaxVectorSize()];
-              @Nullable
-              private boolean[] nulls = null;
-              @Override
-              public double[] getDoubleVector()
-              {
-                computeDoubles();
-                return doubles;
-              }
-
-              @Nullable
-              @Override
-              public boolean[] getNullVector()
-              {
-                computeDoubles();
-                return nulls;
-              }
-
-              private void computeDoubles()
-              {
-                if (currentOffsetId != offset.getId()) {
-                  currentOffsetId = offset.getId();
-                  final Object[] values = delegate.getObjectVector();
-                  for (int i = 0; i < values.length; i++) {
-                    Number n = ExprEval.computeNumber(Evals.asString(values[i]));
-                    if (n != null) {
-                      doubles[i] = n.doubleValue();
-                      if (nulls != null) {
-                        nulls[i] = false;
-                      }
-                    } else {
-                      if (nulls == null) {
-                        nulls = new boolean[offset.getMaxVectorSize()];
-                      }
-                      nulls[i] = true;
-                    }
-                  }
-                }
-              }
-            };
-          }
+          final ColumnType castTo = fieldSpec.expectedType != null ? fieldSpec.expectedType : ColumnType.DOUBLE;
+          return ExpressionVectorSelectors.castObjectSelectorToNumeric(
+              offset,
+              columnName,
+              delegate,
+              holder.getCapabilities().toColumnType(),
+              castTo
+          );
         }
         // otherwise, just use the columns native vector value selector (this might explode if not natively numeric)
         return theColumn.makeVectorValueSelector(offset);
       }
       // array columns can also be handled if the path is a root level array element accessor
-      if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+      if (isRootArrayElementPathAndArrayColumn(theColumn)) {
         final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
         VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
         final int elementNumber = ((NestedPathArrayElement) fieldSpec.parts.get(0)).getIndex();
@@ -801,210 +596,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         }
 
         if (fieldSpec.expectedType != null && fieldSpec.expectedType.is(ValueType.LONG)) {
-          return new BaseLongVectorValueSelector(offset)
-          {
-            private final long[] longs = new long[offset.getMaxVectorSize()];
-            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
-            private int id = ReadableVectorInspector.NULL_ID;
-
-            private void computeNumbers()
-            {
-              if (offset.getId() != id) {
-                final Object[] maybeArrays = arraySelector.getObjectVector();
-                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-                  Object maybeArray = maybeArrays[i];
-                  if (maybeArray instanceof Object[]) {
-                    Object[] anArray = (Object[]) maybeArray;
-                    if (elementNumber < anArray.length) {
-                      if (anArray[elementNumber] instanceof Number) {
-                        Number n = (Number) anArray[elementNumber];
-                        longs[i] = n.longValue();
-                        nulls[i] = false;
-                      } else {
-                        Double d = anArray[elementNumber] instanceof String
-                                   ? Doubles.tryParse((String) anArray[elementNumber])
-                                   : null;
-                        if (d != null) {
-                          longs[i] = d.longValue();
-                          nulls[i] = false;
-                        } else {
-                          longs[i] = 0L;
-                          nulls[i] = true;
-                        }
-                      }
-                    } else {
-                      nullElement(i);
-                    }
-                  } else {
-                    // not an array?
-                    nullElement(i);
-                  }
-                }
-                id = offset.getId();
-              }
-            }
-
-            private void nullElement(int i)
-            {
-              longs[i] = 0L;
-              nulls[i] = true;
-            }
-
-            @Override
-            public long[] getLongVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return longs;
-            }
-
-            @Nullable
-            @Override
-            public boolean[] getNullVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return nulls;
-            }
-          };
+          return new ArrayElementLongVectorValueSelector(offset, arraySelector, elementNumber);
         } else if (fieldSpec.expectedType != null && fieldSpec.expectedType.is(ValueType.FLOAT)) {
-          return new BaseFloatVectorValueSelector(offset)
-          {
-            private final float[] floats = new float[offset.getMaxVectorSize()];
-            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
-            private int id = ReadableVectorInspector.NULL_ID;
-
-            private void computeNumbers()
-            {
-              if (offset.getId() != id) {
-                final Object[] maybeArrays = arraySelector.getObjectVector();
-                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-                  Object maybeArray = maybeArrays[i];
-                  if (maybeArray instanceof Object[]) {
-                    Object[] anArray = (Object[]) maybeArray;
-                    if (elementNumber < anArray.length) {
-                      if (anArray[elementNumber] instanceof Number) {
-                        Number n = (Number) anArray[elementNumber];
-                        floats[i] = n.floatValue();
-                        nulls[i] = false;
-                      } else {
-                        Double d = anArray[elementNumber] instanceof String
-                                   ? Doubles.tryParse((String) anArray[elementNumber])
-                                   : null;
-                        if (d != null) {
-                          floats[i] = d.floatValue();
-                          nulls[i] = false;
-                        } else {
-                          nullElement(i);
-                        }
-                      }
-                    } else {
-                      nullElement(i);
-                    }
-                  } else {
-                    // not an array?
-                    nullElement(i);
-                  }
-                }
-                id = offset.getId();
-              }
-            }
-
-            private void nullElement(int i)
-            {
-              floats[i] = 0f;
-              nulls[i] = true;
-            }
-
-            @Override
-            public float[] getFloatVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return floats;
-            }
-
-            @Nullable
-            @Override
-            public boolean[] getNullVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return nulls;
-            }
-          };
+          return new ArrayElementFloatVectorValueSelector(offset, arraySelector, elementNumber);
         } else {
-          return new BaseDoubleVectorValueSelector(offset)
-          {
-            private final double[] doubles = new double[offset.getMaxVectorSize()];
-            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
-            private int id = ReadableVectorInspector.NULL_ID;
-
-            private void computeNumbers()
-            {
-              if (offset.getId() != id) {
-                final Object[] maybeArrays = arraySelector.getObjectVector();
-                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-                  Object maybeArray = maybeArrays[i];
-                  if (maybeArray instanceof Object[]) {
-                    Object[] anArray = (Object[]) maybeArray;
-                    if (elementNumber < anArray.length) {
-                      if (anArray[elementNumber] instanceof Number) {
-                        Number n = (Number) anArray[elementNumber];
-                        doubles[i] = n.doubleValue();
-                        nulls[i] = false;
-                      } else {
-                        Double d = anArray[elementNumber] instanceof String
-                                   ? Doubles.tryParse((String) anArray[elementNumber])
-                                   : null;
-                        if (d != null) {
-                          doubles[i] = d;
-                          nulls[i] = false;
-                        } else {
-                          nullElement(i);
-                        }
-                      }
-                    } else {
-                      nullElement(i);
-                    }
-                  } else {
-                    // not an array?
-                    nullElement(i);
-                  }
-                }
-                id = offset.getId();
-              }
-            }
-
-            private void nullElement(int i)
-            {
-              doubles[i] = 0.0;
-              nulls[i] = true;
-            }
-
-            @Override
-            public double[] getDoubleVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return doubles;
-            }
-
-            @Nullable
-            @Override
-            public boolean[] getNullVector()
-            {
-              if (offset.getId() != id) {
-                computeNumbers();
-              }
-              return nulls;
-            }
-          };
+          return new ArrayElementDoubleVectorValueSelector(offset, arraySelector, elementNumber);
         }
       }
       return NilVectorSelector.create(offset);
@@ -1013,157 +609,20 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
     // if column is numeric, it has a vector value selector, so we can directly make a vector value selector
     // if we are missing an expectedType, then we've got nothing else to work with so try it anyway
+    final ColumnType leastRestrictiveType = column.getFieldLogicalType(fieldSpec.parts);
+
     if (column.isNumeric(fieldSpec.parts) || fieldSpec.expectedType == null) {
       return column.makeVectorValueSelector(fieldSpec.parts, offset);
     }
 
-    final ColumnType leastRestrictiveType = column.getFieldLogicalType(fieldSpec.parts);
     final VectorObjectSelector fieldSelector = column.makeVectorObjectSelector(fieldSpec.parts, offset);
-    final VectorObjectSelector objectSelector;
-    // if the field has array types, wrap the object selector in the array to scalar value coercer
-    if (leastRestrictiveType != null && leastRestrictiveType.isArray()) {
-      objectSelector = makeVectorArrayToScalarObjectSelector(
-          offset,
-          fieldSelector,
-          ExpressionType.fromColumnTypeStrict(leastRestrictiveType.getElementType()),
-          ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType)
-      );
-    } else {
-      objectSelector = fieldSelector;
-    }
-    if (fieldSpec.expectedType.is(ValueType.LONG)) {
-      return new BaseLongVectorValueSelector(offset)
-      {
-        private final long[] longVector = new long[offset.getMaxVectorSize()];
-
-        @Nullable
-        private boolean[] nullVector = null;
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-        public long[] getLongVector()
-        {
-          computeVectorsIfNeeded();
-          return longVector;
-        }
-
-        @Nullable
-        @Override
-        public boolean[] getNullVector()
-        {
-          computeVectorsIfNeeded();
-          return nullVector;
-        }
-
-        private void computeVectorsIfNeeded()
-        {
-          if (id == offset.getId()) {
-            return;
-          }
-          id = offset.getId();
-          final Object[] vals = objectSelector.getObjectVector();
-          for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++) {
-            Object v = vals[i];
-            if (v == null) {
-              if (nullVector == null) {
-                nullVector = new boolean[objectSelector.getMaxVectorSize()];
-              }
-              longVector[i] = 0L;
-              nullVector[i] = true;
-            } else {
-              Long l;
-              if (v instanceof Number) {
-                l = ((Number) v).longValue();
-              } else {
-                final String s = String.valueOf(v);
-                l = GuavaUtils.tryParseLong(s);
-                if (l == null) {
-                  final Double d = Doubles.tryParse(s);
-                  if (d != null) {
-                    l = d.longValue();
-                  }
-                }
-              }
-              if (l != null) {
-                longVector[i] = l;
-                if (nullVector != null) {
-                  nullVector[i] = false;
-                }
-              } else {
-                if (nullVector == null) {
-                  nullVector = new boolean[objectSelector.getMaxVectorSize()];
-                }
-                longVector[i] = 0L;
-                nullVector[i] = true;
-              }
-            }
-          }
-        }
-      };
-    } else {
-      // treat anything else as double
-      return new BaseDoubleVectorValueSelector(offset)
-      {
-        private final double[] doubleVector = new double[offset.getMaxVectorSize()];
-
-        @Nullable
-        private boolean[] nullVector = null;
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-        public double[] getDoubleVector()
-        {
-          computeVectorsIfNeeded();
-          return doubleVector;
-        }
-
-        @Nullable
-        @Override
-        public boolean[] getNullVector()
-        {
-          computeVectorsIfNeeded();
-          return nullVector;
-        }
-
-        private void computeVectorsIfNeeded()
-        {
-          if (id == offset.getId()) {
-            return;
-          }
-          id = offset.getId();
-          final Object[] vals = objectSelector.getObjectVector();
-          for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++) {
-            Object v = vals[i];
-            if (v == null) {
-              if (nullVector == null) {
-                nullVector = new boolean[objectSelector.getMaxVectorSize()];
-              }
-              doubleVector[i] = 0.0;
-              nullVector[i] = true;
-            } else {
-              Double d;
-              if (v instanceof Number) {
-                d = ((Number) v).doubleValue();
-              } else {
-                d = Doubles.tryParse(String.valueOf(v));
-              }
-              if (d != null) {
-                doubleVector[i] = d;
-                if (nullVector != null) {
-                  nullVector[i] = false;
-                }
-              } else {
-                if (nullVector == null) {
-                  nullVector = new boolean[objectSelector.getMaxVectorSize()];
-                }
-                doubleVector[i] = 0.0;
-                nullVector[i] = true;
-              }
-            }
-          }
-        }
-      };
-    }
+    return ExpressionVectorSelectors.castObjectSelectorToNumeric(
+        offset,
+        columnName,
+        fieldSelector,
+        leastRestrictiveType,
+        fieldSpec.expectedType
+    );
   }
 
   @Nullable
@@ -1213,7 +672,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       }
       return baseIndexSupplier;
     }
-    if (fieldSpec.parts.size() == 1 && fieldSpec.parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+    if (isRootArrayElementPathAndArrayColumn(theColumn)) {
       // cannot use the array column index supplier directly, in the future array columns should expose a function
       // with a signature like 'getArrayElementIndexSupplier(int index)' to allow getting indexes for specific elements
       // if we want to support this stuff. Right now VariantArrayColumn doesn't actually retain enough information about
@@ -1347,58 +806,32 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   /**
-   * Create a {@link VectorObjectSelector} from a base selector which may return ARRAY types, coercing to some scalar
-   * value. Single element arrays will be unwrapped, while multi-element arrays will become null values. Non-arrays
-   * will be best effort cast to the castTo type.
+   * Returns true if json path is a root array element (for example '$[1]') and the column array column
    */
-  private static VectorObjectSelector makeVectorArrayToScalarObjectSelector(
+  private boolean isRootArrayElementPathAndArrayColumn(BaseColumn theColumn)
+  {
+    return fieldSpec.parts.size() == 1
+           && fieldSpec.parts.get(0) instanceof NestedPathArrayElement
+           && theColumn instanceof VariantColumn;
+  }
+
+  private VectorObjectSelector castVectorObjectSelectorIfNeeded(
+      String columnName,
       ReadableVectorOffset offset,
-      VectorObjectSelector delegate,
-      ExpressionType elementType,
-      ExpressionType castTo
+      ColumnType leastRestrictiveType,
+      VectorObjectSelector objectSelector
   )
   {
-    return new VectorObjectSelector()
-    {
-      final Object[] scalars = new Object[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-      public Object[] getObjectVector()
-      {
-        if (offset.getId() != id) {
-          Object[] result = delegate.getObjectVector();
-          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-            if (result[i] instanceof Object[]) {
-              Object[] o = (Object[]) result[i];
-              if (o == null || o.length != 1) {
-                scalars[i] = null;
-              } else {
-                ExprEval<?> element = ExprEval.ofType(elementType, o[0]);
-                scalars[i] = element.castTo(castTo).value();
-              }
-            } else {
-              ExprEval<?> element = ExprEval.bestEffortOf(result[i]);
-              scalars[i] = element.castTo(castTo).value();
-            }
-          }
-          id = offset.getId();
-        }
-        return scalars;
-      }
-
-      @Override
-      public int getMaxVectorSize()
-      {
-        return offset.getMaxVectorSize();
-      }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
-      }
-    };
+    if (fieldSpec.expectedType != null && !Objects.equals(fieldSpec.expectedType, leastRestrictiveType)) {
+      return ExpressionVectorSelectors.castObject(
+          offset,
+          columnName,
+          objectSelector,
+          leastRestrictiveType,
+          fieldSpec.expectedType
+      );
+    }
+    return objectSelector;
   }
 
   private static class NestedFieldSpec implements EquivalenceKey
@@ -1445,159 +878,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
   }
 
-  /**
-   * Process the "raw" data to extract non-complex values. Like {@link RawFieldColumnSelector} but does not return
-   * complex nested objects and does not wrap the results in {@link StructuredData}.
-   * <p>
-   * This is used as a selector on realtime data when the native field columns are not available.
-   */
-  public static class RawFieldLiteralColumnValueSelector extends RawFieldColumnSelector
-  {
-    public RawFieldLiteralColumnValueSelector(
-        ColumnValueSelector baseSelector,
-        List<NestedPathPart> parts
-    )
-    {
-      super(baseSelector, parts);
-    }
-
-    @Override
-    public double getDouble()
-    {
-      Object o = getObject();
-      return Numbers.tryParseDouble(o, 0.0);
-    }
-
-    @Override
-    public float getFloat()
-    {
-      Object o = getObject();
-      return Numbers.tryParseFloat(o, 0.0f);
-    }
-
-    @Override
-    public long getLong()
-    {
-      Object o = getObject();
-      return Numbers.tryParseLong(o, 0L);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      final Object o = getObject();
-      if (o instanceof Number) {
-        return false;
-      }
-      if (o instanceof String) {
-        return GuavaUtils.tryParseLong((String) o) == null && Doubles.tryParse((String) o) == null;
-      }
-      return true;
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      final StructuredData data = StructuredData.wrap(baseSelector.getObject());
-      if (data == null) {
-        return null;
-      }
-
-      final Object valAtPath = NestedPathFinder.find(data.getValue(), parts);
-      final ExprEval eval = ExprEval.bestEffortOf(valAtPath);
-      if (eval.type().isPrimitive() || eval.type().isPrimitiveArray()) {
-        return eval.valueOrDefault();
-      }
-      // not a primitive value, return null;
-      return null;
-    }
-
-  }
-
-  /**
-   * Process the "raw" data to extract values with {@link NestedPathFinder#find(Object, List)}, wrapping the result in
-   * {@link StructuredData}
-   */
-  public static class RawFieldColumnSelector implements ColumnValueSelector<Object>
-  {
-    protected final ColumnValueSelector baseSelector;
-    protected final List<NestedPathPart> parts;
-
-    public RawFieldColumnSelector(ColumnValueSelector baseSelector, List<NestedPathPart> parts)
-    {
-      this.baseSelector = baseSelector;
-      this.parts = parts;
-    }
-
-    @Override
-    public double getDouble()
-    {
-      StructuredData data = (StructuredData) getObject();
-      if (data != null) {
-        return Numbers.tryParseDouble(data.getValue(), 0.0);
-      }
-      return 0.0;
-    }
-
-    @Override
-    public float getFloat()
-    {
-      StructuredData data = (StructuredData) getObject();
-      if (data != null) {
-        return Numbers.tryParseFloat(data.getValue(), 0f);
-      }
-      return 0f;
-    }
-
-    @Override
-    public long getLong()
-    {
-      StructuredData data = (StructuredData) getObject();
-      if (data != null) {
-        return Numbers.tryParseLong(data.getValue(), 0L);
-      }
-      return 0L;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("baseSelector", baseSelector);
-      inspector.visit("parts", parts);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      StructuredData data = (StructuredData) getObject();
-      if (data == null) {
-        return true;
-      }
-      Object o = data.getValue();
-      return !(o instanceof Number || (o instanceof String && Doubles.tryParse((String) o) != null));
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      StructuredData data = StructuredData.wrap(baseSelector.getObject());
-      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
-    }
-
-    @Override
-    public Class<?> classOfObject()
-    {
-      return Object.class;
-    }
-  }
 
   /**
    * Process the "raw" data to extract vectors of values with {@link NestedPathFinder#find(Object, List)}, wrapping the
    * result in {@link StructuredData}
    */
-  public static class RawFieldVectorObjectSelector implements VectorObjectSelector
+  public static final class RawFieldVectorObjectSelector implements VectorObjectSelector
   {
     private final VectorObjectSelector baseSelector;
     private final List<NestedPathPart> parts;
@@ -1642,7 +928,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
   }
 
-  public static class FieldDimensionSelector extends BaseSingleValueDimensionSelector
+  /**
+   * Create a {@link DimensionSelector} for a nested field on top of a {@link ColumnValueSelector}
+   */
+  public static final class FieldDimensionSelector extends BaseSingleValueDimensionSelector
   {
     private final ColumnValueSelector<?> valueSelector;
 
@@ -1665,6 +954,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (val == null || val instanceof String) {
         return (String) val;
       }
+      if (val instanceof Object[]) {
+        Object[] arrayVal = (Object[]) val;
+        if (arrayVal.length == 1) {
+          return String.valueOf(arrayVal[0]);
+        }
+        return null;
+      }
       return String.valueOf(val);
     }
   }
@@ -1677,7 +973,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
    * This is used as a fall-back when making a selector and the underlying column is NOT a
    * {@link NestedDataComplexColumn}, whose field {@link DimensionSelector} natively implement this behavior.
    */
-  private static class BestEffortCastingValueSelector implements DimensionSelector
+  private static final class BestEffortCastingValueSelector implements DimensionSelector
   {
     private final DimensionSelector baseSelector;
 
@@ -1801,6 +1097,405 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     public IdLookup idLookup()
     {
       return baseSelector.idLookup();
+    }
+  }
+
+  /**
+   * {@link BaseLongVectorValueSelector} for selecting a specific element of an array type column
+   * {@link VectorObjectSelector}
+   */
+  private static final class ArrayElementLongVectorValueSelector extends BaseLongVectorValueSelector
+  {
+    private final long[] longs;
+    private final boolean[] nulls;
+    private final VectorObjectSelector arraySelector;
+    private final int elementNumber;
+    private int id;
+
+    public ArrayElementLongVectorValueSelector(
+        ReadableVectorOffset offset,
+        VectorObjectSelector arraySelector,
+        int elementNumber
+    )
+    {
+      super(offset);
+      this.arraySelector = arraySelector;
+      this.elementNumber = elementNumber;
+      longs = new long[offset.getMaxVectorSize()];
+      nulls = new boolean[offset.getMaxVectorSize()];
+      id = ReadableVectorInspector.NULL_ID;
+    }
+
+    private void computeNumbers()
+    {
+      if (offset.getId() != id) {
+        final Object[] maybeArrays = arraySelector.getObjectVector();
+        for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+          Object maybeArray = maybeArrays[i];
+          if (maybeArray instanceof Object[]) {
+            Object[] anArray = (Object[]) maybeArray;
+            if (elementNumber < anArray.length) {
+              if (anArray[elementNumber] instanceof Number) {
+                Number n = (Number) anArray[elementNumber];
+                longs[i] = n.longValue();
+                nulls[i] = false;
+              } else {
+                Double d = anArray[elementNumber] instanceof String
+                           ? Doubles.tryParse((String) anArray[elementNumber])
+                           : null;
+                if (d != null) {
+                  longs[i] = d.longValue();
+                  nulls[i] = false;
+                } else {
+                  longs[i] = 0L;
+                  nulls[i] = true;
+                }
+              }
+            } else {
+              nullElement(i);
+            }
+          } else {
+            // not an array?
+            nullElement(i);
+          }
+        }
+        id = offset.getId();
+      }
+    }
+
+    private void nullElement(int i)
+    {
+      longs[i] = 0L;
+      nulls[i] = true;
+    }
+
+    @Override
+    public long[] getLongVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return longs;
+    }
+
+    @Nullable
+    @Override
+    public boolean[] getNullVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return nulls;
+    }
+  }
+
+  /**
+   * {@link BaseFloatVectorValueSelector} for selecting a specific element of an array type column
+   * {@link VectorObjectSelector}
+   */
+  private static final class ArrayElementFloatVectorValueSelector extends BaseFloatVectorValueSelector
+  {
+    private final float[] floats;
+    private final boolean[] nulls;
+    private final VectorObjectSelector arraySelector;
+    private final int elementNumber;
+    private int id;
+
+    public ArrayElementFloatVectorValueSelector(
+        ReadableVectorOffset offset,
+        VectorObjectSelector arraySelector,
+        int elementNumber
+    )
+    {
+      super(offset);
+      this.arraySelector = arraySelector;
+      this.elementNumber = elementNumber;
+      floats = new float[offset.getMaxVectorSize()];
+      nulls = new boolean[offset.getMaxVectorSize()];
+      id = ReadableVectorInspector.NULL_ID;
+    }
+
+    private void computeNumbers()
+    {
+      if (offset.getId() != id) {
+        final Object[] maybeArrays = arraySelector.getObjectVector();
+        for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+          Object maybeArray = maybeArrays[i];
+          if (maybeArray instanceof Object[]) {
+            Object[] anArray = (Object[]) maybeArray;
+            if (elementNumber < anArray.length) {
+              if (anArray[elementNumber] instanceof Number) {
+                Number n = (Number) anArray[elementNumber];
+                floats[i] = n.floatValue();
+                nulls[i] = false;
+              } else {
+                Double d = anArray[elementNumber] instanceof String
+                           ? Doubles.tryParse((String) anArray[elementNumber])
+                           : null;
+                if (d != null) {
+                  floats[i] = d.floatValue();
+                  nulls[i] = false;
+                } else {
+                  nullElement(i);
+                }
+              }
+            } else {
+              nullElement(i);
+            }
+          } else {
+            // not an array?
+            nullElement(i);
+          }
+        }
+        id = offset.getId();
+      }
+    }
+
+    private void nullElement(int i)
+    {
+      floats[i] = 0f;
+      nulls[i] = true;
+    }
+
+    @Override
+    public float[] getFloatVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return floats;
+    }
+
+    @Override
+    public boolean[] getNullVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return nulls;
+    }
+  }
+
+  /**
+   * {@link BaseDoubleVectorValueSelector} for selecting a specific element of an array type column
+   * {@link VectorObjectSelector}
+   */
+  private static final class ArrayElementDoubleVectorValueSelector extends BaseDoubleVectorValueSelector
+  {
+    private final double[] doubles;
+    private final boolean[] nulls;
+    private final VectorObjectSelector arraySelector;
+    private final int elementNumber;
+    private int id;
+
+    public ArrayElementDoubleVectorValueSelector(
+        ReadableVectorOffset offset,
+        VectorObjectSelector arraySelector,
+        int elementNumber
+    )
+    {
+      super(offset);
+      this.arraySelector = arraySelector;
+      this.elementNumber = elementNumber;
+      doubles = new double[offset.getMaxVectorSize()];
+      nulls = new boolean[offset.getMaxVectorSize()];
+      id = ReadableVectorInspector.NULL_ID;
+    }
+
+    private void computeNumbers()
+    {
+      if (offset.getId() != id) {
+        final Object[] maybeArrays = arraySelector.getObjectVector();
+        for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+          Object maybeArray = maybeArrays[i];
+          if (maybeArray instanceof Object[]) {
+            Object[] anArray = (Object[]) maybeArray;
+            if (elementNumber < anArray.length) {
+              if (anArray[elementNumber] instanceof Number) {
+                Number n = (Number) anArray[elementNumber];
+                doubles[i] = n.doubleValue();
+                nulls[i] = false;
+              } else {
+                Double d = anArray[elementNumber] instanceof String
+                           ? Doubles.tryParse((String) anArray[elementNumber])
+                           : null;
+                if (d != null) {
+                  doubles[i] = d;
+                  nulls[i] = false;
+                } else {
+                  nullElement(i);
+                }
+              }
+            } else {
+              nullElement(i);
+            }
+          } else {
+            // not an array?
+            nullElement(i);
+          }
+        }
+        id = offset.getId();
+      }
+    }
+
+    private void nullElement(int i)
+    {
+      doubles[i] = 0.0;
+      nulls[i] = true;
+    }
+
+    @Override
+    public double[] getDoubleVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return doubles;
+    }
+
+    @Override
+    public boolean[] getNullVector()
+    {
+      if (offset.getId() != id) {
+        computeNumbers();
+      }
+      return nulls;
+    }
+  }
+
+  /**
+   * {@link VectorObjectSelector} for selecting a specific element of an array type column
+   * {@link VectorObjectSelector}
+   */
+  private static final class ArrayElementVectorObjectSelector implements VectorObjectSelector
+  {
+    private final Object[] elements;
+    private final VectorObjectSelector arraySelector;
+    private final ReadableVectorOffset offset;
+    private final int elementNumber;
+    private final ExpressionType elementType;
+    private final ExpressionType castTo;
+    private int id;
+
+    public ArrayElementVectorObjectSelector(
+        VectorObjectSelector arraySelector,
+        ReadableVectorOffset offset,
+        int elementNumber,
+        ExpressionType elementType,
+        ExpressionType castTo
+    )
+    {
+      this.arraySelector = arraySelector;
+      this.offset = offset;
+      this.elementNumber = elementNumber;
+      this.elementType = elementType;
+      this.castTo = castTo;
+      elements = new Object[arraySelector.getMaxVectorSize()];
+      id = ReadableVectorInspector.NULL_ID;
+    }
+
+    @Override
+    public Object[] getObjectVector()
+    {
+      if (offset.getId() != id) {
+        final Object[] delegate = arraySelector.getObjectVector();
+        for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+          Object maybeArray = delegate[i];
+          if (maybeArray instanceof Object[]) {
+            Object[] anArray = (Object[]) maybeArray;
+            if (elementNumber < anArray.length) {
+              elements[i] = ExprEval.ofType(elementType, anArray[elementNumber]).castTo(castTo).value();
+            } else {
+              elements[i] = null;
+            }
+          } else {
+            elements[i] = null;
+          }
+        }
+        id = offset.getId();
+      }
+      return elements;
+    }
+
+    @Override
+    public int getMaxVectorSize()
+    {
+      return arraySelector.getMaxVectorSize();
+    }
+
+    @Override
+    public int getCurrentVectorSize()
+    {
+      return arraySelector.getCurrentVectorSize();
+    }
+  }
+
+  /**
+   * {@link ColumnValueSelector} for selecting a specific element of an array type column {@link ColumnValueSelector}
+   */
+  private static final class ArrayElementColumnValueSelector implements ColumnValueSelector<Object>
+  {
+    private final ColumnValueSelector<?> arraySelector;
+    private final int elementNumber;
+
+    public ArrayElementColumnValueSelector(ColumnValueSelector<?> arraySelector, int elementNumber)
+    {
+      this.arraySelector = arraySelector;
+      this.elementNumber = elementNumber;
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      Object o = getObject();
+      return !(o instanceof Number);
+    }
+
+    @Override
+    public long getLong()
+    {
+      Object o = getObject();
+      return o instanceof Number ? ((Number) o).longValue() : 0L;
+    }
+
+    @Override
+    public float getFloat()
+    {
+      Object o = getObject();
+      return o instanceof Number ? ((Number) o).floatValue() : 0f;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      Object o = getObject();
+      return o instanceof Number ? ((Number) o).doubleValue() : 0.0;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      arraySelector.inspectRuntimeShape(inspector);
+    }
+
+    @Nullable
+    @Override
+    public Object getObject()
+    {
+      Object o = arraySelector.getObject();
+      if (o instanceof Object[]) {
+        Object[] array = (Object[]) o;
+        if (elementNumber < array.length) {
+          return array[elementNumber];
+        }
+      }
+      return null;
+    }
+
+    @Override
+    public Class<?> classOfObject()
+    {
+      return Object.class;
     }
   }
 }

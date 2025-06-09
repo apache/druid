@@ -254,10 +254,7 @@ public class FieldTypeInfo
       // adjust for empty array if needed
       if (types.hasUntypedArray()) {
         Set<ColumnType> columnTypes = FieldTypeInfo.convertToSet(types.getByteValue());
-        ColumnType leastRestrictive = null;
-        for (ColumnType type : columnTypes) {
-          leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);
-        }
+        ColumnType leastRestrictive = ColumnType.leastRestrictiveType(columnTypes);
         if (leastRestrictive == null) {
           typeByte = add(typeByte, ColumnType.LONG_ARRAY);
         } else if (!leastRestrictive.isArray()) {

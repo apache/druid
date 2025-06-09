@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
@@ -433,16 +434,32 @@ public class SqlResourceTest extends CalciteTestBase
 
     final MockHttpServletResponse response = postForAsyncResponse(sqlQuery, makeRegularUserReq());
 
-    Assert.assertEquals(
+    // In tests, MockHttpServletResponse stores headers as a MultiMap.
+    // This allows the same header key to be set multiple times (e.g., once at the start and once at the end of query processing).
+    // As a result, we observe duplicate context entries for this test in the expected set.
+    // This differs from typical behavior for other headers, where a new value would overwrite any previously set value.
+    final Object expectedMissingHeaders = ImmutableList.of(
         ImmutableMap.of(
             "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
             "uncoveredIntervalsOverflowed", "true"
         ),
-        JSON_MAPPER.readValue(
-            Iterables.getOnlyElement(response.headers.get("X-Druid-Response-Context")),
-            Map.class
+        ImmutableMap.of(
+            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
+            "uncoveredIntervalsOverflowed", "true"
         )
     );
+    final Object observedMissingHeaders = response.headers.get("X-Druid-Response-Context").stream()
+                                                           .map(s -> {
+                                                             try {
+                                                               return JSON_MAPPER.readValue(s, new TypeReference<Map<String, String>>() {});
+                                                             }
+                                                             catch (JsonProcessingException e) {
+                                                               throw new RuntimeException(e);
+                                                             }
+                                                           })
+                                                           .collect(Collectors.toList());
+
+    Assert.assertEquals(expectedMissingHeaders, observedMissingHeaders);
 
     Object results = JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class);
 

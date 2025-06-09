@@ -48,6 +48,7 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -88,7 +89,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
-  private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
+  private final Map<String, Worker> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
@@ -324,7 +325,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     return new IndexerTableInputSpecSlicer(
         coordinatorClient,
         taskActionClient,
-        MultiStageQueryContext.getSegmentSources(queryContext)
+        MultiStageQueryContext.getSegmentSources(queryContext, SegmentSource.NONE)
     );
   }
 
@@ -371,7 +372,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public ControllerContext newContext(String queryId)
+  public ControllerContext newContext(QueryContext context)
   {
     return this;
   }

@@ -72,6 +72,7 @@ import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
@@ -3482,9 +3483,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_NO_STRINGIFY_ARRAY, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3517,7 +3520,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .context(context)
                 .postAggregators(expressionPostAgg("s0", "1", ColumnType.LONG))
                 .build()
         ),
@@ -4987,9 +4990,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithGroupByOrderByWithLimit()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_UNNEST, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
-        QUERY_CONTEXT_UNNEST,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(UnnestDataSource.create(
@@ -5002,7 +5007,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(4)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                .context(QUERY_CONTEXT_UNNEST)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
