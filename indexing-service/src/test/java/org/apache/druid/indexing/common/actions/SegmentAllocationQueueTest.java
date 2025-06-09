@@ -55,7 +55,8 @@ public class SegmentAllocationQueueTest
   private SegmentAllocationQueue allocationQueue;
 
   private StubServiceEmitter emitter;
-  private BlockingExecutorService executor;
+  private BlockingExecutorService managerExec;
+  private BlockingExecutorService workerExec;
 
   private final boolean reduceMetadataIO;
 
@@ -80,8 +81,9 @@ public class SegmentAllocationQueueTest
   @Before
   public void setUp()
   {
-    executor = new BlockingExecutorService("alloc-test-exec");
-    emitter = new StubServiceEmitter("overlord", "alloc-test");
+    managerExec = new BlockingExecutorService("test-manager-exec");
+    workerExec = new BlockingExecutorService("test-worker-exec");
+    emitter = new StubServiceEmitter();
 
     final TaskLockConfig lockConfig = new TaskLockConfig()
     {
@@ -102,6 +104,12 @@ public class SegmentAllocationQueueTest
       {
         return reduceMetadataIO;
       }
+
+      @Override
+      public int getBatchAllocationNumThreads()
+      {
+        return 20;
+      }
     };
 
     allocationQueue = new SegmentAllocationQueue(
@@ -109,8 +117,11 @@ public class SegmentAllocationQueueTest
         lockConfig,
         taskActionTestKit.getMetadataStorageCoordinator(),
         emitter,
-        (corePoolSize, nameFormat)
-            -> new WrappingScheduledExecutorService(nameFormat, executor, false)
+        (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
+            nameFormat,
+            nameFormat.contains("Manager") ? managerExec : workerExec,
+            false
+        )
     );
     allocationQueue.start();
     allocationQueue.becomeLeader();
@@ -122,8 +133,8 @@ public class SegmentAllocationQueueTest
     if (allocationQueue != null) {
       allocationQueue.stop();
     }
-    if (executor != null) {
-      executor.shutdownNow();
+    if (managerExec != null) {
+      managerExec.shutdownNow();
     }
     emitter.flush();
   }
@@ -247,7 +258,7 @@ public class SegmentAllocationQueueTest
                          .build();
     Future<SegmentIdWithShardSpec> halfHourSegmentFuture = allocationQueue.add(halfHourSegmentRequest);
 
-    executor.finishNextPendingTask();
+    processQueuedAllocationJobs();
 
     Assert.assertNotNull(getSegmentId(hourSegmentFuture));
     Assert.assertNull(getSegmentId(halfHourSegmentFuture));
@@ -305,7 +316,7 @@ public class SegmentAllocationQueueTest
       segmentFutures.add(allocationQueue.add(request));
     }
 
-    executor.finishNextPendingTask();
+    processQueuedAllocationJobs();
 
     SegmentIdWithShardSpec segmentId1 = getSegmentId(segmentFutures.get(0));
 
@@ -331,7 +342,7 @@ public class SegmentAllocationQueueTest
     }
 
     allocationQueue.stopBeingLeader();
-    executor.finishNextPendingTask();
+    processQueuedAllocationJobs();
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
@@ -352,8 +363,9 @@ public class SegmentAllocationQueueTest
     final int expectedCount = canBatch ? 1 : 2;
     Assert.assertEquals(expectedCount, allocationQueue.size());
 
-    executor.finishNextPendingTask();
+    processQueuedAllocationJobs();
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
+    emitter.verifySum("task/action/batch/submitted", expectedCount);
 
     Assert.assertNotNull(getSegmentId(futureA));
     Assert.assertNotNull(getSegmentId(futureB));
@@ -388,5 +400,11 @@ public class SegmentAllocationQueueTest
     Task task = new NoopTask(null, groupId, datasource, 0, 0, null);
     taskActionTestKit.getTaskLockbox().add(task);
     return task;
+  }
+
+  private void processQueuedAllocationJobs()
+  {
+    managerExec.finishNextPendingTask();
+    workerExec.finishAllPendingTasks();
   }
 }

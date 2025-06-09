@@ -59,6 +59,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -80,13 +81,21 @@ public class SegmentAllocationQueue
   private final ServiceEmitter emitter;
 
   /**
-   * Single-threaded executor to process allocation queue.
+   * Single-threaded executor to pick up jobs from allocation queue and assign
+   * to worker threads.
    */
-  private final ScheduledExecutorService executor;
+  private final ScheduledExecutorService managerExec;
 
+  /**
+   * Multithreaded executor to process allocation jobs.
+   */
+  private final ScheduledExecutorService workerExec;
+
+  private final AtomicInteger runningJobs = new AtomicInteger(0);
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
+  private final TaskLockConfig config;
   private final boolean reduceMetadataIO;
 
   @Inject
@@ -103,16 +112,28 @@ public class SegmentAllocationQueue
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
     this.reduceMetadataIO = taskLockConfig.isBatchAllocationReduceMetadataIO();
+    this.config = taskLockConfig;
 
-    this.executor = taskLockConfig.isBatchSegmentAllocation()
-                    ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
+    if (taskLockConfig.isBatchSegmentAllocation()) {
+      this.managerExec = executorFactory.create(1, "SegmentAllocQueue-Manager-%s");
+      this.workerExec = executorFactory.create(
+          taskLockConfig.getBatchAllocationNumThreads(),
+          "SegmentAllocQueue-Worker-%s"
+      );
+    } else {
+      this.managerExec = null;
+      this.workerExec = null;
+    }
   }
 
   @LifecycleStart
   public void start()
   {
     if (isEnabled()) {
-      log.info("Initializing segment allocation queue.");
+      log.info(
+          "Initializing segment allocation queue with [%d] worker threads.",
+          config.getBatchAllocationNumThreads()
+      );
       scheduleQueuePoll(maxWaitTimeMillis);
     }
   }
@@ -122,7 +143,8 @@ public class SegmentAllocationQueue
   {
     if (isEnabled()) {
       log.info("Tearing down segment allocation queue.");
-      executor.shutdownNow();
+      managerExec.shutdownNow();
+      workerExec.shutdownNow();
     }
   }
 
@@ -153,16 +175,16 @@ public class SegmentAllocationQueue
 
   public boolean isEnabled()
   {
-    return executor != null && !executor.isShutdown();
+    return managerExec != null && !managerExec.isShutdown();
   }
 
   /**
-   * Schedules a poll of the allocation queue that runs on the {@link #executor}.
+   * Schedules a poll of the allocation queue that runs on the {@link #managerExec}.
    * It is okay to schedule multiple polls since the executor is single threaded.
    */
   private void scheduleQueuePoll(long delay)
   {
-    executor.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    managerExec.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -257,42 +279,30 @@ public class SegmentAllocationQueue
   {
     clearQueueIfNotLeader();
 
-    // Process all the batches that are already due
-    int numProcessedBatches = 0;
+    // Process the batches that are already due
+    int numSubmittedBatches = 0;
     AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-    while (nextBatch != null && nextBatch.isDue()) {
+    while (nextBatch != null && nextBatch.isDue()
+           && runningJobs.get() < config.getBatchAllocationNumThreads()) {
       // Process the next batch in the queue
       processingQueue.pollFirst();
       final AllocateRequestBatch currentBatch = nextBatch;
-      boolean processed;
-      try {
-        processed = processBatch(currentBatch);
-      }
-      catch (Throwable t) {
-        currentBatch.failPendingRequests(t);
-        processed = true;
-        log.error(t, "Error while processing batch[%s].", currentBatch.key);
-      }
-
-      // Requeue if not fully processed yet
-      if (processed) {
-        ++numProcessedBatches;
-      } else {
-        requeueBatch(currentBatch);
-      }
+      runningJobs.incrementAndGet();
+      workerExec.submit(() -> runBatchOnWorker(currentBatch));
+      emitBatchMetric("task/action/batch/submitted", 1L, currentBatch.key);
 
       nextBatch = processingQueue.peek();
     }
 
     // Schedule the next round of processing if the queue is not empty
     if (processingQueue.isEmpty()) {
-      log.debug("Processed [%d] batches, not scheduling again since queue is empty.", numProcessedBatches);
+      log.debug("Submitted [%d] batches, not scheduling again since queue is empty.", numSubmittedBatches);
     } else {
       nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
       long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
       scheduleQueuePoll(nextScheduleDelay);
-      log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
+      log.debug("Submitted [%d] batches, next execution in [%d ms]", numSubmittedBatches, nextScheduleDelay);
     }
   }
 
@@ -313,6 +323,30 @@ public class SegmentAllocationQueue
     }
     if (failedBatches > 0) {
       log.info("Not leader. Failed [%d] batches, remaining in queue [%d].", failedBatches, processingQueue.size());
+    }
+  }
+
+  /**
+   * Runs the given batch. This method must be invoked on the {@link #workerExec}.
+   */
+  private void runBatchOnWorker(AllocateRequestBatch batch)
+  {
+    boolean processed;
+    try {
+      processed = processBatch(batch);
+    }
+    catch (Throwable t) {
+      batch.failPendingRequests(t);
+      processed = true;
+      log.error(t, "Error while processing batch[%s].", batch.key);
+    }
+    finally {
+      runningJobs.decrementAndGet();
+    }
+
+    // Requeue if not fully processed yet
+    if (!processed) {
+      requeueBatch(batch);
     }
   }
 
