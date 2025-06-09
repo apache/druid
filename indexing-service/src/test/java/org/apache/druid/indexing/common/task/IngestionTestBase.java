@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -424,6 +425,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         SegmentTransactionalInsertAction insertAction = (SegmentTransactionalInsertAction) taskAction;
         publishedSegments.addAll(insertAction.getSegments());
         segmentSchemaMapping.merge(insertAction.getSegmentSchemaMapping());
+      } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+        SegmentTransactionalReplaceAction replaceAction = (SegmentTransactionalReplaceAction) taskAction;
+        publishedSegments.addAll(replaceAction.getSegments());
+        segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
       }
       return result;
     }
