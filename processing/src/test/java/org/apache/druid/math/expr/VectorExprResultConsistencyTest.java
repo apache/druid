@@ -27,9 +27,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.expression.TimestampShiftExprMacro;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.TestMapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -37,8 +41,10 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
@@ -58,11 +64,66 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   private static final int NUM_ITERATIONS = 10;
   private static final int VECTOR_SIZE = 512;
 
+
+  private static final Map<String, String> LOOKUP = Map.of(
+      "1", "a",
+      "12", "b",
+      "33", "c",
+      "111", "d",
+      "123", "e",
+      "124", "f"
+  );
+  private static final Map<String, String> INJECTIVE_LOOKUP = new HashMap<>()
+  {
+    @Override
+    public String get(Object key)
+    {
+      return (String) key;
+    }
+  };
+
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
           new TimestampFloorExprMacro(),
           new TimestampShiftExprMacro(),
-          new NestedDataExpressions.JsonObjectExprMacro()
+          new NestedDataExpressions.JsonObjectExprMacro(),
+          new LookupExprMacro(
+              new LookupExtractorFactoryContainerProvider()
+              {
+                @Override
+                public Set<String> getAllLookupNames()
+                {
+                  return Set.of("test-lookup", "test-lookup-injective");
+                }
+
+                @Override
+                public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+                {
+                  if ("test-lookup".equals(lookupName)) {
+                    return Optional.of(
+                        new LookupExtractorFactoryContainer(
+                            "v0",
+                            new TestMapLookupExtractorFactory(LOOKUP, false)
+                        )
+                    );
+                  } else if ("test-lookup-injective".equals(lookupName)) {
+                    return Optional.of(
+                        new LookupExtractorFactoryContainer(
+                            "v0",
+                            new TestMapLookupExtractorFactory(INJECTIVE_LOOKUP, true)
+                        )
+                    );
+                  }
+                  return Optional.empty();
+                }
+
+                @Override
+                public String getCanonicalLookupName(String lookupName)
+                {
+                  return "";
+                }
+              }
+          )
       )
   );
 
@@ -294,6 +355,20 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     testExpression("s1 + '-' + s2", types);
     testExpression("concat(s1, s2)", types);
     testExpression("concat(s1,'-',s2,'-',l1,'-',d1)", types);
+  }
+
+  @Test
+  public void testLookup()
+  {
+    final List<String> columns = new ArrayList<>(types.keySet());
+    columns.add("unknown");
+    final List<String> templates = List.of(
+        "lookup(%s, 'test-lookup')",
+        "lookkup(%s, 'test-lookup', 'missing')",
+        "lookup(%s, 'test-lookup-injective')",
+        "lookup(%s, 'test-lookup-injective', 'missing')"
+    );
+    testFunctions(types, templates, columns);
   }
 
   @Test
