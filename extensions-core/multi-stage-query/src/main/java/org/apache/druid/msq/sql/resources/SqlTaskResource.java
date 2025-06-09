@@ -133,7 +133,8 @@ public class SqlTaskResource
     try {
       sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
     }
 
