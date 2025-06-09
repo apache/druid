@@ -407,7 +407,7 @@ SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 
 
 ### Current Limitations
 
-- `SET` statements currently support **literal values only**  - For exmaple - numbers, strings, booleans.
+- `SET` statements currently support **literal values only**(numbers, strings, booleans).
 - Complex values such as **arrays** or **JSON objects** must still be provided via the `context` field.
 - `Set` statements support for **constant expressions** (for example, using `ARRAY` or `JSON_OBJECT`) is under consideration, as these require evaluation rather than simple assignment.
 
