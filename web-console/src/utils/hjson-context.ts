@@ -367,6 +367,32 @@ export function getHjsonContext(hjson: string): HjsonContext {
     }
   }
 
+  // Handle Hjson's optional trailing commas - if we have a token that contains both
+  // a completed value and the start of a new key, we need to split them
+  if (afterColon && currentKey && currentToken.trim()) {
+    const trimmedToken = currentToken.trim();
+    // Look for patterns like:
+    // - "value newkey" (with whitespace)
+    // - "value"newkey (quoted value followed immediately by new key)
+    // - value newkey (unquoted value with whitespace)
+    const matchWithSpace = /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/.exec(trimmedToken);
+    const matchNoSpace = /^(".*?"|'.*?')([a-zA-Z_].*)$/.exec(trimmedToken);
+    
+    const match = matchWithSpace || matchNoSpace;
+    if (match) {
+      const [, valuePart, keyPart] = match;
+      
+      // Complete the current key-value pair
+      const value = parseValue(valuePart);
+      currentObjectProperties[currentKey] = value;
+      
+      // Set up for the new key
+      afterColon = false;
+      currentToken = keyPart;
+      currentKey = undefined;
+    }
+  }
+
   // Determine final context
   if (containerStack.length === 0) {
     isEditingKey = true;
@@ -388,7 +414,14 @@ export function getHjsonContext(hjson: string): HjsonContext {
         // currentKey is already set from the colon handling
       } else {
         isEditingKey = true;
-        currentKey = undefined;
+        // If we have a current token that looks like a partial key AND
+        // we have some existing properties (suggesting this is a trailing comma case), use it
+        if (currentToken.trim() && Object.keys(currentObjectProperties).length > 0) {
+          const extractedKey = extractKeyFromToken(currentToken);
+          currentKey = extractedKey || undefined;
+        } else {
+          currentKey = undefined;
+        }
       }
     }
   }

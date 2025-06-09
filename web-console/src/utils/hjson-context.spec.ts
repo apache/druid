@@ -250,11 +250,28 @@ describe('getHjsonContext', () => {
         {
           "queryType": "scan",
           "dataSource": "wikipedia",
+          m
       `);
       expect(result).toEqual({
         path: [],
         isEditingKey: true,
-        currentKey: undefined,
+        currentKey: 'm',
+        isEditingComment: false,
+        currentObject: { queryType: 'scan', dataSource: 'wikipedia' },
+      });
+    });
+
+    it('handles trailing commas (Hjson feature)', () => {
+      const result = getHjsonContext(sane`
+        {
+          "queryType": "scan",
+          "dataSource": "wikipedia"
+          m
+      `);
+      expect(result).toEqual({
+        path: [],
+        isEditingKey: true,
+        currentKey: 'm',
         isEditingComment: false,
         currentObject: { queryType: 'scan', dataSource: 'wikipedia' },
       });
