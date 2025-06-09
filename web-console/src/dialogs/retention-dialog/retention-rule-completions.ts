@@ -23,9 +23,7 @@ export const RETENTION_RULE_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.[]',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'The type of retention rule' },
-    ],
+    completions: [{ value: 'type', documentation: 'The type of retention rule' }],
   },
   {
     path: '$.[].type',
@@ -38,15 +36,21 @@ export const RETENTION_RULE_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'dropByPeriod', documentation: 'Drop segments older than a specific period' },
       { value: 'dropBeforeByPeriod', documentation: 'Drop segments before a specific period' },
       { value: 'broadcastForever', documentation: 'Broadcast segments to all nodes forever' },
-      { value: 'broadcastByInterval', documentation: 'Broadcast segments within a specific time interval' },
-      { value: 'broadcastByPeriod', documentation: 'Broadcast segments for a specific period of time' },
+      {
+        value: 'broadcastByInterval',
+        documentation: 'Broadcast segments within a specific time interval',
+      },
+      {
+        value: 'broadcastByPeriod',
+        documentation: 'Broadcast segments for a specific period of time',
+      },
     ],
   },
   // tieredReplicants for load rules
   {
     path: '$.[]',
     isObject: true,
-    condition: (obj) => obj.type && obj.type.startsWith('load'),
+    condition: obj => obj.type && obj.type.startsWith('load'),
     completions: [
       { value: 'tieredReplicants', documentation: 'Replication configuration per tier' },
     ],
@@ -55,7 +59,7 @@ export const RETENTION_RULE_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.[]',
     isObject: true,
-    condition: (obj) => obj.type && obj.type.endsWith('ByPeriod'),
+    condition: obj => obj.type && obj.type.endsWith('ByPeriod'),
     completions: [
       { value: 'period', documentation: 'ISO 8601 period string (e.g., P1M for 1 month)' },
     ],
@@ -64,16 +68,15 @@ export const RETENTION_RULE_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.[]',
     isObject: true,
-    condition: (obj) => obj.type && obj.type.endsWith('ByPeriod') && obj.type !== 'dropBeforeByPeriod',
-    completions: [
-      { value: 'includeFuture', documentation: 'Whether to include future segments' },
-    ],
+    condition: obj =>
+      obj.type && obj.type.endsWith('ByPeriod') && obj.type !== 'dropBeforeByPeriod',
+    completions: [{ value: 'includeFuture', documentation: 'Whether to include future segments' }],
   },
   // interval for interval-based rules
   {
     path: '$.[]',
     isObject: true,
-    condition: (obj) => obj.type && obj.type.endsWith('ByInterval'),
+    condition: obj => obj.type && obj.type.endsWith('ByInterval'),
     completions: [
       { value: 'interval', documentation: 'ISO 8601 interval (e.g., 2020-01-01/2021-01-01)' },
     ],
@@ -111,7 +114,7 @@ export const RETENTION_RULE_COMPLETIONS: JsonCompletionRule[] = [
   },
   // Replication factors
   {
-    path: /^\$\.\[\]\.tieredReplicants\.[^.]+$/,
+    path: /^\$\.\[]\.tieredReplicants\.[^.]+$/,
     completions: [
       { value: '1', documentation: '1 replica' },
       { value: '2', documentation: '2 replicas' },
