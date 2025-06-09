@@ -44,8 +44,10 @@ import org.apache.druid.timeline.Partitions;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,7 +61,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -91,7 +92,11 @@ public class SegmentAllocationQueue
    */
   private final ScheduledExecutorService workerExec;
 
-  private final AtomicInteger runningJobs = new AtomicInteger(0);
+  /**
+   * Thread-safe list of datasources for which a segment allocation is currently in-progress.
+   */
+  private final List<String> runningDatasources = Collections.synchronizedList(new ArrayList<>());
+
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
@@ -281,28 +286,42 @@ public class SegmentAllocationQueue
 
     // Process the batches that are already due
     int numSubmittedBatches = 0;
-    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-    while (nextBatch != null && nextBatch.isDue()
-           && runningJobs.get() < config.getBatchAllocationNumThreads()) {
-      // Process the next batch in the queue
-      processingQueue.pollFirst();
-      final AllocateRequestBatch currentBatch = nextBatch;
-      runningJobs.incrementAndGet();
-      workerExec.submit(() -> runBatchOnWorker(currentBatch));
-      emitBatchMetric("task/action/batch/submitted", 1L, currentBatch.key);
+    int numSkippedBatches = 0;
 
-      nextBatch = processingQueue.peek();
+    // Although thread-safe, this iterator might not see entries added by other
+    // concurrent threads. Those entries will be handled in the next processBatchesDue().
+    final Iterator<AllocateRequestBatch> queueIterator = processingQueue.iterator();
+    while (queueIterator.hasNext() && runningDatasources.size() < config.getBatchAllocationNumThreads()) {
+      final AllocateRequestBatch nextBatch = queueIterator.next();
+      final String dataSource = nextBatch.key.dataSource;
+      if (nextBatch.isDue()) {
+        if (runningDatasources.contains(dataSource)) {
+          // Skip this batch as another batch for the same datasource is in progress
+          emitBatchMetric("task/action/batch/skipped", 1L, nextBatch.key);
+          ++numSkippedBatches;
+        } else {
+          // Process this batch
+          queueIterator.remove();
+          runningDatasources.add(dataSource);
+          workerExec.submit(() -> runBatchOnWorker(nextBatch));
+          emitBatchMetric("task/action/batch/submitted", 1L, nextBatch.key);
+          ++numSubmittedBatches;
+        }
+      } else {
+        break;
+      }
     }
+    log.debug("Submitted [%d] batches, skipped [%d] batches.", numSubmittedBatches, numSkippedBatches);
 
     // Schedule the next round of processing if the queue is not empty
     if (processingQueue.isEmpty()) {
-      log.debug("Submitted [%d] batches, not scheduling again since queue is empty.", numSubmittedBatches);
+      log.debug("Not scheduling again since queue is empty.");
     } else {
-      nextBatch = processingQueue.peek();
+      final AllocateRequestBatch nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
       long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
       scheduleQueuePoll(nextScheduleDelay);
-      log.debug("Submitted [%d] batches, next execution in [%d ms]", numSubmittedBatches, nextScheduleDelay);
+      log.debug("Next execution in [%d ms]", nextScheduleDelay);
     }
   }
 
@@ -341,7 +360,7 @@ public class SegmentAllocationQueue
       log.error(t, "Error while processing batch[%s].", batch.key);
     }
     finally {
-      runningJobs.decrementAndGet();
+      runningDatasources.remove(batch.key.dataSource);
     }
 
     // Requeue if not fully processed yet

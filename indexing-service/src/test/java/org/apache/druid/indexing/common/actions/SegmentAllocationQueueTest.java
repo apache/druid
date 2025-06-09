@@ -258,7 +258,8 @@ public class SegmentAllocationQueueTest
                          .build();
     Future<SegmentIdWithShardSpec> halfHourSegmentFuture = allocationQueue.add(halfHourSegmentRequest);
 
-    processQueuedAllocationJobs();
+    processDistinctDatasourceBatches();
+    processDistinctDatasourceBatches();
 
     Assert.assertNotNull(getSegmentId(hourSegmentFuture));
     Assert.assertNull(getSegmentId(halfHourSegmentFuture));
@@ -316,13 +317,18 @@ public class SegmentAllocationQueueTest
       segmentFutures.add(allocationQueue.add(request));
     }
 
-    processQueuedAllocationJobs();
+    for (int i = 0; i < 10; ++i) {
+      processDistinctDatasourceBatches();
+    }
 
     SegmentIdWithShardSpec segmentId1 = getSegmentId(segmentFutures.get(0));
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Assert.assertEquals(getSegmentId(future), segmentId1);
     }
+
+    // Verify same datasource batches are skipped (9 + 8 + ... + 1) times
+    emitter.verifySum("task/action/batch/skipped", 45);
   }
 
   @Test
@@ -342,7 +348,7 @@ public class SegmentAllocationQueueTest
     }
 
     allocationQueue.stopBeingLeader();
-    processQueuedAllocationJobs();
+    processDistinctDatasourceBatches();
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
@@ -363,7 +369,9 @@ public class SegmentAllocationQueueTest
     final int expectedCount = canBatch ? 1 : 2;
     Assert.assertEquals(expectedCount, allocationQueue.size());
 
-    processQueuedAllocationJobs();
+    // Process both the jobs
+    processDistinctDatasourceBatches();
+    processDistinctDatasourceBatches();
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
     emitter.verifySum("task/action/batch/submitted", expectedCount);
 
@@ -402,7 +410,13 @@ public class SegmentAllocationQueueTest
     return task;
   }
 
-  private void processQueuedAllocationJobs()
+  /**
+   * Triggers the {@link #managerExec} and the {@link #workerExec} to process a
+   * queued set of jobs (i.e. segment allocation batches) for distinct datasources.
+   * A single invocation of this method can process up to 1 batch for any given
+   * datasource and up to {@code batchAllocationNumThreads} batches total.
+   */
+  private void processDistinctDatasourceBatches()
   {
     managerExec.finishNextPendingTask();
     workerExec.finishAllPendingTasks();
