@@ -292,13 +292,13 @@ public class SqlResourceTest extends CalciteTestBase
     {
       @Override
       public HttpStatement httpStatement(
-          final SqlQuery sqlQuery,
+          final SqlQueryPlus sqlQueryPlus,
           final HttpServletRequest req
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
             sqlToolbox.withEngine(engine),
-            sqlQuery,
+            sqlQueryPlus,
             req,
             validateAndAuthorizeLatchSupplier,
             planLatchSupplier,
@@ -1481,7 +1481,7 @@ public class SqlResourceTest extends CalciteTestBase
         errorResponse,
         "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
-    checkSqlRequestLog(false);
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1590,15 +1590,10 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
             null
         ),
-        501
+        DruidException.Category.INVALID_INPUT.getExpectedStatus()
     );
 
-    validateLegacyQueryExceptionErrorResponse(
-        exception,
-        QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
-        QueryUnsupportedException.class.getName(),
-        ""
-    );
+    validateInvalidSqlError(exception, "Incorrect syntax near the keyword 'TO'");
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1623,32 +1618,31 @@ public class SqlResourceTest extends CalciteTestBase
 
     // This is checked in the common method that returns the response, but checking it again just protects
     // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    assertStatusAndCommonHeaders(response, DruidException.Category.INVALID_INPUT.getExpectedStatus());
     Assert.assertEquals(queryId, getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(queryId, getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext()
+  public void testErrorResponseReturnNoQueryIdWhenNotSetInContext()
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = postForSyncResponse(
-        new SqlQuery(
-            "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
-            false,
-            false,
-            false,
-            ImmutableMap.of(),
-            null
-        ),
-        req
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT ANSWER TO LIFE",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of(),
+        null
     );
 
-    // This is checked in the common method that returns the response, but checking it again just protects
-    // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    final Response response = resource.doPost(sqlQuery, req);
+
+    // Query ID won't be set, but we can look for other aspects of the response that we expect.
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
+    Assert.assertEquals("application/json", getContentType(response));
   }
 
   @Test
@@ -1681,7 +1675,7 @@ public class SqlResourceTest extends CalciteTestBase
     failOnExecute(errorMessage);
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
-            "SELECT ANSWER TO LIFE",
+            "SELECT 1",
             ResultFormat.OBJECT,
             false,
             false,
@@ -2297,7 +2291,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     private TestHttpStatement(
         final SqlToolbox lifecycleContext,
-        final SqlQuery sqlQuery,
+        final SqlQueryPlus sqlQueryPlus,
         final HttpServletRequest req,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
@@ -2307,7 +2301,7 @@ public class SqlResourceTest extends CalciteTestBase
         final Consumer<DirectStatement> onAuthorize
     )
     {
-      super(lifecycleContext, sqlQuery, req);
+      super(lifecycleContext, sqlQueryPlus, req);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

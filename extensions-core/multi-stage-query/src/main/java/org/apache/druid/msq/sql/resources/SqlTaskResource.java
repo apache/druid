@@ -43,6 +43,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.ResultFormat;
@@ -127,7 +128,15 @@ public class SqlTaskResource
   )
   {
     // Queries run as MSQ tasks look like regular queries, but return the task ID as their only output.
-    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
+    final SqlQueryPlus sqlQueryPlus;
+    final HttpStatement stmt;
+    try {
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
+      stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
+    } catch (Exception e) {
+      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+    }
+
     final String sqlQueryId = stmt.sqlQueryId();
     try {
       final DirectStatement.ResultSet plan = stmt.plan();
