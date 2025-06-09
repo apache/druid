@@ -421,6 +421,8 @@ SELECT 1 + 1;
 ```
 For how to using `SET` command, See [SET Command](../querying/sql.md#set).
 
+Note: While the examples above use the `SELECT` statement, you can also specify context parameters in Druid SQL queries that use `INSERT` or `REPLACE`.
+
 The following table lists the context parameters for the MSQ task engine:
 
 | Parameter | Description | Default value |
