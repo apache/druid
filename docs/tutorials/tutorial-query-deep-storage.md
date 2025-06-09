@@ -191,24 +191,9 @@ curl --location 'http://localhost:8888/druid/v2/sql/' \
 
 The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
-You can also use Set command to enable `executionMode` of the given query. However, the results depends on where you set `executionMode`.
-
-When using the **Druid UI Console**, you can use the SET command directly to set executionMode. For instance, this query runs successfully:
-
-```sql
-SET executionMode='ASYNC';
-SELECT page FROM wikipedia WHERE __time < TIMESTAMP '2016-06-27 00:10:00' LIMIT 10
-```
-
-However, if you submit the same query as a JSON payload to the **`/druid/v2/sql/statements` API endpoint** as the following:
-
-```json
-{
-    "query": "SET executionMode='ASYNC'; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '2016-06-27 00:10:00' LIMIT 10"
-}
-```
-
-You'll receive an error message: "Execution mode is not provided to the SQL statement API. Please set `executionMode` to `ASYNC` in the query context." This is because `executionMode` isn't a parameter you can set within the SQL query itself for this API. Instead, you must define it in the request's top-level `context`.
+:::info
+You can't use `SET` command to set up the value `executionMode`.This context parameter must be specified using the `context` field in the Druid SQL API or Druid Web Console.
+:::
 
 ## Get query status
 
