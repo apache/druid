@@ -18,21 +18,20 @@
 
 import type { Ace } from 'ace-builds';
 
-import { DRUID_QUERY_COMPLETIONS } from './druid-query-completions';
-import { getHjsonContext } from './hjson-context';
-import { type CompletionItem, getCompletionsForPath } from './json-completion-utils';
+import type { JsonCompletionItem, JsonCompletionRule } from '../utils';
+import { getCompletionsForPath, getHjsonContext } from '../utils';
+
 import { makeDocHtml } from './make-doc-html';
 
 export interface GetHjsonCompletionsOptions {
+  jsonCompletions: JsonCompletionRule[];
   textBefore: string;
   charBeforePrefix: string;
   prefix: string;
 }
 
-/**
- * Get completions for Hjson Druid queries
- */
 export function getHjsonCompletions({
+  jsonCompletions,
   textBefore,
   charBeforePrefix,
   prefix,
@@ -54,7 +53,7 @@ export function getHjsonCompletions({
   }
 
   const completionItems = getCompletionsForPath(
-    DRUID_QUERY_COMPLETIONS,
+    jsonCompletions,
     pathForCompletions,
     hjsonContext.isEditingKey,
     hjsonContext.currentObject,
@@ -77,10 +76,10 @@ export function getHjsonCompletions({
  * Filter completions based on the current editing context
  */
 function filterCompletionsByContext(
-  completions: CompletionItem[],
+  completions: JsonCompletionItem[],
   hjsonContext: { isEditingKey: boolean; currentKey?: string; currentObject: any },
   charBeforePrefix: string,
-): CompletionItem[] {
+): JsonCompletionItem[] {
   const quote = charBeforePrefix === '"';
 
   if (hjsonContext.isEditingKey) {
@@ -108,7 +107,7 @@ function filterCompletionsByContext(
  * Convert a CompletionItem to an Ace Completion
  */
 function convertToAceCompletion(
-  item: CompletionItem,
+  item: JsonCompletionItem,
   _charBeforePrefix: string,
   isEditingKey: boolean,
 ): Ace.Completion {

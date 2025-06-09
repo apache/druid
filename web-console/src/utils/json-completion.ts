@@ -16,29 +16,29 @@
  * limitations under the License.
  */
 
-export interface CompletionItem {
-  value: string;
-  documentation?: string;
-}
-
-export interface CompletionRule {
+export interface JsonCompletionRule {
   path: string | RegExp;
   isObject?: boolean;
   condition?: (currentObject: any) => boolean;
-  completions: CompletionItem[];
+  completions: JsonCompletionItem[];
+}
+
+export interface JsonCompletionItem {
+  value: string;
+  documentation?: string;
 }
 
 /**
  * Get completions for a given path and current object context
  */
 export function getCompletionsForPath(
-  rules: readonly CompletionRule[],
+  rules: readonly JsonCompletionRule[],
   path: string[],
   isKey: boolean,
   currentObject: any,
-): CompletionItem[] {
+): JsonCompletionItem[] {
   const pathStr = pathToString(path);
-  const completions: CompletionItem[] = [];
+  const completions: JsonCompletionItem[] = [];
 
   for (const rule of rules) {
     if (Boolean(rule.isObject) !== Boolean(isKey)) continue;

@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type { CompletionRule } from './json-completion-utils';
+import type { JsonCompletionRule } from '../../utils';
 
-export const DRUID_QUERY_COMPLETIONS: CompletionRule[] = [
+export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
   // Root level - when starting a new query
   {
     path: '$',

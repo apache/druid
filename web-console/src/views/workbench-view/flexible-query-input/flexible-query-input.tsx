@@ -28,6 +28,7 @@ import AceEditor from 'react-ace';
 
 import { getHjsonCompletions } from '../../../ace-completions/hjson-completions';
 import { getSqlCompletions } from '../../../ace-completions/sql-completions';
+import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
 import { AppToaster } from '../../../singletons';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
@@ -163,6 +164,7 @@ export class FlexibleQueryInput extends React.PureComponent<
             callback(
               null,
               getHjsonCompletions({
+                jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
                 textBefore: lines.join('\n'),
                 charBeforePrefix,
                 prefix,
