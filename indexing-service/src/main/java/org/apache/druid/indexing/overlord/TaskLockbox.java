@@ -272,8 +272,7 @@ public class TaskLockbox
    * @return null if the lock could not be reacquired.
    */
   @Nullable
-  @VisibleForTesting
-  protected TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
+  private TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
   {
     if (!taskMatchesLock(task, taskLock)) {
       log.warn(
@@ -823,7 +822,6 @@ public class TaskLockbox
    * @param taskId an id of the task holding the lock
    * @param lock   lock to be revoked
    */
-  @VisibleForTesting
   public void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();

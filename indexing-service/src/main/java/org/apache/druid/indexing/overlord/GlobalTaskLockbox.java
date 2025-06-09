@@ -153,8 +153,8 @@ public class GlobalTaskLockbox
   /**
    * Acquires a lock on behalf of a task.  Blocks until the lock is acquired.
    *
-   * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * @return {@link LockResult} containing a new or an existing lock if succeeded.
+   * Otherwise, {@link LockResult} with {@link LockResult#isRevoked()} true.
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request) throws InterruptedException
@@ -166,10 +166,11 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Acquires a lock on behalf of a task, waiting up to the specified wait time if necessary.
+   * Acquires a lock on behalf of a task, waiting up to the specified wait time
+   * if necessary.
    *
-   * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * @return {@link LockResult} containing a new or an existing lock if succeeded.
+   * Otherwise, a {@link LockResult} with {@link LockResult#isRevoked()} true.
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request, long timeoutMs) throws InterruptedException
@@ -184,8 +185,8 @@ public class GlobalTaskLockbox
    * Attempt to acquire a lock for a task, without removing it from the queue. Can safely be called multiple times on
    * the same task until the lock is preempted.
    *
-   * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * @return {@link LockResult} containing a new or an existing lock if succeeded.
+   * Otherwise, {@link LockResult} with {@link LockResult#isRevoked()} true.
    * @throws IllegalStateException if the task is not a valid active task
    */
   public LockResult tryLock(final Task task, final LockRequest request)
@@ -201,8 +202,7 @@ public class GlobalTaskLockbox
    * a {@link Task} and a {@link SegmentAllocateAction}. This method tries to
    * acquire the task locks on the required intervals/segments and then performs
    * a batch allocation of segments. It is possible that some requests succeed
-   * successfully and others failed. In that case, only the failed ones should be
-   * retried.
+   * and others fail. In that case, only the failed ones should be retried.
    *
    * @param requests                List of allocation requests
    * @param dataSource              Datasource for which segment is to be allocated.
@@ -277,7 +277,6 @@ public class GlobalTaskLockbox
   /**
    * Cleans up pending segments associated with the given task, if any.
    */
-  @VisibleForTesting
   protected void cleanupPendingSegments(Task task)
   {
     executeForTask(
@@ -287,10 +286,7 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Return the currently-active locks for some task.
-   *
-   * @param task task for which to locate locks
-   * @return currently-active locks for the given task
+   * Returns all the active locks currently held by the given task.
    */
   public List<TaskLock> findLocksForTask(final Task task)
   {
@@ -301,7 +297,7 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Finds the active non-revoked REPLACE locks held by the given task.
+   * Returns all the active non-revoked REPLACE locks held by the given task.
    */
   public Set<ReplaceTaskLock> findReplaceLocksForTask(Task task)
   {
@@ -312,7 +308,7 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Finds all the active non-revoked REPLACE locks for the given datasource.
+   * Returns all the active non-revoked REPLACE locks for the given datasource.
    */
   public Set<ReplaceTaskLock> getAllReplaceLocksForDatasource(String datasource)
   {
@@ -374,6 +370,9 @@ public class GlobalTaskLockbox
     return datasourceToActiveLocks;
   }
 
+  /**
+   * Releases the lock held by a task over the given interval.
+   */
   public void unlock(final Task task, final Interval interval)
   {
     executeForTask(
@@ -382,6 +381,9 @@ public class GlobalTaskLockbox
     );
   }
 
+  /**
+   * Releases all locks currently held by the given task.
+   */
   public void unlockAll(Task task)
   {
     executeForTask(
@@ -390,6 +392,9 @@ public class GlobalTaskLockbox
     );
   }
 
+  /**
+   * Adds the given task to the set of active tasks.
+   */
   public void add(Task task)
   {
     executeForTask(
@@ -399,10 +404,8 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Release all locks for a task and remove task from set of active tasks.
-   * Does nothing if the task is not currently locked or not an active task.
-   *
-   * @param task task to unlock
+   * Removes a task from the set of active tasks and releases all locks held by it.
+   * Does nothing if the task is not active or doesn't hold any locks.
    */
   public void remove(final Task task)
   {
