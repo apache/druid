@@ -256,11 +256,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     {
       super(
           toolbox,
-          supervisorTask.getId(),
-          supervisorTask.getGroupId(),
-          supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext(),
-          CentralizedDatasourceSchemaConfig.create()
+          supervisorTask
       );
       this.supervisorTask = supervisorTask;
     }
