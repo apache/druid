@@ -70,8 +70,9 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     final Path segmentPath = getPath(segment);
     log.info("Killing segment[%s] mapped to path[%s]", segment.getId(), segmentPath);
 
-    try (final FileSystem fs = segmentPath.getFileSystem(config)) {
+    try {
       String filename = segmentPath.getName();
+      try (final FileSystem fs = segmentPath.getFileSystem(config)) {
         if (!filename.endsWith(".zip")) {
           throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
         } else {
@@ -115,6 +116,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
           removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
         }
+      }
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Unable to kill segment");
