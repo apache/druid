@@ -279,10 +279,24 @@ public class LogicalStageBuilder
     }
   }
 
+  public abstract class FrameProcessorStage1 extends AbstractLogicalStage{
+
+    public FrameProcessorStage1(RowSignature signature, DagInputSpec input)
+    {
+      super(signature, input);
+    }
+
+    public FrameProcessorStage1(RowSignature signature, List<DagInputSpec> input)
+    {
+      super(signature, input);
+    }
+
+  }
+
   /**
    * Represents a stage that reads data from input sources.
    */
-  public class ReadStage extends AbstractLogicalStage
+  public class ReadStage extends FrameProcessorStage1
   {
     public ReadStage(RowSignature signature, DagInputSpec inputSpecs)
     {
@@ -434,6 +448,7 @@ public class LogicalStageBuilder
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
+      // FIXME: this is a root transformation
       if (stack.getNode() instanceof DruidSort) {
         DruidSort sort = (DruidSort) stack.getNode();
         if (sort.hasLimitOrOffset()) {
