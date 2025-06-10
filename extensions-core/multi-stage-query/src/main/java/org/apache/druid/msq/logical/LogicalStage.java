@@ -21,6 +21,7 @@ package org.apache.druid.msq.logical;
 
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.logical.LogicalStageBuilder.DagStage;
 import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
@@ -42,11 +43,13 @@ public interface LogicalStage
    *
    * This supposed to be called on the top level stage.
    */
+  @Deprecated
   QueryDefinition build();
 
   /**
    * Builds the current stage.
    */
+  @Deprecated
   StageDefinition buildCurrentStage(StageMaker stageMaker);
 
   /**
@@ -60,12 +63,15 @@ public interface LogicalStage
   /**
    * Internal method to build the stage definitions.
    */
+  @Deprecated
   List<StageDefinition> buildStageDefinitions(StageMaker stageMaker);
 
   /**
    * Logical row signature this node supposed to produce.
    */
   RowSignature getLogicalRowSignature();
+
+  DagStage buildCurrentStage2(StageMaker stageMaker);
 
 
 }

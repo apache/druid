@@ -101,7 +101,6 @@ public class LogicalStageBuilder
           .signature(signature);
 
       return sdb;
-
     }
   }
 
@@ -126,7 +125,6 @@ public class LogicalStageBuilder
       sdb.shuffleSpec(stageMaker.shuffleFor(keyColumns));
       return sdb;
     }
-
   }
 
   class StageMaker
@@ -136,18 +134,30 @@ public class LogicalStageBuilder
 
    Stack<DagStage> stack = new Stack<>();
 
-    public void pushFrameProcessorStage(
-        List<DagInputSpec> inputs,
-        RowSignature signature,
-        FrameProcessorFactory<?, ?, ?> processorFactory)
-    {
-      stack.push(new FrameProcessorStage(inputs, signature, processorFactory));
-    }
+   public void pushFrameProcessorStage(
+       List<DagInputSpec> inputs,
+       RowSignature signature,
+       FrameProcessorFactory<?, ?, ?> processorFactory)
+   {
+     stack.push(new FrameProcessorStage(inputs, signature, processorFactory));
+   }
 
-    public void pushSortStage(RowSignature signature, List<KeyColumn> keyColumns)
-    {
-      stack.push(new ShuffleStage(stack.pop(), signature, keyColumns));
-    }
+   public DagStage makeFrameProcessorStage(
+       List<DagInputSpec> inputs,
+       RowSignature signature,
+       FrameProcessorFactory<?, ?, ?> processorFactory)
+   {
+     return new FrameProcessorStage(inputs, signature, processorFactory);
+   }
+
+   public void pushSortStage(RowSignature signature, List<KeyColumn> keyColumns)
+   {
+     stack.push(new ShuffleStage(stack.pop(), signature, keyColumns));
+   }
+   public ShuffleStage makeShuffleStage(RowSignature signature, List<KeyColumn> keyColumns)
+   {
+     return new ShuffleStage(stack.pop(), signature, keyColumns);
+   }
 
     public ScanQueryFrameProcessorFactory makeScanFrameProcessor(
         VirtualColumns virtualColumns,
@@ -271,9 +281,19 @@ public class LogicalStageBuilder
     {
       ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
           .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+
       stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+
       stageMaker.pushSortStage(signature, Collections.emptyList());
       return null;
+    }
+
+    @Override
+    public DagStage buildCurrentStage2(StageMaker stageMaker)
+    {
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+      return stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
     }
 
     @Override
@@ -439,6 +459,19 @@ public class LogicalStageBuilder
     public RowSignature getLogicalRowSignature()
     {
       return inputStage.getLogicalRowSignature();
+    }
+
+    @Override
+    public DagStage buildCurrentStage2(StageMaker stageMaker)
+    {
+
+
+      // FIXME
+      // this should be done differently
+
+      inputStage.buildCurrentStage(stageMaker);
+      return stageMaker.makeShuffleStage(signature, keyColumns);
+
     }
   }
 
