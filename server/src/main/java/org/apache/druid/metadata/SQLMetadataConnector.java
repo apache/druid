@@ -251,20 +251,23 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Execute the desired ALTER statement on the desired table
    *
-   * @param tableName The name of the table being altered
-   * @param sql ALTER statment to be executed
+   * @param tableName      The name of the table being altered
+   * @param sql            ALTER statements to be executed
+   * @param useTransaction Whether to use a transaction for this operation
    */
-  private void alterTable(final String tableName, final Iterable<String> sql)
+  private void alterTable(final String tableName, final Iterable<String> sql, final boolean useTransaction)
   {
     try {
       retryWithHandle(handle -> {
         if (tableExists(handle, tableName)) {
-          final Batch batch = handle.createBatch();
-          for (String s : sql) {
-            log.info("Altering table[%s], with command: %s", tableName, s);
-            batch.add(s);
+          if (useTransaction) {
+            handle.inTransaction((h, status) -> {
+              executeBatch(h, sql);
+              return null;
+            });
+          } else {
+            executeBatch(handle, sql);
           }
-          batch.execute();
         } else {
           log.info("Table[%s] doesn't exist.", tableName);
         }
@@ -272,8 +275,23 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       });
     }
     catch (Exception e) {
-      log.warn(e, "Exception Altering table[%s]", tableName);
+      log.warn(e, "Exception altering table[%s]", tableName);
     }
+  }
+
+  /**
+   * Executes a batch of SQL statements on the given handle.
+   *
+   * @param handle The handle to use for executing the statements.
+   * @param sql    The SQL statements to execute.
+   */
+  private void executeBatch(Handle handle, Iterable<String> sql)
+  {
+    final Batch batch = handle.createBatch();
+    for (String s : sql) {
+      batch.add(s);
+    }
+    batch.execute();
   }
 
   public void createPendingSegmentsTable(final String tableName)
@@ -313,31 +331,42 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createDataSourceTable(final String tableName)
   {
-    final List<String> columns = new ArrayList<>();
-    columns.add(StringUtils.format("supervisor_id VARCHAR(255) %s NOT NULL", getCollation()));
-    columns.add(StringUtils.format("dataSource VARCHAR(255) %s NOT NULL", getCollation()));
-    columns.add("created_date VARCHAR(255) NOT NULL");
-    columns.add(StringUtils.format("commit_metadata_payload %s NOT NULL", getPayloadType()));
-    columns.add("commit_metadata_sha1 VARCHAR(255) NOT NULL");
-
-    final StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
-
-    for (String column : columns) {
-      createStatementBuilder.append(column);
-      createStatementBuilder.append(",\n");
-    }
-
-    createStatementBuilder.append("PRIMARY KEY (supervisor_id)\n)");
-
     createTable(
         tableName,
         ImmutableList.of(
             StringUtils.format(
-                createStatementBuilder.toString(),
+                "CREATE TABLE %1$s (\n"
+                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  commit_metadata_payload %2$s NOT NULL,\n"
+                + "  commit_metadata_sha1 VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (dataSource)\n"
+                + ")",
                 tableName, getPayloadType(), getCollation()
             )
         )
     );
+
+    if (!tableHasColumn(tableName, "supervisor_id")) {
+      final List<String> alterCommands = new ArrayList<>();
+      alterCommands.add(StringUtils.format(
+          "ALTER TABLE %s ADD COLUMN supervisor_id VARCHAR(255) NOT NULL DEFAULT 'NULL'",
+          tableName
+      ));
+      alterCommands.add(StringUtils.format(
+          "UPDATE %s SET supervisor_id = dataSource",
+          tableName
+      ));
+      alterCommands.add(StringUtils.format(
+          "ALTER TABLE %s DROP PRIMARY KEY",
+          tableName
+      ));
+      alterCommands.add(StringUtils.format(
+          "ALTER TABLE %s ADD PRIMARY KEY (supervisor_id)",
+          tableName
+      ));
+      alterTable(tableName, alterCommands, true);
+    }
   }
 
   public void createSegmentTable(final String tableName)
@@ -501,7 +530,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
-      alterTable(tableName, statements);
+      alterTable(tableName, statements, false);
     }
   }
 
@@ -530,7 +559,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN task_allocator_id VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
-      alterTable(tableName, statements);
+      alterTable(tableName, statements, false);
     }
 
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
@@ -625,7 +654,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    alterTable(tableName, alterCommands);
+    alterTable(tableName, alterCommands, false);
 
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
