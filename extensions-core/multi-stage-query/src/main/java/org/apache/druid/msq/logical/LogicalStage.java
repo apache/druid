@@ -19,16 +19,10 @@
 
 package org.apache.druid.msq.logical;
 
-import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.logical.LogicalStageBuilder.DagStage;
-import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import javax.annotation.Nullable;
-
-import java.util.List;
 
 /**
  * Represents an unbuilt physical stage - which can be built.
@@ -39,20 +33,6 @@ import java.util.List;
 public interface LogicalStage
 {
   /**
-   * Builds the full {@link QueryDefinition}.
-   *
-   * This supposed to be called on the top level stage.
-   */
-  @Deprecated
-  QueryDefinition build();
-
-  /**
-   * Builds the current stage.
-   */
-  @Deprecated
-  StageDefinition buildCurrentStage(StageMaker stageMaker);
-
-  /**
    * Attempts to extend the current stage with an additional node.
    *
    * @return null if the current stage cannot be extended
@@ -61,17 +41,7 @@ public interface LogicalStage
   LogicalStage extendWith(DruidNodeStack stack);
 
   /**
-   * Internal method to build the stage definitions.
-   */
-  @Deprecated
-  List<StageDefinition> buildStageDefinitions(StageMaker stageMaker);
-
-  /**
    * Logical row signature this node supposed to produce.
    */
   RowSignature getLogicalRowSignature();
-
-  DagStage buildCurrentStage2(StageMaker stageMaker);
-
-
 }

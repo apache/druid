@@ -69,5 +69,10 @@ public abstract class DagInputSpec
       return null;
     }
 
+    public LogicalStage getStage()
+    {
+      return inputStage;
+    }
+
   }
 }

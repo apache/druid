@@ -26,12 +26,15 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.logical.DagInputSpec.DagStageInputSpec;
+import org.apache.druid.msq.logical.DagInputSpec.PhysicalInputSpec;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
@@ -56,7 +59,6 @@ import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Stack;
 
 /**
  * Helper class to build a {@link LogicalStage} tree.
@@ -129,20 +131,27 @@ public class LogicalStageBuilder
     }
   }
 
-  public class StageMaker
+  int stageIdSeq = 0;
+  private int getNextStageId()
+  {
+    return stageIdSeq++;
+  }
+
+  public static class StageMaker
   {
     /** Provides ids for the stages. */
     private int stageIdSeq = 0;
 
-   Stack<DagStage> stack = new Stack<>();
+    private final PlannerContext plannerContext;
 
-   public void pushFrameProcessorStage(
-       List<InputSpec> inputs,
-       RowSignature signature,
-       FrameProcessorFactory<?, ?, ?> processorFactory)
+    private List<StageDefinitionBuilder> stageBuilders=new ArrayList<>();
+
+
+   public StageMaker(PlannerContext plannerContext)
    {
-     stack.push(new FrameProcessorStage(inputs, signature, processorFactory));
+     this.plannerContext = plannerContext;
    }
+
 
    public DagStage makeFrameProcessorStage(
        List<InputSpec> inputSpecs,
@@ -150,15 +159,6 @@ public class LogicalStageBuilder
        FrameProcessorFactory<?, ?, ?> processorFactory)
    {
      return new FrameProcessorStage(inputSpecs, signature, processorFactory);
-   }
-
-   public void pushSortStage(RowSignature signature, List<KeyColumn> keyColumns)
-   {
-     stack.push(new ShuffleStage(stack.pop(), signature, keyColumns));
-   }
-   public ShuffleStage makeShuffleStage(RowSignature signature, List<KeyColumn> keyColumns)
-   {
-     return new ShuffleStage(stack.pop(), signature, keyColumns);
    }
 
     public ScanQueryFrameProcessorFactory makeScanFrameProcessor(
@@ -197,15 +197,11 @@ public class LogicalStageBuilder
     }
 
 
-    StageDefinition build1() {
-      DagStage node = stack.pop();
-      return node.buildStages(new StageMaker()).build(getIdForBuilder());
-    }
-
     private int getNextStageId()
     {
       return stageIdSeq++;
     }
+
 
     private String getIdForBuilder()
     {
@@ -245,6 +241,18 @@ public class LogicalStageBuilder
       return null;
 
     }
+    public StageDefinitionBuilder buildStage(LogicalStage stage)
+    {
+      if(stage instanceof FrameProcessorStage1) {
+        return buildFrameProcessorStage((FrameProcessorStage1) stage);
+      }
+      if(stage instanceof DistributeStage1) {
+        return buildDistributeStage((DistributeStage1) stage);
+      }
+
+      throw  DruidException.defensive("d"+stage.getClass());
+
+    }
 
     public void buildStage(AbstractLogicalStage stage)
     {
@@ -258,10 +266,9 @@ public class LogicalStageBuilder
       }
       stage.buildCurrentStage(this, inputSpecs);
 
-
     }
 
-    public DagStage buildStage(FrameProcessorStage1 frameProcessorStage)
+    public StageDefinitionBuilder buildFrameProcessorStage(FrameProcessorStage1 frameProcessorStage)
     {
       List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
@@ -269,16 +276,76 @@ public class LogicalStageBuilder
         inputSpecs.add(buildInputSpec(dagInputSpec));
       }
       BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
-      return makeFrameProcessorStage(inputSpecs, frameProcessorStage.getLogicalRowSignature(), frameProcessor);
+      StageDefinitionBuilder sdb = newStageDefinitionBuilder();
+      sdb.inputs(inputSpecs);
+      sdb.signature(frameProcessorStage.getLogicalRowSignature());
+      sdb.processorFactory(frameProcessor);
+      sdb.shuffleSpec(MixShuffleSpec.instance());
+      return  sdb;
     }
+
+    private StageDefinitionBuilder buildDistributeStage(DistributeStage1 stage)
+    {
+      List<DagInputSpec> inputs = stage.inputSpecs;
+      List<InputSpec> inputSpecs = new ArrayList<>();
+      for (DagInputSpec dagInputSpec : inputs) {
+        inputSpecs.add(buildInputSpec(dagInputSpec));
+      }
+      StageDefinitionBuilder sdb = newStageDefinitionBuilder();
+      sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getSignature(), null));
+      sdb.inputs(inputSpecs);
+      sdb.signature(stage.getSignature());
+      sdb.shuffleSpec(stage.buildShuffleSpec());
+      return sdb;
+
+    }
+
+
+
+
+    private StageDefinitionBuilder newStageDefinitionBuilder()
+    {
+      StageDefinitionBuilder builder = StageDefinition.builder(getNextStageId());
+      stageBuilders.add(builder);
+      return builder;
+    }
+
 
     private InputSpec buildInputSpec(DagInputSpec dagInputSpec)
     {
+      if(dagInputSpec instanceof PhysicalInputSpec) {
+        return dagInputSpec.toInputSpec();
+      }
+      if (dagInputSpec instanceof DagStageInputSpec) {
+        DagStageInputSpec dagInputSpec2 = (DagStageInputSpec) dagInputSpec;
+        LogicalStage stage = dagInputSpec2.getStage();
+        StageDefinitionBuilder dagStage = buildStage(stage);
+        int stageNumber = dagStage.getStageNumber();
+        return new StageInputSpec(stageNumber);
+      }
       if(true)
       {
-        throw new RuntimeException("FIXME: Unimplemented!");
+        throw new RuntimeException("FIXME: Unimplemented!" + dagInputSpec);
       }
       return null;
+    }
+
+
+    public QueryDefinition buildQueryDefinition()
+    {
+      return QueryDefinition.create(makeStages(), plannerContext.queryContext());
+    }
+
+
+    private List<StageDefinition> makeStages()
+    {
+      List<StageDefinition> ret = new ArrayList<>();
+
+      for (StageDefinitionBuilder stageDefinitionBuilder : stageBuilders) {
+        ret.add(stageDefinitionBuilder.build(getIdForBuilder()));
+      }
+
+      return ret;
 
     }
   }
@@ -290,6 +357,7 @@ public class LogicalStageBuilder
     public AbstractLogicalStage(RowSignature signature, DagInputSpec input)
     {
       this(signature, Collections.singletonList(input));
+      //getNextStageId();
     }
 
     protected abstract void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2);
@@ -301,32 +369,12 @@ public class LogicalStageBuilder
     }
 
     @Override
-    public StageDefinition buildCurrentStage(StageMaker stageMaker)
-    {
-      throw DruidException.defensive("This should have been implemented - or not reach this point!");
-    }
-
-    @Override
-    public final QueryDefinition build()
-    {
-      StageMaker stageMaker = new StageMaker();
-      stageMaker.buildStage(this);
-      List<StageDefinition> buildStageDefinitions = buildStageDefinitions(stageMaker);
-      return QueryDefinition.create(stageMaker.getStages(), plannerContext.queryContext());
-    }
-
-    @Override
-    public final List<StageDefinition> buildStageDefinitions(StageMaker stageMaker)
-    {
-      List<StageDefinition> ret = new ArrayList<>();
-      buildCurrentStage(stageMaker);
-      ret.add(stageMaker.build1());
-
-      return ret;
-    }
-    @Override
     public RowSignature getLogicalRowSignature()
     {
+      return signature;
+    }
+
+    public RowSignature getSignature() {
       return signature;
     }
   }
@@ -354,6 +402,8 @@ public class LogicalStageBuilder
       super(signature, input);
     }
 
+    protected abstract ShuffleSpec buildShuffleSpec();
+
     public DistributeStage1(RowSignature signature, List<DagInputSpec> input)
     {
       super(signature, input);
@@ -376,27 +426,6 @@ public class LogicalStageBuilder
     public ReadStage(ReadStage readStage, RowSignature newSignature)
     {
       super(newSignature, readStage.inputSpecs);
-    }
-
-    @Override
-    public StageDefinition buildCurrentStage(StageMaker stageMaker)
-    {
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-
-//      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
-
-      stageMaker.pushSortStage(signature, Collections.emptyList());
-      return null;
-    }
-
-    @Override
-    public DagStage buildCurrentStage2(StageMaker stageMaker)
-    {
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-      return null;
-//      return stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
     }
 
     @Override
@@ -468,6 +497,7 @@ public class LogicalStageBuilder
     return new FilterStage(inputStage, virtualColumnRegistry, dimFilter);
   }
 
+
   class FilterStage extends ReadStage
   {
     protected final VirtualColumnRegistry virtualColumnRegistry;
@@ -491,17 +521,6 @@ public class LogicalStageBuilder
     }
 
     @Override
-    public StageDefinition buildCurrentStage(StageMaker stageMaker)
-    {
-      VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(output, signature, dimFilter);
-//      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
-      stageMaker.pushSortStage(signature, Collections.emptyList());
-      return null;
-    }
-
-    @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
       if (stack.getNode() instanceof DruidProject) {
@@ -516,6 +535,15 @@ public class LogicalStageBuilder
       }
       return null;
     }
+
+    @Override
+    protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
+    {
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(virtualColumnRegistry.build(Collections.emptySet()), signature, dimFilter);
+      return scanFrameProcessor;
+    }
+
   }
 
   class ProjectStage extends FilterStage
@@ -570,25 +598,11 @@ public class LogicalStageBuilder
     }
 
     @Override
-    public StageDefinition buildCurrentStage(StageMaker stageMaker)
-    {
-      inputStage.buildCurrentStage(stageMaker);
-      stageMaker.pushSortStage(signature, keyColumns);
-      return null;
-    }
-
-    @Override
     public RowSignature getLogicalRowSignature()
     {
       return inputStage.getLogicalRowSignature();
     }
 
-    @Override
-    public DagStage buildCurrentStage2(StageMaker stageMaker)
-    {
-      List<InputSpec> inputStages = stageMaker.makeInputStages(inputSpecs);
-      return stageMaker.makeShuffleStage(inputStages, signature, keyColumns);
-    }
 
     @Override
     protected void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2)
@@ -598,6 +612,20 @@ public class LogicalStageBuilder
         throw new RuntimeException("FIXME: Unimplemented!");
       }
 
+    }
+
+    @Override
+    protected ShuffleSpec buildShuffleSpec()
+    {
+      final Granularity segmentGranularity = Granularities.ALL;
+      // FIXME:
+      // QueryKitUtils.getSegmentGranularityFromContext(jsonMapper,
+      // queryToRun.getContext());
+
+      final ClusterBy clusterBy = QueryKitUtils
+          .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
+      // FIXME targetSize == 1
+      return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
     }
   }
 

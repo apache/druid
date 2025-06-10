@@ -20,27 +20,40 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.logical.LogicalStage;
 import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class LogicalStageToQueryDefinitionTranslator
 {
+  final PlannerContext plannerContext;
+
+  public LogicalStageToQueryDefinitionTranslator(PlannerContext plannerContext)
+  {
+    this.plannerContext = plannerContext;
+  }
 
   public QueryDefinition translate(LogicalStage logicalStage)
   {
-//    return QueryDefinition.create(buildStageDefinitions(new StageMaker()), plannerContext.queryContext());
+    // return QueryDefinition.create(buildStageDefinitions(new StageMaker()),
+    // plannerContext.queryContext());
 
-    StageMaker maker = null;
+    StageMaker maker = new StageMaker(plannerContext);
+    StageDefinitionBuilder stage = maker.buildStage(logicalStage);
 
-    logicalStage.buildCurrentStage2(maker);
 
     if(true)
-    {
+     {
+      return maker.buildQueryDefinition();
+      // logicalStage.buildCurrentStage2(maker);
+    }
+
+    if (true) {
       throw new RuntimeException("FIXME: Unimplemented!");
     }
-//    QueryDefinition.create();
+    // QueryDefinition.create();
     return null;
-
 
   }
 

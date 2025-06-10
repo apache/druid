@@ -69,12 +69,8 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
     LogicalStage logicalStage = qdt.translate(rootRel);
 
     QueryDefinition queryDef;
-    if (false) {
-      queryDef = logicalStage.build();
-    } else {
-      LogicalStageToQueryDefinitionTranslator sdt = new LogicalStageToQueryDefinitionTranslator();
-      queryDef = sdt.translate(logicalStage);
-    }
+    LogicalStageToQueryDefinitionTranslator sdt = new LogicalStageToQueryDefinitionTranslator(plannerContext);
+    queryDef = sdt.translate(logicalStage);
     // FIXME final MSQDestination related things should happen here at
 
     QueryContext context = plannerContext.queryContext();
