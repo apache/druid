@@ -127,7 +127,7 @@ public class LogicalStageBuilder
     }
   }
 
-  class StageMaker
+  public class StageMaker
   {
     /** Provides ids for the stages. */
     private int stageIdSeq = 0;

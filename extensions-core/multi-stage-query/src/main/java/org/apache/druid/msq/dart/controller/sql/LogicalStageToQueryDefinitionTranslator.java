@@ -21,17 +21,26 @@ package org.apache.druid.msq.dart.controller.sql;
 
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.LogicalStage;
+import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
 
 public class LogicalStageToQueryDefinitionTranslator
 {
 
   public QueryDefinition translate(LogicalStage logicalStage)
   {
+//    return QueryDefinition.create(buildStageDefinitions(new StageMaker()), plannerContext.queryContext());
+
+    StageMaker maker = null;
+
+    logicalStage.buildCurrentStage2(maker);
+
     if(true)
     {
       throw new RuntimeException("FIXME: Unimplemented!");
     }
+//    QueryDefinition.create();
     return null;
+
 
   }
 
