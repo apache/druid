@@ -41,6 +41,7 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -176,6 +177,7 @@ public class WorkerImpl implements Worker
       throw new ISE("already run");
     }
 
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     try (final Closer closer = Closer.create()) {
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
       controllerClient = kernelHolders.getControllerClient();
@@ -234,6 +236,7 @@ public class WorkerImpl implements Worker
     workerCloser.register(context.dataServerQueryHandlerFactory());
     this.workerClient = workerCloser.register(new ExceptionWrappingWorkerClient(context.makeWorkerClient()));
     final FrameProcessorExecutor workerExec = new FrameProcessorExecutor(makeProcessingPool());
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     final long maxAllowedParseExceptions;
 
@@ -348,6 +351,8 @@ public class WorkerImpl implements Worker
         logKernelStatus(kernelHolders.getAllKernels());
       }
     }
+
+    context.emitMetric("query/time", stopwatch.millisElapsed());
 
     // Empty means success.
     return Optional.empty();

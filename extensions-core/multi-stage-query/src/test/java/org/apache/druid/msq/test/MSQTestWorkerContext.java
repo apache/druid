@@ -110,6 +110,12 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
+  public void emitMetric(String metric, Number value)
+  {
+
+  }
+
+  @Override
   public void registerWorker(Worker worker, Closer closer)
   {
 

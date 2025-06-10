@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
@@ -68,6 +69,7 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
   private final Outbox<ControllerMessage> outbox;
   private final CoordinatorClient coordinatorClient;
   private final QueryToolChestWarehouse warehouse;
+  private final ServiceEmitter emitter;
 
   @Inject
   public DartWorkerFactoryImpl(
@@ -85,7 +87,8 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
       @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox,
       CoordinatorClient coordinatorClient,
-      QueryToolChestWarehouse warehouse
+      QueryToolChestWarehouse warehouse,
+      ServiceEmitter emitter
   )
   {
     this.selfNode = selfNode;
@@ -103,6 +106,7 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
     this.outbox = outbox;
     this.coordinatorClient = coordinatorClient;
     this.warehouse = warehouse;
+    this.emitter = emitter;
   }
 
   @Override
@@ -130,7 +134,8 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
             serviceClientFactory,
             jsonMapper,
             warehouse
-        )
+        ),
+        emitter
     );
 
     return new WorkerImpl(null, workerContext);

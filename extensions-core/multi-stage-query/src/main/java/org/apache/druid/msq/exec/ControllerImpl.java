@@ -375,10 +375,10 @@ public class ControllerImpl implements Controller
     ListenableFuture<?> workerTaskRunnerFuture = null;
     CounterSnapshotsTree countersSnapshot = null;
     Throwable exceptionEncountered = null;
-    Stopwatch stopwatch = Stopwatch.createStarted();
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
