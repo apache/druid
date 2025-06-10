@@ -101,7 +101,6 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   private final SplittableInputSource<?> baseInputSource;
   private final ParallelIndexSupervisorTask supervisorTask;
 
-  @VisibleForTesting
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,
       ParallelIndexSupervisorTask supervisorTask
