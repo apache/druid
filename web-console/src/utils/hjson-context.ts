@@ -57,7 +57,7 @@ export interface HjsonContext {
  * @returns Context information about the cursor position
  */
 export function getHjsonContext(hjson: string): HjsonContext {
-  // Default context for empty input
+  // Empty input
   if (!hjson.trim()) {
     return {
       path: [],
@@ -68,476 +68,284 @@ export function getHjsonContext(hjson: string): HjsonContext {
     };
   }
 
-  // Track our position in the JSON structure
+  // State machine state
   const path: string[] = [];
-  let isEditingKey;
+  const containerStack: { type: 'object' | 'array'; index: number }[] = [];
+  const objectStack: any[] = [{}];
+
+  let state: 'normal' | 'string' | 'single-comment' | 'multi-comment' = 'normal';
+  let stringDelim = '';
+  let token = '';
   let currentKey: string | undefined;
-  let inString = false;
-  let stringChar: string | null = null;
-  let escapeNext = false;
-  let currentToken = '';
-  let expectingValue = false;
   let afterColon = false;
 
-  // Track the current object being edited
-  const objectStack: any[] = [{}]; // Stack of objects/arrays, starting with root
-  let currentObjectProperties: Record<string, any> = {}; // Properties of the current object
+  // Comment preservation
+  let preCommentKey: string | undefined;
+  let preCommentAfterColon = false;
 
-  // Comment tracking
-  let inSingleLineComment = false;
-  let inMultiLineComment = false;
-
-  // Context state before entering comment (preserved during comment parsing)
-  let preCommentIsEditingKey: boolean | undefined;
-  let preCommentCurrentKey: string | undefined;
-
-  // Stack to track whether we're in an object or array
-  const containerStack: { type: 'object' | 'array'; elementCount: number }[] = [];
-
+  // Process each character
   for (let i = 0; i < hjson.length; i++) {
-    const char = hjson[i];
-    const nextChar = i < hjson.length - 1 ? hjson[i + 1] : null;
+    const ch = hjson[i];
+    const next = hjson[i + 1];
 
-    // Handle escape sequences
-    if (escapeNext) {
-      escapeNext = false;
-      if (!inSingleLineComment && !inMultiLineComment) {
-        currentToken += char;
-      }
-      continue;
-    }
-
-    if (char === '\\' && inString && !inSingleLineComment && !inMultiLineComment) {
-      escapeNext = true;
-      currentToken += char;
-      continue;
-    }
-
-    // Handle comment detection and parsing
-    if (inSingleLineComment) {
-      // Exit single-line comment on newline
-      if (char === '\n') {
-        inSingleLineComment = false;
-      }
-      continue;
-    }
-
-    if (inMultiLineComment) {
-      // Exit multi-line comment on */
-      if (char === '*' && nextChar === '/') {
-        inMultiLineComment = false;
-        i++; // Skip the '/' as well
-      }
-      continue;
-    }
-
-    // Check for comment start (only when not in string)
-    if (!inString) {
-      // Single-line comment
-      if (char === '/' && nextChar === '/') {
-        // Save current context before entering comment
-        preCommentIsEditingKey = determineIsEditingKey(containerStack, afterColon);
-        preCommentCurrentKey = currentKey;
-        inSingleLineComment = true;
-        i++; // Skip the second '/'
-        continue;
-      }
-      // Multi-line comment
-      if (char === '/' && nextChar === '*') {
-        // Save current context before entering comment
-        preCommentIsEditingKey = determineIsEditingKey(containerStack, afterColon);
-        preCommentCurrentKey = currentKey;
-        inMultiLineComment = true;
-        i++; // Skip the '*'
-        continue;
-      }
-    }
-
-    // Handle strings
-    if (inString) {
-      currentToken += char;
-      if (char === stringChar) {
-        inString = false;
-        stringChar = null;
-
-        // If we just completed a string and we're in an array expecting a value, add it immediately
-        if (
-          expectingValue &&
-          containerStack.length > 0 &&
-          containerStack[containerStack.length - 1].type === 'array'
-        ) {
-          const value = parseValue(currentToken.trim());
-          const currentArray = objectStack[objectStack.length - 1] as any[];
-          currentArray.push(value);
-          currentToken = '';
+    // State transitions
+    if (state === 'string') {
+      token += ch;
+      if (ch === stringDelim && hjson[i - 1] !== '\\') {
+        state = 'normal';
+        // If in array expecting value, push completed string
+        if (afterColon && currentKey && containerStack.length > 0) {
+          const container = containerStack[containerStack.length - 1];
+          if (container.type === 'array') {
+            objectStack[objectStack.length - 1].push(parseValue(token));
+            token = '';
+            afterColon = false;
+          }
         }
       }
       continue;
     }
 
-    // Start of string
-    if ((char === '"' || char === "'") && !inString) {
-      inString = true;
-      stringChar = char;
-      currentToken += char;
+    if (state === 'single-comment') {
+      if (ch === '\n') state = 'normal';
       continue;
     }
 
-    // Handle structural characters
-    switch (char) {
+    if (state === 'multi-comment') {
+      if (ch === '*' && next === '/') {
+        state = 'normal';
+        i++; // Skip '/'
+      }
+      continue;
+    }
+
+    // Normal state processing
+    // Check for comment start
+    if (ch === '/' && next === '/') {
+      preCommentKey = currentKey;
+      preCommentAfterColon = afterColon;
+      state = 'single-comment';
+      i++; // Skip second '/'
+      continue;
+    }
+
+    if (ch === '/' && next === '*') {
+      preCommentKey = currentKey;
+      preCommentAfterColon = afterColon;
+      state = 'multi-comment';
+      i++; // Skip '*'
+      continue;
+    }
+
+    // String start
+    if (ch === '"' || ch === "'") {
+      state = 'string';
+      stringDelim = ch;
+      token += ch;
+      continue;
+    }
+
+    // Structural characters
+    switch (ch) {
       case '{': {
-        // First, check if we need to complete a previous value (Hjson optional comma handling)
-        if (afterColon && currentKey && currentToken.trim()) {
-          const trimmedToken = currentToken.trim();
-          // Look for patterns where we have both a value and a new key
-          const matchWithSpace = /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/.exec(trimmedToken);
-          const matchNoSpace = /^(".*?"|'.*?')([a-zA-Z_].*)$/.exec(trimmedToken);
-          
-          const match = matchWithSpace || matchNoSpace;
-          if (match) {
-            const [, valuePart, keyPart] = match;
-            
-            // Complete the current key-value pair
-            const value = parseValue(valuePart);
-            currentObjectProperties[currentKey] = value;
-            
-            // Extract the new key and add it to path
-            const newKey = extractKeyFromToken(keyPart);
-            if (newKey) {
-              path.push(newKey);
-            }
-            
-            afterColon = false;
-            currentToken = '';
-            currentKey = undefined;
+        // Handle Hjson no-comma case
+        if (afterColon && currentKey && token.trim()) {
+          const value = tryExtractValueAndKey(token.trim());
+          if (value.hasKey) {
+            getCurrentObject()[currentKey] = parseValue(value.value);
+            path.push(extractKey(value.key!));
           } else {
-            // Just a value, complete it
-            const value = parseValue(trimmedToken);
-            currentObjectProperties[currentKey] = value;
-            afterColon = false;
-            currentToken = '';
-            currentKey = undefined;
+            getCurrentObject()[currentKey] = parseValue(token.trim());
+            if (token.trim()) path.push(currentKey);
           }
-        } else if (currentToken.trim()) {
-          // If we have a token before {, it's a key
-          const key = extractKeyFromToken(currentToken);
-          if (key) {
-            path.push(key);
-          }
+        } else if (token.trim()) {
+          path.push(extractKey(token));
         } else if (afterColon && currentKey) {
-          // We're entering an object that is a value for a key
           path.push(currentKey);
         } else if (
           containerStack.length > 0 &&
           containerStack[containerStack.length - 1].type === 'array'
         ) {
-          // We're in an array, add the index to path
-          path.push(String(containerStack[containerStack.length - 1].elementCount));
+          path.push(String(containerStack[containerStack.length - 1].index));
         }
-        containerStack.push({ type: 'object', elementCount: 0 });
 
-        // Push new object context
-        const newObject = {};
-        objectStack.push(newObject);
-        currentObjectProperties = newObject;
-
-        expectingValue = false;
-        afterColon = false;
-        currentToken = '';
+        containerStack.push({ type: 'object', index: 0 });
+        objectStack.push({});
+        token = '';
         currentKey = undefined;
+        afterColon = false;
         break;
       }
 
       case '[': {
-        if (currentToken.trim()) {
-          // If we have a token before [, it's a key
-          const key = extractKeyFromToken(currentToken);
-          if (key) {
-            path.push(key);
-          }
+        if (token.trim()) {
+          path.push(extractKey(token));
         } else if (afterColon && currentKey) {
-          // We're entering an array that is a value for a key
           path.push(currentKey);
         }
-        containerStack.push({ type: 'array', elementCount: 0 });
 
-        // Push new array context
-        const newArray: any[] = [];
-        objectStack.push(newArray);
-        currentObjectProperties = objectStack[objectStack.length - 2]; // Parent object
-
-        expectingValue = true;
-        afterColon = false;
-        currentToken = '';
+        containerStack.push({ type: 'array', index: 0 });
+        objectStack.push([]);
+        token = '';
         currentKey = undefined;
+        afterColon = false;
         break;
       }
 
       case '}':
       case ']': {
-        // Complete current token if any
-        if (currentToken.trim() && expectingValue && currentKey) {
-          // We were in the middle of a value - save it
-          const value = parseValue(currentToken.trim());
+        // Complete pending value
+        if (token.trim()) {
           if (
             containerStack.length > 0 &&
             containerStack[containerStack.length - 1].type === 'array'
           ) {
-            // Add to array
-            const currentArray = objectStack[objectStack.length - 1] as any[];
-            currentArray.push(value);
-          } else if (afterColon) {
-            // Add to object
-            currentObjectProperties[currentKey] = value;
+            // We're in an array, add the item
+            const arr = objectStack[objectStack.length - 1] as any[];
+            arr.push(parseValue(token.trim()));
+          } else if (afterColon && currentKey) {
+            // We're completing an object property
+            getCurrentObject()[currentKey] = parseValue(token.trim());
           }
         }
 
-        // Get the completed object/array before popping
-        const completedObject =
-          char === '}' ? { ...currentObjectProperties } : objectStack[objectStack.length - 1];
-
-        const container = containerStack.pop();
-        let poppedKey: string | undefined;
-        if (container) {
-          if (path.length > 0) {
-            poppedKey = path.pop();
+        // Pop container
+        const completed = objectStack.pop();
+        containerStack.pop();
+        if (path.length > 0) {
+          const key = path.pop()!;
+          if (objectStack.length > 0 && completed !== undefined) {
+            const parent = objectStack[objectStack.length - 1];
+            if (!Array.isArray(parent)) {
+              parent[key] = completed;
+            }
           }
         }
 
-        // Pop object context
-        objectStack.pop();
-
-        // Store the completed object in its parent if we have a key for it
-        if (poppedKey && objectStack.length > 0) {
-          const parentObject = objectStack[objectStack.length - 1];
-          if (typeof parentObject === 'object' && !Array.isArray(parentObject)) {
-            parentObject[poppedKey] = completedObject;
-          }
-        }
-
-        // Update current object properties to the parent's properties
-        const parentContext = objectStack[objectStack.length - 1];
-        if (parentContext && typeof parentContext === 'object' && !Array.isArray(parentContext)) {
-          currentObjectProperties = parentContext;
-        } else {
-          currentObjectProperties = objectStack[objectStack.length - 2] || {};
-        }
-
-        expectingValue =
-          containerStack.length > 0 && containerStack[containerStack.length - 1]?.type === 'array';
+        token = '';
+        currentKey = undefined;
         afterColon = false;
-        currentToken = '';
         break;
       }
 
-      case ':':
-        if (!inString) {
-          // Extract key from current token
-          const key = extractKeyFromToken(currentToken);
-          if (key) {
-            currentKey = key;
-            afterColon = true;
-            expectingValue = true;
-          }
-          currentToken = '';
-        } else {
-          currentToken += char;
-        }
+      case ':': {
+        currentKey = extractKey(token);
+        afterColon = true;
+        token = '';
         break;
+      }
 
-      case ',':
-        if (!inString) {
-          // Complete current element
-          if (currentToken.trim() && afterColon && currentKey) {
-            // We just completed a key-value pair
-            const value = parseValue(currentToken.trim());
-            if (
-              containerStack.length > 0 &&
-              containerStack[containerStack.length - 1].type === 'array'
-            ) {
-              // Add to array
-              const currentArray = objectStack[objectStack.length - 1] as any[];
-              currentArray.push(value);
-            } else {
-              // Add to object
-              currentObjectProperties[currentKey] = value;
-            }
-          }
-
-          if (containerStack.length > 0) {
-            const container = containerStack[containerStack.length - 1];
-            if (container.type === 'array') {
-              container.elementCount++;
-              expectingValue = true;
-              currentKey = String(container.elementCount);
-            } else {
-              expectingValue = false;
-            }
-          }
-          afterColon = false;
-          currentToken = '';
+      case ',': {
+        // Complete value
+        if (token.trim()) {
           if (
-            containerStack.length === 0 ||
-            containerStack[containerStack.length - 1].type !== 'array'
+            containerStack.length > 0 &&
+            containerStack[containerStack.length - 1].type === 'array'
           ) {
-            currentKey = undefined;
+            // We're in an array, add the item
+            const arr = objectStack[objectStack.length - 1] as any[];
+            arr.push(parseValue(token.trim()));
+          } else if (afterColon && currentKey) {
+            // We're completing an object property
+            getCurrentObject()[currentKey] = parseValue(token.trim());
           }
-        } else {
-          currentToken += char;
         }
-        break;
 
-      default:
-        // Handle whitespace
-        if (!inString && /\s/.test(char)) {
-          // Check if we need to complete a value when we hit a newline (Hjson feature)
-          if (char === '\n' && afterColon && currentKey && currentToken.trim()) {
-            // Complete the current value
-            const value = parseValue(currentToken.trim());
-            currentObjectProperties[currentKey] = value;
-            afterColon = false;
-            currentToken = '';
+        // Update array index
+        if (containerStack.length > 0) {
+          const container = containerStack[containerStack.length - 1];
+          if (container.type === 'array') {
+            container.index++;
+          }
+        }
+
+        token = '';
+        currentKey = undefined;
+        afterColon = false;
+        break;
+      }
+
+      default: {
+        if (/\s/.test(ch)) {
+          // Newline can complete a value in Hjson
+          if (ch === '\n' && afterColon && currentKey && token.trim()) {
+            getCurrentObject()[currentKey] = parseValue(token.trim());
+            token = '';
             currentKey = undefined;
-          } else if (currentToken.trim() || afterColon) {
-            // Keep whitespace in token if we're building something
+            afterColon = false;
           }
         } else {
-          currentToken += char;
+          token += ch;
         }
+      }
     }
   }
 
-  // Handle Hjson's optional trailing commas - if we have a token that contains both
-  // a completed value and the start of a new key, we need to split them
-  if (afterColon && currentKey && currentToken.trim()) {
-    const trimmedToken = currentToken.trim();
-    // Look for patterns like:
-    // - "value newkey" (with whitespace)
-    // - "value"newkey (quoted value followed immediately by new key)
-    // - value newkey (unquoted value with whitespace)
-    const matchWithSpace = /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/.exec(trimmedToken);
-    const matchNoSpace = /^(".*?"|'.*?')([a-zA-Z_].*)$/.exec(trimmedToken);
-    
-    const match = matchWithSpace || matchNoSpace;
-    if (match) {
-      const [, valuePart, keyPart] = match;
-      
-      // Complete the current key-value pair
-      const value = parseValue(valuePart);
-      currentObjectProperties[currentKey] = value;
-      
-      // Set up for the new key
+  // Final state determination
+  // Handle Hjson no-comma between value and next key
+  if (afterColon && currentKey && token.trim()) {
+    const value = tryExtractValueAndKey(token.trim());
+    if (value.hasKey) {
+      getCurrentObject()[currentKey] = parseValue(value.value);
+      token = value.key!;
       afterColon = false;
-      currentToken = keyPart;
       currentKey = undefined;
     }
   }
 
-  // Determine final context
-  if (containerStack.length === 0) {
-    isEditingKey = true;
-    currentKey = undefined;
-  } else {
-    const currentContainer = containerStack[containerStack.length - 1];
-    if (currentContainer.type === 'array') {
-      isEditingKey = false;
-      currentKey = String(currentContainer.elementCount);
+  // Determine context
+  let isEditingKey = true;
+  let finalKey: string | undefined;
 
-      // Add array index to path if we're directly in the array
-      if (expectingValue && !afterColon) {
-        // Don't add to path yet, it will be added when the value is entered
-      }
+  if (containerStack.length === 0) {
+    // Root level - partial keys should not be considered as currentKey
+    isEditingKey = true;
+    finalKey = undefined;
+  } else {
+    const container = containerStack[containerStack.length - 1];
+    if (container.type === 'array') {
+      isEditingKey = false;
+      finalKey = String(container.index);
     } else {
-      // In object
+      isEditingKey = !afterColon;
       if (afterColon) {
-        isEditingKey = false;
-        // currentKey is already set from the colon handling
-      } else {
-        isEditingKey = true;
-        // If we have a current token that looks like a partial key AND
-        // we have some existing properties (suggesting this is a trailing comma case) OR
-        // we're in a nested object, use it as the current key
-        if (currentToken.trim() && (Object.keys(currentObjectProperties).length > 0 || containerStack.length > 1)) {
-          const extractedKey = extractKeyFromToken(currentToken);
-          currentKey = extractedKey || undefined;
-        } else {
-          currentKey = undefined;
-        }
+        finalKey = currentKey;
+      } else if (
+        token.trim() &&
+        ((getCurrentObject() && Object.keys(getCurrentObject()).length > 0) ||
+          containerStack.length > 1)
+      ) {
+        // Set currentKey for partial keys in non-empty objects (trailing comma case) or nested contexts
+        finalKey = extractKey(token);
       }
     }
   }
 
-  // If we're in a comment, use the preserved context from before the comment
-  const finalIsEditingComment = inSingleLineComment || inMultiLineComment;
-  const finalIsEditingKey = finalIsEditingComment
-    ? preCommentIsEditingKey ?? isEditingKey
-    : isEditingKey;
-  const finalCurrentKey = finalIsEditingComment ? preCommentCurrentKey : currentKey;
-
-  // Calculate the final current object
-  let finalCurrentObject = currentObjectProperties;
-
-  // If we're in a comment, preserve the object state from before the comment
-  if (finalIsEditingComment) {
-    // Use the current object properties as they were before the comment
-    finalCurrentObject = currentObjectProperties;
+  // Handle comments
+  const isInComment = state === 'single-comment' || state === 'multi-comment';
+  if (isInComment) {
+    isEditingKey = !preCommentAfterColon;
+    finalKey = preCommentKey;
   }
 
   return {
     path,
-    isEditingKey: finalIsEditingKey,
-    currentKey: finalCurrentKey,
-    isEditingComment: finalIsEditingComment,
-    currentObject: finalCurrentObject,
+    isEditingKey,
+    currentKey: finalKey,
+    isEditingComment: isInComment,
+    currentObject: getCurrentObject(),
   };
-}
 
-function determineIsEditingKey(
-  containerStack: { type: 'object' | 'array'; elementCount: number }[],
-  afterColon: boolean,
-): boolean {
-  if (containerStack.length === 0) {
-    return true;
-  }
-
-  const currentContainer = containerStack[containerStack.length - 1];
-  if (currentContainer.type === 'array') {
-    return false; // In arrays we're always editing values (even if they're object indices)
-  } else {
-    // In object
-    return !afterColon; // If after colon, we're editing value; otherwise editing key
+  function getCurrentObject(): any {
+    if (objectStack.length === 0) return {};
+    const current = objectStack[objectStack.length - 1];
+    return Array.isArray(current) ? objectStack[objectStack.length - 2] || {} : current;
   }
 }
 
-function extractKeyFromToken(token: string): string {
-  const trimmed = token.trim();
+function extractKey(token: string): string {
+  const trimmed = token.trim().replace(/:$/, '').trim();
 
-  // Remove trailing colon if present
-  const withoutColon = trimmed.replace(/:$/, '').trim();
-
-  // Handle quoted keys
-  if (
-    (withoutColon.startsWith('"') && withoutColon.endsWith('"')) ||
-    (withoutColon.startsWith("'") && withoutColon.endsWith("'"))
-  ) {
-    return withoutColon.slice(1, -1);
-  }
-
-  // Handle unquoted keys (Hjson feature)
-  // Take everything up to whitespace or special chars
-  const regex = /^([a-zA-Z_$][a-zA-Z0-9_$]*)/;
-  const match = regex.exec(withoutColon);
-  if (match) {
-    return match[1];
-  }
-
-  return withoutColon;
-}
-
-function parseValue(token: string): any {
-  const trimmed = token.trim();
-
-  // Handle quoted strings
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
@@ -545,17 +353,44 @@ function parseValue(token: string): any {
     return trimmed.slice(1, -1);
   }
 
-  // Handle boolean values
+  const match = /^([a-zA-Z_$][a-zA-Z0-9_$]*)/.exec(trimmed);
+  return match ? match[1] : trimmed;
+}
+
+function parseValue(token: string): any {
+  const trimmed = token.trim();
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
   if (trimmed === 'null') return null;
 
-  // Handle numbers
-  const numMatch = /^-?\d+(\.\d+)?$/.exec(trimmed);
-  if (numMatch) {
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
     return trimmed.includes('.') ? parseFloat(trimmed) : parseInt(trimmed, 10);
   }
 
-  // Return as unquoted string (Hjson feature)
   return trimmed;
+}
+
+function tryExtractValueAndKey(token: string): { value: string; key?: string; hasKey: boolean } {
+  // Try patterns for value followed by key
+  const patterns = [
+    /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/, // With space
+    /^(".*?"|'.*?')([a-zA-Z_].*)$/, // No space after quoted
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(token);
+    if (match) {
+      return { value: match[1], key: match[2], hasKey: true };
+    }
+  }
+
+  return { value: token, hasKey: false };
 }
