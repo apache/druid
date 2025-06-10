@@ -298,12 +298,7 @@ public class QueryContext
 
   public boolean isUseResultLevelCache()
   {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
-  }
-
-  public boolean isUseResultLevelCache(boolean defaultValue)
-  {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return QueryContexts.USE_RESULT_LEVEL_CACHE_KEY.from(this);
   }
 
   public boolean isFinalize(boolean defaultValue)

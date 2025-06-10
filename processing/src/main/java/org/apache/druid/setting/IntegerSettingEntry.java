@@ -43,7 +43,7 @@ public class IntegerSettingEntry extends SettingEntry<Integer>
   }
 
   @Override
-  public Integer parse(Object value)
+  public Integer convert(Object value)
   {
     return QueryContexts.getAsInt(name, value);
   }

@@ -44,7 +44,7 @@ public class ReadableNumberSetting extends SettingEntry<HumanReadableBytes>
   }
 
   @Override
-  public HumanReadableBytes parse(Object value)
+  public HumanReadableBytes convert(Object value)
   {
     return QueryContexts.getAsHumanReadableBytes(name, value);
   }

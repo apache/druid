@@ -73,6 +73,6 @@ public class QuerySettingRegistry
     if (entry == null ) {
       throw InvalidInput.exception("Setting with name [%s] does not exist.", name);
     }
-    return entry.parse(val);
+    return entry.convert(val);
   }
 }

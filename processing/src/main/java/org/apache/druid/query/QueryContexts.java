@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 public class QueryContexts
 {
   public static final SettingEntry<Boolean> FINALIZE_KEY = QuerySettingRegistry.register(
-      SettingEntry.newBooleanBuilder()
+      SettingEntry.newBooleanEntry()
                   .name("finalize")
                   .defaultValue(null)
                   .description(
@@ -92,7 +92,16 @@ public class QueryContexts
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
-  public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
+
+  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE_KEY = QuerySettingRegistry.register(
+      SettingEntry.newBooleanEntry()
+                  .name("useResultLevelCache")
+                  .defaultValue(true)
+                  .description(
+                      "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                  .build());
+
+  //public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";

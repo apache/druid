@@ -43,7 +43,7 @@ public class StringSettingEntry extends SettingEntry<String>
   }
 
   @Override
-  public String parse(Object value)
+  public String convert(Object value)
   {
     return QueryContexts.getAsString(name, value, null);
   }

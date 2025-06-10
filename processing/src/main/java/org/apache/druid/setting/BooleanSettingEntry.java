@@ -46,7 +46,7 @@ public class BooleanSettingEntry extends SettingEntry<Boolean>
   }
 
   @Override
-  public Boolean parse(Object value)
+  public Boolean convert(Object value)
   {
     return QueryContexts.getAsBoolean(name, value);
   }

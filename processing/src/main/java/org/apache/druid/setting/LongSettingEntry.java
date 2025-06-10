@@ -43,7 +43,7 @@ public class LongSettingEntry extends SettingEntry<Long>
   }
 
   @Override
-  public Long parse(Object value)
+  public Long convert(Object value)
   {
     return QueryContexts.getAsLong(name, value);
   }

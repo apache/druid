@@ -43,7 +43,7 @@ public class FloatSettingEntry extends SettingEntry<Float>
   }
 
   @Override
-  public Float parse(Object value)
+  public Float convert(Object value)
   {
     return QueryContexts.getAsFloat(name, value);
   }
