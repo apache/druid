@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -75,39 +74,6 @@ public class LogicalStageBuilder
     this.plannerContext = plannerContext;
   }
 
-  public interface DagStage
-  {
-    StageDefinitionBuilder buildStages(StageMaker stageMaker);
-  }
-
-  public static class FrameProcessorStage implements DagStage
-  {
-    private final List<InputSpec> inputs;
-    private final FrameProcessorFactory<?,?,?> scanProcessorFactory;
-    private RowSignature signature;
-
-    public FrameProcessorStage(
-        List<InputSpec> inputSpecs,
-        RowSignature signature,
-        FrameProcessorFactory<?,?,?> scanProcessorFactory)
-    {
-      this.inputs = inputSpecs;
-      this.signature = signature;
-      this.scanProcessorFactory = scanProcessorFactory;
-    }
-
-    @Override
-    public StageDefinitionBuilder buildStages(StageMaker stageMaker)
-    {
-      StageDefinitionBuilder sdb = StageDefinition.builder(stageMaker.getNextStageId())
-          .inputs(inputs)
-          .processorFactory(scanProcessorFactory)
-          .signature(signature);
-
-      return sdb;
-    }
-  }
-
   public static class StageMaker
   {
     /** Provides ids for the stages. */
@@ -115,14 +81,12 @@ public class LogicalStageBuilder
 
     private final PlannerContext plannerContext;
 
-    private List<StageDefinitionBuilder> stageBuilders=new ArrayList<>();
+    private List<StageDefinitionBuilder> stageBuilders = new ArrayList<>();
 
-
-   public StageMaker(PlannerContext plannerContext)
-   {
-     this.plannerContext = plannerContext;
-   }
-
+    public StageMaker(PlannerContext plannerContext)
+    {
+      this.plannerContext = plannerContext;
+    }
 
     public ScanQueryFrameProcessorFactory makeScanFrameProcessor(
         VirtualColumns virtualColumns,
@@ -175,15 +139,14 @@ public class LogicalStageBuilder
 
     public StageDefinitionBuilder buildStage(LogicalStage stage)
     {
-      if(stage instanceof FrameProcessorStage1) {
+      if (stage instanceof FrameProcessorStage1) {
         return buildFrameProcessorStage((FrameProcessorStage1) stage);
       }
-      if(stage instanceof DistributeStage1) {
+      if (stage instanceof DistributeStage1) {
         return buildDistributeStage((DistributeStage1) stage);
       }
-      throw  DruidException.defensive("d"+stage.getClass());
+      throw DruidException.defensive("d" + stage.getClass());
     }
-
 
     public StageDefinitionBuilder buildFrameProcessorStage(FrameProcessorStage1 frameProcessorStage)
     {
@@ -198,7 +161,7 @@ public class LogicalStageBuilder
       sdb.signature(frameProcessorStage.getLogicalRowSignature());
       sdb.processorFactory(frameProcessor);
       sdb.shuffleSpec(MixShuffleSpec.instance());
-      return  sdb;
+      return sdb;
     }
 
     private StageDefinitionBuilder buildDistributeStage(DistributeStage1 stage)
@@ -217,9 +180,6 @@ public class LogicalStageBuilder
 
     }
 
-
-
-
     private StageDefinitionBuilder newStageDefinitionBuilder()
     {
       StageDefinitionBuilder builder = StageDefinition.builder(getNextStageId());
@@ -227,10 +187,9 @@ public class LogicalStageBuilder
       return builder;
     }
 
-
     private InputSpec buildInputSpec(DagInputSpec dagInputSpec)
     {
-      if(dagInputSpec instanceof PhysicalInputSpec) {
+      if (dagInputSpec instanceof PhysicalInputSpec) {
         return dagInputSpec.toInputSpec();
       }
       if (dagInputSpec instanceof DagStageInputSpec) {
@@ -240,33 +199,25 @@ public class LogicalStageBuilder
         int stageNumber = dagStage.getStageNumber();
         return new StageInputSpec(stageNumber);
       }
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!" + dagInputSpec);
-      }
-      return null;
+      throw DruidException.defensive("Unhandled InputSpec type [%s]", dagInputSpec.getClass().getSimpleName());
     }
-
 
     public QueryDefinition buildQueryDefinition()
     {
       return QueryDefinition.create(makeStages(), plannerContext.queryContext());
     }
 
-
     private List<StageDefinition> makeStages()
     {
       List<StageDefinition> ret = new ArrayList<>();
-
       for (StageDefinitionBuilder stageDefinitionBuilder : stageBuilders) {
         ret.add(stageDefinitionBuilder.build(getIdForBuilder()));
       }
-
       return ret;
-
     }
   }
-  public abstract class AbstractLogicalStage implements LogicalStage
+
+  public static abstract class AbstractLogicalStage implements LogicalStage
   {
     protected final List<DagInputSpec> inputSpecs;
     protected final RowSignature signature;
@@ -274,7 +225,7 @@ public class LogicalStageBuilder
     public AbstractLogicalStage(RowSignature signature, DagInputSpec input)
     {
       this(signature, Collections.singletonList(input));
-      //getNextStageId();
+      // getNextStageId();
     }
 
     public AbstractLogicalStage(RowSignature signature, List<DagInputSpec> inputs)
@@ -289,12 +240,14 @@ public class LogicalStageBuilder
       return signature;
     }
 
-    public RowSignature getSignature() {
+    public RowSignature getSignature()
+    {
       return signature;
     }
   }
 
-  public abstract class FrameProcessorStage1 extends AbstractLogicalStage{
+  public abstract class FrameProcessorStage1 extends AbstractLogicalStage
+  {
 
     public FrameProcessorStage1(RowSignature signature, DagInputSpec input)
     {
@@ -310,7 +263,8 @@ public class LogicalStageBuilder
   }
 
   // FIXME: rename
-  public abstract class DistributeStage1 extends AbstractLogicalStage{
+  public abstract class DistributeStage1 extends AbstractLogicalStage
+  {
 
     public DistributeStage1(RowSignature signature, DagInputSpec input)
     {
@@ -383,7 +337,6 @@ public class LogicalStageBuilder
       );
     }
 
-
     @Override
     protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
     {
@@ -403,7 +356,6 @@ public class LogicalStageBuilder
     DimFilter dimFilter = DruidQuery.getDimFilter(plannerContext, inputStage.signature, virtualColumnRegistry, filter);
     return new FilterStage(inputStage, virtualColumnRegistry, dimFilter);
   }
-
 
   class FilterStage extends ReadStage
   {
