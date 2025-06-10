@@ -178,6 +178,17 @@ public class TestDerbyConnector extends DerbyConnector
     {
       return new PendingSegmentsTable(this);
     }
+
+    public void beforeBenchmark()
+    {
+      before();
+    }
+
+    public void afterBenchmark()
+    {
+      this.getConnector().deleteAllSegmentRecords();
+      after();
+    }
   }
 
   /**
