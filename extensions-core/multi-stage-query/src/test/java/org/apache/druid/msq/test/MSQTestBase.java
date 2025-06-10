@@ -244,8 +244,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
-import static org.apache.druid.sql.calcite.util.CalciteTests.SOME_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.RESTRICTED_DATASOURCE;
+import static org.apache.druid.sql.calcite.util.CalciteTests.SOME_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
@@ -777,17 +777,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
             return segmentId.getInterval();
           }
 
-        @Nullable
-        @Override
-        public <T> T as(@Nonnull Class<T> clazz)
-        {
-          if (CursorFactory.class.equals(clazz)) {
-            return (T) new QueryableIndexCursorFactory(index);
-          } else if (QueryableIndex.class.equals(clazz)) {
-            return (T) index;
+          @Nullable
+          @Override
+          public <T> T as(@Nonnull Class<T> clazz)
+          {
+            if (CursorFactory.class.equals(clazz)) {
+              return (T) new QueryableIndexCursorFactory(index);
+            } else if (QueryableIndex.class.equals(clazz)) {
+              return (T) index;
+            }
+            return null;
           }
-          return null;
-        }
 
           @Override
           public void close()
