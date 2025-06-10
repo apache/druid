@@ -246,19 +246,22 @@ public class LogicalStageBuilder
 
     }
 
-    public void buildStage(AbstractLogicalStage abstractLogicalStage)
+    public void buildStage(AbstractLogicalStage stage)
     {
-      List<DagInputSpec> inputs = abstractLogicalStage.inputSpecs;
+//      if(stage instanceof FrameProcessorStage1) {
+//        buildStage((FrameProcessorStage1)stage);
+//      }
+      List<DagInputSpec> inputs = stage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
       for (DagInputSpec dagInputSpec : inputs) {
         inputSpecs.add(buildInputSpec(dagInputSpec));
       }
-      abstractLogicalStage.buildCurrentStage(this, inputSpecs);
+      stage.buildCurrentStage(this, inputSpecs);
 
 
     }
 
-    public void buildStage(FrameProcessorStage1 frameProcessorStage)
+    public DagStage buildStage(FrameProcessorStage1 frameProcessorStage)
     {
       List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
@@ -266,9 +269,7 @@ public class LogicalStageBuilder
         inputSpecs.add(buildInputSpec(dagInputSpec));
       }
       BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
-      makeFrameProcessorStage(inputSpecs, frameProcessorStage.getLogicalRowSignature(), frameProcessor);
-
-
+      return makeFrameProcessorStage(inputSpecs, frameProcessorStage.getLogicalRowSignature(), frameProcessor);
     }
 
     private InputSpec buildInputSpec(DagInputSpec dagInputSpec)
