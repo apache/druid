@@ -39,7 +39,7 @@ import java.util.function.Function;
 @Warmup(iterations = 1, time = 1)
 @Measurement(iterations = 20, time = 2)
 @BenchmarkMode({Mode.AverageTime})
-@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class SqlSegmentsMetadataQueryBenchmark
 {
 
