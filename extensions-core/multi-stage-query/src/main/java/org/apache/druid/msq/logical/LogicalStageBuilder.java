@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -212,6 +213,26 @@ public class LogicalStageBuilder
         return dartQueryId;
       }
       return plannerContext.getSqlQueryId();
+    }
+
+    public List<InputSpec> makeInputStages(List<DagInputSpec> inputSpecs)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    public DagStage makeShuffleStage(List<InputSpec> inputStages, RowSignature signature, List<KeyColumn> keyColumns)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
     }
   }
   public abstract class AbstractLogicalStage implements LogicalStage
@@ -464,14 +485,8 @@ public class LogicalStageBuilder
     @Override
     public DagStage buildCurrentStage2(StageMaker stageMaker)
     {
-
-
-      // FIXME
-      // this should be done differently
-
-      inputStage.buildCurrentStage(stageMaker);
-      return stageMaker.makeShuffleStage(signature, keyColumns);
-
+      List<InputSpec> inputStages = stageMaker.makeInputStages(inputSpecs);
+      return stageMaker.makeShuffleStage(inputStages, signature, keyColumns);
     }
   }
 
