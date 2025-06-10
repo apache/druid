@@ -21,13 +21,10 @@ package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.logical.LogicalInputSpec.DagStageInputSpec;
-import org.apache.druid.msq.logical.LogicalInputSpec.PhysicalInputSpec;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractFrameProcessorStage;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractShuffleStage;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
@@ -85,7 +82,7 @@ public class StageMaker
     List<LogicalInputSpec> inputs = frameProcessorStage.inputSpecs;
     List<InputSpec> inputSpecs = new ArrayList<>();
     for (LogicalInputSpec dagInputSpec : inputs) {
-      inputSpecs.add(buildInputSpec(dagInputSpec));
+      inputSpecs.add(dagInputSpec.toInputSpec(this));
     }
     BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
@@ -116,21 +113,6 @@ public class StageMaker
     StageDefinitionBuilder builder = StageDefinition.builder(getNextStageId());
     stageBuilders.add(builder);
     return builder;
-  }
-
-  private InputSpec buildInputSpec(LogicalInputSpec dagInputSpec)
-  {
-    if (dagInputSpec instanceof PhysicalInputSpec) {
-      return dagInputSpec.toInputSpec(this);
-    }
-    if (dagInputSpec instanceof DagStageInputSpec) {
-      DagStageInputSpec dagInputSpec2 = (DagStageInputSpec) dagInputSpec;
-      LogicalStage stage = dagInputSpec2.getStage();
-      StageDefinitionBuilder dagStage = buildStage(stage);
-      int stageNumber = dagStage.getStageNumber();
-      return new StageInputSpec(stageNumber);
-    }
-    throw DruidException.defensive("Unhandled InputSpec type [%s]", dagInputSpec.getClass().getSimpleName());
   }
 
   public QueryDefinition buildQueryDefinition()

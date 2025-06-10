@@ -37,6 +37,7 @@ public class LogicalStageToQueryDefinitionTranslator
   public QueryDefinition translate(LogicalStage logicalStage)
   {
     StageMaker maker = new StageMaker(plannerContext);
+
     StageDefinitionBuilder stage = maker.buildStage(logicalStage);
 
     return maker.buildQueryDefinition();
