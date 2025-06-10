@@ -443,8 +443,14 @@ public class TaskQueue
                   e.getMessage()
               );
             }
-            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
-            notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+            try {
+              TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+              notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+              emitTaskCompletionLogsAndMetrics(task, taskStatus);
+            }
+            catch (Exception e2) {
+              log.error(e2, "Exception thrown during task completion cleanup loop: %s", task.getId());
+            }
             return;
           }
           if (taskIsReady) {
@@ -667,9 +673,9 @@ public class TaskQueue
    * This method does not remove the task from {@link #activeTasks} to avoid
    * race conditions with {@link #syncFromStorage()}.
    * <p>
-   * Since this operation involves DB updates and synchronous remote calls, it
-   * must be invoked on a dedicated executor so that task runner and worker sync
-   * is not blocked.
+   * Since this operation is intended to be performed under one of activeTasks hash segment locks, involves DB updates
+   * and synchronous remote calls, it must be invoked on a dedicated executor so that task runner and worker sync
+   * are not blocked.
    *
    * @throws NullPointerException     if task or status is null
    * @throws IllegalArgumentException if the task ID does not match the status ID
@@ -697,6 +703,10 @@ public class TaskQueue
     if (!taskStatus.isComplete()) {
       // Nothing to do for incomplete statuses.
       return;
+    } else if (entry.isComplete) {
+      // A callback() or shutdown() beat us to updating the status and has already cleaned up this task
+      log.info("Received already-complete task[%s] with status [%s], ignoring", task.getId(), taskStatus);
+      return;
     }
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
@@ -707,10 +717,10 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
-      //The code block is only called when a task completes,
-      //and we need to check to make sure the metadata store has the correct status stored.
+      // The code block is only called when a task completes,
+      // and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
-      if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
+      if (!previousStatus.isPresent() || previousStatus.get().isComplete()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
       } else {
         taskStorage.setStatus(taskStatus.withLocation(taskLocation));
@@ -730,8 +740,7 @@ public class TaskQueue
       taskRunner.shutdown(task.getId(), reasonFormat, args);
     }
     catch (Throwable e) {
-      // If task runner shutdown fails, continue with the task shutdown routine. We'll come back and try to
-      // shut it down again later in manageInternalPostCritical, once it's removed from the "tasks" map.
+      // If task runner shutdown fails, continue with the task shutdown routine.
       log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
     }
 
@@ -752,9 +761,6 @@ public class TaskQueue
    */
   private void attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-
     Futures.addCallback(
         statusFuture,
         new FutureCallback<>()
@@ -799,21 +805,7 @@ public class TaskQueue
               );
 
               // Emit event and log, if the task is done
-              if (status.isComplete()) {
-                IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
-                emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
-
-                log.info(
-                    "Completed task[%s] with status[%s] in [%d]ms.",
-                    task.getId(), status.getStatusCode(), status.getDuration()
-                );
-
-                if (status.isSuccess()) {
-                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
-                } else {
-                  Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
-                }
-              }
+              emitTaskCompletionLogsAndMetrics(task, status);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to handle task status")
@@ -1052,21 +1044,43 @@ public class TaskQueue
     );
   }
 
+  private void emitTaskCompletionLogsAndMetrics(final Task task, final TaskStatus status)
+  {
+    if (status.isComplete()) {
+      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
+
+      emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+
+      log.info(
+          "Completed task[%s] with status[%s] in [%d]ms.",
+          task.getId(), status.getStatusCode(), status.getDuration()
+      );
+
+      if (status.isSuccess()) {
+        Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+      } else {
+        Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
+      }
+    }
+  }
+
   private void validateTaskPayload(Task task)
   {
     try {
       String payload = passwordRedactingMapper.writeValueAsString(task);
       if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
         throw InvalidInput.exception(
-                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
-                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
-            );
+            "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+            "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+            task.getId(), payload.length(), config.getMaxTaskPayloadSize()
+        );
       } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
         log.warn(
             "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
-                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
-                "Such tasks may be rejected by the Overlord in future Druid versions.",
+            "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
+            "Such tasks may be rejected by the Overlord in future Druid versions.",
             task.getId(),
             task.getDataSource(),
             payload.length(),

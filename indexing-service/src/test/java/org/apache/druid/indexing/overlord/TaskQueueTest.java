@@ -174,6 +174,17 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
+
+    // Sleep to allow all metrics to be emitted
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+    verifySuccessfulTaskCount(taskQueue, 2);
+    verifyFailedTaskCount(taskQueue, 0);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -388,6 +399,14 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -444,9 +463,12 @@ public class TaskQueueTest extends IngestionTestBase
 
     // Verify that metrics are emitted on receiving announcement
     serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
-    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -621,6 +643,22 @@ public class TaskQueueTest extends IngestionTestBase
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
+    );
+  }
+
+  private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
+  {
+    Assert.assertEquals(
+        successCount,
+        taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static void verifyFailedTaskCount(final TaskQueue taskQueue, int failureCount)
+  {
+    Assert.assertEquals(
+        failureCount,
+        taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
   }
 
