@@ -74,6 +74,7 @@ interface JsonInputProps {
   focus?: boolean;
   width?: string;
   height?: string;
+  showLineNumbers?: boolean;
   issueWithValue?: (value: any) => string | undefined;
   jsonCompletions?: JsonCompletionRule[];
 }
@@ -86,6 +87,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     focus,
     width,
     height,
+    showLineNumbers,
     value,
     issueWithValue,
     jsonCompletions,
@@ -176,7 +178,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
         width={width || '100%'}
         height={height || '8vh'}
         showPrintMargin={false}
-        showGutter={false}
+        showGutter={Boolean(showLineNumbers)}
         value={internalValue.stringified}
         placeholder={placeholder}
         enableBasicAutocompletion={cmp as any}
@@ -185,7 +187,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           $blockScrolling: Infinity,
         }}
         setOptions={{
-          showLineNumbers: false,
+          showLineNumbers: Boolean(showLineNumbers),
           tabSize: 2,
           newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
         }}

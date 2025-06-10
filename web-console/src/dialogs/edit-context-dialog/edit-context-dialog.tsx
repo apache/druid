@@ -17,20 +17,12 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
-import Hjson from 'hjson';
-import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
-import AceEditor from 'react-ace';
 
+import { JsonInput } from '../../components';
 import type { QueryContext } from '../../druid-models';
-import { AppToaster } from '../../singletons';
 
 import './edit-context-dialog.scss';
-
-function formatContext(context: QueryContext | undefined): string {
-  const str = JSONBig.stringify(context || {}, undefined, 2);
-  return str === '{}' ? '{\n\n}' : str;
-}
 
 export interface EditContextDialogProps {
   initQueryContext: QueryContext | undefined;
@@ -42,24 +34,17 @@ export const EditContextDialog = React.memo(function EditContextDialog(
   props: EditContextDialogProps,
 ) {
   const { initQueryContext, onQueryContextChange, onClose } = props;
-  const [queryContextString, setQueryContextString] = useState<string>(
-    formatContext(initQueryContext),
-  );
+  const [queryContext, setQueryContext] = useState<QueryContext | undefined>(initQueryContext);
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   return (
     <Dialog className="edit-context-dialog" isOpen onClose={onClose} title="Edit query context">
-      <AceEditor
-        mode="hjson"
-        theme="solarized_dark"
-        className="query-string"
-        name="ace-editor"
-        fontSize={12}
-        width="100%"
+      <JsonInput
+        value={queryContext}
+        onChange={setQueryContext}
+        setError={setJsonError}
         height="100%"
-        showGutter
-        showPrintMargin={false}
-        value={queryContextString}
-        onChange={v => setQueryContextString(v)}
+        showLineNumbers
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -67,19 +52,11 @@ export const EditContextDialog = React.memo(function EditContextDialog(
           <Button
             text="Save"
             intent={Intent.PRIMARY}
+            disabled={Boolean(jsonError)}
             onClick={() => {
-              let queryContext: QueryContext;
-              try {
-                queryContext = Hjson.parse(queryContextString);
-              } catch (e) {
-                AppToaster.show({
-                  message: e.message,
-                  intent: Intent.DANGER,
-                });
-                return;
+              if (queryContext) {
+                onQueryContextChange(queryContext);
               }
-
-              onQueryContextChange(queryContext);
               onClose();
             }}
           />

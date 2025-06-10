@@ -16,10 +16,14 @@
  * limitations under the License.
  */
 
+import { NATIVE_JSON_QUERY_COMPLETIONS } from '../druid-models';
+
+import type { GetHjsonCompletionsOptions } from './hjson-completions';
 import { getHjsonCompletions } from './hjson-completions';
 
 describe('getHjsonCompletions', () => {
-  const baseOptions = {
+  const baseOptions: GetHjsonCompletionsOptions = {
+    jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
     textBefore: '',
     charBeforePrefix: '',
     prefix: '',
