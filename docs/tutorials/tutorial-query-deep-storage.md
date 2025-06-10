@@ -191,10 +191,6 @@ curl --location 'http://localhost:8888/druid/v2/sql/' \
 
 The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
-:::info
-You can't use `SET` command to set up the value `executionMode`.This context parameter must be specified using the `context` field in the Druid SQL API or Druid Web Console.
-:::
-
 ## Get query status
 
 Replace `:queryId` with the ID for your query and run the following curl command to get your query status:
