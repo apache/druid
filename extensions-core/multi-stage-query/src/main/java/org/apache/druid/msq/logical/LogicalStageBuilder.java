@@ -80,16 +80,16 @@ public class LogicalStageBuilder
 
   public static class FrameProcessorStage implements DagStage
   {
-    private final List<DagInputSpec> inputs;
+    private final List<InputSpec> inputs;
     private final FrameProcessorFactory<?,?,?> scanProcessorFactory;
     private RowSignature signature;
 
     public FrameProcessorStage(
-        List<DagInputSpec> inputs,
+        List<InputSpec> inputSpecs,
         RowSignature signature,
         FrameProcessorFactory<?,?,?> scanProcessorFactory)
     {
-      this.inputs = inputs;
+      this.inputs = inputSpecs;
       this.signature = signature;
       this.scanProcessorFactory = scanProcessorFactory;
     }
@@ -98,7 +98,7 @@ public class LogicalStageBuilder
     public StageDefinitionBuilder buildStages(StageMaker stageMaker)
     {
       StageDefinitionBuilder sdb = StageDefinition.builder(stageMaker.getNextStageId())
-          .inputs(Lists.transform(inputs, DagInputSpec::toInputSpec))
+          .inputs(inputs)
           .processorFactory(scanProcessorFactory)
           .signature(signature);
 
@@ -137,7 +137,7 @@ public class LogicalStageBuilder
    Stack<DagStage> stack = new Stack<>();
 
    public void pushFrameProcessorStage(
-       List<DagInputSpec> inputs,
+       List<InputSpec> inputs,
        RowSignature signature,
        FrameProcessorFactory<?, ?, ?> processorFactory)
    {
@@ -383,7 +383,7 @@ public class LogicalStageBuilder
       ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
           .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
 
-      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+//      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
 
       stageMaker.pushSortStage(signature, Collections.emptyList());
       return null;
@@ -394,7 +394,8 @@ public class LogicalStageBuilder
     {
       ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
           .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-      return stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+      return null;
+//      return stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
     }
 
     @Override
@@ -442,7 +443,8 @@ public class LogicalStageBuilder
     {
       ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
           .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-      stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+
+      stageMaker.makeFrameProcessorStage(inputSpecs2, signature, scanFrameProcessor);
     }
 
     @Override
@@ -493,7 +495,7 @@ public class LogicalStageBuilder
       VirtualColumns output = virtualColumnRegistry.build(Collections.emptySet());
       ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
           .makeScanFrameProcessor(output, signature, dimFilter);
-      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+//      stageMaker.pushFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
       stageMaker.pushSortStage(signature, Collections.emptyList());
       return null;
     }
