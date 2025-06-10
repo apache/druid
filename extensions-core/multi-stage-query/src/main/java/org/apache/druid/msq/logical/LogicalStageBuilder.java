@@ -32,6 +32,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
@@ -144,11 +145,11 @@ public class LogicalStageBuilder
    }
 
    public DagStage makeFrameProcessorStage(
-       List<DagInputSpec> inputs,
+       List<InputSpec> inputSpecs,
        RowSignature signature,
        FrameProcessorFactory<?, ?, ?> processorFactory)
    {
-     return new FrameProcessorStage(inputs, signature, processorFactory);
+     return new FrameProcessorStage(inputSpecs, signature, processorFactory);
    }
 
    public void pushSortStage(RowSignature signature, List<KeyColumn> keyColumns)
@@ -234,6 +235,51 @@ public class LogicalStageBuilder
       return null;
 
     }
+
+    public List<StageDefinition> getStages()
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    public void buildStage(AbstractLogicalStage abstractLogicalStage)
+    {
+      List<DagInputSpec> inputs = abstractLogicalStage.inputSpecs;
+      List<InputSpec> inputSpecs = new ArrayList<>();
+      for (DagInputSpec dagInputSpec : inputs) {
+        inputSpecs.add(buildInputSpec(dagInputSpec));
+      }
+      abstractLogicalStage.buildCurrentStage(this, inputSpecs);
+
+
+    }
+
+    public void buildStage(FrameProcessorStage1 frameProcessorStage)
+    {
+      List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
+      List<InputSpec> inputSpecs = new ArrayList<>();
+      for (DagInputSpec dagInputSpec : inputs) {
+        inputSpecs.add(buildInputSpec(dagInputSpec));
+      }
+      BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
+      makeFrameProcessorStage(inputSpecs, frameProcessorStage.getLogicalRowSignature(), frameProcessor);
+
+
+    }
+
+    private InputSpec buildInputSpec(DagInputSpec dagInputSpec)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
   }
   public abstract class AbstractLogicalStage implements LogicalStage
   {
@@ -244,6 +290,8 @@ public class LogicalStageBuilder
     {
       this(signature, Collections.singletonList(input));
     }
+
+    protected abstract void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2);
 
     public AbstractLogicalStage(RowSignature signature, List<DagInputSpec> inputs)
     {
@@ -260,7 +308,10 @@ public class LogicalStageBuilder
     @Override
     public final QueryDefinition build()
     {
-      return QueryDefinition.create(buildStageDefinitions(new StageMaker()), plannerContext.queryContext());
+      StageMaker stageMaker = new StageMaker();
+      stageMaker.buildStage(this);
+      List<StageDefinition> buildStageDefinitions = buildStageDefinitions(stageMaker);
+      return QueryDefinition.create(stageMaker.getStages(), plannerContext.queryContext());
     }
 
     @Override
@@ -286,11 +337,26 @@ public class LogicalStageBuilder
       super(signature, input);
     }
 
+    protected abstract BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker);
+
     public FrameProcessorStage1(RowSignature signature, List<DagInputSpec> input)
     {
       super(signature, input);
     }
+  }
 
+  // FIXME: rename
+  public abstract class DistributeStage1 extends AbstractLogicalStage{
+
+    public DistributeStage1(RowSignature signature, DagInputSpec input)
+    {
+      super(signature, input);
+    }
+
+    public DistributeStage1(RowSignature signature, List<DagInputSpec> input)
+    {
+      super(signature, input);
+    }
   }
 
   /**
@@ -369,6 +435,22 @@ public class LogicalStageBuilder
           virtualColumnRegistry,
           dimFilter
       );
+    }
+
+    @Override
+    protected void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2)
+    {
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+      stageMaker.makeFrameProcessorStage(inputSpecs, signature, scanFrameProcessor);
+    }
+
+    @Override
+    protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
+    {
+      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
+          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
+      return scanFrameProcessor;
     }
   }
 
@@ -462,9 +544,10 @@ public class LogicalStageBuilder
     }
   }
 
-  class SortStage extends AbstractLogicalStage
+  class SortStage extends DistributeStage1
   {
     protected List<KeyColumn> keyColumns;
+    // FIXME: remove
     private LogicalStage inputStage;
 
     public SortStage(LogicalStage inputStage, List<KeyColumn> keyColumns)
@@ -502,6 +585,16 @@ public class LogicalStageBuilder
     {
       List<InputSpec> inputStages = stageMaker.makeInputStages(inputSpecs);
       return stageMaker.makeShuffleStage(inputStages, signature, keyColumns);
+    }
+
+    @Override
+    protected void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
     }
   }
 
