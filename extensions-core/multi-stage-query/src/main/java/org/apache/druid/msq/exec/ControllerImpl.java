@@ -81,12 +81,14 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -373,6 +375,7 @@ public class ControllerImpl implements Controller
     ListenableFuture<?> workerTaskRunnerFuture = null;
     CounterSnapshotsTree countersSnapshot = null;
     Throwable exceptionEncountered = null;
+    Stopwatch stopwatch = Stopwatch.createStarted();
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
@@ -553,9 +556,15 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
+    emitQueryMetrics(stopwatch);
     // Emit summary metrics
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
+  }
+
+  private void emitQueryMetrics(Stopwatch stopwatch)
+  {
+    context.emitMetric("query/time", stopwatch.millisElapsed());
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)

@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
@@ -109,6 +110,7 @@ public class DartControllerContext implements ControllerContext
     this.memoryIntrospector = memoryIntrospector;
     this.context = context;
     this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
     this.emitter = emitter;
   }
 

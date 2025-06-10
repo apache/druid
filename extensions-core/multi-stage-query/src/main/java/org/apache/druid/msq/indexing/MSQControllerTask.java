@@ -58,6 +58,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -79,6 +80,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import static org.apache.druid.query.DruidMetrics.ENGINE;
 
 @JsonTypeName(MSQControllerTask.TYPE)
 public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
@@ -274,6 +277,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
     Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    metricBuilder.setDimension(ENGINE, MSQTaskSqlEngine.NAME);
     final ControllerContext context = new IndexerControllerContext(
         this.getTaskLockType(),
         this.getDataSource(),
