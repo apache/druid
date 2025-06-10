@@ -500,8 +500,7 @@ public class JettyServerModule extends JerseyServletModule
   private static int getTCPAcceptQueueSize()
   {
     if (SystemUtils.IS_OS_LINUX) {
-      try {
-        BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
+      try (BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn")) ) {
         String acceptQueueSize = in.readLine();
         if (acceptQueueSize != null) {
           return Integer.parseInt(acceptQueueSize);
