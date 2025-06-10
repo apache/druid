@@ -90,9 +90,9 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
         if (zipParts.length > 1) {
           Preconditions.checkState(zipParts.length <= 3 &&
-                                  StringUtils.isNumeric(zipParts[0]) &&
-                                  "index.zip".equals(zipParts[zipParts.length - 1]),
-                                  "Unexpected segmentPath format [%s]", segmentPath
+                                   StringUtils.isNumeric(zipParts[0]) &&
+                                   "index.zip".equals(zipParts[zipParts.length - 1]),
+                                   "Unexpected segmentPath format [%s]", segmentPath
           );
 
           descriptorPath = new Path(
