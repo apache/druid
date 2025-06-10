@@ -95,7 +95,7 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
-      newStage = stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), DagInputSpec.of(inputStage)).extendWith(stack);
+      newStage = stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
       if(newStage != null) {
         return newStage;
       }
@@ -131,7 +131,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     TableDataSource ids = (TableDataSource) sd.dataSource;
     TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, DagInputSpec.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 
@@ -140,7 +140,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     InlineDataSource ids = (InlineDataSource) sd.dataSource;
     InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, DagInputSpec.of(inputSpec));
+    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 }

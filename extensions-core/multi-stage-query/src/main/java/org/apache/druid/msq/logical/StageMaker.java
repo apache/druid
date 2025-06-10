@@ -26,8 +26,8 @@ import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.logical.DagInputSpec.DagStageInputSpec;
-import org.apache.druid.msq.logical.DagInputSpec.PhysicalInputSpec;
+import org.apache.druid.msq.logical.LogicalInputSpec.DagStageInputSpec;
+import org.apache.druid.msq.logical.LogicalInputSpec.PhysicalInputSpec;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractFrameProcessorStage;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractShuffleStage;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
@@ -82,9 +82,9 @@ public class StageMaker
 
   private StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
   {
-    List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
+    List<LogicalInputSpec> inputs = frameProcessorStage.inputSpecs;
     List<InputSpec> inputSpecs = new ArrayList<>();
-    for (DagInputSpec dagInputSpec : inputs) {
+    for (LogicalInputSpec dagInputSpec : inputs) {
       inputSpecs.add(buildInputSpec(dagInputSpec));
     }
     BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
@@ -98,10 +98,10 @@ public class StageMaker
 
   private StageDefinitionBuilder buildShuffleStage(AbstractShuffleStage stage)
   {
-    List<DagInputSpec> inputs = stage.inputSpecs;
+    List<LogicalInputSpec> inputs = stage.inputSpecs;
     List<InputSpec> inputSpecs = new ArrayList<>();
-    for (DagInputSpec dagInputSpec : inputs) {
-      inputSpecs.add(buildInputSpec(dagInputSpec));
+    for (LogicalInputSpec dagInputSpec : inputs) {
+      inputSpecs.add(dagInputSpec.toInputSpec(this));
     }
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
     sdb.inputs(inputSpecs);
@@ -118,10 +118,10 @@ public class StageMaker
     return builder;
   }
 
-  private InputSpec buildInputSpec(DagInputSpec dagInputSpec)
+  private InputSpec buildInputSpec(LogicalInputSpec dagInputSpec)
   {
     if (dagInputSpec instanceof PhysicalInputSpec) {
-      return dagInputSpec.toInputSpec();
+      return dagInputSpec.toInputSpec(this);
     }
     if (dagInputSpec instanceof DagStageInputSpec) {
       DagStageInputSpec dagInputSpec2 = (DagStageInputSpec) dagInputSpec;

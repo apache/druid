@@ -20,22 +20,24 @@
 package org.apache.druid.msq.logical;
 
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 
-public abstract class DagInputSpec
+public abstract class LogicalInputSpec
 {
-  public abstract InputSpec toInputSpec();
+  public abstract InputSpec toInputSpec(StageMaker maker);
 
-  public static DagInputSpec of(LogicalStage inputStage)
+  public static LogicalInputSpec of(LogicalStage inputStage)
   {
     return new DagStageInputSpec(inputStage);
   }
 
-  public static DagInputSpec of(InputSpec inputSpec)
+  public static LogicalInputSpec of(InputSpec inputSpec)
   {
     return new PhysicalInputSpec(inputSpec);
   }
 
-  static class PhysicalInputSpec extends DagInputSpec
+  static class PhysicalInputSpec extends LogicalInputSpec
   {
     private InputSpec inputSpec;
 
@@ -45,13 +47,13 @@ public abstract class DagInputSpec
     }
 
     @Override
-    public InputSpec toInputSpec()
+    public InputSpec toInputSpec(StageMaker maker)
     {
       return inputSpec;
     }
   }
 
-  static class DagStageInputSpec extends DagInputSpec {
+  static class DagStageInputSpec extends LogicalInputSpec {
 
     private LogicalStage inputStage;
 
@@ -61,12 +63,10 @@ public abstract class DagInputSpec
     }
 
     @Override
-    public InputSpec toInputSpec()
+    public InputSpec toInputSpec(StageMaker maker)
     {
-      if(true) {
-        throw new RuntimeException("d");
-      }
-      return null;
+      StageDefinitionBuilder stage = maker.buildStage(inputStage);
+      return new StageInputSpec(stage.getStageNumber());
     }
 
     public LogicalStage getStage()
