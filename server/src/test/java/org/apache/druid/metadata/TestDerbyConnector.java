@@ -159,6 +159,17 @@ public class TestDerbyConnector extends DerbyConnector
       return connector;
     }
 
+    public void beforeBenchmark()
+    {
+      before();
+    }
+
+    public void afterBenchmark()
+    {
+      this.getConnector().deleteAllSegmentRecords();
+      after();
+    }
+
     public MetadataStorageConnectorConfig getMetadataConnectorConfig()
     {
       return connectorConfig;
