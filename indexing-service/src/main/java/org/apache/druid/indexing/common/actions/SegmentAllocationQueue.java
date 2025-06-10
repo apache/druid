@@ -93,9 +93,9 @@ public class SegmentAllocationQueue
   private final ScheduledExecutorService workerExec;
 
   /**
-   * Thread-safe list of datasources for which a segment allocation is currently in-progress.
+   * Thread-safe set of datasources for which a segment allocation is currently in-progress.
    */
-  private final List<String> runningDatasources = Collections.synchronizedList(new ArrayList<>());
+  private final Set<String> runningDatasources = Collections.synchronizedSet(new HashSet<>());
 
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
@@ -319,10 +319,25 @@ public class SegmentAllocationQueue
     } else {
       final AllocateRequestBatch nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
-      long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
+      long nextScheduleDelay = Math.max(
+          getMinScheduleDelay(numSkippedBatches),
+          maxWaitTimeMillis - timeElapsed
+      );
       scheduleQueuePoll(nextScheduleDelay);
       log.debug("Next execution in [%d ms]", nextScheduleDelay);
     }
+  }
+
+  /**
+   * Computes minimum delay for the next queue poll. If any batch was skipped or
+   * if all worker threads are busy, add a small delay (5 millis) before the
+   * next poll to avoid busy waiting.
+   */
+  private int getMinScheduleDelay(int numSkippedBatches)
+  {
+    return (runningDatasources.size() == config.getBatchAllocationNumThreads()
+            || numSkippedBatches > 0)
+           ? 5 : 0;
   }
 
   /**
