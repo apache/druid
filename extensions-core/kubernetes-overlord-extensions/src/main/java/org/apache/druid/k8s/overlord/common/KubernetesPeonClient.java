@@ -91,7 +91,7 @@ public class KubernetesPeonClient
             .inNamespace(namespace)
             .resource(job)
             .create();
-      log.info("Submitted job [%s] for task [%s]. Waiting for POD to launch", jobName, task.getId());
+      log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
 
       // wait until the pod is running or complete or failed, any of those is fine
       Pod mainPod = getPeonPodWithRetries(jobName);
