@@ -333,14 +333,17 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
 
     for (int year = startYear; year < endYear; year++) {
       segments.add(createSegment(
-          Intervals.of("%d/%d", year, year + 1),
-          "version",
-          new LinearShardSpec(0))
+                       Intervals.of("%d/%d", year, year + 1),
+                       "version",
+                       new LinearShardSpec(0)
+                   )
       );
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
-    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, new SegmentSchemaMapping(
-        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(
+        segmentsSet, new SegmentSchemaMapping(
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
+    );
     Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
@@ -364,7 +367,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -384,7 +395,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
-                                           .retrieveUnusedSegmentsPlus(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegmentsPlus(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -394,11 +413,20 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected void verifyContainsAllSegmentsPlus(
       List<DataSegment> expectedSegments,
       List<DataSegmentPlus> actualUnusedSegmentsPlus,
-      DateTime usedStatusLastUpdatedTime)
+      DateTime usedStatusLastUpdatedTime
+  )
   {
-    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
+    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream()
+                                                                      .collect(Collectors.toMap(
+                                                                          DataSegment::getId,
+                                                                          Function.identity()
+                                                                      ));
     Map<SegmentId, DataSegmentPlus> actualIdToSegmentPlus = actualUnusedSegmentsPlus.stream()
-                                                                                    .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
+                                                                                    .collect(Collectors.toMap(
+                                                                                        d -> d.getDataSegment()
+                                                                                              .getId(),
+                                                                                        Function.identity()
+                                                                                    ));
     Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
       DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
       return segmentPlus != null
@@ -483,7 +511,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     final String table = tablesConfig.getSegmentsTable();
     return derbyConnector.retryWithHandle(
         handle -> handle.createQuery("SELECT payload FROM " + table + " WHERE used = true ORDER BY id")
-                        .map((index, result, context) -> JacksonUtils.readValue(mapper, result.getBytes(1), DataSegment.class))
+                        .map((index, result, context) -> JacksonUtils.readValue(
+                            mapper,
+                            result.getBytes(1),
+                            DataSegment.class
+                        ))
                         .list()
     );
   }
@@ -498,7 +530,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     );
   }
 
-  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId, MetadataStorageTablesConfig tablesConfig)
+  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(
+      String taskId,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     return derbyConnector.retryWithHandle(handle -> {
@@ -524,7 +559,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     });
   }
 
-  protected void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap, MetadataStorageTablesConfig tablesConfig)
+  protected void insertIntoUpgradeSegmentsTable(
+      Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     derbyConnector.retryWithHandle(
@@ -568,25 +606,25 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   }
 
   public static void insertUsedSegments(
-          Set<DataSegment> dataSegments,
-          Map<String, String> upgradedFromSegmentIdMap,
-          TestDerbyConnector connector,
-          ObjectMapper jsonMapper
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
   )
   {
     final Set<DataSegmentPlus> usedSegments = new HashSet<>();
     for (DataSegment segment : dataSegments) {
       final DateTime now = DateTimes.nowUtc();
       usedSegments.add(
-              new DataSegmentPlus(
-                      segment,
-                      now,
-                      now,
-                      true,
-                      null,
-                      null,
-                      upgradedFromSegmentIdMap.get(segment.getId().toString())
-              )
+          new DataSegmentPlus(
+              segment,
+              now,
+              now,
+              true,
+              null,
+              null,
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
+          )
       );
     }
 
@@ -594,56 +632,57 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   }
 
   public static void insertSegments(
-          Set<DataSegmentPlus> dataSegments,
-          boolean includeSchema,
-          TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
-          ObjectMapper jsonMapper
+      Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
+      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
+      ObjectMapper jsonMapper
   )
   {
     insertSegments(dataSegments, includeSchema, derbyConnectorRule.getConnector(), jsonMapper);
   }
 
   public static void insertSegments(
-          Set<DataSegmentPlus> dataSegments,
-          boolean includeSchema,
-          TestDerbyConnector connector,
-          ObjectMapper jsonMapper
-  ) {
+      Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
+  )
+  {
     final String table = connector.getMetadataTablesConfigSupplier().get().getSegmentsTable();
 
     final String sql = getSegmentInsertSql(includeSchema, table, connector);
     connector.retryWithHandle(
-            handle -> {
-              PreparedBatch preparedBatch = handle.prepareBatch(sql);
-              for (DataSegmentPlus segmentPlus : dataSegments) {
-                final DataSegment segment = segmentPlus.getDataSegment();
-                String id = segment.getId().toString();
-                final PreparedBatchPart segmentRecord = preparedBatch.add();
-                segmentRecord.bind("id", id)
-                        .bind("dataSource", segment.getDataSource())
-                        .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
-                        .bind("start", segment.getInterval().getStart().toString())
-                        .bind("end", segment.getInterval().getEnd().toString())
-                        .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
-                        .bind("version", segment.getVersion())
-                        .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
-                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                        .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
-                        .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(sql);
+          for (DataSegmentPlus segmentPlus : dataSegments) {
+            final DataSegment segment = segmentPlus.getDataSegment();
+            String id = segment.getId().toString();
+            final PreparedBatchPart segmentRecord = preparedBatch.add();
+            segmentRecord.bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
+                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
 
-                if (includeSchema) {
-                  segmentRecord.bind("num_rows", segmentPlus.getNumRows())
-                          .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
-                }
-              }
-
-              final int[] affectedRows = preparedBatch.execute();
-              final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-              if (!succeeded) {
-                throw new ISE("Failed to publish segments to DB");
-              }
-              return true;
+            if (includeSchema) {
+              segmentRecord.bind("num_rows", segmentPlus.getNumRows())
+                           .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
             }
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
+          }
+          return true;
+        }
     );
   }
 

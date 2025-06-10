@@ -75,13 +75,24 @@ public class TestDerbyConnector extends DerbyConnector
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    super(new NoopMetadataStorageProvider().get(), config, dbTables, new DBI(jdbcUri + ";create=true"), centralizedDatasourceSchemaConfig);
+    super(
+        new NoopMetadataStorageProvider().get(),
+        config,
+        dbTables,
+        new DBI(jdbcUri + ";create=true"),
+        centralizedDatasourceSchemaConfig
+    );
     this.jdbcUri = jdbcUri;
     this.dbTables = dbTables;
   }
 
-  public TestDerbyConnector(String baseName) {
-    this(Suppliers.ofInstance(new MetadataStorageConnectorConfig()),  Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(baseName + dbSafeUUID())), CentralizedDatasourceSchemaConfig.create());
+  public TestDerbyConnector(String baseName)
+  {
+    this(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(baseName + dbSafeUUID())),
+        CentralizedDatasourceSchemaConfig.create()
+    );
   }
 
   public Supplier<MetadataStorageTablesConfig> getMetadataTablesConfigSupplier()
@@ -97,7 +108,11 @@ public class TestDerbyConnector extends DerbyConnector
     catch (UnableToObtainConnectionException e) {
       SQLException cause = (SQLException) e.getCause();
       // error code "08006" indicates proper shutdown
-      Assert.assertEquals(StringUtils.format("Derby not shutdown: [%s]", cause.toString()), "08006", cause.getSQLState());
+      Assert.assertEquals(
+          StringUtils.format("Derby not shutdown: [%s]", cause.toString()),
+          "08006",
+          cause.getSQLState()
+      );
     }
   }
 
@@ -125,14 +140,20 @@ public class TestDerbyConnector extends DerbyConnector
 
     public DerbyConnectorRule(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
-      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())), centralizedDatasourceSchemaConfig);
+      this(
+          Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())),
+          centralizedDatasourceSchemaConfig
+      );
     }
 
     private DerbyConnectorRule(
         final String defaultBase
     )
     {
-      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)), CentralizedDatasourceSchemaConfig.create());
+      this(
+          Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)),
+          CentralizedDatasourceSchemaConfig.create()
+      );
     }
 
     public DerbyConnectorRule(
@@ -155,7 +176,11 @@ public class TestDerbyConnector extends DerbyConnector
     @Override
     protected void before()
     {
-      connector = new TestDerbyConnector(Suppliers.ofInstance(connectorConfig), dbTables, centralizedDatasourceSchemaConfig);
+      connector = new TestDerbyConnector(
+          Suppliers.ofInstance(connectorConfig),
+          dbTables,
+          centralizedDatasourceSchemaConfig
+      );
       connector.getDBI().open().close(); // create db
     }
 
@@ -270,7 +295,7 @@ public class TestDerbyConnector extends DerbyConnector
      * Updates the segments table with the supplied SQL query format and arguments.
      *
      * @param sqlFormat the SQL query format with %s placeholder for the table name and ? for each query {@code args}
-     * @param args the arguments to be substituted into the SQL query
+     * @param args      the arguments to be substituted into the SQL query
      * @return the number of rows affected by the update operation
      */
     public int update(String sqlFormat, Object... args)
@@ -295,9 +320,9 @@ public class TestDerbyConnector extends DerbyConnector
     public String getTableName()
     {
       return this.rule.metadataTablesConfigSupplier()
-                 .get()
-                 .getSegmentsTable()
-                 .toUpperCase(Locale.ENGLISH);
+                      .get()
+                      .getSegmentsTable()
+                      .toUpperCase(Locale.ENGLISH);
     }
   }
 
