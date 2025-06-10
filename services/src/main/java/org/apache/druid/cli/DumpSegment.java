@@ -470,7 +470,7 @@ public class DumpSegment extends GuiceRunnable
                   jg.writeFieldName("path");
                   jg.writeString(NestedPathFinder.toNormalizedJsonPath(field));
                   jg.writeFieldName("types");
-                  Set<ColumnType> types = nestedDataColumn.getColumnTypes(field);
+                  Set<ColumnType> types = nestedDataColumn.getFieldTypes(field);
                   jg.writeStartArray();
                   for (ColumnType type : types) {
                     jg.writeString(type.asTypeString());
@@ -617,7 +617,7 @@ public class DumpSegment extends GuiceRunnable
                     jg.writeFieldName(path);
                     jg.writeStartObject();
                     jg.writeFieldName("types");
-                    Set<ColumnType> types = nestedDataColumn.getColumnTypes(pathParts);
+                    Set<ColumnType> types = nestedDataColumn.getFieldTypes(pathParts);
                     jg.writeStartArray();
                     for (ColumnType type : types) {
                       jg.writeString(type.asTypeString());

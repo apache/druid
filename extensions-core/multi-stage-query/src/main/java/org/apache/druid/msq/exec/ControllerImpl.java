@@ -381,7 +381,7 @@ public class ControllerImpl implements Controller
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
       this.queryStartTime = DateTimes.nowUtc();
       context.registerController(this, closer);
-      queryDef = initializeQueryDefAndState(closer);
+      queryDef = initializeQueryDefAndState();
 
       this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
       this.workerSketchFetcher = new WorkerSketchFetcher(
@@ -657,7 +657,7 @@ public class ControllerImpl implements Controller
     }
   }
 
-  private QueryDefinition initializeQueryDefAndState(final Closer closer)
+  private QueryDefinition initializeQueryDefAndState()
   {
     this.selfDruidNode = context.selfNode();
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);

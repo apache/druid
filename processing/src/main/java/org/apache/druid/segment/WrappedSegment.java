@@ -23,29 +23,21 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.util.Optional;
 
 /**
- * Simple {@link SegmentReference} implementation for a segment that wraps a base segment such as
+ * Simple {@link Segment} implementation for a segment that wraps a base segment such as
  * {@link UnnestSegment} or {@link FilteredSegment}
  */
-public abstract class WrappedSegmentReference implements SegmentReference
+public abstract class WrappedSegment implements Segment
 {
-  protected final SegmentReference delegate;
+  protected final Segment delegate;
 
-  public WrappedSegmentReference(
-      SegmentReference delegate
+  public WrappedSegment(
+      Segment delegate
   )
   {
     this.delegate = delegate;
-  }
-
-  @Override
-  public Optional<Closeable> acquireReferences()
-  {
-    return delegate.acquireReferences();
   }
 
   @Override
@@ -76,12 +68,6 @@ public abstract class WrappedSegmentReference implements SegmentReference
   public void close() throws IOException
   {
     delegate.close();
-  }
-
-  @Override
-  public String asString()
-  {
-    return delegate.asString();
   }
 }
 

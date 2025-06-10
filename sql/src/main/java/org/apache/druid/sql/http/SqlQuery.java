@@ -22,15 +22,30 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.api.container.ContainerException;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.server.initialization.jetty.HttpException;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -199,5 +214,134 @@ public class SqlQuery
   public SqlQuery withQueryContext(Map<String, Object> newContext)
   {
     return new SqlQuery(query, resultFormat, header, typesHeader, sqlTypesHeader, newContext, parameters);
+  }
+
+  /**
+   * Extract SQL query object or SQL text from an HTTP Request
+   */
+  @FunctionalInterface
+  interface ISqlQueryExtractor<T>
+  {
+    T extract() throws IOException;
+  }
+
+  /**
+   * For BROKERs to use.
+   * <p>
+   * Brokers use com.sun.jersey upon Jetty for RESTful API, however jersey intØernally has special handling for x-www-form-urlencoded,
+   * it's not able to get the data from the stream of HttpServletRequest for such content type.
+   * So we use HttpContext to get the request entity/string instead of using HttpServletRequest.
+   *
+   * @throws HttpException if the content type is not supported or the SQL query is malformed
+   */
+  public static SqlQuery from(HttpContext httpContext) throws HttpException
+  {
+    return from(
+        httpContext.getRequest().getRequestHeaders().getFirst(HttpHeaders.CONTENT_TYPE),
+        () -> {
+          try {
+            return httpContext.getRequest().getEntity(SqlQuery.class);
+          }
+          catch (ContainerException e) {
+            if (e.getCause() instanceof JsonParseException) {
+              throw new HttpException(
+                  Response.Status.BAD_REQUEST,
+                  StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getCause().getMessage())
+              );
+            } else {
+              throw e;
+            }
+          }
+        },
+        () -> httpContext.getRequest().getEntity(String.class)
+    );
+  }
+
+  /**
+   * For Router to use
+   *
+   * @throws HttpException if the content type is not supported or the SQL query is malformed
+   */
+  public static SqlQuery from(HttpServletRequest request, ObjectMapper objectMapper) throws HttpException
+  {
+    return from(
+        request.getContentType(),
+        () -> objectMapper.readValue(request.getInputStream(), SqlQuery.class),
+        () -> new String(IOUtils.toByteArray(request.getInputStream()), StandardCharsets.UTF_8)
+    );
+  }
+
+  private static SqlQuery from(
+      String contentType,
+      ISqlQueryExtractor<SqlQuery> jsonQueryExtractor,
+      ISqlQueryExtractor<String> rawQueryExtractor
+  ) throws HttpException
+  {
+    try {
+      if (MediaType.APPLICATION_JSON.equals(contentType)) {
+
+        SqlQuery sqlQuery = jsonQueryExtractor.extract();
+        if (sqlQuery == null) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
+        return sqlQuery;
+
+      } else if (MediaType.TEXT_PLAIN.equals(contentType)) {
+
+        String sql = rawQueryExtractor.extract().trim();
+        if (sql.isEmpty()) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
+
+        return new SqlQuery(sql, null, false, false, false, null, null);
+
+      } else if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
+
+        String sql = rawQueryExtractor.extract().trim();
+        if (sql.isEmpty()) {
+          throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+        }
+
+        try {
+          sql = URLDecoder.decode(sql, StandardCharsets.UTF_8);
+        }
+        catch (IllegalArgumentException e) {
+          throw new HttpException(
+              Response.Status.BAD_REQUEST,
+              "Unable to decode URL-Encoded SQL query: " + e.getMessage()
+          );
+        }
+
+        return new SqlQuery(sql, null, false, false, false, null, null);
+
+      } else {
+        throw new HttpException(
+            Response.Status.UNSUPPORTED_MEDIA_TYPE,
+            StringUtils.format(
+                "Unsupported Content-Type: %s. Only application/json, text/plain or application/x-www-form-urlencoded is supported.",
+                contentType
+            )
+        );
+      }
+    }
+    catch (MismatchedInputException e) {
+      if (e.getOriginalMessage().endsWith("end-of-input")) {
+        throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
+      } else {
+        throw new HttpException(
+            Response.Status.BAD_REQUEST,
+            StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getMessage())
+        );
+      }
+    }
+    catch (JsonParseException e) {
+      throw new HttpException(
+          Response.Status.BAD_REQUEST,
+          StringUtils.format("Malformed SQL query wrapped in JSON: %s", e.getMessage())
+      );
+    }
+    catch (IOException e) {
+      throw new HttpException(Response.Status.BAD_REQUEST, "Unable to read query from request: " + e.getMessage());
+    }
   }
 }

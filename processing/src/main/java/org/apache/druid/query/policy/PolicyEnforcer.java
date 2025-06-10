@@ -25,8 +25,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.SegmentId;
 
 /**
@@ -66,20 +66,20 @@ public interface PolicyEnforcer
   }
 
   /**
-   * Validates a {@link SegmentReference} against the policy enforcer. Prior to query execution, the {@link SegmentReference} tree is walked.
-   * This method is invoked once for each {@link org.apache.druid.segment.RestrictedSegment} and once for each {@link ReferenceCountingSegment}
+   * Validates a {@link Segment} against the policy enforcer. Prior to query execution, the {@link Segment} tree is walked.
+   * This method is invoked once for each {@link org.apache.druid.segment.RestrictedSegment} and once for each {@link ReferenceCountedSegmentProvider}
    * that is not wrapped inside a {@link org.apache.druid.segment.RestrictedSegment}.
    * <p>
-   * Direct invocation of this method is discouraged; use {@link SegmentReference#validateOrElseThrow(PolicyEnforcer)} instead.
+   * Direct invocation of this method is discouraged; use {@link Segment#validateOrElseThrow(PolicyEnforcer)} instead.
    *
    * @param segment the segment to validate
    * @param policy  the policy on the segment, {@link org.apache.druid.segment.RestrictedSegment#policy} or null for other
    * @throws DruidException if the segment does not comply with the policy
    */
-  default void validateOrElseThrow(ReferenceCountingSegment segment, Policy policy) throws DruidException
+  default void validateOrElseThrow(Segment segment, Policy policy) throws DruidException
   {
     SegmentId segmentId = segment.getId();
-    // SegmentId is null if the segment is not table based, or is already closed
+    // SegmentId is null if the segment is not table based
     if (segmentId == null) {
       return;
     }

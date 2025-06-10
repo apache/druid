@@ -41,7 +41,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
@@ -194,10 +194,11 @@ public class IndexedTableJoinCursorBenchmark
 
     hashJoinSegment = closer.register(
         new HashJoinSegment(
-            ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+            ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment).acquireReference().orElseThrow(),
             null,
             clauses,
-            preAnalysis
+            preAnalysis,
+            () -> {}
         )
     );
   }

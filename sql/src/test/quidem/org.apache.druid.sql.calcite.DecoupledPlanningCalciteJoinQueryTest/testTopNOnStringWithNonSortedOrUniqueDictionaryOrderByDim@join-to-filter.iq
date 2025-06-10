@@ -1,4 +1,4 @@
-# testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim@join-to-filter case-crc:a676ed8c
+# testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim@join-to-filter case-crc:27afae27
 # quidem testcase reason: EQUIV_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -9,6 +9,7 @@
 !set plannerStrategy DECOUPLED
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set sqlQueryId dummy
+!set useLexicographicTopN true
 !set outputformat mysql
 !use druidtest:///
 SELECT druid.broadcast.dim4, COUNT(*)

@@ -145,6 +145,22 @@ public class Parser
   }
 
   /**
+   * Create an {@link IdentifierExpr} for some identifier
+   */
+  public static Expr identifier(String identifier)
+  {
+    return new IdentifierExpr(identifier);
+  }
+
+  /**
+   * Create a {@link StringExpr} for a string constant
+   */
+  public static Expr constant(String constant)
+  {
+    return new StringExpr(constant);
+  }
+
+  /**
    * Flatten an {@link Expr}, evaluating expressions on constants where possible to simplify the {@link Expr}.
    */
   public static Expr flatten(Expr expr)

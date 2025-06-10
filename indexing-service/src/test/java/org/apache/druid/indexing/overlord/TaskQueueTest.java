@@ -82,6 +82,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -435,14 +436,14 @@ public class TaskQueueTest extends IngestionTestBase
     // Kill the task, send announcement and wait for TaskQueue to handle update
     taskQueue.shutdown(taskId, "shutdown");
     taskRunner.taskAddedOrUpdated(
-        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
+        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown on runner"), taskLocation),
         workerHolder
     );
     taskQueue.manageQueuedTasks();
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
-    serviceEmitter.verifyEmitted("task/run/time", 1);
+    serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
     CoordinatorRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
     Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));

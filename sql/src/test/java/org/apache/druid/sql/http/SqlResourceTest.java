@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
@@ -278,9 +279,8 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         stubServiceEmitter,
         testRequestLogger,
@@ -297,7 +297,7 @@ public class SqlResourceTest extends CalciteTestBase
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            sqlToolbox,
+            sqlToolbox.withEngine(engine),
             sqlQuery,
             req,
             validateAndAuthorizeLatchSupplier,
@@ -323,12 +323,13 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -403,6 +404,14 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void test_getEnabled()
+  {
+    Response response = resource.getSupportedEngines(req);
+    Set<EngineInfo> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getEngines();
+    Assert.assertTrue(supportedEngines.contains(new EngineInfo(NativeSqlEngine.NAME)));
+  }
+
+  @Test
   public void testCountStarWithMissingIntervalsContext() throws Exception
   {
     final SqlQuery sqlQuery = new SqlQuery(
@@ -425,16 +434,32 @@ public class SqlResourceTest extends CalciteTestBase
 
     final MockHttpServletResponse response = postForAsyncResponse(sqlQuery, makeRegularUserReq());
 
-    Assert.assertEquals(
+    // In tests, MockHttpServletResponse stores headers as a MultiMap.
+    // This allows the same header key to be set multiple times (e.g., once at the start and once at the end of query processing).
+    // As a result, we observe duplicate context entries for this test in the expected set.
+    // This differs from typical behavior for other headers, where a new value would overwrite any previously set value.
+    final Object expectedMissingHeaders = ImmutableList.of(
         ImmutableMap.of(
             "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
             "uncoveredIntervalsOverflowed", "true"
         ),
-        JSON_MAPPER.readValue(
-            Iterables.getOnlyElement(response.headers.get("X-Druid-Response-Context")),
-            Map.class
+        ImmutableMap.of(
+            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
+            "uncoveredIntervalsOverflowed", "true"
         )
     );
+    final Object observedMissingHeaders = response.headers.get("X-Druid-Response-Context").stream()
+                                                           .map(s -> {
+                                                             try {
+                                                               return JSON_MAPPER.readValue(s, new TypeReference<Map<String, String>>() {});
+                                                             }
+                                                             catch (JsonProcessingException e) {
+                                                               throw new RuntimeException(e);
+                                                             }
+                                                           })
+                                                           .collect(Collectors.toList());
+
+    Assert.assertEquals(expectedMissingHeaders, observedMissingHeaders);
 
     Object results = JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class);
 
@@ -1632,8 +1657,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1648,6 +1671,8 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );

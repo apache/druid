@@ -32,12 +32,19 @@ public class Tasks
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
 
+  /**
+   * Priority of embedded kill tasks. Kept lower than batch and realtime tasks
+   * to allow them to preempt embbedded kill tasks.
+   */
+  public static final int DEFAULT_EMBEDDED_KILL_TASK_PRIORITY = 25;
+
   static {
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
 
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
+  public static final long DEFAULT_SUB_TASK_TIMEOUT_MILLIS = 0;
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
   public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = false;
@@ -46,6 +53,7 @@ public class Tasks
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
+  public static final String SUB_TASK_TIMEOUT_KEY = "subTaskTimeoutMillis";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
   public static final String USE_SHARED_LOCK = "useSharedLock";

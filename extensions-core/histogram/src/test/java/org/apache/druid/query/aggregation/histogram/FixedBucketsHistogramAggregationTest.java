@@ -37,7 +37,10 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -48,7 +51,7 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlingTest
 {
-  private AggregationTestHelper helper;
+  private final AggregationTestHelper helper;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -82,13 +85,43 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
   @Test
   public void testIngestWithNullsIgnoredAndQuery() throws Exception
   {
-    MapBasedRow row = ingestAndQuery();
+    MapBasedRow row = ingestAndQuery(this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"));
+    FixedBucketsHistogram histogram = (FixedBucketsHistogram) row.getRaw("index_fbh");
+    Assert.assertEquals(5, histogram.getCount());
     Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
     Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
     Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
-  private MapBasedRow ingestAndQuery() throws Exception
+  /**
+   * When {@link org.apache.druid.segment.RowCombiningTimeAndDimsIterator#moveToNext} is merging indexes,
+   * if {@link org.apache.druid.segment.MergingRowIterator#hasTimeAndDimsChangedSinceMark} is false, then
+   * {@link org.apache.druid.query.aggregation.AggregateCombiner#reset} gets called. This is the only path
+   * that calls this method.
+   */
+  @Test
+  public void testAggregateCombinerReset() throws Exception
+  {
+    String inputRows = "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t10\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t20\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t30\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t40\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t50\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t10\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t20\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t30\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t40\n"
+                       + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t50\n";
+    MapBasedRow row = ingestAndQuery(new ByteArrayInputStream(inputRows.getBytes(StandardCharsets.UTF_8)));
+    FixedBucketsHistogram histogram = (FixedBucketsHistogram) row.getRaw("index_fbh");
+    Assert.assertEquals(10, histogram.getCount());
+    Assert.assertEquals(10, row.getMetric("index_min").floatValue(), 0.0001);
+    Assert.assertEquals(50, row.getMetric("index_max").floatValue(), 0.0001);
+    // Current interpolation logic doesn't consider min/max: it assumes the values seen were evenly-distributed between 50 and 51.
+    Assert.assertEquals(50.95, row.getMetric("index_quantile").floatValue(), 0.0001);
+  }
+
+  private MapBasedRow ingestAndQuery(InputStream inputDataStream) throws Exception
   {
     String ingestionAgg = FixedBucketsHistogramAggregator.TYPE_NAME;
 
@@ -132,7 +165,8 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
                    + "   \"numBuckets\": 200,"
                    + "   \"lowerLimit\": 0,"
                    + "   \"upperLimit\": 200,"
-                   + "   \"outlierHandlingMode\": \"overflow\""
+                   + "   \"outlierHandlingMode\": \"overflow\","
+                   + "   \"finalizeAsBase64Binary\": true"
                    + "  }"
                    + "],"
                    + "\"postAggregations\": ["
@@ -144,12 +178,12 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
                    + "}";
 
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
+        inputDataStream,
         parseSpec,
         metricSpec,
         0,
         Granularities.NONE,
-        50000,
+        5, // ensure we get more than one index, to test merging
         query
     );
 
