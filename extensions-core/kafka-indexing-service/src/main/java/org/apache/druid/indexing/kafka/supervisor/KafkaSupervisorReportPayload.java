@@ -75,7 +75,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
   {
     return "KafkaSupervisorReportPayload{" +
            "id='" + getId() + '\'' +
-           ",dataSource='" + getDataSource() + '\'' +
+           ", dataSource='" + getDataSource() + '\'' +
            ", topic='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +
            ", replicas=" + getReplicas() +

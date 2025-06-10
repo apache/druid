@@ -380,7 +380,7 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      String taskGroup,
+      String taskAllocatorId,
       @Nullable SegmentSchemaMapping segmentSchemaMapping,
       @Nullable String supervisorId
   );
