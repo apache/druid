@@ -323,7 +323,7 @@ export function getSqlCompletions({
 }
 
 export function getSqlLiterals(sqlText: string, maxWords: number): string[] {
-  const literalRegexp = /'[^'\n]+'/g;
+  const literalRegexp = /'[^'\n]{2,}'/g;
   const matches = (sqlText.match(literalRegexp) || []).map(stripOuterChars);
 
   return uniq(matches).slice(0, maxWords);

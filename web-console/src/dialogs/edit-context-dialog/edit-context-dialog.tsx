@@ -17,10 +17,14 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { JsonInput } from '../../components';
 import type { QueryContext } from '../../druid-models';
+import { AppToaster } from '../../singletons';
+
+import { QUERY_CONTEXT_COMPLETIONS } from './query-context-completions';
 
 import './edit-context-dialog.scss';
 
@@ -34,7 +38,7 @@ export const EditContextDialog = React.memo(function EditContextDialog(
   props: EditContextDialogProps,
 ) {
   const { initQueryContext, onQueryContextChange, onClose } = props;
-  const [queryContext, setQueryContext] = useState<QueryContext | undefined>(initQueryContext);
+  const [queryContext, setQueryContext] = useState<QueryContext>(initQueryContext || {});
   const [jsonError, setJsonError] = useState<Error | undefined>();
 
   return (
@@ -45,6 +49,7 @@ export const EditContextDialog = React.memo(function EditContextDialog(
         setError={setJsonError}
         height="100%"
         showLineNumbers
+        jsonCompletions={QUERY_CONTEXT_COMPLETIONS}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -52,11 +57,16 @@ export const EditContextDialog = React.memo(function EditContextDialog(
           <Button
             text="Save"
             intent={Intent.PRIMARY}
-            disabled={Boolean(jsonError)}
             onClick={() => {
-              if (queryContext) {
-                onQueryContextChange(queryContext);
+              if (jsonError) {
+                AppToaster.show({
+                  icon: IconNames.ERROR,
+                  intent: Intent.DANGER,
+                  message: jsonError.message,
+                });
+                return;
               }
+              onQueryContextChange(queryContext);
               onClose();
             }}
           />

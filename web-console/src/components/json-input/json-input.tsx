@@ -61,7 +61,7 @@ function deepEqual(a: any, b: any): boolean {
 }
 
 interface InternalValue {
-  value?: any;
+  lastShownValue: any;
   error?: Error;
   stringified: string;
 }
@@ -93,16 +93,16 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     jsonCompletions,
   } = props;
   const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
-    value,
+    lastShownValue: value,
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
   const aceEditor = useRef<Ace.Editor | undefined>();
 
   useEffect(() => {
-    if (deepEqual(value, internalValue.value)) return;
+    if (deepEqual(value, internalValue.lastShownValue)) return;
     setInternalValue({
-      value,
+      lastShownValue: value,
       stringified: stringifyJson(value),
     });
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -157,7 +157,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           }
 
           setInternalValue({
-            value,
+            lastShownValue: value ?? internalValue.lastShownValue,
             error,
             stringified: inputJson,
           });
