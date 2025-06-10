@@ -70,52 +70,50 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     final Path segmentPath = getPath(segment);
     log.info("Killing segment[%s] mapped to path[%s]", segment.getId(), segmentPath);
 
-    try {
+    try (final FileSystem fs = segmentPath.getFileSystem(config)) {
       String filename = segmentPath.getName();
-      try (final FileSystem fs = segmentPath.getFileSystem(config)) {
-        if (!filename.endsWith(".zip")) {
-          throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
-        } else {
+      if (!filename.endsWith(".zip")) {
+        throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
+      } else {
 
-          if (!fs.exists(segmentPath)) {
-            log.warn("Segment path [%s] does not exist", segmentPath);
-            return;
-          }
-
-          // There are 3 supported path formats:
-          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
-          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
-          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
-          String[] zipParts = filename.split("_");
-
-          Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
-          if (zipParts.length > 1) {
-            Preconditions.checkState(zipParts.length <= 3 &&
-                                     StringUtils.isNumeric(zipParts[0]) &&
-                                     "index.zip".equals(zipParts[zipParts.length - 1]),
-                                     "Unexpected segmentPath format [%s]", segmentPath
-            );
-
-            descriptorPath = new Path(
-                segmentPath.getParent(),
-                org.apache.druid.java.util.common.StringUtils.format(
-                    "%s_%sdescriptor.json",
-                    zipParts[0],
-                    zipParts.length == 2 ? "" : zipParts[1] + "_"
-                )
-            );
-          }
-
-          if (!fs.delete(segmentPath, false)) {
-            throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
-          }
-
-          // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
-          // anymore, but we still delete them if exists.
-          fs.delete(descriptorPath, false);
-
-          removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
+        if (!fs.exists(segmentPath)) {
+          log.warn("Segment path [%s] does not exist", segmentPath);
+          return;
         }
+
+        // There are 3 supported path formats:
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
+        String[] zipParts = filename.split("_");
+
+        Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
+        if (zipParts.length > 1) {
+          Preconditions.checkState(zipParts.length <= 3 &&
+                          StringUtils.isNumeric(zipParts[0]) &&
+                          "index.zip".equals(zipParts[zipParts.length - 1]),
+                  "Unexpected segmentPath format [%s]", segmentPath
+          );
+
+          descriptorPath = new Path(
+                  segmentPath.getParent(),
+                  org.apache.druid.java.util.common.StringUtils.format(
+                          "%s_%sdescriptor.json",
+                          zipParts[0],
+                          zipParts.length == 2 ? "" : zipParts[1] + "_"
+                  )
+          );
+        }
+
+        if (!fs.delete(segmentPath, false)) {
+          throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
+        }
+
+        // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+        // anymore, but we still delete them if exists.
+        fs.delete(descriptorPath, false);
+
+        removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
       }
     }
     catch (IOException e) {
