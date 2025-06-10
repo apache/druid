@@ -20,15 +20,10 @@
 package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.KeyColumn;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.logical.DagInputSpec.DagStageInputSpec;
@@ -36,8 +31,6 @@ import org.apache.druid.msq.logical.DagInputSpec.PhysicalInputSpec;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractFrameProcessorStage;
 import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractShuffleStage;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
-import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
@@ -71,36 +64,9 @@ public class StageMaker
     return ScanQueryFrameProcessorFactory.makeScanFrameProcessor(virtualColumns, signature, dimFilter);
   }
 
-  private ShuffleSpec shuffleFor(List<KeyColumn> keyColumns)
-  {
-    if (keyColumns == null) {
-      return MixShuffleSpec.instance();
-    } else {
-
-      final Granularity segmentGranularity = Granularities.ALL;
-      // FIXME:
-      // QueryKitUtils.getSegmentGranularityFromContext(jsonMapper,
-      // queryToRun.getContext());
-
-      final ClusterBy clusterBy = QueryKitUtils
-          .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
-      // FIXME targetSize == 1
-      return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
-    }
-  }
-
   private int getNextStageId()
   {
     return stageIdSeq++;
-  }
-
-  private String getIdForBuilder()
-  {
-    String dartQueryId = plannerContext.queryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
-    if (dartQueryId != null) {
-      return dartQueryId;
-    }
-    return plannerContext.getSqlQueryId();
   }
 
   public StageDefinitionBuilder buildStage(LogicalStage stage)
@@ -109,12 +75,12 @@ public class StageMaker
       return buildFrameProcessorStage((AbstractFrameProcessorStage) stage);
     }
     if (stage instanceof AbstractShuffleStage) {
-      return buildDistributeStage((AbstractShuffleStage) stage);
+      return buildShuffleStage((AbstractShuffleStage) stage);
     }
-    throw DruidException.defensive("d" + stage.getClass());
+    throw DruidException.defensive("Cannot build type [%s]", stage.getClass().getSimpleName());
   }
 
-  public StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
+  private StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
   {
     List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
     List<InputSpec> inputSpecs = new ArrayList<>();
@@ -130,7 +96,7 @@ public class StageMaker
     return sdb;
   }
 
-  private StageDefinitionBuilder buildDistributeStage(AbstractShuffleStage stage)
+  private StageDefinitionBuilder buildShuffleStage(AbstractShuffleStage stage)
   {
     List<DagInputSpec> inputs = stage.inputSpecs;
     List<InputSpec> inputSpecs = new ArrayList<>();
@@ -138,12 +104,11 @@ public class StageMaker
       inputSpecs.add(buildInputSpec(dagInputSpec));
     }
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
-    sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getSignature(), null));
     sdb.inputs(inputSpecs);
     sdb.signature(stage.getSignature());
+    sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getSignature(), null));
     sdb.shuffleSpec(stage.buildShuffleSpec());
     return sdb;
-
   }
 
   private StageDefinitionBuilder newStageDefinitionBuilder()
@@ -180,5 +145,14 @@ public class StageMaker
       ret.add(stageDefinitionBuilder.build(getIdForBuilder()));
     }
     return ret;
+  }
+
+  private String getIdForBuilder()
+  {
+    String dartQueryId = plannerContext.queryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+    if (dartQueryId != null) {
+      return dartQueryId;
+    }
+    return plannerContext.getSqlQueryId();
   }
 }
