@@ -241,9 +241,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     return sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
+        queryPlus.sqlNode(),
         queryContext,
-        hook,
-        false
+        hook
     );
   }
 

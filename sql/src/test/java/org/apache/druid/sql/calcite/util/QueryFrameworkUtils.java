@@ -368,9 +368,9 @@ public class QueryFrameworkUtils
           return plannerFactory.createPlanner(
               engine,
               queryPlus.sql(),
+              queryPlus.sqlNode(),
               queryContext,
-              hook,
-              true
+              hook
           );
         }
       };
@@ -387,9 +387,9 @@ public class QueryFrameworkUtils
           return plannerFactory.createPlanner(
               engine,
               queryPlus.sql(),
+              queryPlus.sqlNode(),
               queryContext,
-              hook,
-              true
+              hook
           );
         }
 
