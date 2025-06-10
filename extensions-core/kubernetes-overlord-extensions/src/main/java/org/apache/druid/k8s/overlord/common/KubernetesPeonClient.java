@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -106,7 +105,7 @@ public class KubernetesPeonClient
                          }, howLong, timeUnit);
       
       if (result == null) {
-        throw new ISE(StringUtils.format("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId()));
+        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
