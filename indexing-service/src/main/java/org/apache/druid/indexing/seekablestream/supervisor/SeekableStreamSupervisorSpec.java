@@ -96,7 +96,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   )
   {
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
-    this.id = Preconditions.checkNotNull(Configs.valueOrDefault(id, ingestionSchema.getDataSchema().getDataSource()), "id cannot be null!");
+    this.id = Preconditions.checkNotNull(Configs.valueOrDefault(id, ingestionSchema.getDataSchema().getDataSource()), "spec id cannot be null!");
     this.context = context;
 
     this.taskStorage = taskStorage;

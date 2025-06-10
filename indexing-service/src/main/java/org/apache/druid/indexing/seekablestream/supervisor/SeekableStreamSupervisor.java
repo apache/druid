@@ -2617,7 +2617,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             .stream()
             .map(x -> {
               Optional<Task> taskOptional = taskStorage.getTask(x);
-              if (!taskOptional.isPresent() || !this.doesTaskMatchSupervisor(taskOptional.get())) {
+              if (!taskOptional.isPresent() || !doesTaskMatchSupervisor(taskOptional.get())) {
                 return false;
               }
               @SuppressWarnings("unchecked")
@@ -2675,7 +2675,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       genericTask = taskStorage.getTask(taskId).orNull();
     }
 
-    if (genericTask == null || !this.doesTaskMatchSupervisor(genericTask)) {
+    if (genericTask == null || !doesTaskMatchSupervisor(genericTask)) {
       return false;
     }
 
