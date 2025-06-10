@@ -36,25 +36,10 @@ public class LogicalStageToQueryDefinitionTranslator
 
   public QueryDefinition translate(LogicalStage logicalStage)
   {
-    // return QueryDefinition.create(buildStageDefinitions(new StageMaker()),
-    // plannerContext.queryContext());
-
     StageMaker maker = new StageMaker(plannerContext);
     StageDefinitionBuilder stage = maker.buildStage(logicalStage);
 
-
-    if(true)
-     {
-      return maker.buildQueryDefinition();
-      // logicalStage.buildCurrentStage2(maker);
-    }
-
-    if (true) {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    // QueryDefinition.create();
-    return null;
-
+    return maker.buildQueryDefinition();
   }
 
 }

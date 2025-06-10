@@ -249,16 +249,11 @@ public class LogicalStageBuilder
       if(stage instanceof DistributeStage1) {
         return buildDistributeStage((DistributeStage1) stage);
       }
-
       throw  DruidException.defensive("d"+stage.getClass());
-
     }
 
     public void buildStage(AbstractLogicalStage stage)
     {
-//      if(stage instanceof FrameProcessorStage1) {
-//        buildStage((FrameProcessorStage1)stage);
-//      }
       List<DagInputSpec> inputs = stage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
       for (DagInputSpec dagInputSpec : inputs) {
