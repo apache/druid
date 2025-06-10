@@ -108,35 +108,6 @@ public class LogicalStageBuilder
     }
   }
 
-  public static class ShuffleStage implements DagStage
-  {
-    private DagStage inputStage;
-    private RowSignature signature;
-    private List<KeyColumn> keyColumns;
-
-    public ShuffleStage(DagStage inputStage, RowSignature signature, List<KeyColumn> keyColumns)
-    {
-      this.inputStage = inputStage;
-      this.signature = signature;
-      this.keyColumns = keyColumns;
-    }
-
-    @Override
-    public StageDefinitionBuilder buildStages(StageMaker stageMaker)
-    {
-      StageDefinitionBuilder sdb = inputStage.buildStages(stageMaker);
-      sdb.signature(signature);
-      sdb.shuffleSpec(stageMaker.shuffleFor(keyColumns));
-      return sdb;
-    }
-  }
-
-  int stageIdSeq = 0;
-  private int getNextStageId()
-  {
-    return stageIdSeq++;
-  }
-
   public static class StageMaker
   {
     /** Provides ids for the stages. */
@@ -152,14 +123,6 @@ public class LogicalStageBuilder
      this.plannerContext = plannerContext;
    }
 
-
-   public DagStage makeFrameProcessorStage(
-       List<InputSpec> inputSpecs,
-       RowSignature signature,
-       FrameProcessorFactory<?, ?, ?> processorFactory)
-   {
-     return new FrameProcessorStage(inputSpecs, signature, processorFactory);
-   }
 
     public ScanQueryFrameProcessorFactory makeScanFrameProcessor(
         VirtualColumns virtualColumns,
@@ -196,12 +159,10 @@ public class LogicalStageBuilder
       }
     }
 
-
     private int getNextStageId()
     {
       return stageIdSeq++;
     }
-
 
     private String getIdForBuilder()
     {
@@ -212,35 +173,6 @@ public class LogicalStageBuilder
       return plannerContext.getSqlQueryId();
     }
 
-    public List<InputSpec> makeInputStages(List<DagInputSpec> inputSpecs)
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
-
-    public DagStage makeShuffleStage(List<InputSpec> inputStages, RowSignature signature, List<KeyColumn> keyColumns)
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
-
-    public List<StageDefinition> getStages()
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
     public StageDefinitionBuilder buildStage(LogicalStage stage)
     {
       if(stage instanceof FrameProcessorStage1) {
@@ -252,16 +184,6 @@ public class LogicalStageBuilder
       throw  DruidException.defensive("d"+stage.getClass());
     }
 
-    public void buildStage(AbstractLogicalStage stage)
-    {
-      List<DagInputSpec> inputs = stage.inputSpecs;
-      List<InputSpec> inputSpecs = new ArrayList<>();
-      for (DagInputSpec dagInputSpec : inputs) {
-        inputSpecs.add(buildInputSpec(dagInputSpec));
-      }
-      stage.buildCurrentStage(this, inputSpecs);
-
-    }
 
     public StageDefinitionBuilder buildFrameProcessorStage(FrameProcessorStage1 frameProcessorStage)
     {
@@ -354,8 +276,6 @@ public class LogicalStageBuilder
       this(signature, Collections.singletonList(input));
       //getNextStageId();
     }
-
-    protected abstract void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2);
 
     public AbstractLogicalStage(RowSignature signature, List<DagInputSpec> inputs)
     {
@@ -463,14 +383,6 @@ public class LogicalStageBuilder
       );
     }
 
-    @Override
-    protected void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2)
-    {
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-
-      stageMaker.makeFrameProcessorStage(inputSpecs2, signature, scanFrameProcessor);
-    }
 
     @Override
     protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
@@ -596,17 +508,6 @@ public class LogicalStageBuilder
     public RowSignature getLogicalRowSignature()
     {
       return inputStage.getLogicalRowSignature();
-    }
-
-
-    @Override
-    protected void buildCurrentStage(StageMaker stageMaker, List<InputSpec> inputSpecs2)
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-
     }
 
     @Override
