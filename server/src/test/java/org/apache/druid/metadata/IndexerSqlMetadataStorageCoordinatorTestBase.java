@@ -65,6 +65,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class IndexerSqlMetadataStorageCoordinatorTestBase
@@ -563,68 +564,86 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
+    insertUsedSegments(dataSegments, upgradedFromSegmentIdMap, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertUsedSegments(
+          Set<DataSegment> dataSegments,
+          Map<String, String> upgradedFromSegmentIdMap,
+          TestDerbyConnector connector,
+          ObjectMapper jsonMapper
+  )
+  {
     final Set<DataSegmentPlus> usedSegments = new HashSet<>();
     for (DataSegment segment : dataSegments) {
       final DateTime now = DateTimes.nowUtc();
       usedSegments.add(
-          new DataSegmentPlus(
-              segment,
-              now,
-              now,
-              true,
-              null,
-              null,
-              upgradedFromSegmentIdMap.get(segment.getId().toString())
-          )
+              new DataSegmentPlus(
+                      segment,
+                      now,
+                      now,
+                      true,
+                      null,
+                      null,
+                      upgradedFromSegmentIdMap.get(segment.getId().toString())
+              )
       );
     }
 
-    insertSegments(usedSegments, false, derbyConnectorRule, jsonMapper);
+    insertSegments(usedSegments, false, connector, jsonMapper);
   }
 
   public static void insertSegments(
-      Set<DataSegmentPlus> dataSegments,
-      boolean includeSchema,
-      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
-      ObjectMapper jsonMapper
+          Set<DataSegmentPlus> dataSegments,
+          boolean includeSchema,
+          TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
+          ObjectMapper jsonMapper
   )
   {
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    insertSegments(dataSegments, includeSchema, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertSegments(
+          Set<DataSegmentPlus> dataSegments,
+          boolean includeSchema,
+          TestDerbyConnector connector,
+          ObjectMapper jsonMapper
+  ) {
+    final String table = connector.getMetadataTablesConfigSupplier().get().getSegmentsTable();
 
     final String sql = getSegmentInsertSql(includeSchema, table, connector);
     connector.retryWithHandle(
-        handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(sql);
-          for (DataSegmentPlus segmentPlus : dataSegments) {
-            final DataSegment segment = segmentPlus.getDataSegment();
-            String id = segment.getId().toString();
-            final PreparedBatchPart segmentRecord = preparedBatch.add();
-            segmentRecord.bind("id", id)
-                         .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
-                         .bind("start", segment.getInterval().getStart().toString())
-                         .bind("end", segment.getInterval().getEnd().toString())
-                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
-                         .bind("version", segment.getVersion())
-                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
-                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
-                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
+            handle -> {
+              PreparedBatch preparedBatch = handle.prepareBatch(sql);
+              for (DataSegmentPlus segmentPlus : dataSegments) {
+                final DataSegment segment = segmentPlus.getDataSegment();
+                String id = segment.getId().toString();
+                final PreparedBatchPart segmentRecord = preparedBatch.add();
+                segmentRecord.bind("id", id)
+                        .bind("dataSource", segment.getDataSource())
+                        .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
+                        .bind("start", segment.getInterval().getStart().toString())
+                        .bind("end", segment.getInterval().getEnd().toString())
+                        .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                        .bind("version", segment.getVersion())
+                        .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
+                        .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                        .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                        .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
 
-            if (includeSchema) {
-              segmentRecord.bind("num_rows", segmentPlus.getNumRows())
-                           .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
+                if (includeSchema) {
+                  segmentRecord.bind("num_rows", segmentPlus.getNumRows())
+                          .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
+                }
+              }
+
+              final int[] affectedRows = preparedBatch.execute();
+              final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+              if (!succeeded) {
+                throw new ISE("Failed to publish segments to DB");
+              }
+              return true;
             }
-          }
-
-          final int[] affectedRows = preparedBatch.execute();
-          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-          if (!succeeded) {
-            throw new ISE("Failed to publish segments to DB");
-          }
-          return true;
-        }
     );
   }
 

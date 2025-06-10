@@ -8,7 +8,6 @@ import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -34,49 +33,72 @@ public class SqlSegmentsMetadataQueryBenchmark {
 
   private static final DateTime JAN_1 = DateTimes.of("2025-01-01");
   private static final String V1 = JAN_1.toString();
-  private static final List<DataSegment> WIKI_SEGMENTS_2X5D
+  private static final List<DataSegment> WIKI_SEGMENTS_1000X100D
           = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
-          .forIntervals(10, Granularities.DAY)
-          .withNumPartitions(20)
+          .forIntervals(100, Granularities.DAY)
+          .withNumPartitions(1000)
           .startingAt(JAN_1)
           .withVersion(V1)
           .eachOfSizeInMb(500);
-  @Param({
-          "2025-01-01T00:00:00.000Z/2025-01-02T00:00:00.000Z",
-          "2025-01-09T00:00:00.000Z/2025-01-10T00:00:00.000Z",
-          "2025-01-01T00:00:00.000Z/2025-01-05T00:00:00.000Z",
-          "2025-01-01T00:00:00.000Z/2025-01-10T00:00:00.000Z",
-  })
-  private String queryIntervalStr;
-  private Interval queryInterval;
-  private TestDerbyConnector.DerbyConnectorRule derbyConnectorRule;
+
+  private TestDerbyConnector derbyConnector;
 
   @Setup(Level.Trial)
   public void setup() throws Exception {
-    this.derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-    derbyConnectorRule.beforeBenchmark();
-    derbyConnectorRule.getConnector().createSegmentTable();
-    insertSegments(WIKI_SEGMENTS_2X5D.toArray(new DataSegment[0]));
-    this.queryInterval = new Interval(this.queryIntervalStr);
+    this.derbyConnector = new TestDerbyConnector("druidBench");
+    derbyConnector.getDBI().open().close();
+    derbyConnector.createSegmentTable();
+    insertSegments(WIKI_SEGMENTS_1000X100D.toArray(new DataSegment[0]));
   }
 
   @TearDown(Level.Trial)
   public void tearDown() throws Exception {
-    derbyConnectorRule.afterBenchmark();
+    derbyConnector.tearDown();
   }
 
   @Benchmark
-  public void benchmarkRetrieveUsedSegments(Blackhole blackhole) {
-    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(this.queryInterval))));
+  public void benchmarkRetrieveUsedSegments_returnAllSegments(Blackhole blackhole) {
+    final Interval queryInterval = new Interval("2025-01-01T00:00:00.000Z/2025-04-11T00:00:00.000Z");
+    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval))));
+  }
+
+  @Benchmark
+  public void benchmarkRetrieveUsedSegments_returnEmpty(Blackhole blackhole) {
+    final Interval queryInterval = new Interval("2025-12-30T00:00:00.000Z/2025-12-31T00:00:00.000Z");
+    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval))));
+  }
+
+  @Benchmark
+  public void benchmarkRetrieveUsedSegments_returnFirstInterval(Blackhole blackhole) {
+    final Interval queryInterval = new Interval("2025-01-01T00:00:00.000Z/2025-01-02T00:00:00.000Z");
+    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval))));
+  }
+
+  @Benchmark
+  public void benchmarkRetrieveUsedSegments_returnLastInterval(Blackhole blackhole) {
+    final Interval queryInterval = new Interval("2025-04-10T00:00:00.000Z/2025-04-11T00:00:00.000Z");
+    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval))));
+  }
+
+
+  @Benchmark
+  public void benchmarkRetrieveUsedSegments_multipleIntervalsWithOverlaps(Blackhole blackhole) {
+    List<Interval> intervals = List.of(
+            new Interval("2025-01-01T00:00:00.000Z/2025-01-04T00:00:00.000Z"),
+            new Interval("2025-01-03T00:00:00.000Z/2025-01-18T00:00:00.000Z"),
+            new Interval("2025-02-01T00:00:00.000Z/2025-02-06T00:00:00.000Z"),
+            new Interval("2025-02-05T00:00:00.000Z/2025-02-24T00:00:00.000Z"),
+            new Interval("2025-03-10T00:00:00.000Z/2025-04-09T00:00:00.000Z")
+    );
+    blackhole.consume(readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, intervals)));
   }
 
   private <T> Set<T> readAsSet(Function<SqlSegmentsMetadataQuery, CloseableIterator<T>> iterableReader) {
-    final DerbyConnector connector = derbyConnectorRule.getConnector();
-    final MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    final MetadataStorageTablesConfig tablesConfig = derbyConnector.getMetadataTablesConfigSupplier().get();
 
-    return connector.inReadOnlyTransaction((handle, status) -> {
+    return derbyConnector.inReadOnlyTransaction((handle, status) -> {
       final SqlSegmentsMetadataQuery query =
-              SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, TestHelper.JSON_MAPPER);
+              SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, TestHelper.JSON_MAPPER);
 
       try (CloseableIterator<T> iterator = iterableReader.apply(query)) {
         return ImmutableSet.copyOf(iterator);
@@ -88,7 +110,7 @@ public class SqlSegmentsMetadataQueryBenchmark {
     IndexerSqlMetadataStorageCoordinatorTestBase.insertUsedSegments(
             Set.of(segments),
             Map.of(),
-            derbyConnectorRule,
+            derbyConnector,
             TestHelper.JSON_MAPPER
     );
   }

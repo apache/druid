@@ -49,6 +49,7 @@ import java.util.UUID;
 public class TestDerbyConnector extends DerbyConnector
 {
   private final String jdbcUri;
+  private final Supplier<MetadataStorageTablesConfig> dbTables;
 
   public TestDerbyConnector(
       Supplier<MetadataStorageConnectorConfig> config,
@@ -76,6 +77,16 @@ public class TestDerbyConnector extends DerbyConnector
   {
     super(new NoopMetadataStorageProvider().get(), config, dbTables, new DBI(jdbcUri + ";create=true"), centralizedDatasourceSchemaConfig);
     this.jdbcUri = jdbcUri;
+    this.dbTables = dbTables;
+  }
+
+  public TestDerbyConnector(String baseName) {
+    this(Suppliers.ofInstance(new MetadataStorageConnectorConfig()),  Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(baseName + dbSafeUUID())), CentralizedDatasourceSchemaConfig.create());
+  }
+
+  public Supplier<MetadataStorageTablesConfig> getMetadataTablesConfigSupplier()
+  {
+    return this.dbTables;
   }
 
   public void tearDown()
@@ -177,17 +188,6 @@ public class TestDerbyConnector extends DerbyConnector
     public PendingSegmentsTable pendingSegments()
     {
       return new PendingSegmentsTable(this);
-    }
-
-    public void beforeBenchmark()
-    {
-      before();
-    }
-
-    public void afterBenchmark()
-    {
-      this.getConnector().deleteAllSegmentRecords();
-      after();
     }
   }
 

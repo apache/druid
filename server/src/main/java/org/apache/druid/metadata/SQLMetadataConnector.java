@@ -1013,10 +1013,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  public void deleteAllSegmentRecords() {
-    deleteAllRecords(tablesConfigSupplier.get().getSegmentsTable());
-  }
-
   public void createSegmentSchemaTable(final String tableName)
   {
     createTable(
