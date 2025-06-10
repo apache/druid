@@ -84,7 +84,7 @@ public class KubernetesPeonClient
     return clientApi.executeRequest(client -> {
       String jobName = job.getMetadata().getName();
 
-      log.info("Submitting job [%s] for task [%s]", job.getMetadata().getName(), task.getId());
+      log.info("Submitting job[%s] for task[%s].", job.getMetadata().getName(), task.getId());
       client.batch()
             .v1()
             .jobs()
