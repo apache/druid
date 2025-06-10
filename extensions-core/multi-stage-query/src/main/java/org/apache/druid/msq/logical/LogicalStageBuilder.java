@@ -139,16 +139,16 @@ public class LogicalStageBuilder
 
     public StageDefinitionBuilder buildStage(LogicalStage stage)
     {
-      if (stage instanceof FrameProcessorStage1) {
-        return buildFrameProcessorStage((FrameProcessorStage1) stage);
+      if (stage instanceof AbstractFrameProcessorStage) {
+        return buildFrameProcessorStage((AbstractFrameProcessorStage) stage);
       }
-      if (stage instanceof DistributeStage1) {
-        return buildDistributeStage((DistributeStage1) stage);
+      if (stage instanceof AbstractShuffleStage) {
+        return buildDistributeStage((AbstractShuffleStage) stage);
       }
       throw DruidException.defensive("d" + stage.getClass());
     }
 
-    public StageDefinitionBuilder buildFrameProcessorStage(FrameProcessorStage1 frameProcessorStage)
+    public StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
     {
       List<DagInputSpec> inputs = frameProcessorStage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
@@ -164,7 +164,7 @@ public class LogicalStageBuilder
       return sdb;
     }
 
-    private StageDefinitionBuilder buildDistributeStage(DistributeStage1 stage)
+    private StageDefinitionBuilder buildDistributeStage(AbstractShuffleStage stage)
     {
       List<DagInputSpec> inputs = stage.inputSpecs;
       List<InputSpec> inputSpecs = new ArrayList<>();
@@ -246,34 +246,31 @@ public class LogicalStageBuilder
     }
   }
 
-  public abstract class FrameProcessorStage1 extends AbstractLogicalStage
+  public abstract class AbstractFrameProcessorStage extends AbstractLogicalStage
   {
-
-    public FrameProcessorStage1(RowSignature signature, DagInputSpec input)
+    public AbstractFrameProcessorStage(RowSignature signature, DagInputSpec input)
     {
       super(signature, input);
     }
 
     protected abstract BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker);
 
-    public FrameProcessorStage1(RowSignature signature, List<DagInputSpec> input)
+    public AbstractFrameProcessorStage(RowSignature signature, List<DagInputSpec> input)
     {
       super(signature, input);
     }
   }
 
-  // FIXME: rename
-  public abstract class DistributeStage1 extends AbstractLogicalStage
+  public abstract class AbstractShuffleStage extends AbstractLogicalStage
   {
-
-    public DistributeStage1(RowSignature signature, DagInputSpec input)
+    public AbstractShuffleStage(RowSignature signature, DagInputSpec input)
     {
       super(signature, input);
     }
 
     protected abstract ShuffleSpec buildShuffleSpec();
 
-    public DistributeStage1(RowSignature signature, List<DagInputSpec> input)
+    public AbstractShuffleStage(RowSignature signature, List<DagInputSpec> input)
     {
       super(signature, input);
     }
@@ -282,7 +279,7 @@ public class LogicalStageBuilder
   /**
    * Represents a stage that reads data from input sources.
    */
-  public class ReadStage extends FrameProcessorStage1
+  public class ReadStage extends AbstractFrameProcessorStage
   {
     public ReadStage(RowSignature signature, DagInputSpec inputSpecs)
     {
@@ -434,7 +431,7 @@ public class LogicalStageBuilder
     }
   }
 
-  class SortStage extends DistributeStage1
+  class SortStage extends AbstractShuffleStage
   {
     protected List<KeyColumn> keyColumns;
     // FIXME: remove
