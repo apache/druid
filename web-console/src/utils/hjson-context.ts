@@ -186,7 +186,39 @@ export function getHjsonContext(hjson: string): HjsonContext {
     // Handle structural characters
     switch (char) {
       case '{': {
-        if (currentToken.trim()) {
+        // First, check if we need to complete a previous value (Hjson optional comma handling)
+        if (afterColon && currentKey && currentToken.trim()) {
+          const trimmedToken = currentToken.trim();
+          // Look for patterns where we have both a value and a new key
+          const matchWithSpace = /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/.exec(trimmedToken);
+          const matchNoSpace = /^(".*?"|'.*?')([a-zA-Z_].*)$/.exec(trimmedToken);
+          
+          const match = matchWithSpace || matchNoSpace;
+          if (match) {
+            const [, valuePart, keyPart] = match;
+            
+            // Complete the current key-value pair
+            const value = parseValue(valuePart);
+            currentObjectProperties[currentKey] = value;
+            
+            // Extract the new key and add it to path
+            const newKey = extractKeyFromToken(keyPart);
+            if (newKey) {
+              path.push(newKey);
+            }
+            
+            afterColon = false;
+            currentToken = '';
+            currentKey = undefined;
+          } else {
+            // Just a value, complete it
+            const value = parseValue(trimmedToken);
+            currentObjectProperties[currentKey] = value;
+            afterColon = false;
+            currentToken = '';
+            currentKey = undefined;
+          }
+        } else if (currentToken.trim()) {
           // If we have a token before {, it's a key
           const key = extractKeyFromToken(currentToken);
           if (key) {
@@ -356,10 +388,18 @@ export function getHjsonContext(hjson: string): HjsonContext {
         break;
 
       default:
-        // Skip whitespace unless in string
+        // Handle whitespace
         if (!inString && /\s/.test(char)) {
-          if (currentToken.trim() || afterColon) {
-            // Keep building token
+          // Check if we need to complete a value when we hit a newline (Hjson feature)
+          if (char === '\n' && afterColon && currentKey && currentToken.trim()) {
+            // Complete the current value
+            const value = parseValue(currentToken.trim());
+            currentObjectProperties[currentKey] = value;
+            afterColon = false;
+            currentToken = '';
+            currentKey = undefined;
+          } else if (currentToken.trim() || afterColon) {
+            // Keep whitespace in token if we're building something
           }
         } else {
           currentToken += char;
@@ -415,8 +455,9 @@ export function getHjsonContext(hjson: string): HjsonContext {
       } else {
         isEditingKey = true;
         // If we have a current token that looks like a partial key AND
-        // we have some existing properties (suggesting this is a trailing comma case), use it
-        if (currentToken.trim() && Object.keys(currentObjectProperties).length > 0) {
+        // we have some existing properties (suggesting this is a trailing comma case) OR
+        // we're in a nested object, use it as the current key
+        if (currentToken.trim() && (Object.keys(currentObjectProperties).length > 0 || containerStack.length > 1)) {
           const extractedKey = extractKeyFromToken(currentToken);
           currentKey = extractedKey || undefined;
         } else {

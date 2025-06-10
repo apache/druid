@@ -57,7 +57,6 @@ import {
   PopoverText,
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
-import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import type {
   ArrayIngestMode,
   DimensionSpec,
@@ -205,6 +204,7 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
+import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import {
   ParseTimeTable,

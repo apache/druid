@@ -261,7 +261,7 @@ describe('getHjsonContext', () => {
       });
     });
 
-    it('handles trailing commas (Hjson feature)', () => {
+    it('handles no trailing commas (Hjson feature)', () => {
       const result = getHjsonContext(sane`
         {
           "queryType": "scan",
@@ -274,6 +274,25 @@ describe('getHjsonContext', () => {
         currentKey: 'm',
         isEditingComment: false,
         currentObject: { queryType: 'scan', dataSource: 'wikipedia' },
+      });
+    });
+
+    it('custom', () => {
+      const result = getHjsonContext(
+        sane`
+          {
+            queryType: "topN"
+            intervals: "..."
+            dataSource: "sdsds"
+            filter: {
+              t`,
+      );
+      expect(result).toEqual({
+        currentObject: {},
+        isEditingComment: false,
+        isEditingKey: true,
+        path: ['filter'],
+        currentKey: 't',
       });
     });
 
