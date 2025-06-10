@@ -22,7 +22,7 @@ package org.apache.druid.msq.dart.controller.sql;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.logical.LogicalStage;
-import org.apache.druid.msq.logical.LogicalStageBuilder.StageMaker;
+import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class LogicalStageToQueryDefinitionTranslator
