@@ -772,28 +772,28 @@ Ensure that when you are running task pods in another namespace, your task pods 
 Should you require the needed permissions for interacting across Kubernetes namespaces, you can specify a kubeconfig file, and provided the necessary permissions. You can then use the `KUBECONFIG` environment variable to allow your Overlord deployment to find your kubeconfig file. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information.
 
 ### Properties
-| Property | Possible Values | Description | Default | Required |
-| --- | --- | --- | --- | --- |
-| `druid.indexer.runner.namespace` | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
-| `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
-| `druid.indexer.runner.k8sTaskPodNamePrefix` | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
-| `druid.indexer.runner.debugJobs` | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
-| `druid.indexer.runner.sidecarSupport` | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |
-| `druid.indexer.runner.primaryContainerName` | `String` | If running with sidecars, the `primaryContainerName` should be that of your druid container like `druid-overlord`. | First container in `podSpec` list | No |
-| `druid.indexer.runner.kubexitImage` | `String` | Used kubexit project to help shutdown sidecars when the main pod completes. Otherwise, jobs with sidecars never terminate. | karlkfi/kubexit:latest | No |
-| `druid.indexer.runner.disableClientProxy` | `boolean` | Use this if you have a global http(s) proxy and you wish to bypass it. | false | No |
-| `druid.indexer.runner.maxTaskDuration` | `Duration` | Max time a task is allowed to run for before getting killed. | `PT4H` | No |
-| `druid.indexer.runner.taskCleanupDelay` | `Duration` | How long do jobs stay around before getting reaped from K8s. | `P2D` | No |
-| `druid.indexer.runner.taskCleanupInterval` | `Duration` | How often to check for jobs to be reaped. | `PT10M` | No |
-| `druid.indexer.runner.taskJoinTimeout` | `Duration` | Timeout for gathering metadata about existing tasks on startup. | `PT1M` | No |
-| `druid.indexer.runner.K8sjobLaunchTimeout` | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
-| `druid.indexer.runner.javaOptsArray` | `JsonArray` | java opts for the task. | `-Xmx1g` | No |
-| `druid.indexer.runner.labels` | `JsonObject` | Additional labels you want to add to peon pod. | `{}` | No |
-| `druid.indexer.runner.annotations` | `JsonObject` | Additional annotations you want to add to peon pod. | `{}` | No |
-| `druid.indexer.runner.peonMonitors` | `JsonArray` | Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord. | `[]` | No |
+| Property                                             | Possible Values | Description | Default | Required |
+|------------------------------------------------------| --- | --- | --- | --- |
+| `druid.indexer.runner.namespace`                     | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
+| `druid.indexer.runner.overlordNamespace`             | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
+| `druid.indexer.runner.k8sTaskPodNamePrefix`          | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
+| `druid.indexer.runner.debugJobs`                     | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
+| `druid.indexer.runner.sidecarSupport`                | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |
+| `druid.indexer.runner.primaryContainerName`          | `String` | If running with sidecars, the `primaryContainerName` should be that of your druid container like `druid-overlord`. | First container in `podSpec` list | No |
+| `druid.indexer.runner.kubexitImage`                  | `String` | Used kubexit project to help shutdown sidecars when the main pod completes. Otherwise, jobs with sidecars never terminate. | karlkfi/kubexit:latest | No |
+| `druid.indexer.runner.disableClientProxy`            | `boolean` | Use this if you have a global http(s) proxy and you wish to bypass it. | false | No |
+| `druid.indexer.runner.maxTaskDuration`               | `Duration` | Max time a task is allowed to run for before getting killed. | `PT4H` | No |
+| `druid.indexer.runner.taskCleanupDelay`              | `Duration` | How long do jobs stay around before getting reaped from K8s. | `P2D` | No |
+| `druid.indexer.runner.taskCleanupInterval`           | `Duration` | How often to check for jobs to be reaped. | `PT10M` | No |
+| `druid.indexer.runner.taskJoinTimeout`               | `Duration` | Timeout for gathering metadata about existing tasks on startup. | `PT1M` | No |
+| `druid.indexer.runner.k8sjobLaunchTimeout`           | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
+| `druid.indexer.runner.javaOptsArray`                 | `JsonArray` | java opts for the task. | `-Xmx1g` | No |
+| `druid.indexer.runner.labels`                        | `JsonObject` | Additional labels you want to add to peon pod. | `{}` | No |
+| `druid.indexer.runner.annotations`                   | `JsonObject` | Additional annotations you want to add to peon pod. | `{}` | No |
+| `druid.indexer.runner.peonMonitors`                  | `JsonArray` | Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord. | `[]` | No |
 | `druid.indexer.runner.graceTerminationPeriodSeconds` | `Long` | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete. Keep at a smaller value if you want tasks to hold locks for shorter periods. | `PT30S` (K8s default) | No |
-| `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
-| `druid.indexer.runner.cpuCoreInMicro` | `Integer` | Number of CPU micro core for the task. | `1000` | No |
+| `druid.indexer.runner.capacity`                      | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
+| `druid.indexer.runner.cpuCoreInMicro`                | `Integer` | Number of CPU micro core for the task. | `1000` | No |
 
 ### Metrics added
 
