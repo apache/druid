@@ -86,11 +86,11 @@ public class TestDerbyConnector extends DerbyConnector
     this.dbTables = dbTables;
   }
 
-  public TestDerbyConnector(String baseName)
+  public TestDerbyConnector()
   {
     this(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(baseName + dbSafeUUID())),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())),
         CentralizedDatasourceSchemaConfig.create()
     );
   }
@@ -124,6 +124,10 @@ public class TestDerbyConnector extends DerbyConnector
   public String getJdbcUri()
   {
     return jdbcUri;
+  }
+
+  public void createDatabase() {
+    this.getDBI().open().close();
   }
 
   public static class DerbyConnectorRule extends ExternalResource

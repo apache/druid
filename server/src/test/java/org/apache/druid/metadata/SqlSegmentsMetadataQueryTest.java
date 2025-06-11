@@ -241,41 +241,42 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveUsedSegments_withOverlapsCondition()
   {
-    Interval queryInterval = new Interval("2025-01-03T00:00:00.000Z/2025-01-05T00:00:00.000Z");
+    Interval queryInterval = Intervals.of(JAN_1.plusDays(2), JAN_1.plusDays(4));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
     Assert.assertEquals(4, result.size());
-    assertSegmentsInInterval(result, queryInterval);
+    assertSegmentsOverlapInterval(result, queryInterval);
   }
 
   @Test
-  public void test_retrieveUsedSegments_withOverlapsConditionAndUnusedSegments()
+  public void test_retrieveUsedSegments_withOverlapsCondition_andUnusedSegments()
   {
     final Set<DataSegment> segmentsToUpdate = Set.of(WIKI_SEGMENTS_2X5D.get(2));
     int numUpdatedSegments = update(
-        sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc()));
+        sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc())
+    );
     Assert.assertEquals(1, numUpdatedSegments);
 
-    Interval queryInterval = new Interval("2025-01-01T00:00:00.000Z/2025-01-03T00:00:00.000Z");
+    final Interval queryInterval = Intervals.of(JAN_1, JAN_1.plusDays(2));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
     Assert.assertEquals(3, result.size());
-    assertSegmentsInInterval(result, queryInterval);
+    assertSegmentsOverlapInterval(result, queryInterval);
   }
 
   @Test
-  public void test_retrieveUsedSegments_withOverlapsCondition_near_end_date()
+  public void test_retrieveUsedSegments_withOverlapsCondition_nearEndDate()
   {
-    Interval queryInterval = new Interval("2025-01-05T00:00:00.000Z/2025-01-06T00:00:00.000Z");
+    Interval queryInterval = Intervals.of(JAN_1.plusDays(4), JAN_1.plusDays(5));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
     Assert.assertEquals(2, result.size());
-    assertSegmentsInInterval(result, queryInterval);
+    assertSegmentsOverlapInterval(result, queryInterval);
   }
 
-  private void assertSegmentsInInterval(
+  private void assertSegmentsOverlapInterval(
       Set<DataSegment> segments,
       Interval interval
   )

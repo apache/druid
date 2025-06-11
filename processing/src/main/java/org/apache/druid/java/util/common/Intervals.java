@@ -32,6 +32,7 @@ public final class Intervals
 {
   public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
+  public static final String DEFAULT_INTERVAL_FORMAT = "%s/%s";
 
   public static Interval utc(long startInstant, long endInstant)
   {
@@ -51,6 +52,11 @@ public final class Intervals
   public static Interval of(String format, Object... formatArgs)
   {
     return of(StringUtils.format(format, formatArgs));
+  }
+
+  public static Interval of(Object... formatArgs)
+  {
+    return of(DEFAULT_INTERVAL_FORMAT, formatArgs);
   }
 
   /**

@@ -341,9 +341,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
     final Set<DataSegment> committedSegments = coordinator.commitSegments(
-        segmentsSet, new SegmentSchemaMapping(
-            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
-    );
+        segmentsSet, null);
     Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
