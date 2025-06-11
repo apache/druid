@@ -132,7 +132,7 @@ public class DartWorkerContext implements WorkerContext
 
     // Set up metric dimensions
     this.metricBuilder = new ServiceMetricEvent.Builder();
-    MSQMetricUtils.setQueryDimensions(this.metricBuilder, queryContext);
+    MSQMetricUtils.setDartQueryIdDimensions(this.metricBuilder, queryContext);
     this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 

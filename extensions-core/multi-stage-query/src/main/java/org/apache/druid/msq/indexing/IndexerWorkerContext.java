@@ -52,7 +52,6 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -137,10 +136,10 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                         .toInstance(storageConnector));
+
     this.metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(this.metricBuilder, task);
-    MSQMetricUtils.setQueryDimensions(this.metricBuilder, queryContext);
-    metricBuilder.setDimension(ENGINE, MSQTaskSqlEngine.NAME);
+    MSQMetricUtils.setTaskQueryIdDimensions(this.metricBuilder, queryContext);
   }
 
   public static IndexerWorkerContext createProductionInstance(
