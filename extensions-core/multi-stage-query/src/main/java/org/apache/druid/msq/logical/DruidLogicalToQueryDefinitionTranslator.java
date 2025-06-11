@@ -88,7 +88,7 @@ public class DruidLogicalToQueryDefinitionTranslator
   {
     List<LogicalStage> inputStages = buildInputStages(stack);
     DruidLogicalNode node = stack.getNode();
-    if(inputStages.size() == 0) {
+    if (inputStages.size() == 0) {
       Optional<ReadStage> stage = buildReadStage(node);
       if (stage.isPresent()) {
         return stage.get();

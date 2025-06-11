@@ -19,17 +19,20 @@
 
 package org.apache.druid.msq.logical;
 
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.segment.column.RowSignature;
 
 /**
  * Represents an {@link InputSpec} for {@link LogicalStage}-s.
  */
 public abstract class LogicalInputSpec
 {
-
   public abstract InputSpec toInputSpec(StageMaker maker);
+
+  public abstract RowSignature getRowSignature();
 
   public static LogicalInputSpec of(LogicalStage inputStage)
   {
@@ -55,6 +58,12 @@ public abstract class LogicalInputSpec
     {
       return inputSpec;
     }
+
+    @Override
+    public RowSignature getRowSignature()
+    {
+      throw NotYetImplemented.ex(null, "Not supported for this type");
+    }
   }
 
   static class DagStageInputSpec extends LogicalInputSpec
@@ -77,6 +86,12 @@ public abstract class LogicalInputSpec
     public LogicalStage getStage()
     {
       return inputStage;
+    }
+
+    @Override
+    public RowSignature getRowSignature()
+    {
+      return inputStage.getRowSignature();
     }
   }
 }

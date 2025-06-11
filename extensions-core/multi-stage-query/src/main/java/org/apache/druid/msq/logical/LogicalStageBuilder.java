@@ -267,8 +267,7 @@ public class LogicalStageBuilder
     @Override
     public RowSignature getLogicalRowSignature()
     {
-      LogicalStage inputStage = (LogicalStage) inputSpecs.get(0);
-      return inputStage.getLogicalRowSignature();
+      return inputSpecs.get(0).getRowSignature();
     }
 
     @Override
