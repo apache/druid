@@ -1938,13 +1938,14 @@ Metric monitoring is an essential part of Druid operations. The following table 
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
+
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
 
 ```properties
 druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
-You can override cluster-wide configuration by amending the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `../coordinator-overlord/runtime.properties`:
+On the otherhand, some monitors should only be configured for certain services. For these, update the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `coordinator-overlord/runtime.properties` file:
 
 ```
 druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor"]
