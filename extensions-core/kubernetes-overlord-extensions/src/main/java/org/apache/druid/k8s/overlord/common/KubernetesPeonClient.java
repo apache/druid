@@ -28,6 +28,7 @@ import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -80,12 +81,22 @@ public class KubernetesPeonClient
     long start = System.currentTimeMillis();
     // launch job
     return clientApi.executeRequest(client -> {
-      client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
       String jobName = job.getMetadata().getName();
-      log.info("Successfully submitted job: %s ... waiting for job to launch", jobName);
+
+      log.info("Submitting job[%s] for task[%s].", jobName, task.getId());
+      client.batch()
+            .v1()
+            .jobs()
+            .inNamespace(namespace)
+            .resource(job)
+            .create();
+      log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
+
       // wait until the pod is running or complete or failed, any of those is fine
       Pod mainPod = getPeonPodWithRetries(jobName);
-      Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
+      Pod result = client.pods()
+                         .inNamespace(namespace)
+                         .withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
                            if (pod == null) {
                              return true;
@@ -94,7 +105,7 @@ public class KubernetesPeonClient
                          }, howLong, timeUnit);
       
       if (result == null) {
-        throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
+        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
