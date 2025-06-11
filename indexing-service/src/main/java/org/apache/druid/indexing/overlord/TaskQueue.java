@@ -120,7 +120,7 @@ public class TaskQueue
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
   private final TaskActionClientFactory taskActionClientFactory;
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
   private final ObjectMapper passwordRedactingMapper;
   private final TaskContextEnricher taskContextEnricher;
@@ -172,7 +172,7 @@ public class TaskQueue
       TaskStorage taskStorage,
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       ServiceEmitter emitter,
       ObjectMapper mapper,
       TaskContextEnricher taskContextEnricher
@@ -218,10 +218,10 @@ public class TaskQueue
     try {
       Preconditions.checkState(!active, "queue must be stopped");
       setActive(true);
-      syncFromStorage();
       // Mark these tasks as failed as they could not reacuire the lock
       // Clean up needs to happen after tasks have been synced from storage
       Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
+      syncFromStorage();
       for (Task task : tasksToFail) {
         shutdown(task.getId(),
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
@@ -295,6 +295,7 @@ public class TaskQueue
     try {
       setActive(false);
       activeTasks.clear();
+      taskLockbox.shutdown();
       managerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       requestManagement();
@@ -566,7 +567,7 @@ public class TaskQueue
     if (added.get()) {
       taskLockbox.add(task);
     } else if (!entry.task.equals(task)) {
-      throw new ISE("Cannot add task ID [%s] with same ID as task that has already been added", task.getId());
+      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", task.getId());
     }
   }
 

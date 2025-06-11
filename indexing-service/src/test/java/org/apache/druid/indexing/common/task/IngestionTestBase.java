@@ -51,9 +51,9 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -131,7 +131,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private File baseDir;
   private SupervisorManager supervisorManager;
   private TestDataSegmentKiller dataSegmentKiller;
@@ -188,7 +188,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         NoopServiceEmitter.instance(),
         objectMapper
     );
-    lockbox = new TaskLockbox(taskStorage, storageCoordinator);
+    lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
+    lockbox.syncFromStorage();
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
@@ -256,7 +257,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return segmentsMetadataManager;
   }
 
-  public TaskLockbox getLockbox()
+  public GlobalTaskLockbox getLockbox()
   {
     return lockbox;
   }

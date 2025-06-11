@@ -31,7 +31,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -106,7 +106,7 @@ public class ClusterTestingModule implements DruidModule
     } else if (roles.contains(NodeRole.OVERLORD)) {
       // If this is the Overlord, bind a faulty storage coordinator
       log.warn("Running Overlord in cluster testing mode.");
-      binder.bind(TaskLockbox.class)
+      binder.bind(GlobalTaskLockbox.class)
             .to(FaultyTaskLockbox.class)
             .in(LazySingleton.class);
     }

@@ -24,8 +24,8 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -74,7 +74,7 @@ public class SegmentAllocationQueue
 
   private final long maxWaitTimeMillis;
 
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final IndexerMetadataStorageCoordinator metadataStorage;
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final ServiceEmitter emitter;
@@ -91,7 +91,7 @@ public class SegmentAllocationQueue
 
   @Inject
   public SegmentAllocationQueue(
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       TaskLockConfig taskLockConfig,
       IndexerMetadataStorageCoordinator metadataStorage,
       ServiceEmitter emitter,
