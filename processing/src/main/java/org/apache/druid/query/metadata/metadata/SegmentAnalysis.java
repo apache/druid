@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.joda.time.Interval;
 
 import java.util.LinkedHashMap;
@@ -52,6 +53,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final long size;
   private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
+  private final Map<String, AggregateProjectionMetadata> projections;
   private final TimestampSpec timestampSpec;
   private final Granularity queryGranularity;
   private final Boolean rollup;
@@ -64,6 +66,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("size") long size,
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
+      @JsonProperty("projections") Map<String, AggregateProjectionMetadata> projections,
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup
@@ -75,6 +78,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     this.size = size;
     this.numRows = numRows;
     this.aggregators = aggregators;
+    this.projections = projections;
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
@@ -134,6 +138,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     return aggregators;
   }
 
+  @JsonProperty
+  public Map<String, AggregateProjectionMetadata> getProjections()
+  {
+    return projections;
+  }
+
   @Override
   public String toString()
   {
@@ -144,6 +154,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            ", size=" + size +
            ", numRows=" + numRows +
            ", aggregators=" + aggregators +
+           ", projections=" + projections +
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
@@ -170,6 +181,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            Objects.equals(interval, that.interval) &&
            Objects.equals(columns, that.columns) &&
            Objects.equals(aggregators, that.aggregators) &&
+           Objects.equals(projections, that.projections) &&
            Objects.equals(timestampSpec, that.timestampSpec) &&
            Objects.equals(queryGranularity, that.queryGranularity);
   }
@@ -181,7 +193,18 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity, rollup);
+    return Objects.hash(
+        id,
+        interval,
+        columns,
+        size,
+        numRows,
+        aggregators,
+        projections,
+        timestampSpec,
+        queryGranularity,
+        rollup
+    );
   }
 
   @Override

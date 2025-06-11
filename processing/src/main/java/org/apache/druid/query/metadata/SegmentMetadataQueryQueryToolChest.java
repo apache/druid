@@ -30,10 +30,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.commons.collections.MapUtils;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -57,6 +57,7 @@ import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
@@ -281,7 +282,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     // This is a defensive check since SegementMetadata query instantiation guarantees this
     if (CollectionUtils.isNullOrEmpty(dataSources)) {
-      throw InvalidInput.exception("SegementMetadata queries require at least one datasource.");
+      throw DruidException.defensive("SegementMetadata queries require at least one datasource.");
     }
 
     SegmentId mergedSegmentId = null;
@@ -437,6 +438,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       rollup = null;
     }
 
+    Map<String, AggregateProjectionMetadata> projections =
+        (arg1.getProjections() == null || arg2.getProjections() == null)
+        ? null
+        : AggregateProjectionMetadata.merge(arg1.getProjections(), arg2.getProjections());
+
     return new SegmentAnalysis(
         mergedId,
         newIntervals,
@@ -444,6 +450,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         arg1.getSize() + arg2.getSize(),
         arg1.getNumRows() + arg2.getNumRows(),
         aggregators.isEmpty() ? null : aggregators,
+        MapUtils.isEmpty(projections) ? null : projections,
         timestampSpec,
         queryGranularity,
         rollup
@@ -460,6 +467,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         analysis.getSize(),
         analysis.getNumRows(),
         analysis.getAggregators(),
+        analysis.getProjections(),
         analysis.getTimestampSpec(),
         analysis.getQueryGranularity(),
         analysis.isRollup()

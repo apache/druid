@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -72,6 +74,76 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testMerge()
+  {
+    AggregateProjectionMetadata countChocula = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "countChocula",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("theTime", "a", "b", "c"),
+            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
+            Arrays.asList(
+                OrderBy.ascending("theTime"),
+                OrderBy.ascending("a"),
+                OrderBy.ascending("b"),
+                OrderBy.ascending("c")
+            )
+        ),
+        123
+    );
+    AggregateProjectionMetadata sumChocula = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "sumChocula",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("theTime", "a", "b", "c"),
+            new AggregatorFactory[]{new LongSumAggregatorFactory("sumChocula", "chocula")},
+            Arrays.asList(
+                OrderBy.ascending("theTime"),
+                OrderBy.ascending("a"),
+                OrderBy.ascending("b"),
+                OrderBy.ascending("c")
+            )
+        ),
+        123
+    );
+    AggregateProjectionMetadata maxChocula = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "maxChocula",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("theTime", "a", "b", "c"),
+            new AggregatorFactory[]{new LongMaxAggregatorFactory("maxChocula", "chocula")},
+            Arrays.asList(
+                OrderBy.ascending("theTime"),
+                OrderBy.ascending("a"),
+                OrderBy.ascending("b"),
+                OrderBy.ascending("c")
+            )
+        ),
+        123
+    );
+
+    ImmutableMap<String, AggregateProjectionMetadata> metadata1 = ImmutableMap.of(
+        "countChocula", countChocula,
+        "sumChocula", sumChocula
+    );
+    ImmutableMap<String, AggregateProjectionMetadata> metadata2 = ImmutableMap.of(
+        "countChocula", countChocula,
+        "maxChocula", maxChocula
+    );
+
+    ImmutableMap<String, AggregateProjectionMetadata> expected = ImmutableMap.of(
+        "countChocula",
+        new AggregateProjectionMetadata(
+            countChocula.getSchema(),
+            246
+        )
+    );
+    Assert.assertEquals(expected, AggregateProjectionMetadata.merge(metadata1, metadata2));
+  }
 
   @Test
   public void testComparator()
@@ -83,9 +155,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             "theTime",
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("theTime", "a", "b", "c"),
-            new AggregatorFactory[] {
-                new CountAggregatorFactory("chocula")
-            },
+            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
             Arrays.asList(
                 OrderBy.ascending("theTime"),
                 OrderBy.ascending("a"),
@@ -95,14 +165,30 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         123
     );
-    // same row count, but more aggs more better
-    AggregateProjectionMetadata better = new AggregateProjectionMetadata(
+    // same row count, but less grouping columns aggs more better
+    AggregateProjectionMetadata betterLessGroupingColumns = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
-            "better",
+            "betterLessGroupingColumns",
             "theTime",
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
-            new AggregatorFactory[] {
+            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
+            Arrays.asList(
+                OrderBy.ascending("c"),
+                OrderBy.ascending("d"),
+                OrderBy.ascending("theTime")
+            )
+        ),
+        123
+    );
+    // same grouping columns, but more aggregators
+    AggregateProjectionMetadata evenBetterMoreAggs = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "evenBetterMoreAggs",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("c", "d", "theTime"),
+            new AggregatorFactory[]{
                 new CountAggregatorFactory("chocula"),
                 new LongSumAggregatorFactory("e", "e")
             },
@@ -114,11 +200,10 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         123
     );
-
     // small rows is best
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
-            "better",
+            "best",
             null,
             VirtualColumns.EMPTY,
             Arrays.asList("f", "g"),
@@ -128,10 +213,14 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         10
     );
     metadataBest.add(good);
-    metadataBest.add(better);
+    metadataBest.add(betterLessGroupingColumns);
+    metadataBest.add(evenBetterMoreAggs);
     metadataBest.add(best);
     Assert.assertEquals(best, metadataBest.first());
-    Assert.assertEquals(good, metadataBest.last());
+    Assert.assertEquals(
+        new AggregateProjectionMetadata[]{best, evenBetterMoreAggs, betterLessGroupingColumns, good},
+        metadataBest.toArray()
+    );
   }
 
   @Test
@@ -141,12 +230,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
-            "other_projection",
-            null,
-            null,
-            null,
-            null,
-            null
+                "other_projection",
+                null,
+                null,
+                null,
+                null,
+                null
             ),
             0
         )
@@ -157,12 +246,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
-            "other_projection",
-            null,
-            null,
-            Collections.emptyList(),
-            null,
-            null
+                "other_projection",
+                null,
+                null,
+                Collections.emptyList(),
+                null,
+                null
             ),
             0
         )
