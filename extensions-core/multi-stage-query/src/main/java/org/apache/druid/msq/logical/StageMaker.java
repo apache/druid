@@ -41,6 +41,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Builds {@link QueryDefinition} from {@link LogicalStage}-s.
+ */
 public class StageMaker
 {
   /** Provides ids for the stages. */
