@@ -328,11 +328,9 @@ public class SegmentAllocationQueue
     // Schedule the next round of processing if there are available worker threads
     if (runningDatasources.size() >= config.getBatchAllocationNumThreads()) {
       log.debug("Not scheduling again since all worker threads are busy.");
-    } else if (numSkippedBatches >= processingQueue.size()) {
+    } else if (numSkippedBatches >= processingQueue.size() || processingQueue.isEmpty()) {
       // All remaining entries in the queue were skipped
-      log.debug("Not scheduling again since datasources are already being processed.");
-    } else if (processingQueue.isEmpty()) {
-      log.debug("Not scheduling again since queue is empty.");
+      log.debug("Not scheduling again since there are no eligible batches (skipped [%d]).", numSkippedBatches);
     } else {
       final AllocateRequestBatch nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
