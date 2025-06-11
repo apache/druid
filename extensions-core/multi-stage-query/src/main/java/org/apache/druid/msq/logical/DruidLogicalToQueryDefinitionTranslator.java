@@ -19,8 +19,10 @@
 
 package org.apache.druid.msq.logical;
 
+import com.google.common.collect.Lists;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
@@ -28,10 +30,13 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.ReadStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
+import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 
@@ -83,7 +88,6 @@ public class DruidLogicalToQueryDefinitionTranslator
   private LogicalStage buildStageFor(DruidNodeStack stack)
   {
     List<LogicalStage> inputStages = buildInputStages(stack);
-
     DruidLogicalNode node = stack.getNode();
     Optional<ReadStage> stage = buildReadStage(node);
     if (stage.isPresent()) {
@@ -95,12 +99,27 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
-      newStage = stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
+      newStage = makeSequenceStage(inputStage, stack);
       if(newStage != null) {
         return newStage;
       }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
+  }
+
+  private LogicalStage makeSequenceStage(LogicalStage inputStage, DruidNodeStack stack)
+  {
+    if (stack.getNode() instanceof DruidSort) {
+      DruidSort sort = (DruidSort) stack.getNode();
+      if (sort.hasLimitOrOffset()) {
+        throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
+      }
+      List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(inputStage.getLogicalRowSignature(), sort);
+      List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
+      return stageBuilder.makeSortStage(inputStage, keyColumns);
+    }
+
+    return stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
   }
 
   private List<LogicalStage> buildInputStages(DruidNodeStack stack)

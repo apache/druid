@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.logical;
 
-import com.google.common.collect.Lists;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -31,7 +29,6 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -41,8 +38,6 @@ import org.apache.druid.sql.calcite.rel.Projection;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.rel.logical.DruidFilter;
 import org.apache.druid.sql.calcite.rel.logical.DruidProject;
-import org.apache.druid.sql.calcite.rel.logical.DruidSort;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -51,6 +46,8 @@ import java.util.List;
  *
  * Tightly coupled to {@link DruidLogicalToQueryDefinitionTranslator}. Currently
  * its just a context to hold all the {@link LogicalStage} classes.
+ *
+ * FIXME: this is not a builder!
  */
 public class LogicalStageBuilder
 {
@@ -261,16 +258,6 @@ public class LogicalStageBuilder
     @Override
     public LogicalStage extendWith(DruidNodeStack stack)
     {
-      // FIXME: this is a root transformation
-      if (stack.getNode() instanceof DruidSort) {
-        DruidSort sort = (DruidSort) stack.getNode();
-        if (sort.hasLimitOrOffset()) {
-          throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
-        }
-        List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(signature, sort);
-        List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
-        return new SortStage(this, keyColumns);
-      }
       return null;
     }
   }
@@ -321,6 +308,11 @@ public class LogicalStageBuilder
   public ReadStage makeReadStage(RowSignature rowSignature, LogicalInputSpec isp)
   {
     return new ReadStage(rowSignature, isp);
+  }
+
+  public LogicalStage makeSortStage(LogicalStage inputStage, List<KeyColumn> keyColumns)
+  {
+    return new SortStage(inputStage, keyColumns);
   }
 
 }
