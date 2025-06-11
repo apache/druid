@@ -180,17 +180,6 @@ public class LogicalStageBuilder
     }
   }
 
-  public FilterStage create(ReadStage inputStage, DruidFilter filter)
-  {
-    VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
-        inputStage.signature,
-        plannerContext.getExpressionParser(),
-        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
-    );
-    DimFilter dimFilter = DruidQuery.getDimFilter(plannerContext, inputStage.signature, virtualColumnRegistry, filter);
-    return new FilterStage(inputStage, virtualColumnRegistry, dimFilter);
-  }
-
   class FilterStage extends ReadStage
   {
     protected final VirtualColumnRegistry virtualColumnRegistry;
