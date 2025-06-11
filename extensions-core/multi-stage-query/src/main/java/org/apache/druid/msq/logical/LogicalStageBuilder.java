@@ -81,7 +81,8 @@ public class LogicalStageBuilder
       return signature;
     }
 
-    public final RowSignature getSignature()
+    @Override
+    public final RowSignature getRowSignature()
     {
       return signature;
     }

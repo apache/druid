@@ -43,7 +43,6 @@ import java.util.Map;
 
 public class StageMaker
 {
-
   /** Provides ids for the stages. */
   private int stageIdSeq = 0;
 
@@ -110,8 +109,8 @@ public class StageMaker
     }
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
     sdb.inputs(inputSpecs);
-    sdb.signature(stage.getSignature());
-    sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getSignature(), null));
+    sdb.signature(stage.getRowSignature());
+    sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getRowSignature(), null));
     sdb.shuffleSpec(stage.buildShuffleSpec());
     return sdb;
   }
