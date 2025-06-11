@@ -88,9 +88,11 @@ public class DruidLogicalToQueryDefinitionTranslator
   {
     List<LogicalStage> inputStages = buildInputStages(stack);
     DruidLogicalNode node = stack.getNode();
-    Optional<ReadStage> stage = buildReadStage(node);
-    if (stage.isPresent()) {
-      return stage.get();
+    if(inputStages.size() == 0) {
+      Optional<ReadStage> stage = buildReadStage(node);
+      if (stage.isPresent()) {
+        return stage.get();
+      }
     }
     if (inputStages.size() == 1) {
       LogicalStage inputStage = inputStages.get(0);
@@ -104,6 +106,17 @@ public class DruidLogicalToQueryDefinitionTranslator
       }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
+  }
+
+  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
+  {
+    if (node instanceof DruidValues) {
+      return translateValues((DruidValues) node);
+    }
+    if (node instanceof DruidTableScan) {
+      return translateTableScan((DruidTableScan) node);
+    }
+    return Optional.empty();
   }
 
   private LogicalStage makeSequenceStage(LogicalStage inputStage, DruidNodeStack stack)
@@ -131,17 +144,6 @@ public class DruidLogicalToQueryDefinitionTranslator
       stack.pop();
     }
     return inputStages;
-  }
-
-  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
-  {
-    if (node instanceof DruidValues) {
-      return translateValues((DruidValues) node);
-    }
-    if (node instanceof DruidTableScan) {
-      return translateTableScan((DruidTableScan) node);
-    }
-    return Optional.empty();
   }
 
   private Optional<ReadStage> translateTableScan(DruidTableScan node)
