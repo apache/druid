@@ -27,7 +27,6 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
-import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
@@ -179,9 +178,7 @@ public class LogicalStageBuilder
     @Override
     protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
     {
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
-      return scanFrameProcessor;
+      return StageMaker.makeScanFrameProcessor(VirtualColumns.EMPTY, signature, null);
     }
   }
 
@@ -237,11 +234,9 @@ public class LogicalStageBuilder
     @Override
     protected BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
     {
-      ScanQueryFrameProcessorFactory scanFrameProcessor = stageMaker
-          .makeScanFrameProcessor(virtualColumnRegistry.build(Collections.emptySet()), signature, dimFilter);
-      return scanFrameProcessor;
+      VirtualColumns virtualColumns = virtualColumnRegistry.build(Collections.emptySet());
+      return StageMaker.makeScanFrameProcessor(virtualColumns, signature, dimFilter);
     }
-
   }
 
   class ProjectStage extends FilterStage
