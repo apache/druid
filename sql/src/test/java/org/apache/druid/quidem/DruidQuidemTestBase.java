@@ -51,15 +51,16 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -101,7 +102,7 @@ public abstract class DruidQuidemTestBase
   private static final String PROPERTY_FILTER = "quidem.filter";
 
   private final String filterStr;
-  private final List<Pattern> filterPatterns;
+  private final List<String> filterGlobs;
 
   private DruidQuidemRunner druidQuidemRunner;
 
@@ -113,28 +114,24 @@ public abstract class DruidQuidemTestBase
   public DruidQuidemTestBase(DruidQuidemRunner druidQuidemRunner)
   {
     this.filterStr = System.getProperty(PROPERTY_FILTER, null);
-    this.filterPatterns = buildFilterPatterns(filterStr);
+    this.filterGlobs = buildFilterGlobs(filterStr);
     this.druidQuidemRunner = druidQuidemRunner;
   }
 
-  private List<Pattern> buildFilterPatterns(@Nullable String filterStr)
+  private static List<String> buildFilterGlobs(@Nullable String filterStr)
   {
     if (null == filterStr) {
       return Collections.emptyList();
     }
 
-    final List<Pattern> filterPatterns = new ArrayList<>();
+    final List<String> filterGlobs = new ArrayList<>();
     for (String filterGlob : filterStr.split(",")) {
       if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
         filterGlob = filterStr + IQ_SUFFIX;
       }
-      filterPatterns.add(
-          Pattern.compile(
-              Arrays.stream(filterGlob.split("\\*", -1))
-                    .map(Pattern::quote)
-                    .collect(Collectors.joining("[^/]*"))));
+      filterGlobs.add(filterGlob);
     }
-    return filterPatterns;
+    return filterGlobs;
   }
 
   protected static class QuidemTestCaseConfiguration
@@ -360,8 +357,12 @@ public abstract class DruidQuidemTestBase
       throw new FileNotFoundException(StringUtils.format("testRoot [%s] doesn't exists!", testRoot));
     }
 
+    final FileSystem fileSystem = FileSystems.getDefault();
+    final List<PathMatcher> pathMatchers =
+        filterGlobs.stream().map(glob -> fileSystem.getPathMatcher("glob:" + glob)).collect(Collectors.toList());
+
     for (File f : Files.fileTraverser().breadthFirst(testRoot)) {
-      if (isTestIncluded(testRoot, f)) {
+      if (isTestIncluded(pathMatchers, testRoot, f)) {
         Path relativePath = testRoot.toPath().relativize(f.toPath());
         ret.add(relativePath.toString());
       }
@@ -377,13 +378,12 @@ public abstract class DruidQuidemTestBase
     return ret;
   }
 
-  private boolean isTestIncluded(File testRoot, File f)
+  private boolean isTestIncluded(List<PathMatcher> pathMatchers, File testRoot, File f)
   {
-    String relativePath = testRoot.toPath().relativize(f.toPath()).toString();
+    Path relativePath = testRoot.toPath().relativize(f.toPath());
     return !f.isDirectory()
            && f.getName().endsWith(IQ_SUFFIX)
-           && (filterPatterns.isEmpty() || filterPatterns.stream()
-                                                         .anyMatch(pattern -> pattern.matcher(relativePath).matches()));
+           && (pathMatchers.isEmpty() || pathMatchers.stream().anyMatch(m -> m.matches(relativePath)));
   }
 
   protected abstract File getTestRoot();
