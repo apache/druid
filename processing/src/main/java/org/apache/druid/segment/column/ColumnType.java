@@ -235,4 +235,13 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return ColumnType.DOUBLE;
   }
 
+  @Nullable
+  public static ColumnType leastRestrictiveType(Iterable<ColumnType> types)
+  {
+    ColumnType leastRestrictiveType = null;
+    for (ColumnType type : types) {
+      leastRestrictiveType = leastRestrictiveType(leastRestrictiveType, type);
+    }
+    return leastRestrictiveType;
+  }
 }

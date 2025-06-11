@@ -192,6 +192,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
         + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
@@ -5236,12 +5237,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext)
 
   {
+    final Map<String, Object> contextWithLexicographicTopN =
+        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT druid.broadcast.dim4, COUNT(*)\n"
         + "FROM druid.numfoo\n"
         + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
         + "GROUP BY 1 ORDER BY 1 DESC LIMIT 4",
-        queryContext,
+        contextWithLexicographicTopN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(
@@ -5260,7 +5263,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("j0.dim4", "d0", ColumnType.STRING))
                 .threshold(4)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                .context(queryContext)
+                .context(contextWithLexicographicTopN)
                 .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
                 .build()
         ),
@@ -5700,13 +5703,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
     cannotVectorize();
+    final Map<String, Object> contextWithLexicographicTopN =
+        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "select\n" +
         "count(*) filter (where trim(both from dim1) in (select dim2 from foo)),\n" +
         "min(m1) filter (where 'A' not in (select m2 from foo))\n" +
         "from foo as t0\n" +
         "where __time in (select __time from foo)",
-        queryContext,
+        contextWithLexicographicTopN,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
@@ -5763,6 +5768,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     )))
                                                     .aggregators(new CountAggregatorFactory("a0"))
                                                     .threshold(1)
+                                                    .context(contextWithLexicographicTopN)
                                                     .build()
                           ),
                           "__j0.",

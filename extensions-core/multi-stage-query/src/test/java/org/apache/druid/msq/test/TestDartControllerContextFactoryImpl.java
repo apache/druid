@@ -43,6 +43,7 @@ import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
@@ -76,7 +77,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   }
 
   @Override
-  public ControllerContext newContext(String queryId)
+  public ControllerContext newContext(QueryContext context)
   {
     return new DartControllerContext(
         injector,
@@ -85,7 +86,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         new DartTestWorkerClient(),
         memoryIntrospector,
         serverView,
-        emitter
+        emitter,
+        context
     )
     {
       @Override

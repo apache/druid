@@ -73,56 +73,7 @@ public class ExpressionSelectors
   {
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
 
-    return new ColumnValueSelector()
-    {
-      @Override
-      public double getDouble()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getDouble();
-      }
-
-      @Override
-      public float getFloat()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getFloat();
-      }
-
-      @Override
-      public long getLong()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getLong();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return baseSelector.isNull();
-      }
-
-      @Nullable
-      @Override
-      public Object getObject()
-      {
-        // No need for null check on getObject() since baseSelector impls will never return null.
-        ExprEval eval = baseSelector.getObject();
-        return eval.valueOrDefault();
-      }
-
-      @Override
-      public Class classOfObject()
-      {
-        return Object.class;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
-      }
-    };
+    return new EvalUnwrappingColumnValueSelector(baseSelector);
   }
 
   public static ColumnValueSelector makeStringColumnValueSelector(
@@ -132,35 +83,8 @@ public class ExpressionSelectors
   {
     final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
 
-    return new ColumnValueSelector()
+    return new EvalUnwrappingColumnValueSelector(baseSelector)
     {
-      @Override
-      public double getDouble()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getDouble();
-      }
-
-      @Override
-      public float getFloat()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getFloat();
-      }
-
-      @Override
-      public long getLong()
-      {
-        // No Assert for null handling as baseSelector already have it.
-        return baseSelector.getLong();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return baseSelector.isNull();
-      }
-
       @Nullable
       @Override
       public Object getObject()
@@ -169,19 +93,34 @@ public class ExpressionSelectors
         ExprEval eval = baseSelector.getObject();
         return coerceEvalToObjectOrList(eval);
       }
+    };
+  }
 
+  /**
+   * Wrap the output of {@link ColumnValueSelector#getObject()} in {@link ExprEval#ofType(ExpressionType, Object)}
+   * using the supplied delegate type and cast using {@link ExprEval#castTo} to convert to the target type. If the
+   * delegate selector type is null, {@link ExprEval#ofType} falls back to using {@link ExprEval#bestEffortOf}, however
+   * the target type must be not null, or else this method will fail when attempting to convert to an expression type.
+   */
+  public static ColumnValueSelector<?> castColumnValueSelector(
+      RowIdSupplier rowIdSupplier,
+      ColumnValueSelector<?> delegate,
+      @Nullable ColumnType delegateType,
+      ColumnType castToType
+  )
+  {
+    final ExpressionType fromType = ExpressionType.fromColumnType(delegateType);
+    final ExpressionType toType = ExpressionType.fromColumnTypeStrict(castToType);
+    final ColumnValueSelector<ExprEval> cast = new BaseExpressionColumnValueSelector(rowIdSupplier)
+    {
       @Override
-      public Class classOfObject()
+      protected ExprEval<?> eval()
       {
-        return Object.class;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("baseSelector", baseSelector);
+        return ExprEval.ofType(fromType, delegate.getObject()).castTo(toType);
       }
     };
+
+    return new EvalUnwrappingColumnValueSelector(cast);
   }
 
   /**
@@ -533,5 +472,64 @@ public class ExpressionSelectors
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
     return eval.valueOrDefault();
+  }
+
+  /**
+   * Wraps a {@link ColumnValueSelector<ExprEval>} and calls {@link ExprEval#valueOrDefault()} on the output of
+   * {@link #baseSelector#getObject()} in {@link #getObject()}.
+   */
+  private static class EvalUnwrappingColumnValueSelector implements ColumnValueSelector
+  {
+    private final ColumnValueSelector<ExprEval> baseSelector;
+
+    public EvalUnwrappingColumnValueSelector(ColumnValueSelector<ExprEval> baseSelector)
+    {
+      this.baseSelector = baseSelector;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      return baseSelector.getDouble();
+    }
+
+    @Override
+    public float getFloat()
+    {
+      return baseSelector.getFloat();
+    }
+
+    @Override
+    public long getLong()
+    {
+      return baseSelector.getLong();
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return baseSelector.isNull();
+    }
+
+    @Nullable
+    @Override
+    public Object getObject()
+    {
+      // No need for null check on getObject() since baseSelector impls will never return null.
+      ExprEval eval = baseSelector.getObject();
+      return eval.valueOrDefault();
+    }
+
+    @Override
+    public Class classOfObject()
+    {
+      return Object.class;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("baseSelector", baseSelector);
+    }
   }
 }

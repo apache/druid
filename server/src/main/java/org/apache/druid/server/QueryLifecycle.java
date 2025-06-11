@@ -49,7 +49,6 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -481,7 +480,7 @@ public class QueryLifecycle
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
 
-  public ObjectMapper newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  public ObjectMapper newOutputWriter(ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter)
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),

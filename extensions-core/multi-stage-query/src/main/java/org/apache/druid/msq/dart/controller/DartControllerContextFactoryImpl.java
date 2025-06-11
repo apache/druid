@@ -31,6 +31,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
@@ -68,8 +70,9 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
   }
 
   @Override
-  public ControllerContext newContext(final String queryId)
+  public ControllerContext newContext(final QueryContext context)
   {
+    final String queryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
     return new DartControllerContext(
         injector,
         jsonMapper,
@@ -77,7 +80,8 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
         new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse()),
         memoryIntrospector,
         serverView,
-        emitter
+        emitter,
+        context
     );
   }
 }

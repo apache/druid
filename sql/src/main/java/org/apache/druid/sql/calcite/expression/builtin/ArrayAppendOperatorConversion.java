@@ -21,16 +21,20 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
 public class ArrayAppendOperatorConversion extends DirectOperatorConversion
 {
+  public static final String FUNCTION_NAME = "array_append";
+
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("ARRAY_APPEND")
+      .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypeChecker(
           OperandTypes.sequence(
               "'ARRAY_APPEND(array, expr)'",
@@ -50,6 +54,11 @@ public class ArrayAppendOperatorConversion extends DirectOperatorConversion
 
   public ArrayAppendOperatorConversion()
   {
-    super(SQL_FUNCTION, "array_append");
+    super(SQL_FUNCTION, FUNCTION_NAME);
+  }
+
+  protected ArrayAppendOperatorConversion(SqlOperator operator, String druidFunctionName)
+  {
+    super(operator, druidFunctionName);
   }
 }

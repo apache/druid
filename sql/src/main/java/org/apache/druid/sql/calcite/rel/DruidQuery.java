@@ -1295,7 +1295,11 @@ public class DruidQuery
     final TopNMetricSpec topNMetricSpec;
 
     if (limitColumn.getDimension().equals(dimensionSpec.getOutputName())) {
-      // DimensionTopNMetricSpec is exact; always return it even if allowApproximate is false.
+      // ORDER BY dimension. Gives exact results, so no need to check useApproximateTopN.
+      // However, we only go down this path if useLexicographicTopN is true.
+      if (!plannerContext.getPlannerConfig().isUseLexicographicTopN()) {
+        return null;
+      }
       final DimensionTopNMetricSpec baseMetricSpec = new DimensionTopNMetricSpec(
           null,
           limitColumn.getDimensionComparator()

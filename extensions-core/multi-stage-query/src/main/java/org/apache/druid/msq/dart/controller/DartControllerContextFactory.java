@@ -21,11 +21,12 @@ package org.apache.druid.msq.dart.controller;
 
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.query.QueryContext;
 
 /**
  * Class for creating {@link ControllerContext} in {@link DartQueryMaker}.
  */
 public interface DartControllerContextFactory
 {
-  ControllerContext newContext(String queryId);
+  ControllerContext newContext(QueryContext queryContext);
 }
