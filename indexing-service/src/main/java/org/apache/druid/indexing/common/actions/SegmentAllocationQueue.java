@@ -97,6 +97,11 @@ public class SegmentAllocationQueue
    */
   private final Set<String> runningDatasources = Collections.synchronizedSet(new HashSet<>());
 
+  /**
+   * Indicates if a processing of the queue is already scheduled.
+   */
+  private final AtomicBoolean isProcessingScheduled = new AtomicBoolean(false);
+
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
@@ -184,12 +189,14 @@ public class SegmentAllocationQueue
   }
 
   /**
-   * Schedules a poll of the allocation queue that runs on the {@link #managerExec}.
-   * It is okay to schedule multiple polls since the executor is single threaded.
+   * Schedules a poll of the allocation queue that runs on the {@link #managerExec},
+   * if not already scheduled.
    */
   private void scheduleQueuePoll(long delay)
   {
-    managerExec.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    if (isProcessingScheduled.compareAndSet(false, true)) {
+      managerExec.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    }
   }
 
   /**
@@ -280,9 +287,14 @@ public class SegmentAllocationQueue
     });
   }
 
+  /**
+   * Processes batches in the {@link #processingQueue} that are already due.
+   * This method must be invoked on the {@link #managerExec}.
+   */
   private void processBatchesDue()
   {
     clearQueueIfNotLeader();
+    isProcessingScheduled.set(false);
 
     // Process the batches that are already due
     int numSubmittedBatches = 0;
@@ -313,31 +325,21 @@ public class SegmentAllocationQueue
     }
     log.debug("Submitted [%d] batches, skipped [%d] batches.", numSubmittedBatches, numSkippedBatches);
 
-    // Schedule the next round of processing if the queue is not empty
-    if (processingQueue.isEmpty()) {
+    // Schedule the next round of processing if there are available worker threads
+    if (runningDatasources.size() >= config.getBatchAllocationNumThreads()) {
+      log.debug("Not scheduling again since all worker threads are busy.");
+    } else if (numSkippedBatches >= processingQueue.size()) {
+      // All remaining entries in the queue were skipped
+      log.debug("Not scheduling again since datasources are already being processed.");
+    } else if (processingQueue.isEmpty()) {
       log.debug("Not scheduling again since queue is empty.");
     } else {
       final AllocateRequestBatch nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
-      long nextScheduleDelay = Math.max(
-          getMinScheduleDelay(numSkippedBatches),
-          maxWaitTimeMillis - timeElapsed
-      );
+      long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
       scheduleQueuePoll(nextScheduleDelay);
       log.debug("Next execution in [%d ms]", nextScheduleDelay);
     }
-  }
-
-  /**
-   * Computes minimum delay for the next queue poll. If any batch was skipped or
-   * if all worker threads are busy, add a small delay (5 millis) before the
-   * next poll to avoid busy waiting.
-   */
-  private int getMinScheduleDelay(int numSkippedBatches)
-  {
-    return (runningDatasources.size() == config.getBatchAllocationNumThreads()
-            || numSkippedBatches > 0)
-           ? 5 : 0;
   }
 
   /**
@@ -382,6 +384,8 @@ public class SegmentAllocationQueue
     if (!processed) {
       requeueBatch(batch);
     }
+
+    scheduleQueuePoll(0);
   }
 
   /**
