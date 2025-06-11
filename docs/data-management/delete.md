@@ -22,7 +22,7 @@ title: "Data deletion"
   ~ under the License.
   -->
 
-## By time range, manually
+## Delete data for a time range manually
 
 Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 deleting data for time chunks by dropping segments. This is a fast, metadata-only operation.
@@ -42,17 +42,17 @@ For documentation on disabling segments using the Coordinator API, see the
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md).
 
-## By time range, automatically
+## Delete data automatically using drop rules
 
 Druid supports [load and drop rules](../operations/rule-configuration.md), which are used to define intervals of time
 where data should be preserved, and intervals where data should be discarded. Data that falls under a drop rule is
-marked unused, in the same manner as if you [manually mark that time range unused](#by-time-range-manually). This is a
+marked unused, in the same manner as if you [manually mark that time range unused](#delete-data-for-a-time-range-manually). This is a
 fast, metadata-only operation.
 
 Data that is dropped in this way is marked unused, but remains in deep storage. To permanently delete it, use a
 [`kill` task](#kill-task).
 
-## Specific records
+## Delete specific records
 
 Druid supports deleting specific records using [reindexing](update.md#reindex) with a filter. The filter specifies which
 data remains after reindexing, so it must be the inverse of the data you want to delete. Because segments must be
@@ -74,15 +74,15 @@ used to filter, modify, or enrich the data during the reindexing job.
 Data that is deleted in this way is marked unused, but remains in deep storage. To permanently delete it, use a [`kill`
 task](#kill-task).
 
-## Entire table
+## Delete an entire table
 
-Deleting an entire table works the same way as [deleting part of a table by time range](#by-time-range-manually). First,
+Deleting an entire table works the same way as [deleting part of a table by time range](#delete-data-for-a-time-range-manually). First,
 mark all segments unused using the Coordinator API or web console. Then, optionally, delete it permanently using a
 [`kill` task](#kill-task).
 
 <a name="kill-task"></a>
 
-## Permanently (`kill` task)
+## Delete data permanently using `kill` tasks
 
 Data that has been overwritten or soft-deleted still remains as segments that have been marked unused. You can use a
 `kill` task to permanently delete this data.
@@ -116,3 +116,33 @@ Some of the parameters used in the task payload are further explained below:
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
 
+### Auto-kill data using Coordinator duties
+
+Instead of submitting `kill` tasks manually to permanently delete data for a given interval, you can enable auto-kill of unused segments on the Coordinator.
+The Coordinator runs a duty periodically to identify intervals containing unused segments that are eligible for kill. It then launches a `kill` task for each of these intervals.
+
+Refer to [Data management on the Coordinator](../configuration/index.md#data-management) to configure auto-kill of unused segments on the Coordinator.
+
+### Auto-kill data on the Overlord (Experimental)
+
+:::info
+This feature MUST NOT be enabled if auto-kill of unused segments is already enabled on the Coordinator.
+:::
+
+This is an experimental feature to run kill tasks in an "embedded" mode on the Overlord itself.
+
+These embedded tasks offer several advantages over auto-kill perfomed by the Coordinator as they:
+- avoid a lot of unnecessary REST API calls to the Overlord from tasks or the Coordinator.
+- kill unused segments as soon as they become eligible.
+- run on the Overlord and do not take up task slots.
+- finish faster as they save on the overhead of launching a task process.
+- kill a small number of segments per task, to ensure that locks on an interval are not held for too long.
+- skip locked intervals to avoid head-of-line blocking in kill tasks.
+- require little to no configuration.
+- can keep up with a large number of unused segments in the cluster.
+- take advantage of the segment metadata cache on the Overlord.
+
+This feature can be used only if [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+
+Refer to [Auto-kill unused segments on the Overlord](../configuration/index.md#auto-kill-unused-segments-experimental) to configure auto-kill of unused segments on the Overlord.
+See [Auto-kill metrics](../operations/metrics.md#auto-kill-unused-segments) for the metrics emitted by embedded kill tasks.

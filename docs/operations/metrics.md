@@ -354,6 +354,20 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
 
+### Auto-kill unused segments
+
+These metrics are emitted only if [auto-kill of unused segments](../data-management/delete.md#auto-kill-data-on-the-overlord-experimental) is enabled on the Overlord.
+
+|Metric|Description|Dimensions|
+|------|-----------|----------|
+|`segment/killed/metadataStore/count`|Number of used segments currently present in the metadata store.|`dataSource`|
+|`segment/killed/deepStorage/count`|||
+|`segment/kill/queueReset/time`|||
+|`segment/kill/queueProcess/time`|||
+|`segment/kill/jobsProcessed/count`|||
+|`segment/kill/unusedIntervals/count`|||
+|`segment/kill/skippedIntervals/count`|||
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`.
