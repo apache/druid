@@ -55,7 +55,8 @@ public class SegmentAllocationQueueTest
   private SegmentAllocationQueue allocationQueue;
 
   private StubServiceEmitter emitter;
-  private BlockingExecutorService executor;
+  private BlockingExecutorService managerExec;
+  private BlockingExecutorService workerExec;
 
   private final boolean reduceMetadataIO;
 
@@ -80,8 +81,9 @@ public class SegmentAllocationQueueTest
   @Before
   public void setUp()
   {
-    executor = new BlockingExecutorService("alloc-test-exec");
-    emitter = new StubServiceEmitter("overlord", "alloc-test");
+    managerExec = new BlockingExecutorService("test-manager-exec");
+    workerExec = new BlockingExecutorService("test-worker-exec");
+    emitter = new StubServiceEmitter();
 
     final TaskLockConfig lockConfig = new TaskLockConfig()
     {
@@ -102,6 +104,12 @@ public class SegmentAllocationQueueTest
       {
         return reduceMetadataIO;
       }
+
+      @Override
+      public int getBatchAllocationNumThreads()
+      {
+        return 20;
+      }
     };
 
     allocationQueue = new SegmentAllocationQueue(
@@ -109,8 +117,11 @@ public class SegmentAllocationQueueTest
         lockConfig,
         taskActionTestKit.getMetadataStorageCoordinator(),
         emitter,
-        (corePoolSize, nameFormat)
-            -> new WrappingScheduledExecutorService(nameFormat, executor, false)
+        (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
+            nameFormat,
+            nameFormat.contains("Manager") ? managerExec : workerExec,
+            false
+        )
     );
     allocationQueue.start();
     allocationQueue.becomeLeader();
@@ -122,8 +133,8 @@ public class SegmentAllocationQueueTest
     if (allocationQueue != null) {
       allocationQueue.stop();
     }
-    if (executor != null) {
-      executor.shutdownNow();
+    if (managerExec != null) {
+      managerExec.shutdownNow();
     }
     emitter.flush();
   }
@@ -247,7 +258,8 @@ public class SegmentAllocationQueueTest
                          .build();
     Future<SegmentIdWithShardSpec> halfHourSegmentFuture = allocationQueue.add(halfHourSegmentRequest);
 
-    executor.finishNextPendingTask();
+    processDistinctDatasourceBatches();
+    processDistinctDatasourceBatches();
 
     Assert.assertNotNull(getSegmentId(hourSegmentFuture));
     Assert.assertNull(getSegmentId(halfHourSegmentFuture));
@@ -305,13 +317,18 @@ public class SegmentAllocationQueueTest
       segmentFutures.add(allocationQueue.add(request));
     }
 
-    executor.finishNextPendingTask();
+    for (int i = 0; i < 10; ++i) {
+      processDistinctDatasourceBatches();
+    }
 
     SegmentIdWithShardSpec segmentId1 = getSegmentId(segmentFutures.get(0));
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Assert.assertEquals(getSegmentId(future), segmentId1);
     }
+
+    // Verify each datasource batch is marked skipped just once
+    emitter.verifySum("task/action/batch/skipped", 9);
   }
 
   @Test
@@ -331,7 +348,7 @@ public class SegmentAllocationQueueTest
     }
 
     allocationQueue.stopBeingLeader();
-    executor.finishNextPendingTask();
+    processDistinctDatasourceBatches();
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
@@ -352,8 +369,11 @@ public class SegmentAllocationQueueTest
     final int expectedCount = canBatch ? 1 : 2;
     Assert.assertEquals(expectedCount, allocationQueue.size());
 
-    executor.finishNextPendingTask();
+    // Process both the jobs
+    processDistinctDatasourceBatches();
+    processDistinctDatasourceBatches();
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
+    emitter.verifySum("task/action/batch/submitted", expectedCount);
 
     Assert.assertNotNull(getSegmentId(futureA));
     Assert.assertNotNull(getSegmentId(futureB));
@@ -388,5 +408,17 @@ public class SegmentAllocationQueueTest
     Task task = new NoopTask(null, groupId, datasource, 0, 0, null);
     taskActionTestKit.getTaskLockbox().add(task);
     return task;
+  }
+
+  /**
+   * Triggers the {@link #managerExec} and the {@link #workerExec} to process a
+   * queued set of jobs (i.e. segment allocation batches) for distinct datasources.
+   * A single invocation of this method can process up to 1 batch for any given
+   * datasource and up to {@code batchAllocationNumThreads} batches total.
+   */
+  private void processDistinctDatasourceBatches()
+  {
+    managerExec.finishNextPendingTask();
+    workerExec.finishAllPendingTasks();
   }
 }
