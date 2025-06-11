@@ -52,7 +52,6 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -73,8 +72,6 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.apache.druid.query.DruidMetrics.ENGINE;
 
 public class IndexerWorkerContext implements WorkerContext
 {

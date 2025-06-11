@@ -55,6 +55,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -67,8 +68,6 @@ import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.druid.query.QueryContexts.CTX_SQL_QUERY_ID;
 
 /**
  * Implementation for {@link ControllerContext} required to run multi-stage queries as indexing tasks.
@@ -317,7 +316,7 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
         .put(BaseQuery.QUERY_ID, querySpec.getId())
-        .put(BaseQuery.SQL_QUERY_ID, queryContext.get(CTX_SQL_QUERY_ID));
+        .put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {

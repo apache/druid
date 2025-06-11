@@ -44,7 +44,6 @@ import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;

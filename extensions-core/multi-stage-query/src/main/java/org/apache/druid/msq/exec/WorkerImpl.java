@@ -45,10 +45,8 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -101,7 +99,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -230,15 +227,12 @@ public class WorkerImpl implements Worker
   }
 
   private void reportMetrics()
-  {//((WorkerImpl) worker).stageCounters.values().stream().findAny().get()
-    final AtomicLong cpuTimeNs = new AtomicLong(0);
+  {
+    long cpuTimeNs = 0L;
     for (final CounterTracker tracker : stageCounters.values()) {
-      CpuCounters cpuCounters = tracker.counter(CounterNames.cpu(), CpuCounters::new);
-      cpuCounters.snapshot().getCountersMap().forEach((s, snapshot) -> {
-        cpuTimeNs.addAndGet(snapshot.getCpuTime());
-      });
+      cpuTimeNs += tracker.totalCpu();
     }
-    context.emitMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs.get()));
+    context.emitMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
   }
 
   /**
