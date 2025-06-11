@@ -330,7 +330,7 @@ export function getSqlLiterals(sqlText: string, maxWords: number): string[] {
 }
 
 export function getPossibleSqlReferences(sqlText: string, maxWords: number): string[] {
-  const quotedRegexp = /"\w+"/g;
+  const quotedRegexp = /"\w{2,}"/g;
   const quotedMatches = (sqlText.match(quotedRegexp) || []).map(stripOuterChars);
 
   // Match identifiers that are preceded by whitespace, comma, parenthesis, or operators
