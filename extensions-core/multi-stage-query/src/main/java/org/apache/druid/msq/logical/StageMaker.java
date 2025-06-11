@@ -66,7 +66,7 @@ public class StageMaker
 
   public StageDefinitionBuilder buildStage(LogicalStage stage)
   {
-    if(builtStages.get(stage) != null ) {
+    if (builtStages.get(stage) != null) {
       return builtStages.get(stage);
     }
     StageDefinitionBuilder stageDef = buildStageInternal(stage);

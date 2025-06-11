@@ -57,7 +57,8 @@ public abstract class LogicalInputSpec
     }
   }
 
-  static class DagStageInputSpec extends LogicalInputSpec {
+  static class DagStageInputSpec extends LogicalInputSpec
+  {
 
     private LogicalStage inputStage;
 

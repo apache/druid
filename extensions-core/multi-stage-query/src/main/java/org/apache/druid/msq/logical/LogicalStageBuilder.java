@@ -58,7 +58,7 @@ public class LogicalStageBuilder
     this.plannerContext = plannerContext;
   }
 
-  public static abstract class AbstractLogicalStage implements LogicalStage
+  public abstract static class AbstractLogicalStage implements LogicalStage
   {
     protected final List<LogicalInputSpec> inputSpecs;
     protected final RowSignature signature;

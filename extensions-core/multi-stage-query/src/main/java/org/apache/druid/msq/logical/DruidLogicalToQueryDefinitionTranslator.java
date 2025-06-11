@@ -99,7 +99,7 @@ public class DruidLogicalToQueryDefinitionTranslator
         return newStage;
       }
       newStage = makeSequenceStage(inputStage, stack);
-      if(newStage != null) {
+      if (newStage != null) {
         return newStage;
       }
     }

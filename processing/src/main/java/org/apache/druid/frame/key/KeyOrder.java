@@ -63,8 +63,7 @@ public enum KeyOrder
 
   static KeyOrder fromDirection(Direction direction)
   {
-    switch (direction)
-    {
+    switch (direction) {
       case ASCENDING:
         return ASCENDING;
       case DESCENDING:

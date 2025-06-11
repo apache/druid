@@ -86,7 +86,7 @@ public class KeyColumn
     return StringUtils.format("%s%s", columnName, order == KeyOrder.NONE ? "" : " " + order);
   }
 
-  static public KeyColumn fromOrderByColumnSpec(OrderByColumnSpec orderByColumnSpec)
+  public static KeyColumn fromOrderByColumnSpec(OrderByColumnSpec orderByColumnSpec)
   {
     return new KeyColumn(
         orderByColumnSpec.getDimension(),
