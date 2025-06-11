@@ -742,7 +742,7 @@ public class TaskQueue
     removeTaskLock(task);
     requestManagement();
 
-    log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus.getStatusCode());
+    log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
   }
 
   /**
@@ -1058,7 +1058,7 @@ public class TaskQueue
 
       log.info(
           "Completed task[%s] with status[%s] in [%d]ms.",
-          task.getId(), status.getStatusCode(), status.getDuration()
+          task.getId(), status, status.getDuration()
       );
     }
   }
