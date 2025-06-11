@@ -66,7 +66,6 @@ public class LogicalStageBuilder
     public AbstractLogicalStage(RowSignature signature, LogicalInputSpec input)
     {
       this(signature, Collections.singletonList(input));
-      // getNextStageId();
     }
 
     public AbstractLogicalStage(RowSignature signature, List<LogicalInputSpec> inputs)
@@ -95,12 +94,12 @@ public class LogicalStageBuilder
       super(signature, input);
     }
 
-    protected abstract BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker);
-
-    public AbstractFrameProcessorStage(RowSignature signature, List<LogicalInputSpec> input)
+    public AbstractFrameProcessorStage(RowSignature signature, List<LogicalInputSpec> inputs)
     {
-      super(signature, input);
+      super(signature, inputs);
     }
+
+    protected abstract BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker);
   }
 
   public abstract static class AbstractShuffleStage extends AbstractLogicalStage
@@ -124,15 +123,15 @@ public class LogicalStageBuilder
    */
   public class ReadStage extends AbstractFrameProcessorStage
   {
-    public ReadStage(RowSignature signature, LogicalInputSpec inputSpecs)
+    public ReadStage(RowSignature signature, LogicalInputSpec inputSpec)
     {
-      super(signature, inputSpecs);
+      super(signature, inputSpec);
     }
 
     /**
      * Copy constructor.
      */
-    public ReadStage(ReadStage readStage, RowSignature newSignature)
+    protected ReadStage(ReadStage readStage, RowSignature newSignature)
     {
       super(newSignature, readStage.inputSpecs);
     }
@@ -212,7 +211,7 @@ public class LogicalStageBuilder
     /**
      * Copy constructor.
      */
-    public FilterStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
+    protected FilterStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
     {
       super(stage, rowSignature);
       this.dimFilter = stage.dimFilter;
@@ -250,11 +249,6 @@ public class LogicalStageBuilder
     public ProjectStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
     {
       super(stage, newVirtualColumnRegistry, rowSignature);
-    }
-
-    public ProjectStage(ProjectStage stage, RowSignature rowSignature)
-    {
-      super(stage, stage.virtualColumnRegistry, rowSignature);
     }
 
     @Override
