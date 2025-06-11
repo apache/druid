@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.kafka.IncrementalPublishingKafkaIndexTaskRunner;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
@@ -63,6 +64,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
@@ -485,10 +487,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testCreateBaseTaskContexts() throws JsonProcessingException
+  public void testGetTaskRunnerType() throws JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
-    final Map<String, Object> contexts = supervisor.createIndexTasks(
+    final SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity> indexTask = supervisor.createIndexTasks(
         1,
         "seq",
         OBJECT_MAPPER,
@@ -531,10 +533,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         ),
         null
-    ).get(0).getContext();
-    final Boolean contextValue = (Boolean) contexts.get("IS_INCREMENTAL_HANDOFF_SUPPORTED");
-    Assert.assertNotNull(contextValue);
-    Assert.assertTrue(contextValue);
+    ).get(0);
+    Assert.assertTrue(indexTask.getRunner() instanceof IncrementalPublishingKafkaIndexTaskRunner);
   }
 
   @Test

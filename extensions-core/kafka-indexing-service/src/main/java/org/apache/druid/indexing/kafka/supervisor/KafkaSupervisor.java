@@ -231,10 +231,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
-    // Kafka index task always uses incremental handoff since 0.16.0.
-    // The below is for the compatibility when you want to downgrade your cluster to something earlier than 0.16.0.
-    // Kafka index task will pick up LegacyKafkaIndexTaskRunner without the below configuration.
-    context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
     List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
