@@ -48,11 +48,8 @@ import java.util.List;
  */
 public class LogicalStageBuilder
 {
-  private PlannerContext plannerContext;
-
   public LogicalStageBuilder(PlannerContext plannerContext)
   {
-    this.plannerContext = plannerContext;
   }
 
   public abstract static class AbstractLogicalStage implements LogicalStage
@@ -138,7 +135,7 @@ public class LogicalStageBuilder
     {
       if (stack.getNode() instanceof DruidFilter) {
         DruidFilter filter = (DruidFilter) stack.getNode();
-        return makeFilterStage(filter);
+        return makeFilterStage(stack.getPlannerContext(), filter);
       }
 
       if (stack.getNode() instanceof DruidProject) {
@@ -148,12 +145,12 @@ public class LogicalStageBuilder
             project.getCluster(), project.getTraitSet(), project,
             project.getCluster().getRexBuilder().makeLiteral(true)
         );
-        return makeFilterStage(dummyFilter).extendWith(stack);
+        return makeFilterStage(stack.getPlannerContext(), dummyFilter).extendWith(stack);
       }
       return null;
     }
 
-    private LogicalStage makeFilterStage(DruidFilter filter)
+    private LogicalStage makeFilterStage(PlannerContext plannerContext, DruidFilter filter)
     {
       VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
           signature,
@@ -207,7 +204,7 @@ public class LogicalStageBuilder
     {
       if (stack.getNode() instanceof DruidProject) {
         DruidProject project = (DruidProject) stack.getNode();
-        Projection projection = Projection.preAggregation(project, plannerContext, signature, virtualColumnRegistry);
+        Projection projection = Projection.preAggregation(project, stack.getPlannerContext(), signature, virtualColumnRegistry);
 
         return new ProjectStage(
             this,

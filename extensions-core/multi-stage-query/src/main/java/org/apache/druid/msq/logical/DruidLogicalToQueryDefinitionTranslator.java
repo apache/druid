@@ -69,7 +69,7 @@ public class DruidLogicalToQueryDefinitionTranslator
    */
   public LogicalStage translate(DruidLogicalNode relRoot)
   {
-    DruidNodeStack stack = new DruidNodeStack();
+    DruidNodeStack stack = new DruidNodeStack(plannerContext);
     stack.push(relRoot);
     LogicalStage logicalStage = buildStageFor(stack);
     return logicalStage;

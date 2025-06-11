@@ -94,8 +94,13 @@ public class DruidQueryGenerator
         return ToStringBuilder.reflectionToString(this, ToStringStyle.NO_CLASS_NAME_STYLE);
       }
     }
-
     Stack<Entry> stack = new Stack<>();
+    PlannerContext plannerContext;
+
+    public DruidNodeStack(PlannerContext plannerContext)
+    {
+      this.plannerContext = plannerContext;
+    }
 
     public void push(DruidLogicalNode item)
     {
@@ -136,11 +141,16 @@ public class DruidQueryGenerator
     {
       return stack.peek().operandIndex;
     }
+
+    public PlannerContext getPlannerContext()
+    {
+      return plannerContext;
+    }
   }
 
   public DruidQuery buildQuery()
   {
-    DruidNodeStack stack = new DruidNodeStack();
+    DruidNodeStack stack = new DruidNodeStack(vertexFactory.plannerContext);
     stack.push(relRoot);
     Vertex vertex = buildVertexFor(stack);
     return vertex.buildQuery(true);
