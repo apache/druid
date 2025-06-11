@@ -17,38 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.msq.logical;
+package org.apache.druid.msq.logical.stages;
 
+import org.apache.druid.msq.kernel.ShuffleSpec;
+import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
-import javax.annotation.Nullable;
-
-/**
- * Represents an unbuilt physical stage - which can be built.
- *
- * Implementations of this interface will keep track of the inputs needed to
- * build the physical stage.
- */
-public interface LogicalStage
+public abstract class AbstractShuffleStage extends AbstractLogicalStage
 {
-  /**
-   * Attempts to extend the current stage with an additional node.
-   *
-   * @return null if the current stage cannot be extended
-   */
-  @Nullable
-  LogicalStage extendWith(DruidNodeStack stack);
+  public AbstractShuffleStage(RowSignature signature, LogicalInputSpec input)
+  {
+    super(signature, input);
+  }
 
-  /**
-   * Real row signature this stage will return.
-   *
-   * This might have been reordered and may have additional technical columns.
-   */
-  RowSignature getRowSignature();
+  @Override
+  public LogicalStage extendWith(DruidNodeStack stack)
+  {
+    return null;
+  }
 
-  /**
-   * Logical row signature this node supposed to be producing.
-   */
-  RowSignature getLogicalRowSignature();
+  public abstract ShuffleSpec buildShuffleSpec();
 }

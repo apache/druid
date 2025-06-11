@@ -25,8 +25,9 @@ import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractFrameProcessorStage;
-import org.apache.druid.msq.logical.LogicalStageBuilder.AbstractShuffleStage;
+import org.apache.druid.msq.logical.stages.AbstractFrameProcessorStage;
+import org.apache.druid.msq.logical.stages.AbstractShuffleStage;
+import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.query.QueryContexts;
@@ -89,7 +90,7 @@ public class StageMaker
 
   private StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
   {
-    List<LogicalInputSpec> inputs = frameProcessorStage.inputSpecs;
+    List<LogicalInputSpec> inputs = frameProcessorStage.getInputSpecs();
     List<InputSpec> inputSpecs = new ArrayList<>();
     for (LogicalInputSpec dagInputSpec : inputs) {
       inputSpecs.add(dagInputSpec.toInputSpec(this));
@@ -105,7 +106,7 @@ public class StageMaker
 
   private StageDefinitionBuilder buildShuffleStage(AbstractShuffleStage stage)
   {
-    List<LogicalInputSpec> inputs = stage.inputSpecs;
+    List<LogicalInputSpec> inputs = stage.getInputSpecs();
     List<InputSpec> inputSpecs = new ArrayList<>();
     for (LogicalInputSpec dagInputSpec : inputs) {
       inputSpecs.add(dagInputSpec.toInputSpec(this));

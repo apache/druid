@@ -23,6 +23,7 @@ import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.segment.column.RowSignature;
 
 /**

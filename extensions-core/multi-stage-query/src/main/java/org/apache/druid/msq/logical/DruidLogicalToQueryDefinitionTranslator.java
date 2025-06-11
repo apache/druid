@@ -26,7 +26,9 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.logical.LogicalStageBuilder.ReadStage;
+import org.apache.druid.msq.logical.stages.LogicalStage;
+import org.apache.druid.msq.logical.stages.ReadStage;
+import org.apache.druid.msq.logical.stages.SortStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -56,12 +58,10 @@ import java.util.Optional;
 public class DruidLogicalToQueryDefinitionTranslator
 {
   private PlannerContext plannerContext;
-  private LogicalStageBuilder stageBuilder;
 
   public DruidLogicalToQueryDefinitionTranslator(PlannerContext plannerContext)
   {
     this.plannerContext = plannerContext;
-    this.stageBuilder = new LogicalStageBuilder(plannerContext);
   }
 
   /**
@@ -127,10 +127,9 @@ public class DruidLogicalToQueryDefinitionTranslator
       }
       List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(inputStage.getLogicalRowSignature(), sort);
       List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
-      return stageBuilder.makeSortStage(inputStage, keyColumns);
+      return new SortStage(inputStage, keyColumns);
     }
-
-    return stageBuilder.makeReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
+    return new ReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
   }
 
   private List<LogicalStage> buildInputStages(DruidNodeStack stack)
@@ -150,7 +149,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     TableDataSource ids = (TableDataSource) sd.dataSource;
     TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
+    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 
@@ -159,7 +158,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     InlineDataSource ids = (InlineDataSource) sd.dataSource;
     InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
+    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 }
