@@ -88,7 +88,7 @@ public class LogicalStageBuilder
     }
   }
 
-  public abstract class AbstractFrameProcessorStage extends AbstractLogicalStage
+  public abstract static class AbstractFrameProcessorStage extends AbstractLogicalStage
   {
     public AbstractFrameProcessorStage(RowSignature signature, LogicalInputSpec input)
     {
@@ -103,7 +103,7 @@ public class LogicalStageBuilder
     }
   }
 
-  public abstract class AbstractShuffleStage extends AbstractLogicalStage
+  public abstract static class AbstractShuffleStage extends AbstractLogicalStage
   {
     public AbstractShuffleStage(RowSignature signature, LogicalInputSpec input)
     {
@@ -263,7 +263,7 @@ public class LogicalStageBuilder
     }
   }
 
-  class SortStage extends AbstractShuffleStage
+  static class SortStage extends AbstractShuffleStage
   {
     protected List<KeyColumn> keyColumns;
     // FIXME: remove
