@@ -443,14 +443,9 @@ public class TaskQueue
                   e.getMessage()
               );
             }
-            try {
-              TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
-              notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
-              emitTaskCompletionLogsAndMetrics(task, taskStatus);
-            }
-            catch (Exception e2) {
-              log.error(e2, "Exception thrown during task completion cleanup loop: %s", task.getId());
-            }
+            final TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+            emitTaskCompletionLogsAndMetrics(task, taskStatus);
             return;
           }
           if (taskIsReady) {
@@ -705,7 +700,7 @@ public class TaskQueue
       return;
     } else if (entry.isComplete) {
       // A callback() or shutdown() beat us to updating the status and has already cleaned up this task
-      log.info("Received already-complete task[%s] with status [%s], ignoring", task.getId(), taskStatus);
+      log.info("Ignoring notification with status[%s] for already completed task[%s]", taskStatus, task.getId());
       return;
     }
 
@@ -746,6 +741,8 @@ public class TaskQueue
 
     removeTaskLock(task);
     requestManagement();
+
+    log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus.getStatusCode());
   }
 
   /**
@@ -1053,16 +1050,16 @@ public class TaskQueue
 
       emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
 
-      log.info(
-          "Completed task[%s] with status[%s] in [%d]ms.",
-          task.getId(), status.getStatusCode(), status.getDuration()
-      );
-
       if (status.isSuccess()) {
         Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
       } else {
         Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
       }
+
+      log.info(
+          "Completed task[%s] with status[%s] in [%d]ms.",
+          task.getId(), status.getStatusCode(), status.getDuration()
+      );
     }
   }
 
