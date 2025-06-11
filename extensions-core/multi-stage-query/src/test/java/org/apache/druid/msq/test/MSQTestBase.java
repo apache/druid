@@ -149,6 +149,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -749,7 +750,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           final List<InputRow> rtRows =
               rtRawRows.stream().map(TestDataBuilder::createRow).collect(Collectors.toList());
 
-          segment = Optional.of(new RowBasedSegment<>(
+          segment = Optional.of(new TestSegmentUtils.InMemoryTestSegment<>(
+                                    segmentId,
                                     Sequences.simple(rtRows),
                                     RowAdapters.standardRow(),
                                     RowSignature.builder()
