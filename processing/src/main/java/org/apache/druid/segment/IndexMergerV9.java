@@ -1352,10 +1352,10 @@ public class IndexMergerV9 implements IndexMerger
 
     List<Metadata> metadataList = Lists.transform(indexes, IndexableAdapter::getMetadata);
     final Metadata segmentMetadata;
-    if (metricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
-      for (int i = 0; i < metricAggs.length; i++) {
-        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
+    if (sortedMetricAggs != null) {
+      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
+      for (int i = 0; i < sortedMetricAggs.length; i++) {
+        combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
       }
       segmentMetadata = Metadata.merge(
           metadataList,
