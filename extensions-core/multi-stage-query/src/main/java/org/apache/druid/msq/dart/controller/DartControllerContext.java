@@ -34,6 +34,7 @@ import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -109,9 +110,12 @@ public class DartControllerContext implements ControllerContext
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
     this.context = context;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
-    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
     this.emitter = emitter;
+
+    // Set up metric dimensions
+    this.metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setQueryDimensions(this.metricBuilder, context);
+    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 
   @Override

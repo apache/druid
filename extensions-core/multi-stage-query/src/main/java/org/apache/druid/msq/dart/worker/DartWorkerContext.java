@@ -32,6 +32,7 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -43,6 +44,7 @@ import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
@@ -127,7 +129,10 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
+
+    // Set up metric dimensions
     this.metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setQueryDimensions(this.metricBuilder, queryContext);
     this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 

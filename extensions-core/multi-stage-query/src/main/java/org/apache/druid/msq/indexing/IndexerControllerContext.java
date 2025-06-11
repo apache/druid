@@ -87,8 +87,6 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceMetricEvent.Builder metricBuilder;
   private final MemoryIntrospector memoryIntrospector;
 
-
-
   public IndexerControllerContext(
       final TaskLockType taskLockType,
       final String taskDataSource,

@@ -49,6 +49,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -57,6 +58,7 @@ import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CancellationReason;
+import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -275,9 +277,13 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
+
+    // Setup metric dimensions
     Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    MSQMetricUtils.setQueryDimensions(metricBuilder, this.getQuerySpec().getContext());
     metricBuilder.setDimension(ENGINE, MSQTaskSqlEngine.NAME);
+
     final ControllerContext context = new IndexerControllerContext(
         this.getTaskLockType(),
         this.getDataSource(),
