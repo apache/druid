@@ -247,14 +247,14 @@ public class LogicalStageBuilder
 
   class ProjectStage extends FilterStage
   {
-    public ProjectStage(FilterStage root, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
+    public ProjectStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
     {
-      super(root, newVirtualColumnRegistry, rowSignature);
+      super(stage, newVirtualColumnRegistry, rowSignature);
     }
 
-    public ProjectStage(ProjectStage root, RowSignature rowSignature)
+    public ProjectStage(ProjectStage stage, RowSignature rowSignature)
     {
-      super(root, root.virtualColumnRegistry, rowSignature);
+      super(stage, stage.virtualColumnRegistry, rowSignature);
     }
 
     @Override
