@@ -42,12 +42,12 @@ import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.kafka.IncrementalPublishingKafkaIndexTaskRunner;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskRunner;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.kafka.test.TestBroker;
@@ -534,7 +534,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         null
     ).get(0);
-    Assert.assertTrue(indexTask.getRunner() instanceof IncrementalPublishingKafkaIndexTaskRunner);
+    Assert.assertTrue(indexTask.getRunner() instanceof KafkaIndexTaskRunner);
   }
 
   @Test
