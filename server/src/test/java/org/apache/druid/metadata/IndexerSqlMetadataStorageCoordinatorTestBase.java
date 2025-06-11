@@ -31,10 +31,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
@@ -65,7 +63,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class IndexerSqlMetadataStorageCoordinatorTestBase
@@ -646,7 +643,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
-    final String table = connector.getMetadataTablesConfigSupplier().get().getSegmentsTable();
+    final String table = connector.getMetadataTablesConfig().getSegmentsTable();
 
     final String sql = getSegmentInsertSql(includeSchema, table, connector);
     connector.retryWithHandle(

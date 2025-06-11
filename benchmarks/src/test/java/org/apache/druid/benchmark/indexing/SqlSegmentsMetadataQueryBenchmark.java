@@ -115,7 +115,7 @@ public class SqlSegmentsMetadataQueryBenchmark
 
   private <T> Set<T> readAsSet(Function<SqlSegmentsMetadataQuery, CloseableIterator<T>> iterableReader)
   {
-    final MetadataStorageTablesConfig tablesConfig = derbyConnector.getMetadataTablesConfigSupplier().get();
+    final MetadataStorageTablesConfig tablesConfig = derbyConnector.getMetadataTablesConfig();
 
     return derbyConnector.inReadOnlyTransaction((handle, status) -> {
       final SqlSegmentsMetadataQuery query =

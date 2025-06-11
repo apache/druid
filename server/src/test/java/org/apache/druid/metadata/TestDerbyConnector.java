@@ -49,11 +49,11 @@ import java.util.UUID;
 public class TestDerbyConnector extends DerbyConnector
 {
   private final String jdbcUri;
-  private final Supplier<MetadataStorageTablesConfig> dbTables;
+  private final MetadataStorageTablesConfig dbTables;
 
   public TestDerbyConnector(
-      Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataStorageConnectorConfig config,
+      MetadataStorageTablesConfig dbTables,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -61,24 +61,24 @@ public class TestDerbyConnector extends DerbyConnector
   }
 
   public TestDerbyConnector(
-      Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables
+      MetadataStorageConnectorConfig config,
+      MetadataStorageTablesConfig dbTables
   )
   {
     this(config, dbTables, "jdbc:derby:memory:druidTest" + dbSafeUUID(), CentralizedDatasourceSchemaConfig.create());
   }
 
   protected TestDerbyConnector(
-      Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables,
+      MetadataStorageConnectorConfig config,
+      MetadataStorageTablesConfig dbTables,
       String jdbcUri,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
         new NoopMetadataStorageProvider().get(),
-        config,
-        dbTables,
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(dbTables),
         new DBI(jdbcUri + ";create=true"),
         centralizedDatasourceSchemaConfig
     );
@@ -89,13 +89,13 @@ public class TestDerbyConnector extends DerbyConnector
   public TestDerbyConnector()
   {
     this(
-        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())),
+        new MetadataStorageConnectorConfig(),
+        MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID()),
         CentralizedDatasourceSchemaConfig.create()
     );
   }
 
-  public Supplier<MetadataStorageTablesConfig> getMetadataTablesConfigSupplier()
+  public MetadataStorageTablesConfig getMetadataTablesConfig()
   {
     return this.dbTables;
   }
@@ -126,14 +126,15 @@ public class TestDerbyConnector extends DerbyConnector
     return jdbcUri;
   }
 
-  public void createDatabase() {
+  public void createDatabase()
+  {
     this.getDBI().open().close();
   }
 
   public static class DerbyConnectorRule extends ExternalResource
   {
     private TestDerbyConnector connector;
-    private final Supplier<MetadataStorageTablesConfig> dbTables;
+    private final MetadataStorageTablesConfig dbTables;
     private final MetadataStorageConnectorConfig connectorConfig;
     private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
@@ -145,7 +146,7 @@ public class TestDerbyConnector extends DerbyConnector
     public DerbyConnectorRule(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this(
-          Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())),
+          MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID()),
           centralizedDatasourceSchemaConfig
       );
     }
@@ -155,13 +156,13 @@ public class TestDerbyConnector extends DerbyConnector
     )
     {
       this(
-          Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)),
+          MetadataStorageTablesConfig.fromBase(defaultBase),
           CentralizedDatasourceSchemaConfig.create()
       );
     }
 
     public DerbyConnectorRule(
-        Supplier<MetadataStorageTablesConfig> dbTables,
+        MetadataStorageTablesConfig dbTables,
         CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
     )
     {
@@ -181,7 +182,7 @@ public class TestDerbyConnector extends DerbyConnector
     protected void before()
     {
       connector = new TestDerbyConnector(
-          Suppliers.ofInstance(connectorConfig),
+          connectorConfig,
           dbTables,
           centralizedDatasourceSchemaConfig
       );
@@ -206,7 +207,7 @@ public class TestDerbyConnector extends DerbyConnector
 
     public Supplier<MetadataStorageTablesConfig> metadataTablesConfigSupplier()
     {
-      return dbTables;
+      return Suppliers.ofInstance(dbTables);
     }
 
     public SegmentsTable segments()
