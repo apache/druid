@@ -70,6 +70,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
     LogicalStage logicalStage = qdt.translate(rootRel);
 
     StageMaker maker = new StageMaker(plannerContext);
+    maker.buildStage(logicalStage);
     QueryDefinition queryDef = maker.buildQueryDefinition();
 
     QueryContext context = plannerContext.queryContext();
