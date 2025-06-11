@@ -327,8 +327,8 @@ public class SegmentAllocationQueueTest
       Assert.assertEquals(getSegmentId(future), segmentId1);
     }
 
-    // Verify same datasource batches are skipped (9 + 8 + ... + 1) times
-    emitter.verifySum("task/action/batch/skipped", 45);
+    // Verify each datasource batch is marked skipped just once
+    emitter.verifySum("task/action/batch/skipped", 9);
   }
 
   @Test

@@ -309,7 +309,7 @@ public class SegmentAllocationQueue
       if (nextBatch.isDue()) {
         if (runningDatasources.contains(dataSource)) {
           // Skip this batch as another batch for the same datasource is in progress
-          emitBatchMetric("task/action/batch/skipped", 1L, nextBatch.key);
+          markBatchAsSkipped(nextBatch);
           ++numSkippedBatches;
         } else {
           // Process this batch
@@ -386,6 +386,22 @@ public class SegmentAllocationQueue
     }
 
     scheduleQueuePoll(0);
+  }
+
+  /**
+   * Marks the given batch as skipped.
+   */
+  private void markBatchAsSkipped(AllocateRequestBatch batch)
+  {
+    keyToBatch.compute(
+        batch.key,
+        (batchKey, latestBatchForKey) -> {
+          if (latestBatchForKey != null) {
+            latestBatchForKey.markSkipped();
+          }
+          return latestBatchForKey;
+        }
+    );
   }
 
   /**
@@ -624,6 +640,7 @@ public class SegmentAllocationQueue
     private long queueTimeMillis;
     private final AllocateRequestKey key;
     private boolean started = false;
+    private boolean skipped = false;
 
     /**
      * Map from allocate requests (represents a single SegmentAllocateAction)
@@ -651,6 +668,7 @@ public class SegmentAllocationQueue
     {
       queueTimeMillis = System.currentTimeMillis();
       started = false;
+      skipped = false;
     }
 
     void markStarted()
@@ -661,6 +679,14 @@ public class SegmentAllocationQueue
     boolean isStarted()
     {
       return started;
+    }
+
+    void markSkipped()
+    {
+      if (!skipped) {
+        skipped = true;
+        emitBatchMetric("task/action/batch/skipped", 1L, key);
+      }
     }
 
     boolean isFull()
