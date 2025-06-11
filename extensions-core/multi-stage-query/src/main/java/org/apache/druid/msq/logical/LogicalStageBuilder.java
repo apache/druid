@@ -110,12 +110,13 @@ public class LogicalStageBuilder
       super(signature, input);
     }
 
-    protected abstract ShuffleSpec buildShuffleSpec();
-
-    public AbstractShuffleStage(RowSignature signature, List<LogicalInputSpec> input)
+    @Override
+    public LogicalStage extendWith(DruidNodeStack stack)
     {
-      super(signature, input);
+      return null;
     }
+
+    protected abstract ShuffleSpec buildShuffleSpec();
   }
 
   /**
@@ -265,9 +266,7 @@ public class LogicalStageBuilder
 
   static class SortStage extends AbstractShuffleStage
   {
-    protected List<KeyColumn> keyColumns;
-    // FIXME: remove
-    private LogicalStage inputStage;
+    protected final List<KeyColumn> keyColumns;
 
     public SortStage(LogicalStage inputStage, List<KeyColumn> keyColumns)
     {
@@ -275,19 +274,13 @@ public class LogicalStageBuilder
           QueryKitUtils.sortableSignature(inputStage.getLogicalRowSignature(), keyColumns),
           LogicalInputSpec.of(inputStage)
       );
-      this.inputStage = inputStage;
       this.keyColumns = keyColumns;
-    }
-
-    @Override
-    public LogicalStage extendWith(DruidNodeStack stack)
-    {
-      return null;
     }
 
     @Override
     public RowSignature getLogicalRowSignature()
     {
+      LogicalStage inputStage = (LogicalStage) inputSpecs.get(0);
       return inputStage.getLogicalRowSignature();
     }
 
