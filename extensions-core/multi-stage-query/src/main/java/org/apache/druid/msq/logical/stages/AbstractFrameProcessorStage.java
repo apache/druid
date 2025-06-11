@@ -19,13 +19,19 @@
 
 package org.apache.druid.msq.logical.stages;
 
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nonnull;
+
 import java.util.List;
 
+/**
+ * Represents a {@link LogicalStage} which could be processed as a {@link FrameProcessorFactory}.
+ */
 public abstract class AbstractFrameProcessorStage extends AbstractLogicalStage
 {
   public AbstractFrameProcessorStage(RowSignature signature, LogicalInputSpec input)
@@ -38,5 +44,9 @@ public abstract class AbstractFrameProcessorStage extends AbstractLogicalStage
     super(signature, inputs);
   }
 
+  /**
+   * Builds the {@link FrameProcessorFactory} for this stage.
+   */
+  @Nonnull
   public abstract BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker);
 }

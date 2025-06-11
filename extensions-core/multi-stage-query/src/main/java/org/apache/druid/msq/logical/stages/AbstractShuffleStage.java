@@ -22,8 +22,12 @@ package org.apache.druid.msq.logical.stages;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
+import javax.annotation.Nonnull;
+
+/**
+ * Represents a Shuffle stage.
+ */
 public abstract class AbstractShuffleStage extends AbstractLogicalStage
 {
   public AbstractShuffleStage(RowSignature signature, LogicalInputSpec input)
@@ -31,11 +35,9 @@ public abstract class AbstractShuffleStage extends AbstractLogicalStage
     super(signature, input);
   }
 
-  @Override
-  public LogicalStage extendWith(DruidNodeStack stack)
-  {
-    return null;
-  }
-
+  /**
+   * Builds the shuffle specification for this stage.
+   */
+  @Nonnull
   public abstract ShuffleSpec buildShuffleSpec();
 }

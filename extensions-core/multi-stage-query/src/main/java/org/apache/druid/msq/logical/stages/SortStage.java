@@ -26,6 +26,7 @@ import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import java.util.List;
 
@@ -54,4 +55,11 @@ public class SortStage extends AbstractShuffleStage
     final ClusterBy clusterBy = new ClusterBy(keyColumns, 0);
     return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
   }
+
+  @Override
+  public LogicalStage extendWith(DruidNodeStack stack)
+  {
+    return null;
+  }
+
 }

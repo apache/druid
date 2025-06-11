@@ -22,10 +22,12 @@ package org.apache.druid.msq.logical.stages;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.segment.column.RowSignature;
-
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Common stage implementation.
+ */
 public abstract class AbstractLogicalStage implements LogicalStage
 {
   protected final List<LogicalInputSpec> inputSpecs;

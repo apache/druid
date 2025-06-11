@@ -25,9 +25,9 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 class ProjectStage extends FilterStage
 {
-  public ProjectStage(FilterStage stage, VirtualColumnRegistry newVirtualColumnRegistry, RowSignature rowSignature)
+  public ProjectStage(FilterStage stage, VirtualColumnRegistry virtualColumnRegistry, RowSignature signature)
   {
-    super(stage, newVirtualColumnRegistry, rowSignature);
+    super(stage, virtualColumnRegistry, signature);
   }
 
   @Override

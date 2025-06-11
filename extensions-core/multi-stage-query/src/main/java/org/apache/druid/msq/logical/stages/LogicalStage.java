@@ -56,6 +56,8 @@ public interface LogicalStage
   RowSignature getLogicalRowSignature();
 
 
+  /**
+   * Returns the inputs of this stage.
+   */
   List<LogicalInputSpec> getInputSpecs();
-
 }
