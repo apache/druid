@@ -111,7 +111,7 @@ public class GlobalTaskLockbox
     final AtomicInteger taskLockCount = new AtomicInteger(0);
 
     datasourceToSyncResult.forEach((dataSource, syncResult) -> {
-      try (final DatasourceLockboxResource lockboxResource = getLockboxResource(dataSource)) {
+      try (final DatasourceLockboxResource lockboxResource = getLockboxResource(dataSource, false)) {
         final TaskLockboxSyncResult lockboxSyncResult = lockboxResource.delegate.resetState(
             syncResult.storedActiveTasks,
             syncResult.storedLocks
@@ -141,6 +141,8 @@ public class GlobalTaskLockbox
     // Clean up all existing lockboxes
     final Set<String> datasourceNames = Set.copyOf(datasourceToLockbox.keySet());
     for (String dataSource : datasourceNames) {
+      // This can block if a bad runaway operation is still working on the underlying TaskLockbox.
+      // There is currently no clear way to interrupt ongoing operations.
       cleanupLockboxResourceIf(dataSource, resource -> true);
     }
 
@@ -468,8 +470,14 @@ public class GlobalTaskLockbox
    * Gets the {@link DatasourceLockboxResource} for the given datasource and
    * increments the number of references currently in use.
    * This resource must be closed once it is not needed anymore.
+   *
+   * @throws ISE if {@code verifySyncComplete} is true and sync is not complete
+   * yet.
    */
-  private DatasourceLockboxResource getLockboxResource(String datasource)
+  private DatasourceLockboxResource getLockboxResource(
+      String datasource,
+      boolean verifySyncComplete
+  )
   {
     return datasourceToLockbox.compute(
         datasource,
@@ -480,6 +488,15 @@ public class GlobalTaskLockbox
                   new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
               )
           );
+
+          // Verify sync is complete before acquiring the resource
+          if (verifySyncComplete && !syncComplete.get()) {
+            throw new ISE(
+                "Cannot get TaskLockbox for datasource[%s] as sync with storage has not happened yet.",
+                datasource
+            );
+          }
+
           resource.acquireReference();
           return resource;
         }
@@ -499,7 +516,6 @@ public class GlobalTaskLockbox
         dataSource,
         (ds, resource) -> {
           if (resource != null && resourcePredicate.test(resource)) {
-            // TODO: what if a bad runaway operation is holding the TaskLockbox.giant?
             resource.delegate.clear();
             return null;
           } else {
@@ -518,15 +534,7 @@ public class GlobalTaskLockbox
       LockComputation<R, T> computation
   ) throws T
   {
-    // Verify that sync is complete
-    if (!syncComplete.get()) {
-      throw new ISE(
-          "Cannot get TaskLockbox for datasource[%s] as sync with storage has not happened yet.",
-          datasource
-      );
-    }
-
-    try (final DatasourceLockboxResource lockbox = getLockboxResource(datasource)) {
+    try (final DatasourceLockboxResource lockbox = getLockboxResource(datasource, true)) {
       return computation.perform(lockbox.delegate);
     }
   }

@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
@@ -71,6 +72,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -2048,6 +2050,21 @@ public class GlobalTaskLockboxTest
     taskLockbox.remove(appendTask);
 
     EasyMock.verify(coordinator);
+  }
+
+  @Test
+  public void test_add_throwsException_ifSyncIsNotComplete()
+  {
+    lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            ISE.class,
+            () -> lockbox.add(NoopTask.create())
+        ),
+        ExceptionMatcher.of(ISE.class).expectMessageIs(
+            "Cannot get TaskLockbox for datasource[none] as sync with storage has not happened yet."
+        )
+    );
   }
 
   private class TaskLockboxValidator
