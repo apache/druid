@@ -131,7 +131,7 @@ This feature MUST NOT be enabled if auto-kill of unused segments is already enab
 
 This is an experimental feature to run kill tasks in an "embedded" mode on the Overlord itself.
 
-These embedded tasks offer several advantages over auto-kill perfomed by the Coordinator as they:
+These embedded tasks offer several advantages over auto-kill performed by the Coordinator as they:
 - avoid a lot of unnecessary REST API calls to the Overlord from tasks or the Coordinator.
 - kill unused segments as soon as they become eligible.
 - run on the Overlord and do not take up task slots.

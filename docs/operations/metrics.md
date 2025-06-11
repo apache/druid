@@ -360,13 +360,13 @@ These metrics are emitted only if [auto-kill of unused segments](../data-managem
 
 |Metric|Description|Dimensions|
 |------|-----------|----------|
-|`segment/killed/metadataStore/count`|Number of used segments currently present in the metadata store.|`dataSource`|
-|`segment/killed/deepStorage/count`|||
-|`segment/kill/queueReset/time`|||
-|`segment/kill/queueProcess/time`|||
-|`segment/kill/jobsProcessed/count`|||
-|`segment/kill/unusedIntervals/count`|||
-|`segment/kill/skippedIntervals/count`|||
+|`segment/killed/metadataStore/count`|Number of segments permanently deleted from the metadata store.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/killed/deepStorage/count`|Number of segments permanently deleted from the deep storage.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/unusedIntervals/count`|Number of intervals containing unused segments for a given datasource.|`dataSource`|
+|`segment/kill/skippedIntervals/count`|Number of intervals that were skipped for kill due to being already locked by another task.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/queueReset/time`|Time taken in milliseconds to reset the kill queue.||
+|`segment/kill/queueProcess/time`|Time taken in milliseconds to fully process the kill queue.||
+|`segment/kill/jobsProcessed/count`|Number of jobs processed from the kill queue for a given datasource.|`dataSource`|
 
 ## Shuffle metrics (Native parallel task)
 
