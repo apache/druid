@@ -1935,7 +1935,7 @@ Metric monitoring is an essential part of Druid operations. The following table 
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|Any|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|Overlord|
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|Overlord|
-|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|MiddleManager, Indexer|
+|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
@@ -1944,7 +1944,11 @@ For example, you might configure monitors on all services for system and JVM inf
 druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
-You can override cluster-wide configuration by amending the `runtime.properties` of individual services.
+You can override cluster-wide configuration by amending the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `../coordinator-overlord/runtime.properties`:
+
+```
+druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor"]
+```
 
 ### Metrics emitters
 
