@@ -21,8 +21,6 @@ package org.apache.druid.msq.logical;
 
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -276,14 +274,7 @@ public class LogicalStageBuilder
     @Override
     protected ShuffleSpec buildShuffleSpec()
     {
-      final Granularity segmentGranularity = Granularities.ALL;
-      // FIXME:
-      // QueryKitUtils.getSegmentGranularityFromContext(jsonMapper,
-      // queryToRun.getContext());
-
-      final ClusterBy clusterBy = QueryKitUtils
-          .clusterByWithSegmentGranularity(new ClusterBy(keyColumns, 0), segmentGranularity);
-      // FIXME targetSize == 1
+      final ClusterBy clusterBy = new ClusterBy(keyColumns, 0);
       return ShuffleSpecFactories.globalSortWithMaxPartitionCount(1).build(clusterBy, false);
     }
   }
