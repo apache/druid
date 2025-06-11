@@ -131,6 +131,9 @@ The response for submitting a query includes the query ID along with basic infor
 "durationMs": DURATION_IN_MS,
 }
 ```
+:::info
+You can't use `SET` command to set up the value `executionMode`.This context parameter must be specified using the `context` field in the Druid SQL API or Druid Web Console.
+:::
 
 
 ### Get query status
