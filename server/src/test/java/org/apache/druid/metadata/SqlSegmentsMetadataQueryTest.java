@@ -241,7 +241,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveUsedSegments_withOverlapsCondition()
   {
-    Interval queryInterval = Intervals.of(JAN_1.plusDays(2), JAN_1.plusDays(4));
+    Interval queryInterval = new Interval(JAN_1.plusDays(2), JAN_1.plusDays(4));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
@@ -258,7 +258,7 @@ public class SqlSegmentsMetadataQueryTest
     );
     Assert.assertEquals(1, numUpdatedSegments);
 
-    final Interval queryInterval = Intervals.of(JAN_1, JAN_1.plusDays(2));
+    final Interval queryInterval = new Interval(JAN_1, JAN_1.plusDays(2));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
@@ -269,7 +269,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveUsedSegments_withOverlapsCondition_nearEndDate()
   {
-    Interval queryInterval = Intervals.of(JAN_1.plusDays(4), JAN_1.plusDays(5));
+    Interval queryInterval = new Interval(JAN_1.plusDays(4), JAN_1.plusDays(5));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
     Assert.assertEquals(2, result.size());
