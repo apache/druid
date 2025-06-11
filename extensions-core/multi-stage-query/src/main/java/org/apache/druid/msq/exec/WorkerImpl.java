@@ -45,8 +45,10 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.CpuCounter;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -222,7 +224,18 @@ public class WorkerImpl implements Worker
     }
     finally {
       runFuture.set(null);
+      reportMetrics();
     }
+  }
+
+  private void reportMetrics()
+  {//((WorkerImpl) worker).stageCounters.values().stream().findAny().get()
+    long cpuTime = 0;
+    for (final CounterTracker tracker : stageCounters.values()) {
+      CpuCounter cpuCounter = tracker.counter(CounterNames.cpu(), CpuCounter::new);
+      cpuTime += cpuCounter.snapshot().getCpuTime();
+    }
+    context.emitMetric("query/cpu/time", cpuTime);
   }
 
   /**
