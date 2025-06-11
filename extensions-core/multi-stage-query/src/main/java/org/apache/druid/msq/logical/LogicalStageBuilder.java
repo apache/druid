@@ -81,7 +81,7 @@ public class LogicalStageBuilder
       return signature;
     }
 
-    public RowSignature getSignature()
+    public final RowSignature getSignature()
     {
       return signature;
     }

@@ -41,7 +41,14 @@ public interface LogicalStage
   LogicalStage extendWith(DruidNodeStack stack);
 
   /**
-   * Logical row signature this node supposed to produce.
+   * Real row signature this stage will return.
+   *
+   * This might have been reordered and may have additional technical columns.
+   */
+  RowSignature getRowSignature();
+
+  /**
+   * Logical row signature this node supposed to be producing.
    */
   RowSignature getLogicalRowSignature();
 }
