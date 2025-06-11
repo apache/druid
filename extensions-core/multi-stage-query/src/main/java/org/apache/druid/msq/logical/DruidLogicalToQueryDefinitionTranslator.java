@@ -26,7 +26,6 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.LogicalStageBuilder.ReadStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -47,7 +46,7 @@ import java.util.Optional;
 
 /**
  * Translates the logical plan defined by the {@link DruidLogicalNode} into a
- * {@link QueryDefinition}.
+ * {@link LogicalStage} nodes.
  *
  * The translation should be executed as a single pass over the logical plan.
  *

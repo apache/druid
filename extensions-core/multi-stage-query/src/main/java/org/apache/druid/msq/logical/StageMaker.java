@@ -36,7 +36,10 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class StageMaker
 {
@@ -46,7 +49,7 @@ public class StageMaker
 
   private final PlannerContext plannerContext;
 
-  private List<StageDefinitionBuilder> stageBuilders = new ArrayList<>();
+  private Map<LogicalStage, StageDefinitionBuilder> builtStages = new IdentityHashMap<>();
 
   public StageMaker(PlannerContext plannerContext)
   {
@@ -61,12 +64,17 @@ public class StageMaker
     return ScanQueryFrameProcessorFactory.makeScanFrameProcessor(virtualColumns, signature, dimFilter);
   }
 
-  private int getNextStageId()
+  public StageDefinitionBuilder buildStage(LogicalStage stage)
   {
-    return stageIdSeq++;
+    if(builtStages.get(stage) != null ) {
+      return builtStages.get(stage);
+    }
+    StageDefinitionBuilder stageDef = buildStageInternal(stage);
+    builtStages.put(stage, stageDef);
+    return stageDef;
   }
 
-  public StageDefinitionBuilder buildStage(LogicalStage stage)
+  private StageDefinitionBuilder buildStageInternal(LogicalStage stage)
   {
     if (stage instanceof AbstractFrameProcessorStage) {
       return buildFrameProcessorStage((AbstractFrameProcessorStage) stage);
@@ -110,9 +118,12 @@ public class StageMaker
 
   private StageDefinitionBuilder newStageDefinitionBuilder()
   {
-    StageDefinitionBuilder builder = StageDefinition.builder(getNextStageId());
-    stageBuilders.add(builder);
-    return builder;
+    return StageDefinition.builder(getNextStageId());
+  }
+
+  private int getNextStageId()
+  {
+    return stageIdSeq++;
   }
 
   public QueryDefinition buildQueryDefinition()
@@ -123,9 +134,10 @@ public class StageMaker
   private List<StageDefinition> makeStages()
   {
     List<StageDefinition> ret = new ArrayList<>();
-    for (StageDefinitionBuilder stageDefinitionBuilder : stageBuilders) {
+    for (StageDefinitionBuilder stageDefinitionBuilder : builtStages.values()) {
       ret.add(stageDefinitionBuilder.build(getIdForBuilder()));
     }
+    ret.sort(Comparator.comparing(StageDefinition::getStageNumber));
     return ret;
   }
 

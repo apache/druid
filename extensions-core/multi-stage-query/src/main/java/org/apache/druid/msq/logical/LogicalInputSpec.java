@@ -23,8 +23,12 @@ import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 
+/**
+ * Represents an {@link InputSpec} for {@link LogicalStage}-s.
+ */
 public abstract class LogicalInputSpec
 {
+
   public abstract InputSpec toInputSpec(StageMaker maker);
 
   public static LogicalInputSpec of(LogicalStage inputStage)
@@ -73,6 +77,5 @@ public abstract class LogicalInputSpec
     {
       return inputStage;
     }
-
   }
 }
