@@ -154,33 +154,33 @@
     ],
     "type": "counter"
   },
-  "ingest/persist/counter": {
+  "ingest/persists/counter": {
     "dimensions": [
       "dataSource"
     ],
     "type": "counter"
   },
-  "ingest/persist/time": {
+  "ingest/persists/time": {
     "dimensions": [
       "dataSource"
     ],
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
-  "ingest/persist/cpu": {
+  "ingest/persists/cpu": {
     "dimensions": [
       "dataSource"
     ],
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
-  "ingest/persist/backPressure": {
+  "ingest/persists/backPressure": {
     "dimensions": [
       "dataSource"
     ],
     "type": "gauge"
   },
-  "ingest/persist/failed": {
+  "ingest/persists/failed": {
     "dimensions": [
       "dataSource"
     ],
