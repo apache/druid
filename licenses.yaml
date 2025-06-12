@@ -223,7 +223,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.4
+version: 2.18.4.1
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -2854,7 +2854,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.18.4
+version: 2.18.4.1
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -5068,18 +5068,6 @@ version: 3.0.4
 license_file_path: licenses/bin/jakarta.el.EPL2
 libraries:
   - org.glassfish: jakarta.el
-
----
-
-name:
-license_category: binary
-module: extensions-contrib/ambari-metrics-emitter
-license_name: CDDL 1.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-version: 2.2.12
-libraries:
-  - javax.xml.bind: jaxb-api
 
 ---
 
