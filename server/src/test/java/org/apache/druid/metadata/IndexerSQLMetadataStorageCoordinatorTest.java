@@ -151,7 +151,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
-        () -> new SegmentsMetadataManagerConfig(null, cacheMode),
+        () -> new SegmentsMetadataManagerConfig(null, cacheMode, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopSegmentSchemaCache(),
         derbyConnector,
@@ -1829,6 +1829,99 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(limit, retreivedUnusedSegments.size());
     Assert.assertTrue(SEGMENTS.containsAll(retreivedUnusedSegments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithExactInterval()
+  {
+    final String dataSource = defaultSegment.getDataSource();
+    coordinator.commitSegments(Set.of(defaultSegment, defaultSegment2, defaultSegment3), null);
+
+    final DateTime now = DateTimes.nowUtc();
+    markAllSegmentsUnused(Set.of(defaultSegment, defaultSegment2, defaultSegment3), now.minusHours(1));
+
+    // Verify that query for overlapping interval does not return the segments
+    Assert.assertTrue(
+        coordinator.retrieveUnusedSegmentsWithExactInterval(
+            dataSource,
+            Intervals.ETERNITY,
+            now,
+            10
+        ).isEmpty()
+    );
+
+    // Verify that query for exact interval returns the segments
+    Assert.assertEquals(
+        List.of(defaultSegment3),
+        coordinator.retrieveUnusedSegmentsWithExactInterval(
+            dataSource,
+            defaultSegment3.getInterval(),
+            now,
+            10
+        )
+    );
+
+    Assert.assertEquals(defaultSegment.getInterval(), defaultSegment2.getInterval());
+    Assert.assertEquals(
+        Set.of(defaultSegment, defaultSegment2),
+        Set.copyOf(
+            coordinator.retrieveUnusedSegmentsWithExactInterval(
+                dataSource,
+                defaultSegment.getInterval(),
+                now,
+                10
+            )
+        )
+    );
+
+    // Verify that query with limit 1 returns only 1 result
+    Assert.assertEquals(
+        1,
+        coordinator.retrieveUnusedSegmentsWithExactInterval(
+            dataSource,
+            defaultSegment.getInterval(),
+            now,
+            1
+        ).size()
+    );
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentIntervals()
+  {
+    final String dataSource = defaultSegment.getDataSource();
+    coordinator.commitSegments(Set.of(defaultSegment, defaultSegment3), null);
+
+    Assert.assertTrue(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100).isEmpty());
+
+    markAllSegmentsUnused(Set.of(defaultSegment), DateTimes.nowUtc().minusHours(1));
+    Assert.assertEquals(
+        List.of(defaultSegment.getInterval()),
+        coordinator.retrieveUnusedSegmentIntervals(dataSource, 100)
+    );
+
+    markAllSegmentsUnused(Set.of(defaultSegment3), DateTimes.nowUtc().minusHours(1));
+    Assert.assertEquals(
+        Set.of(defaultSegment.getInterval(), defaultSegment3.getInterval()),
+        Set.copyOf(coordinator.retrieveUnusedSegmentIntervals(dataSource, 100))
+    );
+
+    // Verify retrieve with limit 1 returns only 1 interval
+    Assert.assertEquals(
+        1,
+        coordinator.retrieveUnusedSegmentIntervals(dataSource, 1).size()
+    );
+  }
+
+  @Test
+  public void testRetrieveAllDatasourceNames()
+  {
+    coordinator.commitSegments(Set.of(defaultSegment), null);
+    coordinator.commitSegments(Set.of(hugeTimeRangeSegment1), null);
+    Assert.assertEquals(
+        Set.of("fooDataSource", "hugeTimeRangeDataSource"),
+        coordinator.retrieveAllDatasourceNames()
+    );
   }
 
   @Test
@@ -3742,7 +3835,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     SegmentId highestUnusedId = transactionFactory.inReadWriteDatasourceTransaction(
         TestDataSource.WIKI,
-        transaction -> transaction.findHighestUnusedSegmentId(Intervals.of("2024/2025"), "v1")
+        transaction -> transaction.noCacheSql().retrieveHighestUnusedSegmentId(
+            TestDataSource.WIKI,
+            Intervals.of("2024/2025"),
+            "v1"
+        )
     );
     Assert.assertEquals(
         unusedSegmentForExactIntervalAndVersion.getId(),

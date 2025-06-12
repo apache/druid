@@ -45,12 +45,6 @@ public class LikeOperatorConversion extends DirectOperatorConversion
     super(SQL_FUNCTION, "like");
   }
 
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return SQL_FUNCTION;
-  }
-
   @Nullable
   @Override
   public DimFilter toDruidFilter(

@@ -42,6 +42,7 @@ public class DruidMetrics
   public static final String GROUP_ID = "groupId";
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";
+  public static final String DESCRIPTION = "description";
 
   // Ingestion dimensions
   public static final String PARTITIONING_TYPE = "partitioningType";

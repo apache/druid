@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
@@ -43,11 +42,5 @@ public class SafeDivideOperatorConversion extends DirectOperatorConversion
   public SafeDivideOperatorConversion()
   {
     super(SQL_FUNCTION, Function.SafeDivide.NAME);
-  }
-
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return SQL_FUNCTION;
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.testing.cluster.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -34,7 +35,7 @@ import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
  * <li>Skip cleanup of pending segments</li>
  * </ul>
  */
-public class FaultyTaskLockbox extends TaskLockbox
+public class FaultyTaskLockbox extends GlobalTaskLockbox
 {
   private static final Logger log = new Logger(FaultyTaskLockbox.class);
 

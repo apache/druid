@@ -22,6 +22,7 @@ package org.apache.druid.metadata.segment;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -116,6 +117,12 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   public Handle getHandle()
   {
     return delegate.getHandle();
+  }
+
+  @Override
+  public SqlSegmentsMetadataQuery noCacheSql()
+  {
+    return delegate.noCacheSql();
   }
 
   @Override

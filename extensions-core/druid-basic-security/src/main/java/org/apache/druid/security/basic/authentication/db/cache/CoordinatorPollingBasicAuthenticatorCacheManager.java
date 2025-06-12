@@ -126,6 +126,9 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
               }
               LOG.debug("Scheduled user cache poll is done");
             }
+            catch (InterruptedException e) {
+              LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedUserMaps.");
+            }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
@@ -148,7 +151,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     }
 
     LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopping.");
-    exec.shutdown();
+    exec.shutdownNow();
     LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopped.");
   }
 
@@ -188,15 +191,17 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   {
     try {
       return RetryUtils.retry(
-          () -> {
-            return tryFetchUserMapFromCoordinator(prefix);
-          },
-          e -> true,
+          () -> tryFetchUserMapFromCoordinator(prefix),
+          e -> !(e instanceof InterruptedException),
           commonCacheConfig.getMaxSyncRetries()
       );
     }
+    catch (InterruptedException e) {
+      LOG.noStackTrace().info(e, "Interrupted while fetching user map for authenticator[%s].", prefix);
+      return null;
+    }
     catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator [%s]", prefix).emit();
+      LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator[%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {

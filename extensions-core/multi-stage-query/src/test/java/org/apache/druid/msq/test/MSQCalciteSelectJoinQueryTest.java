@@ -27,6 +27,7 @@ import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+
 import java.util.Map;
 
 /**
@@ -77,6 +78,12 @@ public class MSQCalciteSelectJoinQueryTest
     protected JoinAlgorithm joinAlgorithm()
     {
       return JoinAlgorithm.SORT_MERGE;
+    }
+
+    @Override
+    public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
+    {
+      // Skip testing sort-merge join for restricted broadcast, this test is not applicable.
     }
   }
 

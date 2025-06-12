@@ -55,6 +55,7 @@ import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.PhysicalSegmentInspector;
@@ -132,7 +133,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig =
-        new SegmentsMetadataManagerConfig(Period.millis(10), null);
+        new SegmentsMetadataManagerConfig(Period.millis(10), null, null);
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
   }
 
@@ -1068,7 +1069,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    segment.getDataSource(),
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -2230,7 +2234,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    segment.getDataSource(),
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty())).once();
 

@@ -54,6 +54,7 @@ public class DartFrameContext implements FrameContext
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public DartFrameContext(
       final StageId stageId,
@@ -63,7 +64,8 @@ public class DartFrameContext implements FrameContext
       final DataSegmentProvider dataSegmentProvider,
       ResourceHolder<ProcessingBuffers> processingBuffers,
       final WorkerMemoryParameters memoryParameters,
-      final WorkerStorageParameters storageParameters
+      final WorkerStorageParameters storageParameters,
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
     this.stageId = stageId;
@@ -74,6 +76,7 @@ public class DartFrameContext implements FrameContext
     this.processingBuffers = processingBuffers;
     this.memoryParameters = memoryParameters;
     this.storageParameters = storageParameters;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
   }
 
   @Override
@@ -163,9 +166,7 @@ public class DartFrameContext implements FrameContext
   @Override
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    // We don't query data servers. This factory won't actually be used, because Dart doesn't allow segmentSource to be
-    // overridden; it always uses SegmentSource.NONE. (If it is called, some wires got crossed somewhere.)
-    return null;
+    return dataServerQueryHandlerFactory;
   }
 
   @Override

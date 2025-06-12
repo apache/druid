@@ -23,14 +23,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(a_float, ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -40,14 +40,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -57,14 +57,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -74,14 +74,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(a_str, ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -91,14 +91,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -108,14 +108,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -125,14 +125,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(a_null, ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -142,14 +142,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -159,14 +159,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -176,14 +176,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(a_empty, ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -193,14 +193,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok
@@ -210,14 +210,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_overlap(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY[1]) AS col
 FROM test_array;
-+-------+
-| col   |
-+-------+
-| false |
-| false |
-| false |
-| false |
-+-------+
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
 (4 rows)
 
 !ok

@@ -257,11 +257,6 @@ public class DataSourceTest
         e.getMessage()
     );
 
-    ISE e2 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(noPolicyFound, policyEnforcer));
-    Assert.assertEquals(
-        "No restriction found on table [table1], but had policy [RowFilterPolicy{rowFilter=random-column IS NULL}] before.",
-        e2.getMessage()
-    );
     ISE e3 = Assert.assertThrows(
         ISE.class,
         () -> restrictedDataSource.withPolicies(policyWasNotChecked, policyEnforcer)

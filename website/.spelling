@@ -688,6 +688,7 @@ druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
 error_msg
@@ -726,6 +727,7 @@ total_size
 useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
+useLexicographicTopN
 wikipedia
 your-table
 enableTimeBoundaryPlanning

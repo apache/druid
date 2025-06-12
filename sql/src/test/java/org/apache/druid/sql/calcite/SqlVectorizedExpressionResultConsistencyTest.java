@@ -68,9 +68,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTest
+public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNullHandlingTest
 {
-  private static final Logger log = new Logger(SqlVectorizedExpressionSanityTest.class);
+  private static final Logger log = new Logger(SqlVectorizedExpressionResultConsistencyTest.class);
 
   private static final List<String> QUERIES = ImmutableList.of(
       "SELECT SUM(long1 * long2) FROM foo",
@@ -174,7 +174,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
 
   private String query;
 
-  public SqlVectorizedExpressionSanityTest(String query)
+  public SqlVectorizedExpressionResultConsistencyTest(String query)
   {
     this.query = query;
   }
@@ -182,10 +182,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @Test
   public void testQuery()
   {
-    sanityTestVectorizedSqlQueries(ENGINE, PLANNER_FACTORY, query);
+    testQuery(ENGINE, PLANNER_FACTORY, query);
   }
 
-  public static void sanityTestVectorizedSqlQueries(SqlEngine engine, PlannerFactory plannerFactory, String query)
+  public static void testQuery(SqlEngine engine, PlannerFactory plannerFactory, String query)
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",
