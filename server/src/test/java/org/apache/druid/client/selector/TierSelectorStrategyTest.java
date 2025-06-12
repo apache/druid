@@ -37,6 +37,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,7 +46,7 @@ import java.util.Set;
 
 public class TierSelectorStrategyTest
 {
-  
+
   @Test
   public void testHighestPriorityTierSelectorStrategyRealtime()
   {
@@ -64,7 +65,7 @@ public class TierSelectorStrategyTest
         highPriority, lowPriority
     );
   }
-  
+
   @Test
   public void testHighestPriorityTierSelectorStrategy()
   {
@@ -247,7 +248,7 @@ public class TierSelectorStrategyTest
     Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
     Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
-  
+
   @Test
   public void testServerSelectorStrategyDefaults()
   {
@@ -260,17 +261,214 @@ public class TierSelectorStrategyTest
     servers.add(p0);
     RandomServerSelectorStrategy strategy = new RandomServerSelectorStrategy();
     Assert.assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
-    Assert.assertEquals(strategy.pick(EasyMock.createMock(Query.class), servers, EasyMock.createMock(DataSegment.class)), p0);
-    ServerSelectorStrategy defaultDeprecatedServerSelectorStrategy = new ServerSelectorStrategy() {
+    Assert.assertEquals(
+        strategy.pick(
+            EasyMock.createMock(Query.class),
+            servers,
+            EasyMock.createMock(DataSegment.class)
+        ), p0
+    );
+    ServerSelectorStrategy defaultDeprecatedServerSelectorStrategy = new ServerSelectorStrategy()
+    {
       @Override
-      public <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
-          int numServersToPick)
+      public <T> List<QueryableDruidServer> pick(
+          @Nullable Query<T> query, Collection<QueryableDruidServer> servers, DataSegment segment,
+          int numServersToPick
+      )
       {
         return strategy.pick(servers, segment, numServersToPick);
       }
     };
-    Assert.assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
-    Assert.assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class), 1).get(0), p0);
+    Assert.assertEquals(
+        defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class)),
+        p0
+    );
+    Assert.assertEquals(
+        defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class), 1)
+                                               .get(0), p0
+    );
   }
 
+  private void testPreferredTierSelectorStrategy(
+      PreferredTierSelectorStrategy tierSelectorStrategy,
+      QueryableDruidServer... expectedSelection
+  )
+  {
+    final ServerSelector serverSelector = new ServerSelector(
+        new DataSegment(
+            "test",
+            Intervals.of("2013-01-01/2013-01-02"),
+            DateTimes.of("2013-01-01").toString(),
+            new HashMap<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            NoneShardSpec.instance(),
+            0,
+            0L
+        ),
+        tierSelectorStrategy,
+        HistoricalFilter.IDENTITY_FILTER
+    );
+
+    List<QueryableDruidServer> servers = new ArrayList<>(Arrays.asList(expectedSelection));
+
+    List<DruidServerMetadata> expectedCandidates = new ArrayList<>();
+    for (QueryableDruidServer server : servers) {
+      expectedCandidates.add(server.getServer().getMetadata());
+    }
+    Collections.shuffle(servers);
+    for (QueryableDruidServer server : servers) {
+      serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
+    }
+
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+
+    // when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
+    List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
+    allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
+    Assert.assertEquals(allServers, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
+
+    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  @Test
+  public void testPreferredTierSelectorStrategyHighestPriority()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        client
+    );
+    QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        client
+    );
+    QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        client
+    );
+
+    testPreferredTierSelectorStrategy(
+        new PreferredTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+        ),
+        preferredTierHighPriority, preferredTierLowPriority, nonPreferredTierHighestPriority
+    );
+  }
+
+  @Test
+  public void testPreferredTierSelectorStrategyLowestPriority()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        client
+    );
+    QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        client
+    );
+    QueryableDruidServer nonPreferredTierLowestPriority = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", -1),
+        client
+    );
+
+    testPreferredTierSelectorStrategy(
+        new PreferredTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new PreferredTieSelectorStrategyConfig("preferred", "lowest")
+        ),
+        preferredTierLowPriority, preferredTierHighPriority, nonPreferredTierLowestPriority
+    );
+  }
+
+  @Test
+  public void testPreferredTierSelectorStrategyWithFallback()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    // Create only non-preferred tier servers with different priorities
+    QueryableDruidServer nonPreferredTierLowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 0),
+        client
+    );
+    QueryableDruidServer nonPreferredTierMediumPriority = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 1),
+        client
+    );
+    QueryableDruidServer nonPreferredTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        client
+    );
+
+    // Since no preferred tier servers are available, it should fall back to other servers
+    // based on highest priority
+    testPreferredTierSelectorStrategy(
+        new PreferredTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+        ),
+        nonPreferredTierHighPriority, nonPreferredTierMediumPriority, nonPreferredTierLowPriority
+    );
+  }
+
+  @Test
+  public void testPreferredTierSelectorStrategyMixedServers()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        client
+    );
+    QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        client
+    );
+    QueryableDruidServer anotherTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "tier1", 2),
+        client
+    );
+    QueryableDruidServer yetAnotherTierMediumPriority = new QueryableDruidServer(
+        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "tier2", 1),
+        client
+    );
+
+    // Should return preferred tier servers first, sorted by priority
+    testPreferredTierSelectorStrategy(
+        new PreferredTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+        ),
+        preferredTierHighPriority, preferredTierLowPriority, anotherTierHighPriority, yetAnotherTierMediumPriority
+    );
+  }
+
+  @Test
+  public void testPreferredTierSelectorStrategyDefaultPriority()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+
+    QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        client
+    );
+    QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
+        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        client
+    );
+    QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        client
+    );
+
+    testPreferredTierSelectorStrategy(
+        new PreferredTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            // Using null for priority should default to highest priority
+            new PreferredTieSelectorStrategyConfig("preferred", null)
+        ),
+        preferredTierHighPriority, preferredTierLowPriority, nonPreferredTierHighestPriority
+    );
+  }
 }

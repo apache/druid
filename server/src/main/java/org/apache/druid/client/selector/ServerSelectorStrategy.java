@@ -27,6 +27,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -38,12 +39,12 @@ import java.util.Set;
 public interface ServerSelectorStrategy
 {
   @Nullable
-  default <T> QueryableDruidServer pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment)
+  default <T> QueryableDruidServer pick(@Nullable Query<T> query, Collection<QueryableDruidServer> servers, DataSegment segment)
   {
     return Iterables.getOnlyElement(pick(query, servers, segment, 1), null);
   }
 
-  default <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
+  default <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Collection<QueryableDruidServer> servers, DataSegment segment,
       int numServersToPick)
   {
     return pick(servers, segment, numServersToPick);
@@ -51,13 +52,13 @@ public interface ServerSelectorStrategy
 
   @Deprecated
   @Nullable
-  default QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
+  default QueryableDruidServer pick(Collection<QueryableDruidServer> servers, DataSegment segment)
   {
     return pick(null, servers, segment);
   }
 
   @Deprecated
-  default List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
+  default List<QueryableDruidServer> pick(Collection<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
   {
     return pick(null, servers, segment, numServersToPick);
   }
