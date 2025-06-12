@@ -79,16 +79,7 @@ Segment records and segments in deep storage become eligible for deletion when b
 - When they meet the eligibility requirement of kill task datasource configuration according to `killDataSourceWhitelist` set in the Coordinator dynamic configuration. See [Dynamic configuration](../configuration/index.md#dynamic-configuration).
 - When the `durationToRetain` time has passed since their creation.
 
-Kill tasks use the following configuration:
-- `druid.coordinator.kill.on`: When `true`, enables the Coordinator to submit a kill task for unused segments, which deletes them completely from metadata store and from deep storage.
-Only applies to the specified datasources in the dynamic configuration parameter `killDataSourceWhitelist`.
-If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitted for all datasources.
-- `druid.coordinator.kill.period`: Defines the frequency in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) for the cleanup job to check for and delete eligible segments. Defaults to `druid.coordinator.period.indexingPeriod`. Must be greater than or equal to `druid.coordinator.period.indexingPeriod`.
-- `druid.coordinator.kill.durationToRetain`: Defines the retention period in [ISO 8601 format](https://en.wikipedia.org/wiki/ISO_8601#Durations) after creation that segments become eligible for deletion.
-- `druid.coordinator.kill.ignoreDurationToRetain`: A way to override `druid.coordinator.kill.durationToRetain`. When enabled, the coordinator considers all unused segments as eligible to be killed.
-- `druid.coordinator.kill.bufferPeriod`: Defines the amount of time that a segment must be unused before it can be permanently removed from metadata and deep storage. This serves as a buffer period to prevent data loss if data ends up being needed after being marked unused.
-- `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
-- `druid.coordinator.kill.maxInterval`: Defines the largest interval, as an [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations), of segments to delete per kill task. Set to zero, e.g. `PT0S`, for unlimited.
+Refer to [Data Management on Coordinator](../configuration/index.md#data-management) to configure auto-kill of unused segments on the Coordinator.
 
 ### Audit records
 

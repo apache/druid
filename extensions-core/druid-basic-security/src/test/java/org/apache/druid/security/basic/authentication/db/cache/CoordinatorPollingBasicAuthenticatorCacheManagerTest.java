@@ -102,6 +102,8 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 
     // Stop the manager and verify that the polling thread has been interrupted
     manager.stop();
+    Thread.sleep(10);
+
     Assert.assertTrue(isInterrupted.get());
 
     EasyMock.verify(injector, leaderClient);

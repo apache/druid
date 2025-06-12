@@ -354,6 +354,20 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
 
+### Auto-kill unused segments
+
+These metrics are emitted only if [auto-kill of unused segments](../data-management/delete.md#auto-kill-data-on-the-overlord-experimental) is enabled on the Overlord.
+
+|Metric|Description|Dimensions|
+|------|-----------|----------|
+|`segment/killed/metadataStore/count`|Number of segments permanently deleted from the metadata store.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/killed/deepStorage/count`|Number of segments permanently deleted from the deep storage.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/unusedIntervals/count`|Number of intervals containing unused segments for a given datasource.|`dataSource`|
+|`segment/kill/skippedIntervals/count`|Number of intervals that were skipped for kill due to being already locked by another task.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/queueReset/time`|Time taken in milliseconds to reset the kill queue.||
+|`segment/kill/queueProcess/time`|Time taken in milliseconds to fully process the kill queue.||
+|`segment/kill/jobsProcessed/count`|Number of jobs processed from the kill queue for a given datasource.|`dataSource`|
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`.
