@@ -24,13 +24,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        jdk: [ "11", "17", "21.0.4" ]
         pattern: [ "CoordinatorPollingBasic*" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
-      jdk: 17
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
+      jdk: ${{ matrix.jdk }}
       artifact_prefix: "unit-test-reports"
-      key: "test-jdk17-[${{ matrix.pattern }}]"
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
 
   test-report:
     name: "test-report"
