@@ -24,14 +24,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ "11", "17", "21.0.4" ]
-        pattern: [ "CoordinatorPollingBasic*" ]
+        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
-      jdk: ${{ matrix.jdk }}
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      jdk: 17
       artifact_prefix: "unit-test-reports"
-      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+      key: "test-jdk17-[${{ matrix.pattern }}]"
 
   test-report:
     name: "test-report"
@@ -74,7 +73,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [ "11", "21.0.4" ]
-        pattern: [ "CoordinatorPollingBasic*" ]
+        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
