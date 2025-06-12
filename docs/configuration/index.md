@@ -1194,6 +1194,7 @@ The following properties pertain to segment metadata caching on the Overlord tha
 ##### Auto-kill unused segments (Experimental)
 
 These configs pertain to the new embedded mode of running [kill tasks on the Overlord](../data-management/delete.md#auto-kill-data-on-the-overlord-experimental).
+None of the configs that apply to [auto-kill performed by the Coordinator](../data-management/delete.md#auto-kill-data-using-coordinator-duties) are used by this feature.
 
 |Property|Description|Default|
 |--------|-----------|-------|

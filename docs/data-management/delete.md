@@ -126,7 +126,9 @@ Refer to [Data management on the Coordinator](../configuration/index.md#data-man
 ### Auto-kill data on the Overlord (Experimental)
 
 :::info
-This feature MUST NOT be enabled if auto-kill of unused segments is already enabled on the Coordinator.
+This is an experimental feature that:
+- Can be used only if [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+- MUST NOT be used if auto-kill of unused segments is already enabled on the Coordinator.
 :::
 
 This is an experimental feature to run kill tasks in an "embedded" mode on the Overlord itself.
@@ -141,8 +143,6 @@ These embedded tasks offer several advantages over auto-kill performed by the Co
 - require little to no configuration.
 - can keep up with a large number of unused segments in the cluster.
 - take advantage of the segment metadata cache on the Overlord.
-
-This feature can be used only if [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
 
 Refer to [Auto-kill unused segments on the Overlord](../configuration/index.md#auto-kill-unused-segments-experimental) to configure auto-kill of unused segments on the Overlord.
 See [Auto-kill metrics](../operations/metrics.md#auto-kill-unused-segments) for the metrics emitted by embedded kill tasks.
