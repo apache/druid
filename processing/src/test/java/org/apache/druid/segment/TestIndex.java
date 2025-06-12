@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
-import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -182,7 +181,7 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS =  ImmutableList.of(
+  public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS = ImmutableList.of(
       new AggregateProjectionSpec(
           "index_projection",
           VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
