@@ -117,8 +117,8 @@ public class TaskActionTestKit extends ExternalResource
     emitter = new StubServiceEmitter();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
     testDerbyConnector = new TestDerbyConnector(
-        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(metadataStorageTablesConfig)
+        new MetadataStorageConnectorConfig(),
+        metadataStorageTablesConfig
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
     final SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
