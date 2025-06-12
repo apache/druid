@@ -42,7 +42,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
 
   public PreferredTierSelectorStrategy(
       @JacksonInject ServerSelectorStrategy serverSelectorStrategy,
-      @JacksonInject PreferredTieSelectorStrategyConfig config
+      @JacksonInject PreferredTierSelectorStrategyConfig config
   )
   {
     super(serverSelectorStrategy);

@@ -352,7 +352,7 @@ public class TierSelectorStrategyTest
     testPreferredTierSelectorStrategy(
         new PreferredTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
-            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+            new PreferredTierSelectorStrategyConfig("preferred", "highest")
         ),
         preferredTierHighPriority, preferredTierLowPriority, nonPreferredTierHighestPriority
     );
@@ -378,7 +378,7 @@ public class TierSelectorStrategyTest
     testPreferredTierSelectorStrategy(
         new PreferredTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
-            new PreferredTieSelectorStrategyConfig("preferred", "lowest")
+            new PreferredTierSelectorStrategyConfig("preferred", "lowest")
         ),
         preferredTierLowPriority, preferredTierHighPriority, nonPreferredTierLowestPriority
     );
@@ -407,7 +407,7 @@ public class TierSelectorStrategyTest
     testPreferredTierSelectorStrategy(
         new PreferredTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
-            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+            new PreferredTierSelectorStrategyConfig("preferred", "highest")
         ),
         nonPreferredTierHighPriority, nonPreferredTierMediumPriority, nonPreferredTierLowPriority
     );
@@ -438,7 +438,7 @@ public class TierSelectorStrategyTest
     testPreferredTierSelectorStrategy(
         new PreferredTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
-            new PreferredTieSelectorStrategyConfig("preferred", "highest")
+            new PreferredTierSelectorStrategyConfig("preferred", "highest")
         ),
         preferredTierHighPriority, preferredTierLowPriority, anotherTierHighPriority, yetAnotherTierMediumPriority
     );
@@ -466,7 +466,7 @@ public class TierSelectorStrategyTest
         new PreferredTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
             // Using null for priority should default to highest priority
-            new PreferredTieSelectorStrategyConfig("preferred", null)
+            new PreferredTierSelectorStrategyConfig("preferred", null)
         ),
         preferredTierHighPriority, preferredTierLowPriority, nonPreferredTierHighestPriority
     );

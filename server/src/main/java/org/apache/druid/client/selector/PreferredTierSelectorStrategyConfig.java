@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-public class PreferredTieSelectorStrategyConfig
+public class PreferredTierSelectorStrategyConfig
 {
   @JsonProperty
   private String tier;
@@ -37,7 +37,7 @@ public class PreferredTieSelectorStrategyConfig
   private String priority;
 
   @JsonCreator
-  public PreferredTieSelectorStrategyConfig(
+  public PreferredTierSelectorStrategyConfig(
       @JsonProperty("tier") String tier,
       @JsonProperty("priority") String priority
   )
