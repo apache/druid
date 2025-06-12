@@ -144,8 +144,6 @@ public class MSQWorkerTask extends AbstractTask
 
     try {
       worker.run();
-
-
       return TaskStatus.success(context.workerId());
     }
     catch (MSQException e) {

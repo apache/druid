@@ -177,7 +177,6 @@ public class WorkerImpl implements Worker
       throw new ISE("already run");
     }
 
-    final Stopwatch stopwatch = Stopwatch.createStarted();
     try (final Closer closer = Closer.create()) {
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
       controllerClient = kernelHolders.getControllerClient();
@@ -222,11 +221,11 @@ public class WorkerImpl implements Worker
     }
     finally {
       runFuture.set(null);
-      reportMetrics();
+      reportCpuMetrics();
     }
   }
 
-  private void reportMetrics()
+  private void reportCpuMetrics()
   {
     long cpuTimeNs = 0L;
     for (final CounterTracker tracker : stageCounters.values()) {

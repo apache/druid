@@ -272,10 +272,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
-
     Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
-
     final ControllerContext context = new IndexerControllerContext(
         this.getTaskLockType(),
         this.getDataSource(),
