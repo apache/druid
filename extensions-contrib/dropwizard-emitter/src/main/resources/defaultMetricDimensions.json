@@ -154,7 +154,7 @@
     ],
     "type": "counter"
   },
-  "ingest/persists/counter": {
+  "ingest/persists/count": {
     "dimensions": [
       "dataSource"
     ],
@@ -235,31 +235,31 @@
     ],
     "type": "counter"
   },
-  "segment/assigned/counter": {
+  "segment/assigned/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/moved/counter": {
+  "segment/moved/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/dropped/counter": {
+  "segment/dropped/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/deleted/counter": {
+  "segment/deleted/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/unneeded/counter": {
+  "segment/unneeded/count": {
     "dimensions": [
       "tier"
     ],
@@ -295,13 +295,13 @@
     ],
     "type": "gauge"
   },
-  "segment/loadQueue/counter": {
+  "segment/loadQueue/count": {
     "dimensions": [
       "server"
     ],
     "type": "gauge"
   },
-  "segment/dropQueue/counter": {
+  "segment/dropQueue/count": {
     "dimensions": [
       "server"
     ],
@@ -313,7 +313,7 @@
     ],
     "type": "gauge"
   },
-  "segment/overShadowed/counter": {
+  "segment/overShadowed/count": {
     "dimensions": [],
     "type": "gauge"
   },
@@ -365,7 +365,7 @@
     ],
     "type": "gauge"
   },
-  "jvm/bufferpool/counter": {
+  "jvm/bufferpool/count": {
     "dimensions": [
       "bufferpoolName"
     ],
@@ -407,7 +407,7 @@
     ],
     "type": "gauge"
   },
-  "jvm/gc/counter": {
+  "jvm/gc/count": {
     "dimensions": [
       "gcName",
       "gcGen"
@@ -445,13 +445,13 @@
     "dimensions": [],
     "type": "gauge"
   },
-  "sys/disk/write/counter": {
+  "sys/disk/write/count": {
     "dimensions": [
       "fsDevName"
     ],
     "type": "counter"
   },
-  "sys/disk/read/counter": {
+  "sys/disk/read/count": {
     "dimensions": [
       "fsDevName"
     ],
@@ -518,13 +518,13 @@
     ],
     "type": "gauge"
   },
-  "coordinator-segment/counter": {
+  "coordinator-segment/count": {
     "dimensions": [
       "dataSource"
     ],
     "type": "gauge"
   },
-  "historical-segment/counter": {
+  "historical-segment/count": {
     "dimensions": [
       "dataSource",
       "tier",
