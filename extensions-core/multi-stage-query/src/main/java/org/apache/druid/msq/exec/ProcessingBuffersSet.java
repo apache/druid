@@ -23,7 +23,6 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.kernel.StageDefinition;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,16 +59,16 @@ public class ProcessingBuffersSet
   }
 
   /**
-   * Acquire buffers if a particular stages needs them; otherwise, returns null.
+   * Acquire buffers if a particular stages needs them; otherwise, returns a holder that throws an exception on
+   * {@link ResourceHolder#get()}.
    */
-  @Nullable
   public ResourceHolder<ProcessingBuffers> acquireForStage(final StageDefinition stageDef)
   {
     if (!stageDef.getProcessorFactory().usesProcessingBuffers()) {
-      return null;
+      return new NilResourceHolder<>();
+    } else {
+      return acquire();
     }
-
-    return acquire();
   }
 
   /**
@@ -100,5 +99,23 @@ public class ProcessingBuffersSet
         pool.add(buffers);
       }
     };
+  }
+
+  /**
+   * Resource holder that throws an exception on {@link #get()}.
+   */
+  private static class NilResourceHolder<T> implements ResourceHolder<T>
+  {
+    @Override
+    public T get()
+    {
+      throw DruidException.defensive("Unexpected call to get()");
+    }
+
+    @Override
+    public void close()
+    {
+      // Do nothing.
+    }
   }
 }
