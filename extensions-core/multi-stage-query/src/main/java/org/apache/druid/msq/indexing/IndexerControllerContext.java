@@ -314,9 +314,15 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
-        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
-        .put(BaseQuery.QUERY_ID, querySpec.getId())
-        .put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+
+    if (querySpec.getId() != null) {
+      builder.put(BaseQuery.QUERY_ID, querySpec.getId());
+    }
+
+    if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
+      builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+    }
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {

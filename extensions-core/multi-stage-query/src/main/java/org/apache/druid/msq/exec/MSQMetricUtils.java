@@ -22,8 +22,10 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 
 /**
  * Utility methods for setting up dimensions on metrics.
@@ -35,8 +37,8 @@ public class MSQMetricUtils
       final QueryContext queryContext
   )
   {
-    metricBuilder.setDimension("sqlQueryId", queryContext.get("sqlQueryId"));
-    metricBuilder.setDimension("queryId", queryContext.get("queryId"));
+    metricBuilder.setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
+    metricBuilder.setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
   }
 
   public static void setDartQueryIdDimensions(
@@ -46,7 +48,7 @@ public class MSQMetricUtils
   {
     metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
     setQueryIdDimensions(metricBuilder, queryContext);
-    metricBuilder.setDimension("dartQueryId", queryContext.get("dartQueryId"));
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryContext.get(QueryContexts.CTX_DART_QUERY_ID));
   }
 
   public static void setTaskQueryIdDimensions(
