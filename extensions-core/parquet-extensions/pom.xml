@@ -200,9 +200,6 @@
           <scope>runtime</scope>
         </dependency>
       </dependencies>
-      <properties>
-        <parquet.version>1.15.1</parquet.version>
-      </properties>
     </profile>
   </profiles>
 </project>
