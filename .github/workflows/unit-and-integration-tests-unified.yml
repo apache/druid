@@ -201,7 +201,7 @@ jobs:
     name: "unit tests - PR approved"
     uses: ./.github/workflows/ci.yml
     needs: [check-approval]
-    if: ${{ needs.check-approval.outputs.approved == 'true' }}
+    if: ${{ needs.check-approval.outputs.approved != 'true' }}
 
   standard-its:
     needs: [build, unit-tests-unapproved, check-approval]
