@@ -21,7 +21,6 @@ package org.apache.druid.client.selector;
 
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.IAE;
@@ -38,8 +37,8 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
   private static final Logger log = new Logger(PreferredTierSelectorStrategy.class);
 
-  private final String perferredTier;
-  private final TierSelectorStrategy priortyStrategy;
+  private final String preferredTier;
+  private final TierSelectorStrategy priorityStrategy;
 
   public PreferredTierSelectorStrategy(
       @JacksonInject ServerSelectorStrategy serverSelectorStrategy,
@@ -47,15 +46,15 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
   )
   {
     super(serverSelectorStrategy);
-    this.perferredTier = config.getTier();
+    this.preferredTier = config.getTier();
 
     if (config.getPriority() == null) {
-      this.priortyStrategy = new HighestPriorityTierSelectorStrategy(serverSelectorStrategy);
+      this.priorityStrategy = new HighestPriorityTierSelectorStrategy(serverSelectorStrategy);
     } else {
       if ("highest".equalsIgnoreCase(config.getPriority())) {
-        this.priortyStrategy = new HighestPriorityTierSelectorStrategy(serverSelectorStrategy);
+        this.priorityStrategy = new HighestPriorityTierSelectorStrategy(serverSelectorStrategy);
       } else if ("lowest".equalsIgnoreCase(config.getPriority())) {
-        this.priortyStrategy = new LowestPriorityTierSelectorStrategy(serverSelectorStrategy);
+        this.priorityStrategy = new LowestPriorityTierSelectorStrategy(serverSelectorStrategy);
       } else {
         throw new IAE("druid.broker.select.tier.preferred.priority must be either 'highest' or 'lowest'");
       }
@@ -65,7 +64,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
   @Override
   public Comparator<Integer> getComparator()
   {
-    return priortyStrategy.getComparator();
+    return priorityStrategy.getComparator();
   }
 
   @Override
@@ -79,7 +78,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
     if (log.isDebugEnabled()) {
       log.debug(
           "Picking [%d] servers from preferred tier [%s] for segment [%s] with priority [%s]",
-          numServersToPick, perferredTier, segment.getId(), this.priortyStrategy.getClass().getSimpleName()
+          numServersToPick, preferredTier, segment.getId(), this.priorityStrategy.getClass().getSimpleName()
       );
     }
 
@@ -87,7 +86,7 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
     List<QueryableDruidServer> nonPreferred = new ArrayList<>(numServersToPick);
     for (Set<QueryableDruidServer> priorityServers : prioritizedServers.values()) {
       for (QueryableDruidServer server : priorityServers) {
-        if (perferredTier.equals(server.getServer().getMetadata().getTier())) {
+        if (preferredTier.equals(server.getServer().getMetadata().getTier())) {
           preferred.add(server);
           if (preferred.size() == numServersToPick) {
             return this.serverSelectorStrategy.pick(query, preferred, segment, numServersToPick);
