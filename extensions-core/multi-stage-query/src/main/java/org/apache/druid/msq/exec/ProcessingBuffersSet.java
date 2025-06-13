@@ -104,7 +104,7 @@ public class ProcessingBuffersSet
   /**
    * Resource holder that throws an exception on {@link #get()}.
    */
-  private static class NilResourceHolder<T> implements ResourceHolder<T>
+  static class NilResourceHolder<T> implements ResourceHolder<T>
   {
     @Override
     public T get()
