@@ -1,0 +1,2003 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++-------+-------+
+| c1    | c2    |
++-------+-------+
+| false | false |
+| false | false |
+| false | false |
+| false | true  |
+| false | true  |
+| false | true  |
+| false |       |
+| false |       |
+| false |       |
+| true  | false |
+| true  | false |
+| true  | false |
+| true  | true  |
+| true  | true  |
+| true  | true  |
+| true  |       |
+| true  |       |
+| true  |       |
+|       | false |
+|       | false |
+|       | false |
+|       | true  |
+|       | true  |
+|       | true  |
+|       |       |
+|       |       |
+|       |       |
++-------+-------+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++-------+----+
+| c1    | c2 |
++-------+----+
+| false |  1 |
+| false |  1 |
+| false |  1 |
+| false |  2 |
+| false |  2 |
+| false |  2 |
+| false |    |
+| false |    |
+| false |    |
+| true  |  1 |
+| true  |  1 |
+| true  |  1 |
+| true  |  2 |
+| true  |  2 |
+| true  |  2 |
+| true  |    |
+| true  |    |
+| true  |    |
+|       |  1 |
+|       |  1 |
+|       |  1 |
+|       |  2 |
+|       |  2 |
+|       |  2 |
+|       |    |
+|       |    |
+|       |    |
++-------+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++-------+-----+
+| c1    | c2  |
++-------+-----+
+| false | 0.1 |
+| false | 0.1 |
+| false | 0.1 |
+| false | 0.2 |
+| false | 0.2 |
+| false | 0.2 |
+| false |     |
+| false |     |
+| false |     |
+| true  | 0.1 |
+| true  | 0.1 |
+| true  | 0.1 |
+| true  | 0.2 |
+| true  | 0.2 |
+| true  | 0.2 |
+| true  |     |
+| true  |     |
+| true  |     |
+|       | 0.1 |
+|       | 0.1 |
+|       | 0.1 |
+|       | 0.2 |
+|       | 0.2 |
+|       | 0.2 |
+|       |     |
+|       |     |
+|       |     |
++-------+-----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++-------+----+
+| c1    | c2 |
++-------+----+
+| false | S1 |
+| false | S1 |
+| false | S1 |
+| false | S2 |
+| false | S2 |
+| false | S2 |
+| false |    |
+| false |    |
+| false |    |
+| true  | S1 |
+| true  | S1 |
+| true  | S1 |
+| true  | S2 |
+| true  | S2 |
+| true  | S2 |
+| true  |    |
+| true  |    |
+| true  |    |
+|       | S1 |
+|       | S1 |
+|       | S1 |
+|       | S2 |
+|       | S2 |
+|       | S2 |
+|       |    |
+|       |    |
+|       |    |
++-------+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++-------+----+
+| c1    | c2 |
++-------+----+
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| false |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+| true  |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
+|       |    |
++-------+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A6_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++-------+------+
+| c1    | c2   |
++-------+------+
+| false | 0.1  |
+| false | 0.1  |
+| false | 0.1  |
+| false | 1    |
+| false | 1    |
+| false | 1    |
+| false | S1   |
+| false | S1   |
+| false | S1   |
+| false | true |
+| false | true |
+| false | true |
+| false |      |
+| false |      |
+| false |      |
+| true  | 0.1  |
+| true  | 0.1  |
+| true  | 0.1  |
+| true  | 1    |
+| true  | 1    |
+| true  | 1    |
+| true  | S1   |
+| true  | S1   |
+| true  | S1   |
+| true  | true |
+| true  | true |
+| true  | true |
+| true  |      |
+| true  |      |
+| true  |      |
+|       | 0.1  |
+|       | 0.1  |
+|       | 0.1  |
+|       | 1    |
+|       | 1    |
+|       | 1    |
+|       | S1   |
+|       | S1   |
+|       | S1   |
+|       | true |
+|       | true |
+|       | true |
+|       |      |
+|       |      |
+|       |      |
++-------+------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++----+-------+
+| c1 | c2    |
++----+-------+
+|  1 | false |
+|  1 | false |
+|  1 | false |
+|  1 | true  |
+|  1 | true  |
+|  1 | true  |
+|  1 |       |
+|  1 |       |
+|  1 |       |
+|  2 | false |
+|  2 | false |
+|  2 | false |
+|  2 | true  |
+|  2 | true  |
+|  2 | true  |
+|  2 |       |
+|  2 |       |
+|  2 |       |
+|    | false |
+|    | false |
+|    | false |
+|    | true  |
+|    | true  |
+|    | true  |
+|    |       |
+|    |       |
+|    |       |
++----+-------+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|  1 |  1 |
+|  1 |  1 |
+|  1 |  1 |
+|  1 |  2 |
+|  1 |  2 |
+|  1 |  2 |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  2 |  1 |
+|  2 |  1 |
+|  2 |  1 |
+|  2 |  2 |
+|  2 |  2 |
+|  2 |  2 |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++----+-----+
+| c1 | c2  |
++----+-----+
+|  1 | 0.1 |
+|  1 | 0.1 |
+|  1 | 0.1 |
+|  1 | 0.2 |
+|  1 | 0.2 |
+|  1 | 0.2 |
+|  1 |     |
+|  1 |     |
+|  1 |     |
+|  2 | 0.1 |
+|  2 | 0.1 |
+|  2 | 0.1 |
+|  2 | 0.2 |
+|  2 | 0.2 |
+|  2 | 0.2 |
+|  2 |     |
+|  2 |     |
+|  2 |     |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    |     |
+|    |     |
+|    |     |
++----+-----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|  1 | S1 |
+|  1 | S1 |
+|  1 | S1 |
+|  1 | S2 |
+|  1 | S2 |
+|  1 | S2 |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  2 | S1 |
+|  2 | S1 |
+|  2 | S1 |
+|  2 | S2 |
+|  2 | S2 |
+|  2 | S2 |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  1 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|  2 |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A7_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++----+------+
+| c1 | c2   |
++----+------+
+|  1 | 0.1  |
+|  1 | 0.1  |
+|  1 | 0.1  |
+|  1 | 1    |
+|  1 | 1    |
+|  1 | 1    |
+|  1 | S1   |
+|  1 | S1   |
+|  1 | S1   |
+|  1 | true |
+|  1 | true |
+|  1 | true |
+|  1 |      |
+|  1 |      |
+|  1 |      |
+|  2 | 0.1  |
+|  2 | 0.1  |
+|  2 | 0.1  |
+|  2 | 1    |
+|  2 | 1    |
+|  2 | 1    |
+|  2 | S1   |
+|  2 | S1   |
+|  2 | S1   |
+|  2 | true |
+|  2 | true |
+|  2 | true |
+|  2 |      |
+|  2 |      |
+|  2 |      |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | true |
+|    | true |
+|    | true |
+|    |      |
+|    |      |
+|    |      |
++----+------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++-----+-------+
+| c1  | c2    |
++-----+-------+
+| 0.1 | false |
+| 0.1 | false |
+| 0.1 | false |
+| 0.1 | true  |
+| 0.1 | true  |
+| 0.1 | true  |
+| 0.1 |       |
+| 0.1 |       |
+| 0.1 |       |
+| 0.2 | false |
+| 0.2 | false |
+| 0.2 | false |
+| 0.2 | true  |
+| 0.2 | true  |
+| 0.2 | true  |
+| 0.2 |       |
+| 0.2 |       |
+| 0.2 |       |
+|     | false |
+|     | false |
+|     | false |
+|     | true  |
+|     | true  |
+|     | true  |
+|     |       |
+|     |       |
+|     |       |
++-----+-------+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++-----+----+
+| c1  | c2 |
++-----+----+
+| 0.1 |  1 |
+| 0.1 |  1 |
+| 0.1 |  1 |
+| 0.1 |  2 |
+| 0.1 |  2 |
+| 0.1 |  2 |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.2 |  1 |
+| 0.2 |  1 |
+| 0.2 |  1 |
+| 0.2 |  2 |
+| 0.2 |  2 |
+| 0.2 |  2 |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+|     |  1 |
+|     |  1 |
+|     |  1 |
+|     |  2 |
+|     |  2 |
+|     |  2 |
+|     |    |
+|     |    |
+|     |    |
++-----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++-----+-----+
+| c1  | c2  |
++-----+-----+
+| 0.1 | 0.1 |
+| 0.1 | 0.1 |
+| 0.1 | 0.1 |
+| 0.1 | 0.2 |
+| 0.1 | 0.2 |
+| 0.1 | 0.2 |
+| 0.1 |     |
+| 0.1 |     |
+| 0.1 |     |
+| 0.2 | 0.1 |
+| 0.2 | 0.1 |
+| 0.2 | 0.1 |
+| 0.2 | 0.2 |
+| 0.2 | 0.2 |
+| 0.2 | 0.2 |
+| 0.2 |     |
+| 0.2 |     |
+| 0.2 |     |
+|     | 0.1 |
+|     | 0.1 |
+|     | 0.1 |
+|     | 0.2 |
+|     | 0.2 |
+|     | 0.2 |
+|     |     |
+|     |     |
+|     |     |
++-----+-----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++-----+----+
+| c1  | c2 |
++-----+----+
+| 0.1 | S1 |
+| 0.1 | S1 |
+| 0.1 | S1 |
+| 0.1 | S2 |
+| 0.1 | S2 |
+| 0.1 | S2 |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.2 | S1 |
+| 0.2 | S1 |
+| 0.2 | S1 |
+| 0.2 | S2 |
+| 0.2 | S2 |
+| 0.2 | S2 |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+|     | S1 |
+|     | S1 |
+|     | S1 |
+|     | S2 |
+|     | S2 |
+|     | S2 |
+|     |    |
+|     |    |
+|     |    |
++-----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++-----+----+
+| c1  | c2 |
++-----+----+
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.1 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+| 0.2 |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
+|     |    |
++-----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A8_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++-----+------+
+| c1  | c2   |
++-----+------+
+| 0.1 | 0.1  |
+| 0.1 | 0.1  |
+| 0.1 | 0.1  |
+| 0.1 | 1    |
+| 0.1 | 1    |
+| 0.1 | 1    |
+| 0.1 | S1   |
+| 0.1 | S1   |
+| 0.1 | S1   |
+| 0.1 | true |
+| 0.1 | true |
+| 0.1 | true |
+| 0.1 |      |
+| 0.1 |      |
+| 0.1 |      |
+| 0.2 | 0.1  |
+| 0.2 | 0.1  |
+| 0.2 | 0.1  |
+| 0.2 | 1    |
+| 0.2 | 1    |
+| 0.2 | 1    |
+| 0.2 | S1   |
+| 0.2 | S1   |
+| 0.2 | S1   |
+| 0.2 | true |
+| 0.2 | true |
+| 0.2 | true |
+| 0.2 |      |
+| 0.2 |      |
+| 0.2 |      |
+|     | 0.1  |
+|     | 0.1  |
+|     | 0.1  |
+|     | 1    |
+|     | 1    |
+|     | 1    |
+|     | S1   |
+|     | S1   |
+|     | S1   |
+|     | true |
+|     | true |
+|     | true |
+|     |      |
+|     |      |
+|     |      |
++-----+------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++----+-------+
+| c1 | c2    |
++----+-------+
+| S1 | false |
+| S1 | false |
+| S1 | false |
+| S1 | true  |
+| S1 | true  |
+| S1 | true  |
+| S1 |       |
+| S1 |       |
+| S1 |       |
+| S2 | false |
+| S2 | false |
+| S2 | false |
+| S2 | true  |
+| S2 | true  |
+| S2 | true  |
+| S2 |       |
+| S2 |       |
+| S2 |       |
+|    | false |
+|    | false |
+|    | false |
+|    | true  |
+|    | true  |
+|    | true  |
+|    |       |
+|    |       |
+|    |       |
++----+-------+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+| S1 |  1 |
+| S1 |  1 |
+| S1 |  1 |
+| S1 |  2 |
+| S1 |  2 |
+| S1 |  2 |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S2 |  1 |
+| S2 |  1 |
+| S2 |  1 |
+| S2 |  2 |
+| S2 |  2 |
+| S2 |  2 |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++----+-----+
+| c1 | c2  |
++----+-----+
+| S1 | 0.1 |
+| S1 | 0.1 |
+| S1 | 0.1 |
+| S1 | 0.2 |
+| S1 | 0.2 |
+| S1 | 0.2 |
+| S1 |     |
+| S1 |     |
+| S1 |     |
+| S2 | 0.1 |
+| S2 | 0.1 |
+| S2 | 0.1 |
+| S2 | 0.2 |
+| S2 | 0.2 |
+| S2 | 0.2 |
+| S2 |     |
+| S2 |     |
+| S2 |     |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    |     |
+|    |     |
+|    |     |
++----+-----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+| S1 | S1 |
+| S1 | S1 |
+| S1 | S1 |
+| S1 | S2 |
+| S1 | S2 |
+| S1 | S2 |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S2 | S1 |
+| S2 | S1 |
+| S2 | S1 |
+| S2 | S2 |
+| S2 | S2 |
+| S2 | S2 |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S1 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+| S2 |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A9_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++----+------+
+| c1 | c2   |
++----+------+
+| S1 | 0.1  |
+| S1 | 0.1  |
+| S1 | 0.1  |
+| S1 | 1    |
+| S1 | 1    |
+| S1 | 1    |
+| S1 | S1   |
+| S1 | S1   |
+| S1 | S1   |
+| S1 | true |
+| S1 | true |
+| S1 | true |
+| S1 |      |
+| S1 |      |
+| S1 |      |
+| S2 | 0.1  |
+| S2 | 0.1  |
+| S2 | 0.1  |
+| S2 | 1    |
+| S2 | 1    |
+| S2 | 1    |
+| S2 | S1   |
+| S2 | S1   |
+| S2 | S1   |
+| S2 | true |
+| S2 | true |
+| S2 | true |
+| S2 |      |
+| S2 |      |
+| S2 |      |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | true |
+|    | true |
+|    | true |
+|    |      |
+|    |      |
+|    |      |
++----+------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++----+-------+
+| c1 | c2    |
++----+-------+
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | false |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    | true  |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
+|    |       |
++----+-------+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  1 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |  2 |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++----+-----+
+| c1 | c2  |
++----+-----+
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.1 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    | 0.2 |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
+|    |     |
++----+-----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S1 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    | S2 |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
+|    |    |
++----+----+
+(27 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A10_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++----+------+
+| c1 | c2   |
++----+------+
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 0.1  |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | 1    |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | S1   |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    | true |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
+|    |      |
++----+------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A11_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B6_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS u2(c2);
++------+-------+
+| c1   | c2    |
++------+-------+
+| 0.1  | false |
+| 0.1  | false |
+| 0.1  | false |
+| 0.1  | true  |
+| 0.1  | true  |
+| 0.1  | true  |
+| 0.1  |       |
+| 0.1  |       |
+| 0.1  |       |
+| 1    | false |
+| 1    | false |
+| 1    | false |
+| 1    | true  |
+| 1    | true  |
+| 1    | true  |
+| 1    |       |
+| 1    |       |
+| 1    |       |
+| S1   | false |
+| S1   | false |
+| S1   | false |
+| S1   | true  |
+| S1   | true  |
+| S1   | true  |
+| S1   |       |
+| S1   |       |
+| S1   |       |
+| true | false |
+| true | false |
+| true | false |
+| true | true  |
+| true | true  |
+| true | true  |
+| true |       |
+| true |       |
+| true |       |
+|      | false |
+|      | false |
+|      | false |
+|      | true  |
+|      | true  |
+|      | true  |
+|      |       |
+|      |       |
+|      |       |
++------+-------+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B7_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u2(c2);
++------+----+
+| c1   | c2 |
++------+----+
+| 0.1  |  1 |
+| 0.1  |  1 |
+| 0.1  |  1 |
+| 0.1  |  2 |
+| 0.1  |  2 |
+| 0.1  |  2 |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 1    |  1 |
+| 1    |  1 |
+| 1    |  1 |
+| 1    |  2 |
+| 1    |  2 |
+| 1    |  2 |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| S1   |  1 |
+| S1   |  1 |
+| S1   |  1 |
+| S1   |  2 |
+| S1   |  2 |
+| S1   |  2 |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| true |  1 |
+| true |  1 |
+| true |  1 |
+| true |  2 |
+| true |  2 |
+| true |  2 |
+| true |    |
+| true |    |
+| true |    |
+|      |  1 |
+|      |  1 |
+|      |  1 |
+|      |  2 |
+|      |  2 |
+|      |  2 |
+|      |    |
+|      |    |
+|      |    |
++------+----+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B8_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[2]' RETURNING DOUBLE array)) AS u2(c2);
++------+-----+
+| c1   | c2  |
++------+-----+
+| 0.1  | 0.1 |
+| 0.1  | 0.1 |
+| 0.1  | 0.1 |
+| 0.1  | 0.2 |
+| 0.1  | 0.2 |
+| 0.1  | 0.2 |
+| 0.1  |     |
+| 0.1  |     |
+| 0.1  |     |
+| 1    | 0.1 |
+| 1    | 0.1 |
+| 1    | 0.1 |
+| 1    | 0.2 |
+| 1    | 0.2 |
+| 1    | 0.2 |
+| 1    |     |
+| 1    |     |
+| 1    |     |
+| S1   | 0.1 |
+| S1   | 0.1 |
+| S1   | 0.1 |
+| S1   | 0.2 |
+| S1   | 0.2 |
+| S1   | 0.2 |
+| S1   |     |
+| S1   |     |
+| S1   |     |
+| true | 0.1 |
+| true | 0.1 |
+| true | 0.1 |
+| true | 0.2 |
+| true | 0.2 |
+| true | 0.2 |
+| true |     |
+| true |     |
+| true |     |
+|      | 0.1 |
+|      | 0.1 |
+|      | 0.1 |
+|      | 0.2 |
+|      | 0.2 |
+|      | 0.2 |
+|      |     |
+|      |     |
+|      |     |
++------+-----+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B9_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS u2(c2);
++------+----+
+| c1   | c2 |
++------+----+
+| 0.1  | S1 |
+| 0.1  | S1 |
+| 0.1  | S1 |
+| 0.1  | S2 |
+| 0.1  | S2 |
+| 0.1  | S2 |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 1    | S1 |
+| 1    | S1 |
+| 1    | S1 |
+| 1    | S2 |
+| 1    | S2 |
+| 1    | S2 |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| S1   | S1 |
+| S1   | S1 |
+| S1   | S1 |
+| S1   | S2 |
+| S1   | S2 |
+| S1   | S2 |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| true | S1 |
+| true | S1 |
+| true | S1 |
+| true | S2 |
+| true | S2 |
+| true | S2 |
+| true |    |
+| true |    |
+| true |    |
+|      | S1 |
+|      | S1 |
+|      | S1 |
+|      | S2 |
+|      | S2 |
+|      | S2 |
+|      |    |
+|      |    |
+|      |    |
++------+----+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B10_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS u2(c2);
++------+----+
+| c1   | c2 |
++------+----+
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 0.1  |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| 1    |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| S1   |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+| true |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
+|      |    |
++------+----+
+(45 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B11_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS u2(c2);
++----+----+
+| c1 | c2 |
++----+----+
++----+----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_multi_unnests TEST_ID: A12_B12_D1
+#-------------------------------------------------------------------------
+SELECT c1,
+       c2
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u1(c1),
+     unnest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS u2(c2);
++------+------+
+| c1   | c2   |
++------+------+
+| 0.1  | 0.1  |
+| 0.1  | 0.1  |
+| 0.1  | 0.1  |
+| 0.1  | 1    |
+| 0.1  | 1    |
+| 0.1  | 1    |
+| 0.1  | S1   |
+| 0.1  | S1   |
+| 0.1  | S1   |
+| 0.1  | true |
+| 0.1  | true |
+| 0.1  | true |
+| 0.1  |      |
+| 0.1  |      |
+| 0.1  |      |
+| 1    | 0.1  |
+| 1    | 0.1  |
+| 1    | 0.1  |
+| 1    | 1    |
+| 1    | 1    |
+| 1    | 1    |
+| 1    | S1   |
+| 1    | S1   |
+| 1    | S1   |
+| 1    | true |
+| 1    | true |
+| 1    | true |
+| 1    |      |
+| 1    |      |
+| 1    |      |
+| S1   | 0.1  |
+| S1   | 0.1  |
+| S1   | 0.1  |
+| S1   | 1    |
+| S1   | 1    |
+| S1   | 1    |
+| S1   | S1   |
+| S1   | S1   |
+| S1   | S1   |
+| S1   | true |
+| S1   | true |
+| S1   | true |
+| S1   |      |
+| S1   |      |
+| S1   |      |
+| true | 0.1  |
+| true | 0.1  |
+| true | 0.1  |
+| true | 1    |
+| true | 1    |
+| true | 1    |
+| true | S1   |
+| true | S1   |
+| true | S1   |
+| true | true |
+| true | true |
+| true | true |
+| true |      |
+| true |      |
+| true |      |
+|      | 0.1  |
+|      | 0.1  |
+|      | 0.1  |
+|      | 1    |
+|      | 1    |
+|      | 1    |
+|      | S1   |
+|      | S1   |
+|      | S1   |
+|      | true |
+|      | true |
+|      | true |
+|      |      |
+|      |      |
+|      |      |
++------+------+
+(75 rows)
+
+!ok
+

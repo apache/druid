@@ -1,0 +1,1610 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B1_C1
+#-------------------------------------------------------------------------
+SELECT concat(c, c)||concat(c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (concat(c, c)||concat(c, c)) IN ('',
+                                       '1111',
+                                       '2222',
+                                       '3333');
++------+
+| col  |
++------+
+|      |
+|      |
+|      |
+| 1111 |
+| 1111 |
+| 1111 |
+| 2222 |
+| 2222 |
+| 2222 |
+| 3333 |
+| 3333 |
+| 3333 |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B1_C2
+#-------------------------------------------------------------------------
+SELECT concat(c, c_long)||concat(c, c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (concat(c, c_long)||concat(c, c_long)) IN ('00',
+                                                 '1010',
+                                                 '2020',
+                                                 '3030',
+                                                 '11',
+                                                 '1111',
+                                                 '2121',
+                                                 '3131',
+                                                 '22',
+                                                 '1212',
+                                                 '2222',
+                                                 '3232');
++------+
+| col  |
++------+
+| 00   |
+| 1010 |
+| 11   |
+| 1111 |
+| 1212 |
+| 2020 |
+| 2121 |
+| 22   |
+| 2222 |
+| 3030 |
+| 3131 |
+| 3232 |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B2_C1
+#-------------------------------------------------------------------------
+SELECT textcat(c, c)||textcat(c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (textcat(c, c)||textcat(c, c)) IN ('',
+                                         '1111',
+                                         '2222',
+                                         '3333');
++------+
+| col  |
++------+
+|      |
+|      |
+|      |
+| 1111 |
+| 1111 |
+| 1111 |
+| 2222 |
+| 2222 |
+| 2222 |
+| 3333 |
+| 3333 |
+| 3333 |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B2_C2
+#-------------------------------------------------------------------------
+SELECT textcat(c, cast(c_long AS char))||textcat(c, cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (textcat(c, cast(c_long AS char))||textcat(c, cast(c_long AS char))) IN ('00',
+                                                                               '1010',
+                                                                               '2020',
+                                                                               '3030',
+                                                                               '11',
+                                                                               '1111',
+                                                                               '2121',
+                                                                               '3131',
+                                                                               '22',
+                                                                               '1212',
+                                                                               '2222',
+                                                                               '3232');
++------+
+| col  |
++------+
+| 00   |
+| 1010 |
+| 11   |
+| 1111 |
+| 1212 |
+| 2020 |
+| 2121 |
+| 22   |
+| 2222 |
+| 3030 |
+| 3131 |
+| 3232 |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B3_C1
+#-------------------------------------------------------------------------
+SELECT string_format('%sZ', c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND string_format('%sZ', c) IN ('nullZ',
+                                  '1Z',
+                                  '2Z',
+                                  '3Z');
++-------+
+| col   |
++-------+
+| 1Z    |
+| 1Z    |
+| 1Z    |
+| 2Z    |
+| 2Z    |
+| 2Z    |
+| 3Z    |
+| 3Z    |
+| 3Z    |
+| nullZ |
+| nullZ |
+| nullZ |
++-------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B3_C2
+#-------------------------------------------------------------------------
+SELECT string_format('%sZ', c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND string_format('%sZ', c_long) IN ('0Z',
+                                       '1Z',
+                                       '2Z');
++-----+
+| col |
++-----+
+| 0Z  |
+| 0Z  |
+| 0Z  |
+| 0Z  |
+| 0Z  |
+| 1Z  |
+| 1Z  |
+| 1Z  |
+| 1Z  |
+| 1Z  |
+| 2Z  |
+| 2Z  |
+| 2Z  |
+| 2Z  |
+| 2Z  |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B4_C1
+#-------------------------------------------------------------------------
+SELECT length(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND length(c) IN (0,
+                    1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B4_C2
+#-------------------------------------------------------------------------
+SELECT length(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND length(c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B5_C1
+#-------------------------------------------------------------------------
+SELECT char_length(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND char_length(c) IN (0,
+                         1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B5_C2
+#-------------------------------------------------------------------------
+SELECT char_length(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND char_length(c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B6_C1
+#-------------------------------------------------------------------------
+SELECT character_length(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND character_length(c) IN (0,
+                              1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B6_C2
+#-------------------------------------------------------------------------
+SELECT character_length(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND character_length(c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT strlen(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strlen(c) IN (0,
+                    1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B7_C2
+#-------------------------------------------------------------------------
+SELECT strlen(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strlen(c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT lower(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND lower(c)!='ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B8_C2
+#-------------------------------------------------------------------------
+SELECT lower(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND lower(c_long) IN ('0',
+                        '1',
+                        '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B9_C1
+#-------------------------------------------------------------------------
+SELECT upper(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND upper(c)!='ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B9_C2
+#-------------------------------------------------------------------------
+SELECT upper(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND upper(c_long) IN ('0',
+                        '1',
+                        '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B10_C1
+#-------------------------------------------------------------------------
+SELECT parse_long(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND parse_long(c) IN (0,
+                        1,
+                        2,
+                        3);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B10_C2
+#-------------------------------------------------------------------------
+SELECT parse_long(cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND parse_long(cast(c_long AS char)) IN (0,
+                                           1,
+                                           2);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C1
+#-------------------------------------------------------------------------
+SELECT position(c IN c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND position(c IN c) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C2
+#-------------------------------------------------------------------------
+SELECT position(c_long IN c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND position(c_long IN c) IN (0,
+                                1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C3
+#-------------------------------------------------------------------------
+SELECT position(c IN c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND position(c IN c_long) IN (0,
+                                1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B11_C4
+#-------------------------------------------------------------------------
+SELECT position(c_long IN c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND position(c_long IN c_long) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B12_C1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(c, '.*') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND regexp_extract(c, '.*')!='ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B12_C2
+#-------------------------------------------------------------------------
+SELECT regexp_extract(cast(c_long AS char), '.*') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND regexp_extract(cast(c_long AS char), '.*')!='ABCD';
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B13_C1
+#-------------------------------------------------------------------------
+SELECT regexp_like(c, '.*') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+|      |
+|      |
+|      |
++------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B13_C2
+#-------------------------------------------------------------------------
+SELECT regexp_like(cast(c_long AS char), '.*') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND regexp_like(cast(c_long AS char), '.*') IS TRUE;
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B14_C1
+#-------------------------------------------------------------------------
+SELECT contains_string(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (contains_string(c, '1') IS TRUE
+       OR contains_string(c, '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B14_C2
+#-------------------------------------------------------------------------
+SELECT contains_string(cast(c_long AS char), '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (contains_string(cast(c_long AS char), '1') IS TRUE
+       OR contains_string(cast(c_long AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B15_C1
+#-------------------------------------------------------------------------
+SELECT icontains_string(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (icontains_string(c, '1') IS TRUE
+       OR icontains_string(c, '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B15_C2
+#-------------------------------------------------------------------------
+SELECT icontains_string(cast(c_long AS char), '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (icontains_string(cast(c_long AS char), '1') IS TRUE
+       OR icontains_string(cast(c_long AS char), '1') IS FALSE);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B16_C1
+#-------------------------------------------------------------------------
+SELECT replace(c, '1', 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND replace(c, '1', 'Z')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
+| Z   |
+| Z   |
+| Z   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B16_C2
+#-------------------------------------------------------------------------
+SELECT replace(c_long, '1', 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND replace(c_long, '1', 'Z')<>'ABCD';
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| Z   |
+| Z   |
+| Z   |
+| Z   |
+| Z   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C1
+#-------------------------------------------------------------------------
+SELECT strpos(c, c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strpos(c, c) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C2
+#-------------------------------------------------------------------------
+SELECT strpos(cast(c_long AS char), c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strpos(cast(c_long AS char), c) IN (0,
+                                          1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C3
+#-------------------------------------------------------------------------
+SELECT strpos(c, cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strpos(c, cast(c_long AS char)) IN (0,
+                                          1);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B17_C4
+#-------------------------------------------------------------------------
+SELECT strpos(cast(c_long AS char), cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND strpos(cast(c_long AS char), cast(c_long AS char)) IN (1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B18_C1
+#-------------------------------------------------------------------------
+SELECT substring(c, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND substring(c, 1)<>'ABCD';
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B18_C2
+#-------------------------------------------------------------------------
+SELECT substring(cast(c_long AS char), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND substring(cast(c_long AS char), 1) IN ('0',
+                                             '1',
+                                             '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B19_C1
+#-------------------------------------------------------------------------
+SELECT right(c, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND right(c, 1)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B19_C2
+#-------------------------------------------------------------------------
+SELECT right(cast(c_long AS char), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND right(cast(c_long AS char), 1) IN ('0',
+                                         '1',
+                                         '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B20_C1
+#-------------------------------------------------------------------------
+SELECT left(c, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND left(c, 1)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B20_C2
+#-------------------------------------------------------------------------
+SELECT left(cast(c_long AS char), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND left(cast(c_long AS char), 1) IN ('0',
+                                        '1',
+                                        '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B21_C1
+#-------------------------------------------------------------------------
+SELECT substr(c, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND substr(c, 1)<>'ABCD';
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B21_C2
+#-------------------------------------------------------------------------
+SELECT substr(cast(c_long AS char), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND substr(cast(c_long AS char), 1) IN ('0',
+                                          '1',
+                                          '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B22_C1
+#-------------------------------------------------------------------------
+SELECT trim(BOTH '1'
+            FROM c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND trim(BOTH '1'
+           FROM c)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B22_C2
+#-------------------------------------------------------------------------
+SELECT trim(BOTH '1'
+            FROM c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND trim(BOTH '1'
+           FROM c_long)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B23_C1
+#-------------------------------------------------------------------------
+SELECT btrim(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND btrim(c, '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
