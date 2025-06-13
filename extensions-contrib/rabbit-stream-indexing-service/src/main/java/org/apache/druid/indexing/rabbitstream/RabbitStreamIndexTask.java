@@ -50,24 +50,24 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
   @JsonCreator
   public RabbitStreamIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") RabbitStreamIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") RabbitStreamIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ObjectMapper configMapper,
-      @JsonProperty("supervisorId") @Nullable String supervisorId
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
         getOrMakeId(id, dataSchema.getDataSource(), TYPE),
+        supervisorId,
         taskResource,
         dataSchema,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
-        supervisorId
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
     );
     this.configMapper = configMapper;
 

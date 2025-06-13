@@ -63,6 +63,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
@@ -118,6 +119,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -5130,6 +5132,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void test_doesTaskMatchSupervisor()
+  {
+    supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, null, new Period("PT1H"), new Period("PT1H"), false, kafkaHost, null);
+
+    KafkaIndexTask kafkaTaskMatch = createMock(KafkaIndexTask.class);
+    EasyMock.expect(kafkaTaskMatch.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(kafkaTaskMatch);
+
+    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(kafkaTaskMatch));
+
+    KafkaIndexTask kafkaTaskNoMatch = createMock(KafkaIndexTask.class);
+    EasyMock.expect(kafkaTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
+    EasyMock.replay(kafkaTaskNoMatch);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(kafkaTaskNoMatch));
+
+    SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
+    EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(differentTaskType);
+  }
+
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     // create topic manually
@@ -5218,6 +5242,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5243,6 +5268,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5268,6 +5294,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5282,6 +5309,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   private TestableKafkaSupervisor getTestableSupervisor(
+      @Nullable String id,
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -5375,7 +5403,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
-            null,
+            id,
             null,
             dataSchema,
             tuningConfig,
@@ -5686,6 +5714,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     return new KafkaIndexTask(
         id,
         null,
+        null,
         schema,
         tuningConfig,
         new KafkaIndexTaskIOConfig(
@@ -5703,8 +5732,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
-        OBJECT_MAPPER,
-        null
+        OBJECT_MAPPER
     );
   }
 

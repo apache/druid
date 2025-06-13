@@ -2925,12 +2925,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
+        null,
         cloneDataSchema(dataSchema),
         tuningConfig,
         ioConfig,
         context,
-        OBJECT_MAPPER,
-        null
+        OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
     return task;

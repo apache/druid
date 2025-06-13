@@ -245,6 +245,7 @@ public class SupervisorResource
                         throw new RuntimeException(e);
                       }
                       theBuilder.withType(manager.getSupervisorSpec(x).get().getType())
+                                .withDataSource(manager.getSupervisorSpec(x).get().getDataSources().get(0))
                                 .withSource(manager.getSupervisorSpec(x).get().getSource())
                                 .withSuspended(manager.getSupervisorSpec(x).get().isSuspended());
                     }

@@ -103,7 +103,7 @@ public class SupervisorStatus
   }
 
   @JsonProperty
-  public String getDatasource()
+  public String getDataSource()
   {
     return dataSource;
   }

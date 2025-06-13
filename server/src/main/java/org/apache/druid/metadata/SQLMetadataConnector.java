@@ -251,23 +251,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Execute the desired ALTER statement on the desired table
    *
-   * @param tableName      The name of the table being altered
-   * @param sql            ALTER statements to be executed
-   * @param useTransaction Whether to use a transaction for this operation
+   * @param tableName The name of the table being altered
+   * @param sql ALTER statment to be executed
    */
-  private void alterTable(final String tableName, final Iterable<String> sql, final boolean useTransaction)
+  private void alterTable(final String tableName, final Iterable<String> sql)
   {
     try {
       retryWithHandle(handle -> {
         if (tableExists(handle, tableName)) {
-          if (useTransaction) {
-            handle.inTransaction((h, status) -> {
-              executeBatch(h, sql);
-              return null;
-            });
-          } else {
-            executeBatch(handle, sql);
+          final Batch batch = handle.createBatch();
+          for (String s : sql) {
+            log.info("Altering table[%s], with command: %s", tableName, s);
+            batch.add(s);
           }
+          batch.execute();
         } else {
           log.info("Table[%s] doesn't exist.", tableName);
         }
@@ -275,23 +272,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       });
     }
     catch (Exception e) {
-      log.warn(e, "Exception altering table[%s]", tableName);
+      log.warn(e, "Exception Altering table[%s]", tableName);
     }
-  }
-
-  /**
-   * Executes a batch of SQL statements on the given handle.
-   *
-   * @param handle The handle to use for executing the statements.
-   * @param sql    The SQL statements to execute.
-   */
-  private void executeBatch(Handle handle, Iterable<String> sql)
-  {
-    final Batch batch = handle.createBatch();
-    for (String s : sql) {
-      batch.add(s);
-    }
-    batch.execute();
   }
 
   public void createPendingSegmentsTable(final String tableName)
@@ -346,27 +328,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-
-    if (!tableHasColumn(tableName, "supervisor_id")) {
-      final List<String> alterCommands = new ArrayList<>();
-      alterCommands.add(StringUtils.format(
-          "ALTER TABLE %s ADD COLUMN supervisor_id VARCHAR(255) NOT NULL DEFAULT 'NULL'",
-          tableName
-      ));
-      alterCommands.add(StringUtils.format(
-          "UPDATE %s SET supervisor_id = dataSource",
-          tableName
-      ));
-      alterCommands.add(StringUtils.format(
-          "ALTER TABLE %s DROP PRIMARY KEY",
-          tableName
-      ));
-      alterCommands.add(StringUtils.format(
-          "ALTER TABLE %s ADD PRIMARY KEY (supervisor_id)",
-          tableName
-      ));
-      alterTable(tableName, alterCommands, true);
-    }
   }
 
   public void createSegmentTable(final String tableName)
@@ -530,7 +491,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
-      alterTable(tableName, statements, false);
+      alterTable(tableName, statements);
     }
   }
 
@@ -559,7 +520,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       statements.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN task_allocator_id VARCHAR(255)", tableName));
     }
     if (!statements.isEmpty()) {
-      alterTable(tableName, statements, false);
+      alterTable(tableName, statements);
     }
 
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
@@ -654,7 +615,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
     }
 
-    alterTable(tableName, alterCommands, false);
+    alterTable(tableName, alterCommands);
 
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(

@@ -411,8 +411,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             segments,
             null,
             null,
-            segmentSchemaMapping,
-            null
+            null,
+            segmentSchemaMapping
         );
 
     // Metadata transaction cannot fail because we are not trying to do one.
@@ -426,16 +426,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       final Set<DataSegment> segments,
+      @Nullable final String supervisorId,
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata,
-      @Nullable final SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable final String supervisorId
+      @Nullable final SegmentSchemaMapping segmentSchemaMapping
   )
   {
     verifySegmentsToCommit(segments);
 
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+    } else if (startMetadata != null && supervisorId == null) {
+      throw new IllegalArgumentException(
+          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
     }
 
     final String dataSource = segments.iterator().next().getDataSource();
@@ -542,9 +545,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         appendSegmentToReplaceLock,
         null,
         null,
+        null,
         taskAllocatorId,
-        segmentSchemaMapping,
-        null
+        segmentSchemaMapping
     );
   }
 
@@ -552,21 +555,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public SegmentPublishResult commitAppendSegmentsAndMetadata(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable String supervisorId
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
         appendSegments,
         appendSegmentToReplaceLock,
+        supervisorId,
         startMetadata,
         endMetadata,
         taskAllocatorId,
-        segmentSchemaMapping,
-        supervisorId
+        segmentSchemaMapping
     );
   }
 
@@ -1178,17 +1181,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private SegmentPublishResult commitAppendSegmentsAndMetadataInTransaction(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      @Nullable String supervisorId,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable String supervisorId
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     final String dataSource = verifySegmentsToCommit(appendSegments);
     if ((startMetadata == null && endMetadata != null)
         || (startMetadata != null && endMetadata == null)) {
       throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+    } else if (startMetadata != null && supervisorId == null) {
+      throw new IllegalArgumentException(
+          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
     }
 
     final List<PendingSegmentRecord> segmentIdsForNewVersions = inReadOnlyDatasourceTransaction(
@@ -1232,7 +1238,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // Try to update datasource metadata first
             if (startMetadata != null) {
               final SegmentPublishResult metadataUpdateResult
-                  = updateDataSourceMetadataInTransaction(transaction, supervisorId, dataSource, startMetadata, endMetadata);
+                  = updateDataSourceMetadataInTransaction(
+                  transaction,
+                  supervisorId,
+                  dataSource,
+                  startMetadata,
+                  endMetadata
+              );
 
               // Abort the transaction if datasource metadata update has failed
               if (!metadataUpdateResult.isSuccess()) {
@@ -2109,7 +2121,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final byte[] bytes = connector.lookup(
         dbTables.getDataSourceTable(),
-        "supervisor_id",
+        "dataSource",
         "commit_metadata_payload",
         supervisorId
     );
@@ -2132,7 +2144,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return connector.lookupWithHandle(
         transaction.getHandle(),
         dbTables.getDataSourceTable(),
-        "supervisor_id",
+        "dataSource",
         "commit_metadata_payload",
         supervisorId
     );
@@ -2240,13 +2252,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final String insertSql = StringUtils.format(
-          "INSERT INTO %s (supervisor_id, dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
-          + "VALUES (:supervisor_id, :dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+          "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+          + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
           dbTables.getDataSourceTable()
       );
       final int numRows = transaction.getHandle().createStatement(insertSql)
-                                     .bind("supervisor_id", supervisorId)
-                                     .bind("dataSource", dataSource)
+                                     .bind("dataSource", supervisorId)
                                      .bind("created_date", DateTimes.nowUtc().toString())
                                      .bind("commit_metadata_payload", newCommitMetadataBytes)
                                      .bind("commit_metadata_sha1", newCommitMetadataSha1)
@@ -2261,12 +2272,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           "UPDATE %s SET "
           + "commit_metadata_payload = :new_commit_metadata_payload, "
           + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-          + "WHERE supervisor_id = :supervisor_id AND dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+          + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
           dbTables.getDataSourceTable()
       );
       final int numRows = transaction.getHandle().createStatement(updateSql)
-                                     .bind("supervisor_id", supervisorId)
-                                     .bind("dataSource", dataSource)
+                                     .bind("dataSource", supervisorId)
                                      .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
                                      .bind("new_commit_metadata_payload", newCommitMetadataBytes)
                                      .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
@@ -2298,8 +2308,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return connector.retryWithHandle(
         handle -> {
           int rows = handle.createStatement(
-              StringUtils.format("DELETE from %s WHERE supervisor_id = :supervisor_id", dbTables.getDataSourceTable())
-          ).bind("supervisor_id", supervisorId).execute();
+              StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+          ).bind("dataSource", supervisorId).execute();
 
           return rows > 0;
         }
@@ -2318,11 +2328,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String sql = "UPDATE %s SET "
                        + "commit_metadata_payload = :new_commit_metadata_payload, "
                        + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-                       + "WHERE supervisor_id = :supervisor_id";
+                       + "WHERE dataSource = :dataSource";
     return connector.retryWithHandle(
         handle -> {
           final int numRows = handle.createStatement(StringUtils.format(sql, dbTables.getDataSourceTable()))
-                                    .bind("supervisor_id", supervisorId)
+                                    .bind("dataSource", supervisorId)
                                     .bind("new_commit_metadata_payload", newCommitMetadataBytes)
                                     .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
                                     .execute();
@@ -2369,19 +2379,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public boolean insertDataSourceMetadata(String supervisorId, String dataSource, DataSourceMetadata metadata)
+  public boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata metadata)
   {
     return 1 == connector.getDBI().inTransaction(
         (handle, status) -> handle
             .createStatement(
                 StringUtils.format(
-                    "INSERT INTO %s (supervisor_id, dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) VALUES" +
-                    " (:supervisor_id, :dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+                    "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) VALUES" +
+                    " (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
                     dbTables.getDataSourceTable()
                 )
             )
-            .bind("supervisor_id", supervisorId)
-            .bind("dataSource", dataSource)
+            .bind("dataSource", supervisorId)
             .bind("created_date", DateTimes.nowUtc().toString())
             .bind("commit_metadata_payload", jsonMapper.writeValueAsBytes(metadata))
             .bind("commit_metadata_sha1", BaseEncoding.base16().encode(
@@ -2398,7 +2407,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle -> handle
             .createQuery(
                 StringUtils.format(
-                    "SELECT supervisor_id FROM %1$s WHERE created_date < '%2$s'",
+                    "SELECT dataSource FROM %1$s WHERE created_date < '%2$s'",
                     dbTables.getDataSourceTable(),
                     dateTime.toString()
                 )
@@ -2411,13 +2420,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle -> {
           final PreparedBatch batch = handle.prepareBatch(
               StringUtils.format(
-                  "DELETE FROM %1$s WHERE supervisor_id = :supervisor_id AND created_date < '%2$s'",
+                  "DELETE FROM %1$s WHERE dataSource = :dataSource AND created_date < '%2$s'",
                   dbTables.getDataSourceTable(),
                   dateTime.toString()
               )
           );
           for (String supervisorId : supervisorsToDelete) {
-            batch.bind("supervisor_id", supervisorId).add();
+            batch.bind("dataSource", supervisorId).add();
           }
           int[] result = batch.execute();
           return IntStream.of(result).sum();

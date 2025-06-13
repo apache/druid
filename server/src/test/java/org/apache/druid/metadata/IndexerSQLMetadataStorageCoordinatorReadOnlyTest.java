@@ -219,8 +219,8 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
             Map.of(),
             null,
             null,
-            "allocator",
             null,
+            "allocator",
             null
         )
     );

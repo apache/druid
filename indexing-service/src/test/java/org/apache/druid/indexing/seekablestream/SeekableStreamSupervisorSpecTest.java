@@ -147,7 +147,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     private BaseTestSeekableStreamSupervisor()
     {
       super(
-          "testSupervisorId",
           taskStorage,
           taskMaster,
           indexerMetadataStorageCoordinator,
@@ -737,6 +736,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleOut() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -793,6 +793,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleOutAlreadyAtMax() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -853,6 +854,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithNoScalingOnIdleSupervisor() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -902,6 +904,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleOutSmallPartitionNumber() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -948,6 +951,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleIn() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
@@ -997,6 +1001,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleInThresholdGreaterThanPartitions() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
@@ -1051,6 +1056,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleInAlreadyAtMin() throws InterruptedException
   {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -1131,6 +1137,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     )
     {
     };
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
@@ -1195,7 +1202,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(dataSchema);
 
     spec = new SeekableStreamSupervisorSpec(
-        null,
+        SUPERVISOR,
         ingestionSchema,
         null,
         null,
@@ -1302,9 +1309,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         rowIngestionMetersFactory,
         supervisorStateManagerConfig,
         supervisor4,
-        null
+        SUPERVISOR
     );
-    Assert.assertEquals(spec.getDataSources().get(0), spec.getId());
+    Assert.assertEquals(SUPERVISOR, spec.getId());
   }
 
   @Test

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -100,7 +101,6 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       final RowIngestionMetersFactory rowIngestionMetersFactory)
   {
     super(
-        spec.getId(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -143,11 +143,12 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   @Override
   protected boolean doesTaskMatchSupervisor(Task task)
   {
-    if (!(task instanceof RabbitStreamIndexTask)) {
+    if (task instanceof RabbitStreamIndexTask) {
+      final String supervisorId = ((RabbitStreamIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
       return false;
     }
-    final String supervisorId = ((RabbitStreamIndexTask) task).getSupervisorId();
-    return supervisorId.equals(spec.getId());
   }
 
   @Override
@@ -222,13 +223,13 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new RabbitStreamIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper,
-          spec.getId()
+          sortingMapper
       ));
     }
     return taskList;
