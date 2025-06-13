@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -46,24 +45,6 @@ public interface Worker
    * Runs the worker in the current thread. Surrounding classes provide the execution thread.
    */
   void run();
-
-  /**
-   * Terminate the worker upon a cancellation request. Causes a concurrently-running {@link #run()} method in
-   * a separate thread to cancel all outstanding work and exit. Does not block. Use {@link #awaitStop()} if you
-   * would like to wait for {@link #run()} to finish.
-   */
-  void stop(CancellationReason reason);
-
-  /**
-   * Wait for {@link #run()} to finish.
-   */
-  void awaitStop();
-
-  /**
-   * Report that the controller has failed. The worker must cease work immediately. Cleanup then exit.
-   * Do not send final messages to the controller: there will be no one home at the other end.
-   */
-  void controllerFailed();
 
   // Controller-to-worker, and worker-to-worker messages
 

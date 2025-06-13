@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
-import org.apache.druid.msq.indexing.error.CancellationReason;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.SketchEncoding;
@@ -40,10 +40,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  protected final Map<String, Worker> inMemoryWorkers;
+  protected final Map<String, WorkerRunRef> inMemoryWorkers;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
+  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers)
   {
     this.inMemoryWorkers = inMemoryWorkers;
   }
@@ -57,10 +57,10 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected Worker getWorkerFor(String workerTaskId)
   {
-    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker);
+    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker).worker();
   }
 
-  protected Worker newWorker(String workerId)
+  protected WorkerRunRef newWorker(String workerId)
   {
     throw new RuntimeException("Not implemented!");
   }
@@ -158,7 +158,7 @@ public class MSQTestWorkerClient implements WorkerClient
   public void close()
   {
     if (closed.compareAndSet(false, true)) {
-      inMemoryWorkers.forEach((k, v) -> v.stop(CancellationReason.UNKNOWN));
+      inMemoryWorkers.forEach((k, v) -> v.cancel());
     }
   }
 }

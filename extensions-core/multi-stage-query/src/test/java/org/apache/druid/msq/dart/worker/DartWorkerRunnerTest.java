@@ -19,7 +19,8 @@
 
 package org.apache.druid.msq.dart.worker;
 
-import com.google.common.util.concurrent.SettableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -31,8 +32,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.msq.indexing.error.CanceledFault;
-import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.exec.WorkerContext;
+import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -46,7 +47,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -57,7 +57,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,9 +75,7 @@ public class DartWorkerRunnerTest
           Collections.emptyMap()
       );
 
-  private final SettableFuture<?> workerRun = SettableFuture.create();
-
-  private ExecutorService workerExec;
+  private ListeningExecutorService workerExec;
   private DartWorkerRunner workerRunner;
   private AutoCloseable mockCloser;
 
@@ -86,10 +83,10 @@ public class DartWorkerRunnerTest
   public Path temporaryFolder;
 
   @Mock
-  private DartWorkerFactory workerFactory;
+  private DartWorkerContextFactory workerFactory;
 
   @Mock
-  private Worker worker;
+  private WorkerContext workerContext;
 
   @Mock
   private DruidNodeDiscoveryProvider discoveryProvider;
@@ -109,7 +106,7 @@ public class DartWorkerRunnerTest
     mockCloser = MockitoAnnotations.openMocks(this);
     workerRunner = new DartWorkerRunner(
         workerFactory,
-        workerExec = Execs.multiThreaded(MAX_WORKERS, "worker-exec-%s"),
+        workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(MAX_WORKERS, "worker-exec-%s")),
         discoveryProvider,
         new DartResourcePermissionMapper(),
         authorizerMapper,
@@ -119,7 +116,7 @@ public class DartWorkerRunnerTest
     // "discoveryProvider" provides "discovery".
     Mockito.when(discoveryProvider.getForNodeRole(NodeRole.BROKER)).thenReturn(discovery);
 
-    // "workerFactory" builds "worker".
+    // "workerFactory" builds "workerContext".
     Mockito.when(
         workerFactory.build(
             QUERY_ID,
@@ -127,39 +124,14 @@ public class DartWorkerRunnerTest
             temporaryFolder.toFile(),
             QueryContext.empty()
         )
-    ).thenReturn(worker);
+    ).thenReturn(workerContext);
 
-    // "worker.run()" exits when "workerRun" resolves.
-    Mockito.doAnswer(invocation -> {
-      workerRun.get();
-      return null;
-    }).when(worker).run();
+    // Set up workerContext.workerId() to return WORKER_ID.
+    Mockito.when(workerContext.workerId()).thenReturn(WORKER_ID.toString());
 
-    // "worker.stop()" sets "workerRun" to a cancellation error.
-    Mockito.doAnswer(invocation -> {
-      workerRun.setException(new MSQException(new CanceledFault(invocation.getArgument(0))));
-      return null;
-    }).when(worker).stop(ArgumentMatchers.any());
-
-    // "worker.controllerFailed()" sets "workerRun" to an error.
-    Mockito.doAnswer(invocation -> {
-      workerRun.setException(new ISE("Controller failed"));
-      return null;
-    }).when(worker).controllerFailed();
-
-    // "worker.awaitStop()" waits for "workerRun". It does not throw an exception, just like WorkerImpl.awaitStop.
-    Mockito.doAnswer(invocation -> {
-      try {
-        workerRun.get();
-      }
-      catch (Throwable e) {
-        // Suppress
-      }
-      return null;
-    }).when(worker).awaitStop();
-
-    // "worker.id()" returns WORKER_ID.
-    Mockito.when(worker.id()).thenReturn(WORKER_ID.toString());
+    // Set up workerContext.selfNode() to return a mock DruidNode
+    DruidNode selfNode = new DruidNode("worker", "localhost", false, 8282, -1, true, false);
+    Mockito.when(workerContext.selfNode()).thenReturn(selfNode);
 
     // Start workerRunner, capture listener in "discoveryListener".
     workerRunner.start();
@@ -239,8 +211,8 @@ public class DartWorkerRunnerTest
     // Start the worker twice (startWorker is idempotent; nothing special happens the second time).
     final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
     final Worker workerFromStart2 = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
-    Assertions.assertSame(worker, workerFromStart);
-    Assertions.assertSame(worker, workerFromStart2);
+    Assertions.assertSame(workerContext, ((WorkerImpl) workerFromStart).getWorkerContext());
+    Assertions.assertSame(workerContext, ((WorkerImpl) workerFromStart2).getWorkerContext());
 
     // Worker should enter the GetWorkersResponse.
     final GetWorkersResponse workersResponse = workerRunner.getWorkersResponse();
@@ -262,7 +234,7 @@ public class DartWorkerRunnerTest
 
     // Start the worker.
     final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
-    Assertions.assertSame(worker, workerFromStart);
+    Assertions.assertSame(workerContext, ((WorkerImpl) workerFromStart).getWorkerContext());
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 
     // Deactivate controller.
@@ -282,7 +254,7 @@ public class DartWorkerRunnerTest
 
     // Start the worker.
     final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
-    Assertions.assertSame(worker, workerFromStart);
+    Assertions.assertSame(workerContext, ((WorkerImpl) workerFromStart).getWorkerContext());
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 
     // Stop that worker.
@@ -302,7 +274,7 @@ public class DartWorkerRunnerTest
 
     // Start the worker.
     final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
-    Assertions.assertSame(worker, workerFromStart);
+    Assertions.assertSame(workerContext, ((WorkerImpl) workerFromStart).getWorkerContext());
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 
     // Stop runner.
