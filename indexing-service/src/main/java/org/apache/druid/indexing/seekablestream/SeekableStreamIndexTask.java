@@ -78,13 +78,13 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   public SeekableStreamIndexTask(
       final String id,
+      final @Nullable String supervisorId,
       @Nullable final TaskResource taskResource,
       final DataSchema dataSchema,
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final String groupId,
-      @Nullable final String supervisorId
+      @Nullable final String groupId
   )
   {
     super(

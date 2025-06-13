@@ -419,7 +419,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction
-                     .forSegmentsAndMetadata(runner.getSupervisorId(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping)
+                     .forSegmentsAndMetadata(segmentsToPush, runner.getSupervisorId(), startMetadata, endMetadata, segmentSchemaMapping)
                  : SegmentTransactionalInsertAction
                      .appendAction(runner.getSupervisorId(), runner.getAppenderator().getDataSource(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
       } else {

@@ -98,7 +98,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public boolean insertDataSourceMetadata(String supervisorId, String dataSource, DataSourceMetadata dataSourceMetadata)
+  public boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
@@ -236,11 +236,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public SegmentPublishResult commitAppendSegmentsAndMetadata(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      SegmentSchemaMapping segmentSchemaMapping,
-      String supervisorId
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
@@ -249,10 +249,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
+      @Nullable final String supervisorId,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable final String supervisorId
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     // Don't actually compare metadata, just do it!

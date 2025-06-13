@@ -93,7 +93,7 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testTransactionalUpdateDataSourceMetadataWithDefaultSupervisorId() throws Exception
+  public void test_transactionalUpdateDataSourceMetadata_withDefaultSupervisorId() throws Exception
   {
     final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
@@ -137,7 +137,7 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testTransactionalUpdateDataSourceMetadataWithCustomSupervisorId() throws Exception
+  public void test_transactionalUpdateDataSourceMetadata_withCustomSupervisorId() throws Exception
   {
     final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
@@ -181,7 +181,7 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testFailTransactionalUpdateDataSourceMetadata() throws Exception
+  public void test_fail_transactionalUpdateDataSourceMetadata() throws Exception
   {
     final Task task = NoopTask.create();
     actionTestKit.getTaskLockbox().add(task);
@@ -209,7 +209,7 @@ public class SegmentTransactionalInsertActionTest
   }
 
   @Test
-  public void testFailBadVersion() throws Exception
+  public void test_fail_badVersion() throws Exception
   {
     final Task task = NoopTask.create();
     final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction

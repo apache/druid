@@ -733,10 +733,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Insert first segment.
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
@@ -753,10 +753,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Insert second segment.
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
+        SUPERVISOR_ID,
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), result2);
 
@@ -815,19 +815,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Insert first segment.
     final SegmentPublishResult result1 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.retryableFailure("this failure can be retried"), result1);
 
     final SegmentPublishResult resultOnRetry = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), resultOnRetry);
 
@@ -847,19 +847,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Insert second segment.
     final SegmentPublishResult result2 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
+        SUPERVISOR_ID,
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.retryableFailure("this failure can be retried"), result2);
 
     final SegmentPublishResult resultOnRetry2 = failOnceCoordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
+        SUPERVISOR_ID,
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment2)), resultOnRetry2);
 
@@ -888,10 +888,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.retryableFailure(
@@ -910,19 +910,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
@@ -982,10 +982,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             RuntimeException.class,
             () -> storageCoordinator.commitSegmentsAndMetadata(
                 Set.of(defaultSegment),
+                SUPERVISOR_ID,
                 new ObjectMetadata(null),
                 new ObjectMetadata(Map.of("foo", "baz")),
-                null,
-                SUPERVISOR_ID
+                null
             )
         ),
         ExceptionMatcher.of(RuntimeException.class)
@@ -1057,19 +1057,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(defaultSegment)), result1);
 
     final SegmentPublishResult result2 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment2),
+        SUPERVISOR_ID,
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
@@ -2410,10 +2410,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3425,10 +3425,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3455,10 +3455,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(
@@ -3481,10 +3481,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
+        SUPERVISOR_ID,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION),
-        SUPERVISOR_ID
+        new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
     Assert.assertEquals(

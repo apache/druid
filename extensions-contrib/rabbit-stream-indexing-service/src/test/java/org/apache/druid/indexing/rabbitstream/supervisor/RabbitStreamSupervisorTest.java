@@ -36,8 +36,10 @@ import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
+import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTask;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamRecordSupplier;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -51,6 +53,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Period;
 import org.junit.After;
@@ -59,6 +62,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -180,6 +184,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
    * Use for tests where you don't want generateSequenceName to be overridden out
    */
   private RabbitStreamSupervisor getSupervisor(
+      final @Nullable String id,
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -217,7 +222,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         clientFactory,
         OBJECT_MAPPER,
         new RabbitStreamSupervisorSpec(
-            null,
+            id,
             null,
             dataSchema,
             tuningConfig,
@@ -240,6 +245,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
   public RabbitStreamSupervisor getDefaultSupervisor()
   {
     return getSupervisor(
+        null,
         1,
         1,
         false,
@@ -334,6 +340,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
 
     for (Integer taskCount : taskCounts) {
       supervisor = getSupervisor(
+          null,
           1,
           taskCount,
           false,
@@ -352,6 +359,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
   public void testReportPayload()
   {
     supervisor = getSupervisor(
+        null,
         1,
         1,
         false,
@@ -374,6 +382,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
   public void testCreateTaskIOConfig()
   {
     supervisor = getSupervisor(
+        null,
         1,
         1,
         false,
@@ -414,5 +423,39 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     );
 
     Assert.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
+  }
+
+  @Test
+  public void test_doesTaskMatchSupervisor()
+  {
+    supervisor = getSupervisor(
+        "supervisorId",
+        1,
+        1,
+        false,
+        "PT30M",
+        null,
+        null,
+        RabbitStreamSupervisorTest.dataSchema,
+        tuningConfig
+    );
+
+    RabbitStreamIndexTask rabbitTaskMatch = createMock(RabbitStreamIndexTask.class);
+    EasyMock.expect(rabbitTaskMatch.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(rabbitTaskMatch);
+
+    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(rabbitTaskMatch));
+
+    RabbitStreamIndexTask rabbitTaskNoMatch = createMock(RabbitStreamIndexTask.class);
+    EasyMock.expect(rabbitTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
+    EasyMock.replay(rabbitTaskNoMatch);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(rabbitTaskNoMatch));
+
+    SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
+    EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(differentTaskType);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -106,7 +107,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   )
   {
     super(
-        spec.getId(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -153,11 +153,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected boolean doesTaskMatchSupervisor(Task task)
   {
-    if (!(task instanceof KafkaIndexTask)) {
+    if (task instanceof KafkaIndexTask) {
+      final String supervisorId = ((KafkaIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
       return false;
     }
-    final String supervisorId = ((KafkaIndexTask) task).getSupervisorId();
-    return supervisorId.equals(spec.getId());
   }
 
   @Override
@@ -241,13 +242,13 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KafkaIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper,
-          spec.getId()
+          sortingMapper
       ));
     }
     return taskList;

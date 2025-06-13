@@ -21,8 +21,12 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+
+import javax.annotation.Nullable;
 
 public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
 {
@@ -31,13 +35,13 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   private final DataSourceMetadata resetMetadata;
 
   public ResetDataSourceMetadataAction(
-      @JsonProperty("supervisorId") String supervisorId,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("resetMetadata") DataSourceMetadata resetMetadata
   )
   {
-    this.supervisorId = supervisorId;
-    this.dataSource = dataSource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null");
+    this.supervisorId = Configs.valueOrDefault(supervisorId, dataSource);
     this.resetMetadata = resetMetadata;
   }
 

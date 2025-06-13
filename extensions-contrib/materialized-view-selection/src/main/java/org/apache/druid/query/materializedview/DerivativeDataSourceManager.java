@@ -158,7 +158,7 @@ public class DerivativeDataSourceManager
           handle
               .createQuery(
                   StringUtils.format(
-                      "SELECT DISTINCT supervisor_id,dataSource,commit_metadata_payload FROM %1$s",
+                      "SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s",
                       dbTables.get().getDataSourceTable()
                   )
               )

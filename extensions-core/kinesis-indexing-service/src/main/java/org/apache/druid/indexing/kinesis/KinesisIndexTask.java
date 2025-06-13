@@ -65,25 +65,25 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
   @JsonCreator
   public KinesisIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("useListShards") boolean useListShards,
-      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
-      @JsonProperty("supervisorId") @Nullable String supervisorId
+      @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(
         getOrMakeId(id, dataSchema.getDataSource(), TYPE),
+        supervisorId,
         taskResource,
         dataSchema,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
-        supervisorId
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;

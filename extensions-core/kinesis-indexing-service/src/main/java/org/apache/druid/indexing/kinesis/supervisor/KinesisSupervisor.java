@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
@@ -97,7 +98,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   )
   {
     super(
-        spec.getId(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -167,14 +167,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KinesisIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
           spec.getSpec().getTuningConfig().isUseListShards(),
-          awsCredentialsConfig,
-          spec.getId()
+          awsCredentialsConfig
       ));
     }
     return taskList;
@@ -251,11 +251,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   @Override
   protected boolean doesTaskMatchSupervisor(Task task)
   {
-    if (!(task instanceof KinesisIndexTask)) {
+    if (task instanceof KinesisIndexTask) {
+      final String supervisorId = ((KinesisIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
       return false;
     }
-    final String supervisorId = ((KinesisIndexTask) task).getSupervisorId();
-    return supervisorId.equals(spec.getId());
   }
 
   @Override

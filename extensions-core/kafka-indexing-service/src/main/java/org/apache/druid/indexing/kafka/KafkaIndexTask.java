@@ -63,24 +63,24 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   @JsonCreator
   public KafkaIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ObjectMapper configMapper,
-      @JsonProperty("supervisorId") @Nullable String supervisorId
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
         getOrMakeId(id, dataSchema.getDataSource(), TYPE),
+        supervisorId,
         taskResource,
         dataSchema,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
-        supervisorId
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
     );
     this.configMapper = configMapper;
 

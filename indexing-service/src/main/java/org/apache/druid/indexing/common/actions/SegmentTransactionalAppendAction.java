@@ -76,8 +76,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
-      String supervisorId,
       Set<DataSegment> segments,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       SegmentSchemaMapping segmentSchemaMapping
@@ -98,7 +98,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     this.segments = segments;
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
-    this.supervisorId = supervisorId;
+
+    if (supervisorId == null && !segments.isEmpty()) {
+      this.supervisorId = segments.stream().findFirst().get().getDataSource();
+    } else {
+      this.supervisorId = supervisorId;
+    }
 
     if ((startMetadata == null && endMetadata != null)
         || (startMetadata != null && endMetadata == null)) {
@@ -191,11 +196,11 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
           segments,
           segmentToReplaceLock,
+          supervisorId,
           startMetadata,
           endMetadata,
           taskAllocatorId,
-          segmentSchemaMapping,
-          supervisorId
+          segmentSchemaMapping
       );
     }
 

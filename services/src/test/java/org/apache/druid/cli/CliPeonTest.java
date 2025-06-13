@@ -149,7 +149,7 @@ public class CliPeonTest
             DruidMetrics.TASK_TYPE, TestStreamingTask.TYPE,
             DruidMetrics.STATUS, TestStreamingTask.STATUS
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId, supervisor))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
     );
 
     // streaming task with non-empty ags
@@ -162,7 +162,7 @@ public class CliPeonTest
             DruidMetrics.STATUS, TestStreamingTask.STATUS,
             DruidMetrics.TAGS, tags
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId, supervisor))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
     );
   }
 
@@ -231,14 +231,15 @@ public class CliPeonTest
 
     public TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         String datasource,
         @Nullable Map context,
-        @Nullable String groupId,
-        @Nullable String supervisorId
+        @Nullable String groupId
     )
     {
       this(
           id,
+          supervisorId,
           null,
           DataSchema.builder()
               .withDataSource(datasource)
@@ -249,24 +250,23 @@ public class CliPeonTest
           mock(SeekableStreamIndexTaskTuningConfig.class),
           new TestSeekableStreamIndexTaskIOConfig(),
           context,
-          groupId,
-          supervisorId
+          groupId
       );
     }
 
     private TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         @Nullable TaskResource taskResource,
         DataSchema dataSchema,
         SeekableStreamIndexTaskTuningConfig tuningConfig,
         SeekableStreamIndexTaskIOConfig ioConfig,
         @Nullable Map context,
-        @Nullable String groupId,
-        @Nullable String supervisorId
+        @Nullable String groupId
     )
     {
 
-      super(id, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, supervisorId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
     }
 
     @Override

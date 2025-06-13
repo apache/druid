@@ -168,7 +168,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     Set<String> dims = Sets.newHashSet("dim1", "dim2", "dim3");
     Set<String> metrics = Sets.newHashSet("cost");
     DerivativeDataSourceMetadata metadata = new DerivativeDataSourceMetadata(baseDataSource, dims, metrics);
-    metadataStorageCoordinator.insertDataSourceMetadata(dataSource, dataSource, metadata);
+    metadataStorageCoordinator.insertDataSourceMetadata(dataSource, metadata);
     // insert base datasource segments
     List<Boolean> baseResult = Lists.transform(
         ImmutableList.of(

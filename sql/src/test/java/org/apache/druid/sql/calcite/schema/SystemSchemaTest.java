@@ -1391,7 +1391,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(supervisorTable);
 
     String json = "[{\n"
-                  + "\t\"id\": \"wikipedia\",\n"
+                  + "\t\"id\": \"wikipedia_supervisor\",\n"
                   + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
                   + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
@@ -1416,7 +1416,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
-    Assert.assertEquals("wikipedia", row0[0].toString());
+    Assert.assertEquals("wikipedia_supervisor", row0[0].toString());
     Assert.assertEquals("wikipedia", row0[1].toString());
     Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[2].toString());
     Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[3].toString());

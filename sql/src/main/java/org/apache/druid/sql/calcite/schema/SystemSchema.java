@@ -989,7 +989,7 @@ public class SystemSchema extends AbstractSchema
               final SupervisorStatus supervisor = it.next();
               return new Object[]{
                   supervisor.getId(),
-                  supervisor.getDatasource(),
+                  supervisor.getDataSource(),
                   supervisor.getState(),
                   supervisor.getDetailedState(),
                   supervisor.isHealthy() ? 1L : 0L,

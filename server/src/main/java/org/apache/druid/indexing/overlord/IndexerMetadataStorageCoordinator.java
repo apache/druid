@@ -334,10 +334,10 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
+      @Nullable String supervisorId,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable String supervisorId
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -378,11 +378,11 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitAppendSegmentsAndMetadata(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      @Nullable String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping,
-      @Nullable String supervisorId
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -408,12 +408,12 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Retrieves supervisor's metadata from the datasource metadata store. Returns null if there is no metadata.
+   * Retrieves supervisor's metadata from the metadata store. Returns null if there is no metadata.
    */
   @Nullable DataSourceMetadata retrieveDataSourceMetadata(String supervisorId);
 
   /**
-   * Removes entry for 'supervisorId' from the dataSource metadata table.
+   * Removes entry for {@code supervisorId} from the dataSource metadata table.
    *
    * @param supervisorId identifier
    *
@@ -432,15 +432,14 @@ public interface IndexerMetadataStorageCoordinator
   boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata) throws IOException;
 
   /**
-   * Insert dataSourceMetadata entry for 'supervisorId' and 'dataSource'.
+   * Insert dataSourceMetadata entry for 'supervisorId'.
    *
    * @param supervisorId       identifier
-   * @param dataSource         identifier
    * @param dataSourceMetadata value to set
    *
    * @return true if the entry was inserted, false otherwise
    */
-  boolean insertDataSourceMetadata(String supervisorId, String dataSource, DataSourceMetadata dataSourceMetadata);
+  boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata);
 
   /**
    * Remove datasource metadata created before the given timestamp and not in given excludeSupervisorIds set.

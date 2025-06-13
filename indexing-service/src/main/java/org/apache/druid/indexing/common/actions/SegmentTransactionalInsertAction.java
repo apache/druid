@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -130,7 +131,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
-    this.supervisorId = supervisorId;
+    this.supervisorId = Configs.valueOrDefault(supervisorId, dataSource);
     this.segmentSchemaMapping = segmentSchemaMapping;
 
     if ((startMetadata == null && endMetadata != null)
@@ -208,8 +209,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       // but still needs to update metadata with the progress that the task made.
       try {
         retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
-            dataSource,
             supervisorId,
+            dataSource,
             startMetadata,
             endMetadata
         );
@@ -243,10 +244,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
                       segments,
+                      supervisorId,
                       startMetadata,
                       endMetadata,
-                      segmentSchemaMapping,
-                      supervisorId
+                      segmentSchemaMapping
                   )
               )
               .onInvalidLocks(
