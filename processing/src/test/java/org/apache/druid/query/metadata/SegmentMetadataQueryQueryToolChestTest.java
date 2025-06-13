@@ -613,7 +613,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   public void testMergeWithNullAnalyses(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
     final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).rollup(false).build();
 
     Assert.assertEquals(analysis1, mergeWithStrategy(analysis1, null, aggregatorMergeStrategy));
     Assert.assertEquals(analysis2, mergeWithStrategy(null, analysis2, aggregatorMergeStrategy));

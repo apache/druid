@@ -128,11 +128,13 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 
     ImmutableMap<String, AggregateProjectionMetadata> metadata1 = ImmutableMap.of(
         "countChocula", countChocula,
-        "sumChocula", sumChocula
+        "chocula-conflict", sumChocula,
+        "sumChocula-only-in-metadata1", sumChocula
     );
     ImmutableMap<String, AggregateProjectionMetadata> metadata2 = ImmutableMap.of(
         "countChocula", countChocula,
-        "maxChocula", maxChocula
+        "chocula-conflict", maxChocula,
+        "maxChocula-only-in-metadata2", maxChocula
     );
 
     ImmutableMap<String, AggregateProjectionMetadata> expected = ImmutableMap.of(
@@ -217,7 +219,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     metadataBest.add(evenBetterMoreAggs);
     metadataBest.add(best);
     Assert.assertEquals(best, metadataBest.first());
-    Assert.assertEquals(
+    Assert.assertArrayEquals(
         new AggregateProjectionMetadata[]{best, evenBetterMoreAggs, betterLessGroupingColumns, good},
         metadataBest.toArray()
     );
