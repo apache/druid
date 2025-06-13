@@ -29,7 +29,6 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
 @JsonSubTypes(value = {
