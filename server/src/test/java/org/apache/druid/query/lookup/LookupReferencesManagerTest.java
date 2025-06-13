@@ -116,7 +116,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -179,7 +179,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -219,7 +219,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -273,7 +273,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -325,7 +325,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -356,7 +356,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -384,7 +384,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -414,7 +414,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -447,7 +447,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -477,7 +477,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -501,7 +501,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -531,7 +531,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -596,7 +596,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -637,7 +637,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -723,7 +723,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -769,7 +769,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
@@ -934,7 +934,7 @@ public class LookupReferencesManagerTest
     ListenableFuture<Map<String, LookupExtractorFactoryContainer>> future = new AbstractFuture<>()
     {
       @Override
-      public Map<String, LookupExtractorFactoryContainer> get() throws InterruptedException, ExecutionException
+      public Map<String, LookupExtractorFactoryContainer> get()
       {
         return lookupMap;
       }
