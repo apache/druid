@@ -58,7 +58,7 @@ public class DefaultObjectMapperTest
     Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
 
     // string token
-    Assert.assertEquals(time,  mapper.readValue(StringUtils.format("\"%s\"", time), DateTime.class));
+    Assert.assertEquals(time, mapper.readValue(StringUtils.format("\"%s\"", time), DateTime.class));
 
     // int token
     DateTime result = mapper.readValue("1717267200000", DateTime.class);
