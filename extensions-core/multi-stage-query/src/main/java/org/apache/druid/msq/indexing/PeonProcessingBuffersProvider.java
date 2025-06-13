@@ -53,7 +53,7 @@ public class PeonProcessingBuffersProvider implements ProcessingBuffersProvider
   }
 
   @Override
-  public ResourceHolder<ProcessingBuffersSet> acquire(int poolSize)
+  public ResourceHolder<ProcessingBuffersSet> acquire(int poolSize, long timeoutMillis)
   {
     if (poolSize == 0) {
       return new ReferenceCountingResourceHolder<>(ProcessingBuffersSet.EMPTY, () -> {});

@@ -49,7 +49,7 @@ public class IndexerProcessingBuffersProvider implements ProcessingBuffersProvid
   }
 
   @Override
-  public ResourceHolder<ProcessingBuffersSet> acquire(int poolSize)
+  public ResourceHolder<ProcessingBuffersSet> acquire(int poolSize, final long timeoutMillis)
   {
     if (poolSize == 0) {
       return new ReferenceCountingResourceHolder<>(ProcessingBuffersSet.EMPTY, () -> {});
