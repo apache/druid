@@ -35,7 +35,12 @@ import org.apache.druid.math.expr.vector.VectorConditionalProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -153,6 +158,45 @@ public interface Function extends NamedFunction
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
     throw new UOE("Function[%s] is not vectorized", name());
+  }
+
+  /**
+   * Allows a {@link Function} to provide an {@link ColumnIndexSupplier} given access to the underlying
+   * {@link ColumnIndexSupplier} and {@link org.apache.druid.segment.column.ColumnHolder} of the base table.
+   *
+   * Unlike the contracts of other index supplier methods, a null return value for this method is not indicative of
+   * anything other than the {@link Function} implementation having no specialized index supplier implementation, and
+   * so callers can fall back to generic handling as appropriate.
+   *
+   * @see Expr#asColumnIndexSupplier(ColumnIndexSelector, ColumnType) 
+   */
+  @Nullable
+  default ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector selector,
+      @Nullable ColumnType outputType,
+      List<Expr> args
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Allows a {@link Function} to be computed into a {@link BitmapColumnIndex}. The supplied {@link ColumnIndexSelector}
+   * provides access to underlying {@link ColumnIndexSupplier} and even
+   * {@link org.apache.druid.segment.column.ColumnHolder}. Coupled with
+   * {@link #asColumnIndexSupplier(ColumnIndexSelector, ColumnType, List<Expr>)}, which allows {@link Function} to
+   * provide indexes of their own, it allows for a system of composing indexes on top of any base column structures.
+   *
+   * Unlike {@link Expr#asBitmapColumnIndex(ColumnIndexSelector)}, a null return value of this method is not indicative
+   * of anything other than the {@link Function} implementation not having a specialized way to compute into a
+   * {@link BitmapColumnIndex}, and so callers can fall back to generic handling as appropriate.
+   *
+   * @see Expr#asBitmapColumnIndex(ColumnIndexSelector)
+   */
+  @Nullable
+  default BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector, List<Expr> args)
+  {
+    return null;
   }
 
   /**
@@ -4317,6 +4361,24 @@ public interface Function extends NamedFunction
         } else {
           return ExprEval.ofLongBoolean(false);
         }
+      }
+
+      @Nullable
+      @Override
+      public BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector, List<Expr> args)
+      {
+        final ColumnIndexSupplier arg0Supplier = args.get(0).asColumnIndexSupplier(selector, ColumnType.STRING);
+        if (arg0Supplier == null) {
+          return null;
+        }
+        final ValueSetIndexes values = arg0Supplier.as(ValueSetIndexes.class);
+        if (values == null) {
+          return null;
+        }
+        final List<?> sortedMatchValues = matchValues.stream()
+                                                     .sorted(ColumnType.STRING.getNullableStrategy())
+                                                     .collect(Collectors.toList());
+        return values.forSortedValues(sortedMatchValues, ColumnType.STRING);
       }
     }
   }
