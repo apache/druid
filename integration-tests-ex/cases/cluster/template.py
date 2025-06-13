@@ -32,6 +32,7 @@ DRUID_NETWORK = 'druid-it-net'
 DRUID_SUBNET = '172.172.172'
 ZOO_KEEPER = 'zookeeper'
 METADATA = 'metadata'
+MINIO = 'minio'
 KAFKA = 'kafka'
 COORDINATOR = 'coordinator'
 OVERLORD = 'overlord'
@@ -72,7 +73,8 @@ class BaseTemplate:
     # Lookup map to determine what depends_on condition needs to be specified for a docker-compose dependency.
     SERVICE_DEPENDENCY_CONDITION_LOOKUP = {
       METADATA: 'service_healthy',
-      ZOO_KEEPER: 'service_started'
+      ZOO_KEEPER: 'service_started',
+      MINIO: 'service_healthy',
     }
 
     def __init__(self):
