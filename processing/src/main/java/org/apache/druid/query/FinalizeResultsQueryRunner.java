@@ -60,7 +60,7 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     final Query<T> query = queryPlus.getQuery();
     final QueryContext queryContext = query.context();
     final boolean isBySegment = queryContext.isBySegment();
-    final boolean shouldFinalize = queryContext.isFinalize(true);
+    final boolean shouldFinalize = queryContext.isFinalize.get(true);
 
     final Query<T> queryToRun;
     final Function<T, ?> finalizerFn;

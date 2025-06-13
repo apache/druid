@@ -30,9 +30,9 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.setting.BoundedSettingEntry;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -301,11 +301,7 @@ public class QueryContext
     return QueryContexts.USE_RESULT_LEVEL_CACHE_KEY.from(this);
   }
 
-  public boolean isFinalize(boolean defaultValue)
-
-  {
-    return getBoolean(QueryContexts.FINALIZE_KEY.name(), defaultValue);
-  }
+  public final BoundedSettingEntry<Boolean> isFinalize = new BoundedSettingEntry<>(QueryContexts.FINALIZE_KEY, this);
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {

@@ -476,7 +476,7 @@ public class QueryLifecycle
   private boolean isSerializeDateTimeAsLong()
   {
     final QueryContext queryContext = baseQuery.context();
-    final boolean shouldFinalize = queryContext.isFinalize(true);
+    final boolean shouldFinalize = queryContext.isFinalize.get(true);
     return queryContext.isSerializeDateTimeAsLong(false)
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
