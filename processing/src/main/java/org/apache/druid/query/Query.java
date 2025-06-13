@@ -225,7 +225,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return context().getString(BaseQuery.SQL_QUERY_ID);
+    return context().getValue(QueryContexts.SQL_QUERY_ID);
   }
 
   /**
@@ -248,7 +248,7 @@ public interface Query<T>
 
   default Query<T> withPriority(int priority)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY.name(), priority));
   }
 
   default Query<T> withLane(String lane)

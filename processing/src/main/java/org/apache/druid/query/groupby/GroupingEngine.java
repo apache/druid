@@ -222,7 +222,7 @@ public class GroupingEngine
   {
     // Set up downstream context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
-    context.put(QueryContexts.FINALIZE_KEY, false);
+    context.put(QueryContexts.FINALIZE_KEY.name(), false);
     context.put(CTX_KEY_OUTERMOST, false);
 
     Granularity granularity = query.getGranularity();

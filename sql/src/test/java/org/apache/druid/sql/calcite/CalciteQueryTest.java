@@ -2568,7 +2568,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             PLANNER_CONFIG_NO_HLL.withOverrides(
                 ImmutableMap.of(
                     PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "false",
-                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false
+                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false
                 )
             )
         )
@@ -14992,7 +14992,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
-            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true))
+            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), true))
             .sql("SELECT sum(distinct m1) from druid.foo")
             .run()
     );
@@ -15738,7 +15738,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorizeUnlessFallback();
     msqIncompatible();
     final Map<String, Object> queryContext = ImmutableMap.of(
-        PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false,
+        PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false,
         PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, true
     );
     testBuilder()

@@ -30,9 +30,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.setting.BoundedSettingEntry;
+import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -71,8 +72,8 @@ public class QueryContext
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new TreeMap<>(context));
+                   ? Collections.emptyMap()
+                   : Collections.unmodifiableMap(new TreeMap<>(context));
   }
 
   public static QueryContext empty()
@@ -105,6 +106,11 @@ public class QueryContext
     return context.containsKey(key);
   }
 
+  public boolean containsKey(SettingEntry<?> entry)
+  {
+    return context.containsKey(entry.name());
+  }
+
   /**
    * Return a value as a generic {@code Object}, returning {@code null} if the
    * context value is not set.
@@ -130,6 +136,16 @@ public class QueryContext
   public String getString(String key, String defaultValue)
   {
     return QueryContexts.parseString(context, key, defaultValue);
+  }
+
+  public <T> T getValue(SettingEntry<T> entry)
+  {
+    return entry.from(this);
+  }
+
+  public <T> T getValue(SettingEntry<T> entry, T defaultValue)
+  {
+    return entry.from(this, defaultValue);
   }
 
   /**
@@ -298,19 +314,10 @@ public class QueryContext
 
   public boolean isUseResultLevelCache()
   {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
+    return QueryContexts.USE_RESULT_LEVEL_CACHE_KEY.from(this);
   }
 
-  public boolean isUseResultLevelCache(boolean defaultValue)
-  {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
-  }
-
-  public boolean isFinalize(boolean defaultValue)
-
-  {
-    return getBoolean(QueryContexts.FINALIZE_KEY, defaultValue);
-  }
+  public final BoundedSettingEntry<Boolean> isFinalize = new BoundedSettingEntry<>(QueryContexts.FINALIZE_KEY, this);
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {
@@ -398,7 +405,7 @@ public class QueryContext
 
   public int getPriority(int defaultValue)
   {
-    return getInt(QueryContexts.PRIORITY_KEY, defaultValue);
+    return getValue(QueryContexts.PRIORITY, defaultValue);
   }
 
   public String getLane()
@@ -541,10 +548,10 @@ public class QueryContext
     if (curr > maxScatterGatherBytesLimit) {
       throw new BadQueryContextException(
           StringUtils.format(
-            "Configured %s = %d is more than enforced limit of %d.",
-            QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
-            curr,
-            maxScatterGatherBytesLimit
+              "Configured %s = %d is more than enforced limit of %d.",
+              QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
+              curr,
+              maxScatterGatherBytesLimit
           )
       );
     }
@@ -673,7 +680,7 @@ public class QueryContext
 
   public QueryResourceId getQueryResourceId()
   {
-    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
+    return new QueryResourceId(getValue(QueryContexts.QUERY_RESOURCE_ID));
   }
 
   public String getBrokerServiceName()

@@ -36,7 +36,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,9 +53,6 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
-  public static final String QUERY_ID = "queryId";
-  public static final String SUB_QUERY_ID = "subQueryId";
-  public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
@@ -194,32 +190,32 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return context().getString(QUERY_ID);
+    return context().getValue(QueryContexts.QUERY_ID);
   }
 
   @Override
   public Query<T> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SUB_QUERY_ID, subQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name(), subQueryId));
   }
 
   @Nullable
   @Override
   public String getSubQueryId()
   {
-    return context().getString(SUB_QUERY_ID);
+    return context().getValue(QueryContexts.SUB_QUERY_ID);
   }
 
   @Override
   public Query<T> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name(), id));
   }
 
   @Override
   public Query<T> withSqlQueryId(String sqlQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SQL_QUERY_ID, sqlQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), sqlQueryId));
   }
 
   @Override

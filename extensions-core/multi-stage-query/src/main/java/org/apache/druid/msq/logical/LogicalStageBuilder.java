@@ -95,7 +95,7 @@ public class LogicalStageBuilder
 
     private String getIdForBuilder()
     {
-      String dartQueryId = plannerContext.queryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+      String dartQueryId = plannerContext.queryContext().getValue(QueryContexts.DART_QUERY_ID);
       if (dartQueryId != null) {
         return dartQueryId;
       }

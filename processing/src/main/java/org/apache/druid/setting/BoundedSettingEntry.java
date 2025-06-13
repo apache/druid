@@ -17,26 +17,51 @@
  * under the License.
  */
 
-package org.apache.druid.server.scheduling;
+package org.apache.druid.setting;
 
-import org.apache.druid.client.SegmentServerSelector;
-import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.QueryPrioritizationStrategy;
 
-import java.util.Optional;
-import java.util.Set;
+import org.apache.druid.query.QueryContext;
 
-/**
- * Does nothing, the user must set the {@link org.apache.druid.query.QueryContexts#PRIORITY} on the query context
- * to get a priority.
- */
-public class ManualQueryPrioritizationStrategy implements QueryPrioritizationStrategy
+public class BoundedSettingEntry<T>
 {
-  public static final QueryPrioritizationStrategy INSTANCE = new ManualQueryPrioritizationStrategy();
+  private final SettingEntry<T> def;
+  private final QueryContext context;
 
-  @Override
-  public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)
+  public BoundedSettingEntry(SettingEntry<T> def, QueryContext context)
   {
-    return Optional.empty();
+    this.def = def;
+    this.context = context;
+  }
+
+  /**
+   * Get the value using the setting's default
+   */
+  public T get()
+  {
+    return def.from(context);
+  }
+
+  /**
+   * Get the value with a custom default
+   */
+  public T get(T defaultValue)
+  {
+    return def.from(context, defaultValue);
+  }
+
+  /**
+   * Get the setting's name
+   */
+  public String name()
+  {
+    return def.name();
+  }
+
+  /**
+   * Get the setting's default value
+   */
+  public T defaultValue()
+  {
+    return def.defaultValue();
   }
 }

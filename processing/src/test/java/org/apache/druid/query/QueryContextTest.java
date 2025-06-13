@@ -70,7 +70,7 @@ public class QueryContextTest
   }
 
   /**
-   * Verify that a context with an null map is the same as a context with
+   * Verify that a context with a null map is the same as a context with
    * an empty map.
    */
   @Test
@@ -531,7 +531,7 @@ public class QueryContextTest
     @Override
     public Query<Integer> withId(String id)
     {
-      context.put(BaseQuery.QUERY_ID, id);
+      context.put(QueryContexts.QUERY_ID.name(), id);
       return this;
     }
 
@@ -539,13 +539,13 @@ public class QueryContextTest
     @Override
     public String getId()
     {
-      return (String) context.get(BaseQuery.QUERY_ID);
+      return (String) context.get(QueryContexts.QUERY_ID.name());
     }
 
     @Override
     public Query<Integer> withSubQueryId(String subQueryId)
     {
-      context.put(BaseQuery.SUB_QUERY_ID, subQueryId);
+      context.put(QueryContexts.SUB_QUERY_ID.name(), subQueryId);
       return this;
     }
 
@@ -553,7 +553,7 @@ public class QueryContextTest
     @Override
     public String getSubQueryId()
     {
-      return (String) context.get(BaseQuery.SUB_QUERY_ID);
+      return (String) context.get(QueryContexts.SUB_QUERY_ID.name());
     }
 
     @Override

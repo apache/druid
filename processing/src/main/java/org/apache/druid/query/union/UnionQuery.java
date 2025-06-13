@@ -27,7 +27,6 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -163,25 +162,25 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name(), id));
   }
 
   @Override
   public String getId()
   {
-    return context().getString(BaseQuery.QUERY_ID);
+    return context().getValue(QueryContexts.QUERY_ID);
   }
 
   @Override
   public Query<Object> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name(), subQueryId));
   }
 
   @Override
   public String getSubQueryId()
   {
-    return context().getString(BaseQuery.SUB_QUERY_ID);
+    return context().getValue(QueryContexts.SUB_QUERY_ID);
   }
 
   @Override

@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -216,7 +215,7 @@ public class QueryLifecycle
         defaultQueryConfig.getContext(),
         baseQuery.getContext()
     );
-    mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
+    mergedUserAndConfigContext.put(QueryContexts.QUERY_ID.name(), queryId);
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
   }
@@ -475,7 +474,7 @@ public class QueryLifecycle
   private boolean isSerializeDateTimeAsLong()
   {
     final QueryContext queryContext = baseQuery.context();
-    final boolean shouldFinalize = queryContext.isFinalize(true);
+    final boolean shouldFinalize = queryContext.isFinalize.get(true);
     return queryContext.isSerializeDateTimeAsLong(false)
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
