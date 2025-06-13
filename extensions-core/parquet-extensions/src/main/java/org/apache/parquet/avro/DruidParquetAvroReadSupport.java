@@ -125,6 +125,6 @@ public class DruidParquetAvroReadSupport extends AvroReadSupport<GenericRecord>
         AvroDataSupplier.class
     );
     AvroDataSupplier supplier = ReflectionUtils.newInstance(suppClass, configuration);
-    return new AvroRecordMaterializer<>(parquetSchema, avroSchema, supplier.get());
+    return new AvroRecordMaterializer<>(parquetSchema, avroSchema, supplier.get(), new ReflectClassValidator.PackageValidator());
   }
 }
