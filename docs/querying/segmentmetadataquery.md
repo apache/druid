@@ -197,7 +197,12 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * `rollup` in the result is true/false/null.
 * When merging is enabled, if some are rollup, others are not, result is null.
 
-### aggregatorMergeStrategy
+### projections
+
+* `projections` in the result will contain the list of projections in segments. 
+* if any conflicting projections are identified, the conflicting one will be excluded, while the non-conflicting ones will be included.
+
+## aggregatorMergeStrategy
 
 Conflicts between aggregator metadata across segments can occur if some segments have unknown aggregators, or if
 two segments use incompatible aggregators for the same column, such as `longSum` changed to `doubleSum`.
@@ -213,6 +218,6 @@ Druid supports the following aggregator merge strategies:
    for that particular column.
 
 
-### lenientAggregatorMerge (deprecated)
+## lenientAggregatorMerge (deprecated)
 
 Deprecated. Use [`aggregatorMergeStrategy`](#aggregatormergestrategy) instead.

@@ -1433,6 +1433,7 @@
                 "size":0,
                 "numRows":4462111,
                 "aggregators":null,
+                "projections":null,
                 "timestampSpec":null,
                 "queryGranularity":null,
                 "rollup":null

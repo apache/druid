@@ -22,15 +22,16 @@ package org.apache.druid.query.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -43,6 +44,8 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.LogicalSegment;
@@ -51,29 +54,53 @@ import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryQueryToolChestTest
 {
   private static final DataSource TEST_DATASOURCE = new TableDataSource("dummy");
-  private static final SegmentId TEST_SEGMENT_ID1 = SegmentId.of(
-      TEST_DATASOURCE.toString(),
-      Intervals.of("2020-01-01/2020-01-02"),
-      "test",
-      0
+  private static final Interval INTERVAL_2020 = Intervals.of("2020-01-01/2020-01-02");
+  private static final Interval INTERVAL_2021 = Intervals.of("2021-01-01/2021-01-02");
+  private static final SegmentId TEST_SEGMENT_ID1 = SegmentId.of(TEST_DATASOURCE.toString(), INTERVAL_2020, "test", 0);
+  private static final SegmentId TEST_SEGMENT_ID2 = SegmentId.of(TEST_DATASOURCE.toString(), INTERVAL_2021, "test", 0);
+
+  private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_HOURLY = new AggregateProjectionMetadata.Schema(
+      "name1-does-not-matter",
+      Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      VirtualColumns.create(Granularities.toVirtualColumn(
+          Granularities.HOUR,
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      )),
+      ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel"),
+      new AggregatorFactory[]{
+          new LongSumAggregatorFactory("channel_sum", "channel")
+      },
+      ImmutableList.of(
+          OrderBy.ascending(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+          OrderBy.ascending("channel")
+      )
   );
-  private static final SegmentId TEST_SEGMENT_ID2 = SegmentId.of(
-      TEST_DATASOURCE.toString(),
-      Intervals.of("2021-01-01/2021-01-02"),
-      "test",
-      0
+  private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_DAILY = new AggregateProjectionMetadata.Schema(
+      "name2-does-not-matter",
+      Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      VirtualColumns.create(Granularities.toVirtualColumn(
+          Granularities.DAY,
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+      )),
+      ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel"),
+      new AggregatorFactory[]{
+          new LongSumAggregatorFactory("channel_sum", "channel")
+      },
+      ImmutableList.of(
+          OrderBy.ascending(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+          OrderBy.ascending("channel")
+      )
   );
 
   @Test
@@ -99,32 +126,25 @@ public class SegmentMetadataQueryQueryToolChestTest
     byte[] actualKey = strategy.computeCacheKey(query);
     Assert.assertArrayEquals(expectedKey, actualKey);
 
-    SegmentAnalysis result = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.name(),
-                    true,
-                    false,
-                    10881,
-                    1,
-                    "preferred",
-                    "preferred",
-                    null
-                )
+    SegmentAnalysis result = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
+        .column(
+            "placement",
+            new ColumnAnalysis(
+                ColumnType.STRING,
+                ValueType.STRING.name(),
+                true,
+                false,
+                10881,
+                1,
+                "preferred",
+                "preferred",
+                null
             )
-        ),
-        71982,
-        100,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(71982)
+        .numRows(100)
+        .build();
 
     Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result);
 
@@ -139,980 +159,302 @@ public class SegmentMetadataQueryQueryToolChestTest
     Assert.assertEquals(result, fromCacheResult);
   }
 
-  @Test
-  public void testMergeAggregators()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeAggregators(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "baz", new DoubleSumAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeStrict(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
-  @Test
-  public void testMergeAggregatorsWithIntervals()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeAggregatorsWithIntervals(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        ImmutableList.of(TEST_SEGMENT_ID1.getInterval()),
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "baz", new DoubleSumAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        ImmutableList.of(TEST_SEGMENT_ID2.getInterval()),
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .interval(TEST_SEGMENT_ID1.getInterval())
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .interval(TEST_SEGMENT_ID2.getInterval())
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    final List<Interval> expectedIntervals = new ArrayList<>();
-    expectedIntervals.addAll(analysis1.getIntervals());
-    expectedIntervals.addAll(analysis2.getIntervals());
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            expectedIntervals,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeStrict(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            expectedIntervals,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            expectedIntervals,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            expectedIntervals,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new DoubleSumAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
+    SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .interval(TEST_SEGMENT_ID1.getInterval())
+        .interval(TEST_SEGMENT_ID2.getInterval())
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
-  @Test
-  public void testMergeAggregatorsOneNull()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeAggregatorsOneNullStrict(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
+    Assume.assumeTrue(aggregatorMergeStrategy == AggregatorMergeStrategy.STRICT);
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeStrict(analysis1, analysis2)
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
+    final SegmentAnalysis expectedNullAggregators = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
+    Assert.assertEquals(expectedNullAggregators, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
-  @Test
-  public void testMergeAggregatorsAllNull()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeAggregatorsOneNullNotStrict(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
+    Assume.assumeTrue(aggregatorMergeStrategy != AggregatorMergeStrategy.STRICT);
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeStrict(analysis1, analysis2)
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+  }
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeAggregatorsAllNull(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @Test
   public void testMergeAggregatorsConflict()
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-            "baz", new LongMaxAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
 
-    final Map<String, AggregatorFactory> expectedLenient = new HashMap<>();
-    expectedLenient.put("foo", new LongSumAggregatorFactory("foo", "foo"));
-    expectedLenient.put("bar", null);
-    expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
+    // Test strict merge, returns null aggregators as there's a conflict on "bar"
+    final SegmentAnalysis expectedStrict = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
+    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.STRICT));
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
-        mergeStrict(analysis1, analysis2)
-    );
-
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
-
+    // Test lenient merge, returns a map with null for "bar" as it has a conflict
+    final SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", null)
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
     // Simulate multi-level lenient merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(
-            mergeLenient(analysis1, analysis2),
-            mergeLenient(analysis1, analysis2)
-        )
+        expectedLenient,
+        mergeLenient(mergeLenient(analysis1, analysis2), mergeLenient(analysis1, analysis2))
     );
-
     // Simulate multi-level lenient merge (unmerged first)
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(
-            analysis1,
-            mergeLenient(analysis1, analysis2)
-        )
-    );
-
+    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, mergeLenient(analysis1, analysis2)));
     // Simulate multi-level lenient merge (unmerged second)
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(
-            mergeLenient(analysis1, analysis2),
-            analysis1
-        )
-    );
+    Assert.assertEquals(expectedLenient, mergeLenient(mergeLenient(analysis1, analysis2), analysis1));
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
+    // Test earliest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 is earlier
+    final SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(
-            mergeEarliest(analysis1, analysis2),
-            mergeEarliest(analysis1, analysis2)
-        )
+        expectedEarliest,
+        mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
-
+    // Test latest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 is later
+    final SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(
-            mergeLatest(analysis1, analysis2),
-            mergeLatest(analysis1, analysis2)
-        )
+        expectedLatest,
+        mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
   }
 
   @Test
   public void testMergeAggregatorsConflictWithDifferentOrder()
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
 
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-            "baz", new LongMaxAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
-
-    final Map<String, AggregatorFactory> expectedLenient = new HashMap<>();
-    expectedLenient.put("foo", new LongSumAggregatorFactory("foo", "foo"));
-    expectedLenient.put("bar", null);
-    expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
-
+    // Test strict merge, returns null aggregators as there's a conflict on "bar"
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
+        new SegmentAnalysis.Builder("dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+            .build(),
         mergeStrict(analysis1, analysis2)
     );
 
+    // Test lenient merge, returns a map with null for "bar" as it has a conflict
+    final SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", null)
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
+        expectedLenient,
         mergeLenient(analysis1, analysis2)
     );
-
     // Simulate multi-level lenient merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
+        expectedLenient,
         mergeLenient(
             mergeLenient(analysis1, analysis2),
             mergeLenient(analysis1, analysis2)
         )
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
+    // Test earliest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 is earlier
+    final SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(
-            mergeEarliest(analysis1, analysis2),
-            mergeEarliest(analysis1, analysis2)
-        )
+        expectedEarliest,
+        mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
-
+    // Test latest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 is later
+    final SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(
-            mergeLatest(analysis1, analysis2),
-            mergeLatest(analysis1, analysis2)
-        )
+        expectedLatest,
+        mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
   }
 
   @Test
   public void testMergeAggregatorsConflictWithEqualSegmentIntervalsAndDifferentPartitions()
   {
-    final SegmentId segmentId1 = SegmentId.of(
-        TEST_DATASOURCE.toString(),
-        Intervals.of("2023-01-01/2023-01-02"),
-        "test",
-        1
-    );
-    final SegmentId segmentId2 = SegmentId.of(
-        TEST_DATASOURCE.toString(),
-        Intervals.of("2023-01-01/2023-01-02"),
-        "test",
-        2
-    );
+    Interval interval = Intervals.of("2023-01-01/2023-01-02");
+    final SegmentId segmentId1 = SegmentId.of(TEST_DATASOURCE.toString(), interval, "test", 1);
+    final SegmentId segmentId2 = SegmentId.of(TEST_DATASOURCE.toString(), interval, "test", 2);
 
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        segmentId1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(segmentId1)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        segmentId2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-            "baz", new LongMaxAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(segmentId2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
 
-    final Map<String, AggregatorFactory> expectedLenient = new HashMap<>();
-    expectedLenient.put("foo", new LongSumAggregatorFactory("foo", "foo"));
-    expectedLenient.put("bar", null);
-    expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
-
+    // Test strict merge, returns null aggregators as there's a conflict on "bar"
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            null,
-            null,
-            null,
-            null
-        ),
+        new SegmentAnalysis.Builder("dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
+            .build(),
         mergeStrict(analysis1, analysis2)
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(analysis1, analysis2)
-    );
-
+    // Test lenient merge, returns a map with null for "bar" as it has a conflict
+    SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
+        "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", null)
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
     // Simulate multi-level lenient merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            expectedLenient,
-            null,
-            null,
-            null
-        ),
-        mergeLenient(
-            mergeLenient(analysis1, analysis2),
-            mergeLenient(analysis1, analysis2)
-        )
+        expectedLenient,
+        mergeLenient(mergeLenient(analysis1, analysis2), mergeLenient(analysis1, analysis2))
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(analysis1, analysis2)
-    );
-
+    // Test earliest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 has the earlier partition
+    SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
+        "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleSumAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeEarliest(
-            mergeEarliest(analysis1, analysis2),
-            mergeEarliest(analysis1, analysis2)
-        )
+        expectedEarliest,
+        mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
 
-    Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(analysis1, analysis2)
-    );
-
+    // Test latest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 has the later partition
+    SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
+        "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
+        .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
+        .build();
+    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
     Assert.assertEquals(
-        new SegmentAnalysis(
-            "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2",
-            null,
-            new LinkedHashMap<>(),
-            0,
-            0,
-            ImmutableMap.of(
-                "foo", new LongSumAggregatorFactory("foo", "foo"),
-                "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-                "baz", new LongMaxAggregatorFactory("baz", "baz")
-            ),
-            null,
-            null,
-            null
-        ),
-        mergeLatest(
-            mergeLatest(analysis1, analysis2),
-            mergeLatest(analysis1, analysis2)
-        )
+        expectedLatest,
+        mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
   }
 
@@ -1161,115 +503,29 @@ public class SegmentMetadataQueryQueryToolChestTest
   }
 
   @SuppressWarnings("ArgumentParameterSwap")
-  @Test
-  public void testMergeRollup()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeRollup(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        false
-    );
-    final SegmentAnalysis analysis3 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        false
-    );
-    final SegmentAnalysis analysis4 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        true
-    );
-    final SegmentAnalysis analysis5 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        true
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(false).build();
+    final SegmentAnalysis analysis3 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).rollup(false).build();
+    final SegmentAnalysis analysis4 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(true).build();
+    final SegmentAnalysis analysis5 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).rollup(true).build();
 
-    Assert.assertNull(mergeStrict(analysis1, analysis2).isRollup());
-    Assert.assertNull(mergeStrict(analysis1, analysis4).isRollup());
-    Assert.assertNull(mergeStrict(analysis2, analysis4).isRollup());
-    Assert.assertFalse(mergeStrict(analysis2, analysis3).isRollup());
-    Assert.assertTrue(mergeStrict(analysis4, analysis5).isRollup());
-
-    Assert.assertNull(mergeLenient(analysis1, analysis2).isRollup());
-    Assert.assertNull(mergeLenient(analysis1, analysis4).isRollup());
-    Assert.assertNull(mergeLenient(analysis2, analysis4).isRollup());
-    Assert.assertFalse(mergeLenient(analysis2, analysis3).isRollup());
-    Assert.assertTrue(mergeLenient(analysis4, analysis5).isRollup());
-
-    Assert.assertNull(mergeEarliest(analysis1, analysis2).isRollup());
-    Assert.assertNull(mergeEarliest(analysis1, analysis4).isRollup());
-    Assert.assertNull(mergeEarliest(analysis2, analysis4).isRollup());
-    Assert.assertFalse(mergeEarliest(analysis2, analysis3).isRollup());
-    Assert.assertTrue(mergeEarliest(analysis4, analysis5).isRollup());
-
-    Assert.assertNull(mergeLatest(analysis1, analysis2).isRollup());
-    Assert.assertNull(mergeLatest(analysis1, analysis4).isRollup());
-    Assert.assertNull(mergeLatest(analysis2, analysis4).isRollup());
-    Assert.assertFalse(mergeLatest(analysis2, analysis3).isRollup());
-    Assert.assertTrue(mergeLatest(analysis4, analysis5).isRollup());
+    Assert.assertNull(mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy).isRollup());
+    Assert.assertNull(mergeWithStrategy(analysis1, analysis4, aggregatorMergeStrategy).isRollup());
+    Assert.assertNull(mergeWithStrategy(analysis2, analysis4, aggregatorMergeStrategy).isRollup());
+    Assert.assertFalse(mergeWithStrategy(analysis2, analysis3, aggregatorMergeStrategy).isRollup());
+    Assert.assertTrue(mergeWithStrategy(analysis4, analysis5, aggregatorMergeStrategy).isRollup());
   }
 
-  @Test
-  public void testInvalidMergeAggregatorsWithNullOrEmptyDatasource()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testInvalidMergeAggregatorsWithNullOrEmptyDatasource(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        false
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -1278,13 +534,10 @@ public class SegmentMetadataQueryQueryToolChestTest
                 null,
                 analysis1,
                 analysis2,
-                AggregatorMergeStrategy.STRICT
+                aggregatorMergeStrategy
             )
         ),
-        DruidExceptionMatcher
-            .invalidInput()
-            .expectMessageIs(
-                "SegementMetadata queries require at least one datasource.")
+        DruidExceptionMatcher.defensive().expectMessageIs("SegementMetadata queries require at least one datasource.")
     );
 
     MatcherAssert.assertThat(
@@ -1294,201 +547,175 @@ public class SegmentMetadataQueryQueryToolChestTest
                 ImmutableSet.of(),
                 analysis1,
                 analysis2,
-                AggregatorMergeStrategy.STRICT
+                aggregatorMergeStrategy
             )
         ),
         DruidExceptionMatcher
-            .invalidInput()
+            .defensive()
             .expectMessageIs(
                 "SegementMetadata queries require at least one datasource.")
     );
   }
 
-
-  @Test
-  public void testMergeWithUnionDatasource()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeWithUnionDatasource(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        ),
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-            "baz", new LongMaxAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        false
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
-    final SegmentAnalysis expectedMergedAnalysis = new SegmentAnalysis(
-        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        ImmutableMap.of(
-            "foo", new LongSumAggregatorFactory("foo", "foo"),
-            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
-            "baz", new LongMaxAggregatorFactory("baz", "baz")
-        ),
-        null,
-        null,
-        null
-    );
+    final SegmentAnalysis expectedMergedAnalysis = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
+        .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
+        .build();
 
+    UnionDataSource dataSource1 = new UnionDataSource(ImmutableList.of(
+        new TableDataSource("foo"),
+        new TableDataSource("dummy")
+    ));
+    UnionDataSource dataSource2 = new UnionDataSource(ImmutableList.of(
+        new TableDataSource("dummy"),
+        new TableDataSource("foo"),
+        new TableDataSource("bar")
+    ));
+
+    Assert.assertEquals(
+        expectedMergedAnalysis,
+        SegmentMetadataQueryQueryToolChest.finalizeAnalysis(SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            dataSource1.getTableNames(),
+            analysis1,
+            analysis2,
+            aggregatorMergeStrategy
+        ))
+    );
     Assert.assertEquals(
         expectedMergedAnalysis,
         SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
             SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-                new UnionDataSource(
-                    ImmutableList.of(
-                        new TableDataSource("foo"),
-                        new TableDataSource("dummy")
-                    )
-                ).getTableNames(),
+                dataSource2.getTableNames(),
                 analysis1,
                 analysis2,
-                AggregatorMergeStrategy.LATEST
-            )
-        )
-    );
-
-    Assert.assertEquals(
-        expectedMergedAnalysis,
-        SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
-            SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-                new UnionDataSource(
-                    ImmutableList.of(
-                        new TableDataSource("dummy"),
-                        new TableDataSource("foo"),
-                        new TableDataSource("bar")
-                    )
-                ).getTableNames(),
-                analysis1,
-                analysis2,
-                AggregatorMergeStrategy.LATEST
+                aggregatorMergeStrategy
             )
         )
     );
   }
 
-  @Test
-  public void testMergeWithNullAnalyses()
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testMergeWithNullAnalyses(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysis(
-        TEST_SEGMENT_ID1.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        null
-    );
-    final SegmentAnalysis analysis2 = new SegmentAnalysis(
-        TEST_SEGMENT_ID2.toString(),
-        null,
-        new LinkedHashMap<>(),
-        0,
-        0,
-        null,
-        null,
-        null,
-        false
-    );
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(false).build();
 
-    Assert.assertEquals(
-        analysis1,
-        SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), analysis1, null, AggregatorMergeStrategy.STRICT)
-    );
-    Assert.assertEquals(
-        analysis2,
-        SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, analysis2, AggregatorMergeStrategy.STRICT)
-    );
+    Assert.assertEquals(analysis1, mergeWithStrategy(analysis1, null, aggregatorMergeStrategy));
+    Assert.assertEquals(analysis2, mergeWithStrategy(null, analysis2, aggregatorMergeStrategy));
     Assert.assertNull(
         SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.STRICT)
-    );
+            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, aggregatorMergeStrategy));
+  }
+
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjections(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .build();
+
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjectionsWithNull(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis1NullProjection = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .build();
+    final SegmentAnalysis analysis2NullProjection = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
+
+    Assert.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
+    Assert.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
     Assert.assertNull(
-        SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.LENIENT)
+        mergeWithStrategy(analysis1NullProjection, analysis2NullProjection, aggregatorMergeStrategy).getProjections()
     );
-    Assert.assertNull(
-        SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.EARLIEST)
-    );
-    Assert.assertNull(
-        SegmentMetadataQueryQueryToolChest
-            .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, AggregatorMergeStrategy.LATEST)
-    );
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjectionsWithConflict(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .projection("channel_sum_1", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .projection("channel_sum_2", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
+        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
+        .build();
+
+    // conflict projection is ignored.
+    final SegmentAnalysis expectedStrict = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
+        .build();
+    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+  }
+
+  private static SegmentAnalysis mergeWithStrategy(
+      SegmentAnalysis analysis1,
+      SegmentAnalysis analysis2,
+      AggregatorMergeStrategy strategy
+  )
+  {
+    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
+        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            TEST_DATASOURCE.getTableNames(),
+            analysis1,
+            analysis2,
+            strategy
+        ));
   }
 
   private static SegmentAnalysis mergeStrict(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
   {
-    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
-        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-            TEST_DATASOURCE.getTableNames(),
-            analysis1,
-            analysis2,
-            AggregatorMergeStrategy.STRICT
-        )
-    );
+    return mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.STRICT);
   }
 
   private static SegmentAnalysis mergeLenient(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
   {
-    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
-        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-            TEST_DATASOURCE.getTableNames(),
-            analysis1,
-            analysis2,
-            AggregatorMergeStrategy.LENIENT
-        )
-    );
+    return mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.LENIENT);
   }
 
   private static SegmentAnalysis mergeEarliest(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
   {
-    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
-        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-            TEST_DATASOURCE.getTableNames(),
-            analysis1,
-            analysis2,
-            AggregatorMergeStrategy.EARLIEST
-        )
-    );
+    return mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.EARLIEST);
   }
 
   private static SegmentAnalysis mergeLatest(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
   {
-    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
-        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
-            TEST_DATASOURCE.getTableNames(),
-            analysis1,
-            analysis2,
-            AggregatorMergeStrategy.LATEST
-        )
-    );
+    return mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.LATEST);
   }
 }

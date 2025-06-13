@@ -603,6 +603,7 @@
                 "size":0,
                 "numRows":3702583,
                 "aggregators":null,
+                "projections":null,
                 "timestampSpec":null,
                 "queryGranularity":null,
                 "rollup":null
@@ -626,6 +627,7 @@
                 "size":0,
                 "numRows":3743002,
                 "aggregators":null,
+                "projections":null,
                 "timestampSpec":null,
                 "queryGranularity":null,
                 "rollup":null
@@ -649,6 +651,7 @@
                 "size":0,
                 "numRows":3502959,
                 "aggregators":null,
+                "projections":null,
                 "timestampSpec":null,
                 "queryGranularity":null,
                 "rollup":null

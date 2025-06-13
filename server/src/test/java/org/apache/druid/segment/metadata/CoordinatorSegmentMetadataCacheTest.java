@@ -1113,6 +1113,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -1176,6 +1177,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             ),
             1234,
             100,
+            null,
             null,
             null,
             null,
