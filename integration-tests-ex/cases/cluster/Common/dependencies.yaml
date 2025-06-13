@@ -120,9 +120,9 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/ready" ]
       interval: 5s
       timeout: 3s
-      retries: 60
-      start_period: 3m
-      start_interval: 15s
+      retries: 12
+      start_period: 1m
+      start_interval: 5s
 
   create_minio_buckets:
     image: minio/mc
