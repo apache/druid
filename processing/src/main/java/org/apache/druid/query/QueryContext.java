@@ -106,6 +106,11 @@ public class QueryContext
     return context.containsKey(key);
   }
 
+  public boolean containsKey(SettingEntry<?> entry)
+  {
+    return context.containsKey(entry.name());
+  }
+
   /**
    * Return a value as a generic {@code Object}, returning {@code null} if the
    * context value is not set.
@@ -400,7 +405,7 @@ public class QueryContext
 
   public int getPriority(int defaultValue)
   {
-    return getInt(QueryContexts.PRIORITY_KEY, defaultValue);
+    return getValue(QueryContexts.PRIORITY, defaultValue);
   }
 
   public String getLane()

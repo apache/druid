@@ -83,7 +83,7 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        QueryContexts.PRIORITY_KEY,
+                                                        QueryContexts.PRIORITY.name(),
                                                         1,
                                                         QueryContexts.USE_CACHE_KEY,
                                                         true,
@@ -107,13 +107,13 @@ public class DataSourceMetadataQueryTest
     );
 
     final QueryContext queryContext = serdeQuery.context();
-    Assert.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(1, (int) queryContext.getValue(QueryContexts.PRIORITY));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
     Assert.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY.name()));
+    Assert.assertEquals(true, queryContext.getValue(QueryContexts.FINALIZE_KEY));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY.name(), false));
+    Assert.assertEquals(true, queryContext.getValue(QueryContexts.FINALIZE_KEY, false));
   }
 
   /**

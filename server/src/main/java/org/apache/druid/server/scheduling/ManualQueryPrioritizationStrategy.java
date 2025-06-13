@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Does nothing, the user must set the {@link org.apache.druid.query.QueryContexts#PRIORITY_KEY} on the query context
+ * Does nothing, the user must set the {@link org.apache.druid.query.QueryContexts#PRIORITY} on the query context
  * to get a priority.
  */
 public class ManualQueryPrioritizationStrategy implements QueryPrioritizationStrategy

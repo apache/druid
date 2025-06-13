@@ -63,12 +63,19 @@ public class QueryContexts
                                                                           "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
 
-  public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
-                                                                       .name("dartQueryId")
-                                                                       .defaultValue(null)
-                                                                       .description(
-                                                                           "Unique identifier for the Dart query, used to manage query resources and execution tracking")
-                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
+    public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
+                                                                        .name("dartQueryId")
+                                                                        .defaultValue(null)
+                                                                        .description(
+                                                                            "Unique identifier for the Dart query, used to manage query resources and execution tracking")
+                                                                        .buildAndRegister(QuerySettingRegistry.getInstance());
+
+  public static final SettingEntry<Integer> PRIORITY = SettingEntry.newIntegerEntry()
+                                                                   .name("priority")
+                                                                   .defaultValue(0)
+                                                                   .description(
+                                                                       "Query priority. Queries with higher priority get precedence for resource allocation")
+                                                                   .buildAndRegister(QuerySettingRegistry.getInstance());
 
 
   public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
@@ -78,7 +85,6 @@ public class QueryContexts
                                                                            "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
                                                                        .buildAndRegister(QuerySettingRegistry.getInstance());
 
-  public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
@@ -196,7 +202,6 @@ public class QueryContexts
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
-  public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
   public static final int DEFAULT_VECTOR_SIZE = 512;

@@ -302,7 +302,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final QueryContext queryContext = query.context();
       final int priority = queryContext.getPriority();
-      contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
+      contextBuilder.put(QueryContexts.PRIORITY.name(), priority);
       final String lane = queryContext.getLane();
       if (lane != null) {
         contextBuilder.put(QueryContexts.LANE_KEY, lane);

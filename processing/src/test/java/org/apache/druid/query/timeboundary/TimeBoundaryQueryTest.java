@@ -56,7 +56,7 @@ public class TimeBoundaryQueryTest
                                           .intervals("2013/2014")
                                           .context(
                                               ImmutableMap.of(
-                                                  QueryContexts.PRIORITY_KEY,
+                                                  QueryContexts.PRIORITY.name(),
                                                   1,
                                                   QueryContexts.USE_CACHE_KEY,
                                                   true,
@@ -80,7 +80,7 @@ public class TimeBoundaryQueryTest
     );
 
     final QueryContext queryContext = query.context();
-    Assert.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(1, (int) queryContext.getValue(QueryContexts.PRIORITY));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY.name()));
@@ -94,7 +94,7 @@ public class TimeBoundaryQueryTest
                                           .intervals("2013/2014")
                                           .context(
                                               ImmutableMap.of(
-                                                  QueryContexts.PRIORITY_KEY,
+                                                  QueryContexts.PRIORITY.name(),
                                                   "1",
                                                   QueryContexts.USE_CACHE_KEY,
                                                   "true",
@@ -119,7 +119,7 @@ public class TimeBoundaryQueryTest
 
 
     final QueryContext queryContext = query.context();
-    Assert.assertEquals("1", queryContext.get(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(1, (int) queryContext.getValue(QueryContexts.PRIORITY));
     Assert.assertEquals("true", queryContext.get(QueryContexts.USE_CACHE_KEY));
     Assert.assertEquals("true", queryContext.get(QueryContexts.POPULATE_CACHE_KEY));
     Assert.assertEquals("true", queryContext.get(QueryContexts.FINALIZE_KEY.name()));

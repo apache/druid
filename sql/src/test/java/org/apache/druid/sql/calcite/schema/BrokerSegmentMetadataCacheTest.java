@@ -1045,7 +1045,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.PRIORITY.name(), 5,
         QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
     );
 
@@ -1203,7 +1203,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.PRIORITY.name(), 5,
         QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
     );
 
