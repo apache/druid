@@ -22,7 +22,6 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -105,5 +104,5 @@ public interface CoordinatorClient
    *
    * @param tier         The name of the tier for which the lookup configuration is to be fetched.
    */
-  ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupForTiers(String tier);
+  ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupForTier(String tier);
 }
