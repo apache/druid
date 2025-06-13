@@ -455,7 +455,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
 
     Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
                                                       .putAll(context)
-                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)
                                                       .build();
 
     DimFilter innerFilter = new NullFilter("d0", null);
@@ -470,7 +470,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false))
                      .setExpectedMSQSpec(
                          LegacyMSQSpec
                              .builder()
@@ -547,7 +547,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
 
     Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
                                                       .putAll(context)
-                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)
                                                       .build();
 
     DimFilter innerFilter = new NullFilter("d0", null);
@@ -562,7 +562,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false))
                      .setExpectedMSQSpec(
                          LegacyMSQSpec
                              .builder()

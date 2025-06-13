@@ -62,4 +62,4 @@ public class FloatSettingEntry extends SettingEntry<Float>
       return new FloatSettingEntry(this);
     }
   }
-} 
+}

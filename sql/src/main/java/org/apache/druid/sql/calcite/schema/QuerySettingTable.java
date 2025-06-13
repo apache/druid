@@ -28,10 +28,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
-import org.apache.druid.setting.SettingEntry;
-import org.apache.druid.setting.QuerySettingRegistry;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.setting.QuerySettingRegistry;
+import org.apache.druid.setting.SettingEntry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Iterator;

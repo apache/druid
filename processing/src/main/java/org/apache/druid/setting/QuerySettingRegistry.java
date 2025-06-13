@@ -70,7 +70,7 @@ public class QuerySettingRegistry
   public Object validateAndParse(String name, Object val)
   {
     SettingEntry<?> entry = this.settings.get(name);
-    if (entry == null ) {
+    if (entry == null) {
       throw InvalidInput.exception("Setting with name [%s] does not exist.", name);
     }
     return entry.convert(val);

@@ -101,11 +101,18 @@ public abstract class SettingEntry<T>
    */
   public abstract T convert(Object value);
 
-  public static abstract class AbstractBuilder<T>
+  @Override
+  public String toString()
+  {
+    return name;
+  }
+
+  public abstract static class AbstractBuilder<T>
   {
     protected final String type;
     protected String name;
     protected T defaultValue;
+    protected String scope;
     protected String since;
     protected boolean deprecated;
     protected String description;
@@ -124,6 +131,12 @@ public abstract class SettingEntry<T>
     public AbstractBuilder<T> defaultValue(T defaultValue)
     {
       this.defaultValue = defaultValue;
+      return this;
+    }
+
+    public AbstractBuilder<T> scope(String scope)
+    {
+      this.scope = scope;
       return this;
     }
 

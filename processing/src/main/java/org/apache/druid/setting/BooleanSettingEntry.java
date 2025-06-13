@@ -24,8 +24,6 @@ package org.apache.druid.setting;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
-import java.sql.Types;
-
 public class BooleanSettingEntry extends SettingEntry<Boolean>
 {
   private BooleanSettingEntry(Builder builder)

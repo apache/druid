@@ -62,4 +62,4 @@ public class LongSettingEntry extends SettingEntry<Long>
       return new LongSettingEntry(this);
     }
   }
-} 
+}

@@ -62,4 +62,4 @@ public class StringSettingEntry extends SettingEntry<String>
       return new StringSettingEntry(this);
     }
   }
-} 
+}
