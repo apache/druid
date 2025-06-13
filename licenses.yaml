@@ -2884,7 +2884,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.18.4.1
+version: 2.18.4
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
