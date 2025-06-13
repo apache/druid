@@ -55,6 +55,7 @@ Druid SQL supports SELECT queries with the following structure:
 ```
 [ EXPLAIN PLAN FOR ]
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
+[ SET <parameter> = <value>;]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))]
@@ -379,24 +380,15 @@ documentation for more information on the output of EXPLAIN PLAN.
 Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
 :::
 
-## Identifiers and literals
+## SET 
 
-Identifiers like datasource and column names can optionally be quoted using double quotes. To escape a double quote
-inside an identifier, use another double quote, like `"My ""very own"" identifier"`. All identifiers are case-sensitive
-and no implicit case conversions are performed.
+`SET` statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. These statements can be included before the main SQL query and are supported in multiple query interfaces, including the The Druid SQL [JSON API](../api-reference/sql-api.md) and the Druid Web Console. 
 
-Literal strings should be quoted with single quotes, like `'foo'`. Literal strings with Unicode escapes can be written
-like `U&'fo\00F6'`, where character codes in hex are prefixed by a backslash. Literal numbers can be written in forms
-like `100` (denoting an integer), `100.0` (denoting a floating point value), or `1.0e5` (scientific notation). Literal
-timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
-written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
+You can include 0 or more `SET` statements, each separated by a semicolon `;`, preceding a statement to execute in the `query` string of the request. 
 
-## SET statements
+If present, these `SET` statements assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET` statement of the same request (subsequent requests are not affected).
 
-The Druid SQL [JSON API](../api-reference/sql-api.md) supports including 0 or more `SET` statements separated by `;`
-preceding a statement to execute in the `query` string of the request. If present, these `SET` statements
-assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET`
-statement of the same request (subsequent requests are not affected).
+You can mix `SET` statement (for literal values) and `context parameter` (for expressions or unsupported types), with `SET` overriding on key conflicts.
 
 The syntax of a `SET` statement is:
 
@@ -412,6 +404,26 @@ SET sqlTimeZone = 'America/Los_Angeles';
 SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
+
+### Current Limitations
+
+- `SET` statements currently support **literal values only**(numbers, strings, booleans).
+- Complex values such as **arrays** or **JSON objects** must still be provided via the `context` field.
+- `Set` statements support for **constant expressions** (for example, using `ARRAY` or `JSON_OBJECT`) is under consideration, as these require evaluation rather than simple assignment.
+
+
+## Identifiers and literals
+
+Identifiers like datasource and column names can optionally be quoted using double quotes. To escape a double quote
+inside an identifier, use another double quote, like `"My ""very own"" identifier"`. All identifiers are case-sensitive
+and no implicit case conversions are performed.
+
+Literal strings should be quoted with single quotes, like `'foo'`. Literal strings with Unicode escapes can be written
+like `U&'fo\00F6'`, where character codes in hex are prefixed by a backslash. Literal numbers can be written in forms
+like `100` (denoting an integer), `100.0` (denoting a floating point value), or `1.0e5` (scientific notation). Literal
+timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
+written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
+
 
 ## Dynamic parameters
 
