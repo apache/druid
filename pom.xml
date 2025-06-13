@@ -961,7 +961,7 @@
             <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <!-- override the transitive dependency from com.opencsv:opensv:4.6 to version 1.9.3 to address CVE-2014-0114 -->
-                <version>1.9.4</version>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
