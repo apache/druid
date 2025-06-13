@@ -38,7 +38,7 @@
     <!-- fabric8 6.13.2+ is incompatible with jackson 2.12
        ~ due to fix for https://github.com/fabric8io/kubernetes-client/issues/6110.
        ~ GoIntegerDeserializer uses a _parseInteger method that does not exist in 2.12 (introduced in 2.14) -->
-    <fabric8.version>6.13.1</fabric8.version>
+    <fabric8.version>7.3.1</fabric8.version>
   </properties>
 
   <dependencyManagement>
