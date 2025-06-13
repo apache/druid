@@ -30,8 +30,13 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +44,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @JsonTypeName("scan")
 public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
 {
+  private static final String IRRELEVANT = "irrelevant";
+
   private final ScanQuery query;
 
   /**
@@ -56,6 +63,22 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
     this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
+  }
+
+  public static ScanQueryFrameProcessorFactory makeScanFrameProcessor(
+      VirtualColumns virtualColumns,
+      RowSignature signature,
+      DimFilter dimFilter)
+  {
+    ScanQuery scanQuery = Druids.newScanQueryBuilder()
+        .dataSource(IRRELEVANT)
+        .intervals(QuerySegmentSpec.ETERNITY)
+        .filters(dimFilter)
+        .virtualColumns(virtualColumns)
+        .columns(signature.getColumnNames())
+        .columnTypes(signature.getColumnTypes())
+        .build();
+    return new ScanQueryFrameProcessorFactory(scanQuery);
   }
 
   @JsonProperty
