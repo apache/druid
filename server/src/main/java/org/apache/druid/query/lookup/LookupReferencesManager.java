@@ -103,8 +103,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 
   private final CoordinatorClient coordinatorClient;
 
-  private final ObjectMapper jsonMapper;
-
   private final LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig;
 
   private final LookupConfig lookupConfig;
@@ -137,7 +135,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
     }
     this.coordinatorClient = coordinatorClient;
-    this.jsonMapper = objectMapper;
     this.lookupListeningAnnouncerConfig = lookupListeningAnnouncerConfig;
     this.lookupConfig = lookupConfig;
     this.testMode = testMode;
