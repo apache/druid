@@ -54,7 +54,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;

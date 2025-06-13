@@ -41,7 +41,7 @@ public class DecoupledCalciteDartTest extends CalciteDartTest
     return decoupledExtension.testBuilder()
         .queryContext(
             ImmutableMap.<String, Object>builder()
-                .put(QueryContexts.CTX_DART_QUERY_ID, UUID.randomUUID().toString())
+                .put(QueryContexts.DART_QUERY_ID.name(), UUID.randomUUID().toString())
                 .put(QueryContexts.CTX_PREPLANNED, true)
                 .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
                 .put(QueryContexts.ENABLE_DEBUG, true)

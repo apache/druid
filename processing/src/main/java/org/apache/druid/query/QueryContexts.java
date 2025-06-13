@@ -63,6 +63,13 @@ public class QueryContexts
                                                                           "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
 
+  public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
+                                                                       .name("dartQueryId")
+                                                                       .defaultValue(null)
+                                                                       .description(
+                                                                           "Unique identifier for the Dart query, used to manage query resources and execution tracking")
+                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
+
 
   public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
                                                                        .name("finalize")
@@ -160,18 +167,18 @@ public class QueryContexts
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
   public static final SettingEntry<String> QUERY_RESOURCE_ID = SettingEntry.newStringEntry()
-                                                                            .name("queryResourceId")
-                                                                            .defaultValue(null)
-                                                                            .description(
-                                                                                "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
-                                                                            .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                           .name("queryResourceId")
+                                                                           .defaultValue(null)
+                                                                           .description(
+                                                                               "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
+                                                                           .buildAndRegister(QuerySettingRegistry.getInstance());
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
-  public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name();
   public static final String CTX_FULL_REPORT = "fullReport";
 
   // SQL statement resource specific keys

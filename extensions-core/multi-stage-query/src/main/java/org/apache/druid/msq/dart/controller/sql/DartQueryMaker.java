@@ -171,7 +171,7 @@ public class DartQueryMaker implements QueryMaker
 
   private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
-    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final String dartQueryId = context.getValue(QueryContexts.DART_QUERY_ID);
     final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
 
     final ControllerImpl controller = new ControllerImpl(
@@ -187,7 +187,7 @@ public class DartQueryMaker implements QueryMaker
 
   private ControllerImpl makeQueryDefController(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
-    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final String dartQueryId = context.getValue(QueryContexts.DART_QUERY_ID);
     final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
 
 
@@ -360,7 +360,7 @@ public class DartQueryMaker implements QueryMaker
         "%s-sqlQueryId[%s]-queryId[%s]",
         Thread.currentThread().getName(),
         plannerContext.getSqlQueryId(),
-        plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID)
+        plannerContext.queryContext().getValue(QueryContexts.DART_QUERY_ID)
     );
   }
 
