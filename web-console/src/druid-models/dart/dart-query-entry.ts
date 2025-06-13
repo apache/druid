@@ -17,6 +17,7 @@
  */
 
 export interface DartQueryEntry {
+  engine: 'msq-dart';
   sqlQueryId: string;
   dartQueryId: string;
   sql: string;

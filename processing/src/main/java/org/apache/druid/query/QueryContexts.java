@@ -63,13 +63,6 @@ public class QueryContexts
                                                                           "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
 
-    public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
-                                                                        .name("dartQueryId")
-                                                                        .defaultValue(null)
-                                                                        .description(
-                                                                            "Unique identifier for the Dart query, used to manage query resources and execution tracking")
-                                                                        .buildAndRegister(QuerySettingRegistry.getInstance());
-
   public static final SettingEntry<Integer> PRIORITY = SettingEntry.newIntegerEntry()
                                                                    .name("priority")
                                                                    .defaultValue(0)
@@ -184,6 +177,12 @@ public class QueryContexts
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
+  public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
+                                                                       .name("dartQueryId")
+                                                                       .defaultValue(null)
+                                                                       .description(
+                                                                           "Unique identifier for the Dart query, used to manage query resources and execution tracking")
+                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
   public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name();
   public static final String CTX_FULL_REPORT = "fullReport";
 

@@ -19,7 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.VectorExprSanityTest;
+import org.apache.druid.math.expr.SettableVectorInputBinding;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -72,12 +72,12 @@ public class FilteredVectorInputBindingTest extends InitializedNullHandlingTest
       false
   };
 
-  private VectorExprSanityTest.SettableVectorInputBinding baseBinding;
+  private SettableVectorInputBinding baseBinding;
 
   @Before
   public void setup()
   {
-    baseBinding = new VectorExprSanityTest.SettableVectorInputBinding(VECTOR_SIZE);
+    baseBinding = new SettableVectorInputBinding(VECTOR_SIZE);
     baseBinding.addString("string", STRINGS);
     baseBinding.addLong("long", LONGS, NULLS);
     baseBinding.addDouble("double", DOUBLES);

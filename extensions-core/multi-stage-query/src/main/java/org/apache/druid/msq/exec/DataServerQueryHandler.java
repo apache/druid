@@ -39,7 +39,6 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -183,9 +182,7 @@ public class DataServerQueryHandler
       }
 
       pendingRequests = createNextPendingRequests(
-          missingRichSegmentDescriptors,
-          MultiStageQueryContext.getSegmentSources(query.context()),
-          DataServerSelector.RANDOM
+          missingRichSegmentDescriptors
       );
 
       if (!pendingRequests.isEmpty()) {
@@ -270,9 +267,7 @@ public class DataServerQueryHandler
   }
 
   private List<DataServerRequestDescriptor> createNextPendingRequests(
-      final Set<RichSegmentDescriptor> richSegmentDescriptors,
-      final SegmentSource includeSegmentSource,
-      final DataServerSelector dataServerSelector
+      final Set<RichSegmentDescriptor> richSegmentDescriptors
   )
   {
     final Map<DruidServerMetadata, Set<RichSegmentDescriptor>> serverVsSegmentsMap = new HashMap<>();
@@ -300,16 +295,17 @@ public class DataServerQueryHandler
       if (segmentLoadInfo.getSegment().toDescriptor().equals(segmentDescriptorWithFullInterval)) {
         Set<DruidServerMetadata> servers = segmentLoadInfo.getServers()
                                                           .stream()
-                                                          .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
-                                                                                                             .contains(druidServerMetadata.getType()))
+                                                          .filter(druidServerMetadata -> SegmentSource.REALTIME.getUsedServerTypes()
+                                                                                                               .contains(druidServerMetadata.getType()))
                                                           .collect(Collectors.toSet());
         if (servers.isEmpty()) {
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build("Could not find a server matching includeSegmentSource[%s] for segment[%s]. Only found servers [%s]", includeSegmentSource, richSegmentDescriptor, servers);
+                              .build("Could not find a server matching includeSegmentSource[%s] for segment[%s]. Only found servers [%s]",
+                                     SegmentSource.REALTIME, richSegmentDescriptor, servers);
         }
 
-        DruidServerMetadata druidServerMetadata = dataServerSelector.getSelectServerFunction().apply(servers);
+        DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(servers);
         serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
         SegmentDescriptor descriptor = segmentLoadInfo.getSegment().toDescriptor();
         serverVsSegmentsMap.get(druidServerMetadata)

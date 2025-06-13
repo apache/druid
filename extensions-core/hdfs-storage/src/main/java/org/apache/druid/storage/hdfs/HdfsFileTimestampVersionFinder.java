@@ -54,17 +54,17 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
     };
     long modifiedTime = Long.MIN_VALUE;
     URI mostRecentURI = null;
-    final FileSystem fs = dir.getFileSystem(config);
-    for (FileStatus status : fs.listStatus(dir, filter)) {
-      if (status.isFile()) {
-        final long thisModifiedTime = status.getModificationTime();
-        if (thisModifiedTime >= modifiedTime) {
-          modifiedTime = thisModifiedTime;
-          mostRecentURI = status.getPath().toUri();
+    try (final FileSystem fs = dir.getFileSystem(config)) {
+      for (FileStatus status : fs.listStatus(dir, filter)) {
+        if (status.isFile()) {
+          final long thisModifiedTime = status.getModificationTime();
+          if (thisModifiedTime >= modifiedTime) {
+            modifiedTime = thisModifiedTime;
+            mostRecentURI = status.getPath().toUri();
+          }
         }
       }
     }
-
     return mostRecentURI;
   }
 

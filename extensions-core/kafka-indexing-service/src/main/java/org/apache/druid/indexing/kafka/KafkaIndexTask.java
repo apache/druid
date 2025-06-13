@@ -95,7 +95,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   protected SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new IncrementalPublishingKafkaIndexTaskRunner(
+    return new KafkaIndexTaskRunner(
         this,
         dataSchema.getParser(),
         lockGranularityToUse

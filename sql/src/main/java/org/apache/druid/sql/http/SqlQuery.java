@@ -308,7 +308,7 @@ public class SqlQuery
         catch (IllegalArgumentException e) {
           throw new HttpException(
               Response.Status.BAD_REQUEST,
-              "Unable to decoded URL-Encoded SQL query: " + e.getMessage()
+              "Unable to decode URL-Encoded SQL query: " + e.getMessage()
           );
         }
 

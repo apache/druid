@@ -122,7 +122,6 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
-  public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
@@ -320,12 +319,12 @@ public class MultiStageQueryContext
     );
   }
 
-  public static SegmentSource getSegmentSources(final QueryContext queryContext)
+  public static SegmentSource getSegmentSources(final QueryContext queryContext, final SegmentSource defaultSource)
   {
     return queryContext.getEnum(
         CTX_INCLUDE_SEGMENT_SOURCE,
         SegmentSource.class,
-        DEFAULT_INCLUDE_SEGMENT_SOURCE
+        defaultSource
     );
   }
 

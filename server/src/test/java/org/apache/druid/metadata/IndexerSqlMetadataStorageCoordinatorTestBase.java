@@ -31,10 +31,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
@@ -332,14 +330,14 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
 
     for (int year = startYear; year < endYear; year++) {
       segments.add(createSegment(
-          Intervals.of("%d/%d", year, year + 1),
-          "version",
-          new LinearShardSpec(0))
+                       Intervals.of("%d/%d", year, year + 1),
+                       "version",
+                       new LinearShardSpec(0)
+                   )
       );
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
-    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, new SegmentSchemaMapping(
-        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, null);
     Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
@@ -363,7 +361,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -383,7 +389,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
-                                           .retrieveUnusedSegmentsPlus(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegmentsPlus(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -393,11 +407,20 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected void verifyContainsAllSegmentsPlus(
       List<DataSegment> expectedSegments,
       List<DataSegmentPlus> actualUnusedSegmentsPlus,
-      DateTime usedStatusLastUpdatedTime)
+      DateTime usedStatusLastUpdatedTime
+  )
   {
-    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
+    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream()
+                                                                      .collect(Collectors.toMap(
+                                                                          DataSegment::getId,
+                                                                          Function.identity()
+                                                                      ));
     Map<SegmentId, DataSegmentPlus> actualIdToSegmentPlus = actualUnusedSegmentsPlus.stream()
-                                                                                    .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
+                                                                                    .collect(Collectors.toMap(
+                                                                                        d -> d.getDataSegment()
+                                                                                              .getId(),
+                                                                                        Function.identity()
+                                                                                    ));
     Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
       DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
       return segmentPlus != null
@@ -482,7 +505,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     final String table = tablesConfig.getSegmentsTable();
     return derbyConnector.retryWithHandle(
         handle -> handle.createQuery("SELECT payload FROM " + table + " WHERE used = true ORDER BY id")
-                        .map((index, result, context) -> JacksonUtils.readValue(mapper, result.getBytes(1), DataSegment.class))
+                        .map((index, result, context) -> JacksonUtils.readValue(
+                            mapper,
+                            result.getBytes(1),
+                            DataSegment.class
+                        ))
                         .list()
     );
   }
@@ -497,7 +524,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     );
   }
 
-  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId, MetadataStorageTablesConfig tablesConfig)
+  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(
+      String taskId,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     return derbyConnector.retryWithHandle(handle -> {
@@ -523,7 +553,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     });
   }
 
-  protected void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap, MetadataStorageTablesConfig tablesConfig)
+  protected void insertIntoUpgradeSegmentsTable(
+      Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     derbyConnector.retryWithHandle(
@@ -563,6 +596,16 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
+    insertUsedSegments(dataSegments, upgradedFromSegmentIdMap, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertUsedSegments(
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
+  )
+  {
     final Set<DataSegmentPlus> usedSegments = new HashSet<>();
     for (DataSegment segment : dataSegments) {
       final DateTime now = DateTimes.nowUtc();
@@ -579,7 +622,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       );
     }
 
-    insertSegments(usedSegments, false, derbyConnectorRule, jsonMapper);
+    insertSegments(usedSegments, false, connector, jsonMapper);
   }
 
   public static void insertSegments(
@@ -589,8 +632,17 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
-    final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    insertSegments(dataSegments, includeSchema, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
+  )
+  {
+    final String table = connector.getMetadataTablesConfig().getSegmentsTable();
 
     final String sql = getSegmentInsertSql(includeSchema, table, connector);
     connector.retryWithHandle(

@@ -101,7 +101,7 @@ public class DartControllerContextTest
   public void test_queryKernelConfig()
   {
     final DartControllerContext controllerContext =
-        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null);
+        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null, null);
     final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(QUERY_ID, querySpec);
 
     Assertions.assertFalse(queryKernelConfig.isFaultTolerant());

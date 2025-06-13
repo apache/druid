@@ -900,9 +900,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       }
     } else {
       fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
-      for (ColumnType type : fieldTypes) {
-        leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
-      }
+      leastRestrictiveType = ColumnType.leastRestrictiveType(fieldTypes);
     }
     return leastRestrictiveType;
   }
@@ -1023,7 +1021,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
       ColumnType theType = types.getSingleType();
-      columnBuilder.setType(theType == null ? ColumnType.STRING : theType);
+      if (theType == null) {
+        theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()));
+      }
+      columnBuilder.setType(theType);
 
       GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,
