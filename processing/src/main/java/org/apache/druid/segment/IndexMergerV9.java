@@ -1351,22 +1351,11 @@ public class IndexMergerV9 implements IndexMerger
     }
 
     List<Metadata> metadataList = Lists.transform(indexes, IndexableAdapter::getMetadata);
-    final Metadata segmentMetadata;
-    if (sortedMetricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
-      for (int i = 0; i < sortedMetricAggs.length; i++) {
-        combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
-      }
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          combiningMetricAggs
-      );
-    } else {
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          null
-      );
+    AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
+    for (int i = 0; i < sortedMetricAggs.length; i++) {
+      combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
     }
+    final Metadata segmentMetadata = Metadata.merge(metadataList, combiningMetricAggs);
 
     if (segmentMetadata != null
         && segmentMetadata.getOrdering() != null

@@ -71,7 +71,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   private static final SegmentId TEST_SEGMENT_ID2 = SegmentId.of(TEST_DATASOURCE.toString(), INTERVAL_2021, "test", 0);
 
   private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_HOURLY = new AggregateProjectionMetadata.Schema(
-      "name1-doesnot-matter",
+      "name1-does-not-matter",
       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
       VirtualColumns.create(Granularities.toVirtualColumn(
           Granularities.HOUR,
@@ -87,7 +87,7 @@ public class SegmentMetadataQueryQueryToolChestTest
       )
   );
   private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_DAILY = new AggregateProjectionMetadata.Schema(
-      "name2-doesnot-matter",
+      "name2-does-not-matter",
       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
       VirtualColumns.create(Granularities.toVirtualColumn(
           Granularities.DAY,
@@ -157,67 +157,6 @@ public class SegmentMetadataQueryQueryToolChestTest
     SegmentAnalysis fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
-  }
-
-  @EnumSource(AggregatorMergeStrategy.class)
-  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
-  public void testProjections(AggregatorMergeStrategy aggregatorMergeStrategy)
-  {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
-        .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
-        .build();
-
-    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
-        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
-        .build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
-  }
-
-  @EnumSource(AggregatorMergeStrategy.class)
-  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
-  public void testProjectionsWithNull(AggregatorMergeStrategy aggregatorMergeStrategy)
-  {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
-        .build();
-    final SegmentAnalysis analysis1NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
-        .build();
-    final SegmentAnalysis analysis2NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
-
-    Assert.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
-    Assert.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
-    Assert.assertNull(
-        mergeWithStrategy(analysis1NullProjection, analysis2NullProjection, aggregatorMergeStrategy).getProjections()
-    );
-  }
-
-  @EnumSource(AggregatorMergeStrategy.class)
-  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
-  public void testProjectionsWithConflict(AggregatorMergeStrategy aggregatorMergeStrategy)
-  {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
-        .projection("channel_sum_1", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
-        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
-        .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
-        .projection("channel_sum_2", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
-        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
-        .build();
-
-    // conflict projection is ignored.
-    final SegmentAnalysis expectedStrict = new SegmentAnalysisBuilder(
-        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
-        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
-        .build();
-    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -681,6 +620,68 @@ public class SegmentMetadataQueryQueryToolChestTest
     Assert.assertNull(
         SegmentMetadataQueryQueryToolChest
             .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, aggregatorMergeStrategy));
+  }
+
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjections(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .build();
+
+    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjectionsWithNull(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis1NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .build();
+    final SegmentAnalysis analysis2NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
+
+    Assert.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
+    Assert.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
+    Assert.assertNull(
+        mergeWithStrategy(analysis1NullProjection, analysis2NullProjection, aggregatorMergeStrategy).getProjections()
+    );
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testProjectionsWithConflict(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .projection("channel_sum_1", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
+        .projection("channel_sum_2", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
+        .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
+        .build();
+
+    // conflict projection is ignored.
+    final SegmentAnalysis expectedStrict = new SegmentAnalysisBuilder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
+        .build();
+    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   private static SegmentAnalysis mergeWithStrategy(

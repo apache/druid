@@ -136,7 +136,6 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
 
         final Map<String, AggregateProjectionMetadata> projectionsMap;
-
         if (updatedQuery.hasProjections()
             && ((metadata = Objects.isNull(metadata) ? getMetadata(segment) : metadata)) != null
             && metadata.getProjections() != null) {
