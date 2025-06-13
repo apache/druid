@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import org.apache.commons.collections.MapUtils;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
@@ -450,7 +449,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         arg1.getSize() + arg2.getSize(),
         arg1.getNumRows() + arg2.getNumRows(),
         aggregators.isEmpty() ? null : aggregators,
-        MapUtils.isEmpty(projections) ? null : projections,
+        (projections == null || projections.isEmpty()) ? null : projections,
         timestampSpec,
         queryGranularity,
         rollup
