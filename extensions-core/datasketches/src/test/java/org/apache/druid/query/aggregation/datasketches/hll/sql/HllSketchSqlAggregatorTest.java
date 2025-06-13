@@ -89,6 +89,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
+import org.apache.druid.query.QueryContexts;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -424,7 +425,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                               ImmutableMap.of(
                                                   TimeseriesQuery.SKIP_EMPTY_BUCKETS,
                                                   true,
-                                                  BaseQuery.SQL_QUERY_ID,
+                                                  QueryContexts.SQL_QUERY_ID.name(),
                                                   "dummy"
                                               ),
                                               "d0"

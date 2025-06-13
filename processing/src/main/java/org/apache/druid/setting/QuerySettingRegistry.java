@@ -30,7 +30,7 @@ import java.util.TreeMap;
 /**
  * Registry for query settings that can be used to configure query behavior via {@link org.apache.druid.query.QueryContext}.
  */
-public class QuerySettingRegistry
+public class QuerySettingRegistry implements ISettingRegistry
 {
   private final Map<String, SettingEntry<?>> settings = new TreeMap<>();
 
@@ -46,9 +46,10 @@ public class QuerySettingRegistry
 
   private static final QuerySettingRegistry INSTANCE = new QuerySettingRegistry();
 
-  public static <T> SettingEntry<T> register(SettingEntry<T> setting)
+  @Override
+  public <T> SettingEntry<T> register(SettingEntry<T> setting)
   {
-    if (INSTANCE.settings.put(setting.name(), setting) != null) {
+    if (settings.put(setting.name(), setting) != null) {
       throw new IllegalArgumentException("Setting with name [" + setting.name() + "] already exists.");
     }
     return setting;

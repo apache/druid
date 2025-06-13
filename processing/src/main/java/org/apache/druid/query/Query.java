@@ -225,7 +225,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return context().getString(BaseQuery.SQL_QUERY_ID);
+    return context().getValue(QueryContexts.SQL_QUERY_ID);
   }
 
   /**

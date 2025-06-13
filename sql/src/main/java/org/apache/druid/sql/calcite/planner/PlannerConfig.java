@@ -33,15 +33,13 @@ import java.util.Objects;
 
 public class PlannerConfig
 {
-  public static final SettingEntry<Boolean> CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT //= "useApproximateCountDistinct";
-      = QuerySettingRegistry.register(
-      SettingEntry.newBooleanEntry()
-                  .name("useApproximateCountDistinct")
-                  .scope("sql")
-                  .defaultValue(true)
-                  .description("Use approximate count distinct in SQL queries.")
-                  .build()
-  );
+  public static final SettingEntry<Boolean> CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = SettingEntry.newBooleanEntry()
+                                                                                                 .name("useApproximateCountDistinct")
+                                                                                                 .scope("sql")
+                                                                                                 .defaultValue(true)
+                                                                                                 .description("Use approximate count distinct in SQL queries.")
+                                                                                                 .buildAndRegister(QuerySettingRegistry.getInstance());
+
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";

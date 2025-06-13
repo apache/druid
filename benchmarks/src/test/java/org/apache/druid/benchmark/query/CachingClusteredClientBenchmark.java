@@ -382,7 +382,7 @@ public class CachingClusteredClientBenchmark
                        .granularity(Granularity.fromString(queryGranularity))
                        .context(
                            ImmutableMap.of(
-                               BaseQuery.QUERY_ID, "BenchmarkQuery",
+                               QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                                QueryContexts.BROKER_PARALLELISM, parallelism
                            )
@@ -413,7 +413,7 @@ public class CachingClusteredClientBenchmark
         .threshold(10_000) // we are primarily measuring 'broker' merge time, so collect a significant number of results
         .context(
             ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
+                QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                 QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )
@@ -446,7 +446,7 @@ public class CachingClusteredClientBenchmark
         .setGranularity(Granularity.fromString(queryGranularity))
         .setContext(
             ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
+                QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                 QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )

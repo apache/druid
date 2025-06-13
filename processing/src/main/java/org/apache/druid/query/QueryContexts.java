@@ -42,13 +42,34 @@ import java.util.stream.Collectors;
 @PublicApi
 public class QueryContexts
 {
-  public static final SettingEntry<Boolean> FINALIZE_KEY = QuerySettingRegistry.register(
-      SettingEntry.newBooleanEntry()
-                  .name("finalize")
-                  .defaultValue(null)
-                  .description(
-                      "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                  .build());
+  public static final SettingEntry<String> QUERY_ID = SettingEntry.newStringEntry()
+                                                                  .name("queryId")
+                                                                  .defaultValue(null)
+                                                                  .description(
+                                                                      "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
+                                                                  .buildAndRegister(QuerySettingRegistry.getInstance());
+
+  public static final SettingEntry<String> SUB_QUERY_ID = SettingEntry.newStringEntry()
+                                                                      .name("subQueryId")
+                                                                      .defaultValue(null)
+                                                                      .description(
+                                                                          "Unique identifier for the sub-query, that is used to map the global shared resources (specifically merge buffers) to the sub-query's runtime")
+                                                                      .buildAndRegister(QuerySettingRegistry.getInstance());
+
+  public static final SettingEntry<String> SQL_QUERY_ID = SettingEntry.newStringEntry()
+                                                                      .name("sqlQueryId")
+                                                                      .defaultValue(null)
+                                                                      .description(
+                                                                          "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
+                                                                      .buildAndRegister(QuerySettingRegistry.getInstance());
+
+
+  public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
+                                                                       .name("finalize")
+                                                                       .defaultValue(null)
+                                                                       .description(
+                                                                           "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
@@ -93,13 +114,13 @@ public class QueryContexts
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
 
-  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE_KEY = QuerySettingRegistry.register(
-      SettingEntry.newBooleanEntry()
-                  .name("useResultLevelCache")
-                  .defaultValue(true)
-                  .description(
-                      "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                  .build());
+  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE_KEY = SettingEntry.newBooleanEntry()
+                                                                                     .name("useResultLevelCache")
+                                                                                     .defaultValue(true)
+                                                                                     .description(
+                                                                                         "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                                                                                     .buildAndRegister(
+                                                                                         QuerySettingRegistry.getInstance());
 
   //public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
@@ -141,7 +162,7 @@ public class QueryContexts
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
+  public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
@@ -332,7 +353,7 @@ public class QueryContexts
       catch (NumberFormatException ignored) {
 
         // Attempt to handle trivial decimal values: 12.00, etc.
-        // This mimics how Jackson will convert "12.00" to a Integer on request.
+        // This mimics how Jackson will convert "12.00" to an Integer on request.
         try {
           return new BigDecimal((String) value).intValueExact();
         }

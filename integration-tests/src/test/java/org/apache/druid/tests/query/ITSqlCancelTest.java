@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
@@ -85,7 +86,7 @@ public class ITSqlCancelTest
       queryResponseFutures.add(
           sqlClient.queryAsync(
               sqlHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, queryId), null)
+              new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), queryId), null)
           )
       );
     }
@@ -122,7 +123,7 @@ public class ITSqlCancelTest
     final Future<StatusResponseHolder> queryResponseFuture = sqlClient
         .queryAsync(
             sqlHelper.getQueryURL(config.getRouterUrl()),
-            new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
+            new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), "validId"), null)
         );
 
     // Wait until the sqlLifecycle is authorized and registered

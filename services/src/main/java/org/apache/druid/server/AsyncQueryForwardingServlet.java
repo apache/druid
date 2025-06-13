@@ -39,10 +39,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -312,11 +312,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
   {
     Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
-    String sqlQueryId = (String) context.getOrDefault(BaseQuery.SQL_QUERY_ID, UUID.randomUUID().toString());
+    String sqlQueryId = (String) context.getOrDefault(QueryContexts.SQL_QUERY_ID.name(), UUID.randomUUID().toString());
     // set queryId to sqlQueryId if not overridden
-    String queryId = (String) context.getOrDefault(BaseQuery.QUERY_ID, sqlQueryId);
-    context.put(BaseQuery.SQL_QUERY_ID, sqlQueryId);
-    context.put(BaseQuery.QUERY_ID, queryId);
+    String queryId = (String) context.getOrDefault(QueryContexts.QUERY_ID.name(), sqlQueryId);
+    context.put(QueryContexts.SQL_QUERY_ID.name(), sqlQueryId);
+    context.put(QueryContexts.QUERY_ID.name(), queryId);
     return sqlQuery.withOverridenContext(context);
   }
 
@@ -364,7 +364,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       boolean isNativeQuery
   ) throws IOException
   {
-    handleQueryParseException(request, response, HttpServletResponse.SC_BAD_REQUEST, objectMapper, parseException, isNativeQuery);
+    handleQueryParseException(
+        request,
+        response,
+        HttpServletResponse.SC_BAD_REQUEST,
+        objectMapper,
+        parseException,
+        isNativeQuery
+    );
   }
 
   private void handleQueryParseException(
@@ -392,7 +399,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              new QueryStats(ImmutableMap.of(
+                  "success",
+                  false,
+                  "exception",
+                  errorMessage,
+                  "identity",
+                  authenticationResult.getIdentity()
+              ))
           )
       );
     } else {
@@ -402,7 +416,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              new QueryStats(ImmutableMap.of(
+                  "success",
+                  false,
+                  "exception",
+                  errorMessage,
+                  "identity",
+                  authenticationResult.getIdentity()
+              ))
           )
       );
     }
@@ -744,8 +765,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       if (isJDBC) {
         sqlQueryId = result.getResponse().getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
-        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
-        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name(), null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name(), null);
       } else if (query != null) {
         queryId = query.getId();
       }
@@ -836,8 +857,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       if (isJDBC) {
         sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
-        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
-        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID, null);
       } else if (query != null) {
         queryId = query.getId();
       }

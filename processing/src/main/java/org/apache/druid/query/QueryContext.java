@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.setting.BoundedSettingEntry;
+import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -71,8 +72,8 @@ public class QueryContext
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new TreeMap<>(context));
+                   ? Collections.emptyMap()
+                   : Collections.unmodifiableMap(new TreeMap<>(context));
   }
 
   public static QueryContext empty()
@@ -130,6 +131,16 @@ public class QueryContext
   public String getString(String key, String defaultValue)
   {
     return QueryContexts.parseString(context, key, defaultValue);
+  }
+
+  public <T> T getValue(SettingEntry<T> entry)
+  {
+    return entry.from(this);
+  }
+
+  public <T> T getValue(SettingEntry<T> entry, T defaultValue)
+  {
+    return entry.from(this, defaultValue);
   }
 
   /**
@@ -532,10 +543,10 @@ public class QueryContext
     if (curr > maxScatterGatherBytesLimit) {
       throw new BadQueryContextException(
           StringUtils.format(
-            "Configured %s = %d is more than enforced limit of %d.",
-            QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
-            curr,
-            maxScatterGatherBytesLimit
+              "Configured %s = %d is more than enforced limit of %d.",
+              QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
+              curr,
+              maxScatterGatherBytesLimit
           )
       );
     }
