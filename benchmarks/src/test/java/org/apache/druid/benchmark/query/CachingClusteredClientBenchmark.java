@@ -469,7 +469,7 @@ public class CachingClusteredClientBenchmark
                                               query.getDataSource(),
                                               query.getId(),
                                               query.getSqlQueryId(),
-                                              query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+                                              query.context().getValue(QueryContexts.QUERY_RESOURCE_ID)
                                           ));
   }
 

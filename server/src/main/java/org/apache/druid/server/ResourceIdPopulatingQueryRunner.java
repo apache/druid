@@ -47,7 +47,7 @@ public class ResourceIdPopulatingQueryRunner<T> implements QueryRunner<T>
   public static <T> Query<T> populateResourceId(Query<T> query)
   {
     return query.withOverriddenContext(Collections.singletonMap(
-        QueryContexts.QUERY_RESOURCE_ID,
+        QueryContexts.QUERY_RESOURCE_ID.name(),
         UUID.randomUUID().toString()
     ));
   }

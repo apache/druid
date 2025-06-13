@@ -159,7 +159,12 @@ public class QueryContexts
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
-  public static final String QUERY_RESOURCE_ID = "queryResourceId";
+  public static final SettingEntry<String> QUERY_RESOURCE_ID = SettingEntry.newStringEntry()
+                                                                            .name("queryResourceId")
+                                                                            .defaultValue(null)
+                                                                            .description(
+                                                                                "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
+                                                                            .buildAndRegister(QuerySettingRegistry.getInstance());
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
