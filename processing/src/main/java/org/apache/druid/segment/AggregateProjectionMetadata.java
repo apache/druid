@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,9 +42,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -120,34 +117,6 @@ public class AggregateProjectionMetadata
            "schema=" + schema +
            ", numRows=" + numRows +
            '}';
-  }
-
-  /**
-   * Merge two maps of {@link AggregateProjectionMetadata} objects, returning a new map with the same keys and merged
-   * metadata. If the schemas do not match, the metadata is not merged and the key is not included in the result.
-   *
-   * @param projections1 first map of projections to merge
-   * @param projections2 second map of projections to merge
-   * @return merged map of projections
-   */
-  public static Map<String, AggregateProjectionMetadata> merge(
-      Map<String, AggregateProjectionMetadata> projections1,
-      Map<String, AggregateProjectionMetadata> projections2
-  )
-  {
-    final Map<String, AggregateProjectionMetadata> projections = new HashMap<>();
-    for (String name : Sets.intersection(projections1.keySet(), projections2.keySet())) {
-      AggregateProjectionMetadata spec1 = projections1.get(name);
-      AggregateProjectionMetadata spec2 = projections2.get(name);
-      if (spec1.getSchema().equals(spec2.getSchema())) {
-        // If the schemas are equal, we can merge the metadata
-        projections.put(
-            name,
-            new AggregateProjectionMetadata(spec1.getSchema(), spec1.getNumRows() + spec2.getNumRows())
-        );
-      }
-    }
-    return projections;
   }
 
   public static class Schema

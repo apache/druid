@@ -126,7 +126,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     byte[] actualKey = strategy.computeCacheKey(query);
     Assert.assertArrayEquals(expectedKey, actualKey);
 
-    SegmentAnalysis result = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    SegmentAnalysis result = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
         .column(
             "placement",
@@ -163,16 +163,16 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeAggregators(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -185,18 +185,18 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeAggregatorsWithIntervals(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .interval(TEST_SEGMENT_ID1.getInterval())
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .interval(TEST_SEGMENT_ID2.getInterval())
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    SegmentAnalysis expected = new SegmentAnalysisBuilder(
+    SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .interval(TEST_SEGMENT_ID1.getInterval())
         .interval(TEST_SEGMENT_ID2.getInterval())
@@ -213,13 +213,13 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     Assume.assumeTrue(aggregatorMergeStrategy == AggregatorMergeStrategy.STRICT);
 
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    final SegmentAnalysis expectedNullAggregators = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedNullAggregators = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
     Assert.assertEquals(expectedNullAggregators, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
@@ -230,13 +230,13 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     Assume.assumeTrue(aggregatorMergeStrategy != AggregatorMergeStrategy.STRICT);
 
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -248,10 +248,10 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeAggregatorsAllNull(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
-    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
     Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
@@ -259,23 +259,23 @@ public class SegmentMetadataQueryQueryToolChestTest
   @Test
   public void testMergeAggregatorsConflict()
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
 
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
-    final SegmentAnalysis expectedStrict = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedStrict = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
     Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.STRICT));
 
     // Test lenient merge, returns a map with null for "bar" as it has a conflict
-    final SegmentAnalysis expectedLenient = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", null)
@@ -293,7 +293,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     Assert.assertEquals(expectedLenient, mergeLenient(mergeLenient(analysis1, analysis2), analysis1));
 
     // Test earliest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 is earlier
-    final SegmentAnalysis expectedEarliest = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -307,7 +307,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     // Test latest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 is later
-    final SegmentAnalysis expectedLatest = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
@@ -324,11 +324,11 @@ public class SegmentMetadataQueryQueryToolChestTest
   @Test
   public void testMergeAggregatorsConflictWithDifferentOrder()
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
@@ -336,13 +336,13 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
     Assert.assertEquals(
-        new SegmentAnalysisBuilder("dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        new SegmentAnalysis.Builder("dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
             .build(),
         mergeStrict(analysis1, analysis2)
     );
 
     // Test lenient merge, returns a map with null for "bar" as it has a conflict
-    final SegmentAnalysis expectedLenient = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", null)
@@ -362,7 +362,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     // Test earliest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 is earlier
-    final SegmentAnalysis expectedEarliest = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
@@ -376,7 +376,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     // Test latest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 is later
-    final SegmentAnalysis expectedLatest = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -397,12 +397,12 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentId segmentId1 = SegmentId.of(TEST_DATASOURCE.toString(), interval, "test", 1);
     final SegmentId segmentId2 = SegmentId.of(TEST_DATASOURCE.toString(), interval, "test", 2);
 
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(segmentId1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(segmentId1)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(segmentId2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(segmentId2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
@@ -410,13 +410,13 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
     Assert.assertEquals(
-        new SegmentAnalysisBuilder("dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
+        new SegmentAnalysis.Builder("dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
             .build(),
         mergeStrict(analysis1, analysis2)
     );
 
     // Test lenient merge, returns a map with null for "bar" as it has a conflict
-    SegmentAnalysis expectedLenient = new SegmentAnalysisBuilder(
+    SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
         "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", null)
@@ -430,7 +430,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     // Test earliest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 has the earlier partition
-    SegmentAnalysis expectedEarliest = new SegmentAnalysisBuilder(
+    SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
         "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -444,7 +444,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     // Test latest merge, returns a map with "bar" as DoubleMaxAggregatorFactory since analysis2 has the later partition
-    SegmentAnalysis expectedLatest = new SegmentAnalysisBuilder(
+    SegmentAnalysis expectedLatest = new SegmentAnalysis.Builder(
         "dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
@@ -507,11 +507,11 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeRollup(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).rollup(false).build();
-    final SegmentAnalysis analysis3 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).rollup(false).build();
-    final SegmentAnalysis analysis4 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).rollup(true).build();
-    final SegmentAnalysis analysis5 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).rollup(true).build();
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(false).build();
+    final SegmentAnalysis analysis3 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).rollup(false).build();
+    final SegmentAnalysis analysis4 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(true).build();
+    final SegmentAnalysis analysis5 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).rollup(true).build();
 
     Assert.assertNull(mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy).isRollup());
     Assert.assertNull(mergeWithStrategy(analysis1, analysis4, aggregatorMergeStrategy).isRollup());
@@ -524,8 +524,8 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testInvalidMergeAggregatorsWithNullOrEmptyDatasource(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -561,16 +561,16 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeWithUnionDatasource(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
 
-    final SegmentAnalysis expectedMergedAnalysis = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedMergedAnalysis = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
@@ -612,8 +612,8 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeWithNullAnalyses(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).rollup(false).build();
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(false).build();
 
     Assert.assertEquals(analysis1, mergeWithStrategy(analysis1, null, aggregatorMergeStrategy));
     Assert.assertEquals(analysis2, mergeWithStrategy(null, analysis2, aggregatorMergeStrategy));
@@ -627,14 +627,14 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testProjections(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
         .build();
 
-    final SegmentAnalysis expected = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
         .build();
@@ -645,14 +645,14 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testProjectionsWithNull(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
         .build();
-    final SegmentAnalysis analysis1NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1).build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis1NullProjection = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
         .build();
-    final SegmentAnalysis analysis2NullProjection = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2).build();
+    final SegmentAnalysis analysis2NullProjection = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
     Assert.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
     Assert.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
@@ -665,19 +665,19 @@ public class SegmentMetadataQueryQueryToolChestTest
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testProjectionsWithConflict(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    final SegmentAnalysis analysis1 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID1)
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
         .projection("channel_sum_1", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
         .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 100))
         .build();
-    final SegmentAnalysis analysis2 = new SegmentAnalysisBuilder(TEST_SEGMENT_ID2)
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 200))
         .projection("channel_sum_2", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
         .projection("conflict_projection", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_DAILY, 200))
         .build();
 
     // conflict projection is ignored.
-    final SegmentAnalysis expectedStrict = new SegmentAnalysisBuilder(
+    final SegmentAnalysis expectedStrict = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
         .build();

@@ -437,10 +437,25 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       rollup = null;
     }
 
-    Map<String, AggregateProjectionMetadata> projections =
-        (arg1.getProjections() == null || arg2.getProjections() == null)
-        ? null
-        : AggregateProjectionMetadata.merge(arg1.getProjections(), arg2.getProjections());
+    final Map<String, AggregateProjectionMetadata> projections;
+    if (arg1.getProjections() != null && arg2.getProjections() != null) {
+      projections = new HashMap<>();
+      // Merge two maps of AggregateProjectionMetadata, returning a new map with the same keys and merged metadata.
+      // If the schemas do not match, the metadata is not merged and the key is not included in the result.
+      for (String name : Sets.intersection(arg1.getProjections().keySet(), arg2.getProjections().keySet())) {
+        AggregateProjectionMetadata spec1 = arg1.getProjections().get(name);
+        AggregateProjectionMetadata spec2 = arg2.getProjections().get(name);
+        if (spec1.getSchema().equals(spec2.getSchema())) {
+          // If the schemas are equal, we can merge the metadata
+          projections.put(
+              name,
+              new AggregateProjectionMetadata(spec1.getSchema(), spec1.getNumRows() + spec2.getNumRows())
+          );
+        }
+      }
+    } else {
+      projections = null;
+    }
 
     return new SegmentAnalysis(
         mergedId,

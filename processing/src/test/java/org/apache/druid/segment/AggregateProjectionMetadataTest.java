@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -29,7 +28,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -74,78 +72,6 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testMerge()
-  {
-    AggregateProjectionMetadata countChocula = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "countChocula",
-            "theTime",
-            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
-            Arrays.asList("theTime", "a", "b", "c"),
-            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
-            Arrays.asList(
-                OrderBy.ascending("theTime"),
-                OrderBy.ascending("a"),
-                OrderBy.ascending("b"),
-                OrderBy.ascending("c")
-            )
-        ),
-        123
-    );
-    AggregateProjectionMetadata sumChocula = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "sumChocula",
-            "theTime",
-            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
-            Arrays.asList("theTime", "a", "b", "c"),
-            new AggregatorFactory[]{new LongSumAggregatorFactory("sumChocula", "chocula")},
-            Arrays.asList(
-                OrderBy.ascending("theTime"),
-                OrderBy.ascending("a"),
-                OrderBy.ascending("b"),
-                OrderBy.ascending("c")
-            )
-        ),
-        123
-    );
-    AggregateProjectionMetadata maxChocula = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "maxChocula",
-            "theTime",
-            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
-            Arrays.asList("theTime", "a", "b", "c"),
-            new AggregatorFactory[]{new LongMaxAggregatorFactory("maxChocula", "chocula")},
-            Arrays.asList(
-                OrderBy.ascending("theTime"),
-                OrderBy.ascending("a"),
-                OrderBy.ascending("b"),
-                OrderBy.ascending("c")
-            )
-        ),
-        123
-    );
-
-    ImmutableMap<String, AggregateProjectionMetadata> metadata1 = ImmutableMap.of(
-        "countChocula", countChocula,
-        "chocula-conflict", sumChocula,
-        "sumChocula-only-in-metadata1", sumChocula
-    );
-    ImmutableMap<String, AggregateProjectionMetadata> metadata2 = ImmutableMap.of(
-        "countChocula", countChocula,
-        "chocula-conflict", maxChocula,
-        "maxChocula-only-in-metadata2", maxChocula
-    );
-
-    ImmutableMap<String, AggregateProjectionMetadata> expected = ImmutableMap.of(
-        "countChocula",
-        new AggregateProjectionMetadata(
-            countChocula.getSchema(),
-            246
-        )
-    );
-    Assert.assertEquals(expected, AggregateProjectionMetadata.merge(metadata1, metadata2));
-  }
 
   @Test
   public void testComparator()

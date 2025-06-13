@@ -271,20 +271,23 @@ public class IndexMergerV9 implements IndexMerger
       progress.stopSection(section);
 
       // Recompute the projections.
-      final Metadata finalMetadata =
-          segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())
-          ? segmentMetadata
-          : makeProjections(v9Smoosher,
-                            segmentMetadata.getProjections(),
-                            adapters,
-                            indexSpec,
-                            segmentWriteOutMedium,
-                            progress,
-                            outDir,
-                            closer,
-                            mergersMap,
-                            segmentMetadata
-          );
+      final Metadata finalMetadata;
+      if (segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        finalMetadata = segmentMetadata;
+      } else {
+        finalMetadata = makeProjections(
+            v9Smoosher,
+            segmentMetadata.getProjections(),
+            adapters,
+            indexSpec,
+            segmentWriteOutMedium,
+            progress,
+            outDir,
+            closer,
+            mergersMap,
+            segmentMetadata
+        );
+      }
 
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();

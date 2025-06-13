@@ -103,6 +103,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   );
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String DATASOURCE = "testDatasource";
+  private static final AggregateProjectionMetadata.Schema PROJECTION_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
+  private static final int PROJECTION_ROWS = 279;
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
@@ -223,10 +225,9 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
-    final AggregateProjectionMetadata.Schema projectionSchema = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
     final Map<String, AggregateProjectionMetadata> expectedProjections = ImmutableMap.of(
-        projectionSchema.getName(),
-        new AggregateProjectionMetadata(projectionSchema, 279)
+        PROJECTION_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS)
     );
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
@@ -703,8 +704,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
-        AggregateProjectionMetadata.merge(expectedSegmentAnalysis1.getProjections(),
-                                          expectedSegmentAnalysis2.getProjections()),
+        ImmutableMap.of(
+            PROJECTION_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS * 2)
+        ),
         null,
         null,
         null
