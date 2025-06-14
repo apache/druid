@@ -104,5 +104,5 @@ public interface CoordinatorClient
    *
    * @param tier         The name of the tier for which the lookup configuration is to be fetched.
    */
-  ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupForTier(String tier);
+  ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(String tier);
 }

@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -113,19 +114,19 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   public LookupReferencesManager(
       LookupConfig lookupConfig,
       @Json ObjectMapper objectMapper,
-      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
-      CoordinatorClient coordinatorClient
+      CoordinatorClient coordinatorClient,
+      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig
   )
   {
-    this(lookupConfig, objectMapper, lookupListeningAnnouncerConfig, coordinatorClient, false);
+    this(lookupConfig, objectMapper, coordinatorClient, lookupListeningAnnouncerConfig, false);
   }
 
   @VisibleForTesting
   LookupReferencesManager(
       LookupConfig lookupConfig,
       ObjectMapper objectMapper,
-      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       CoordinatorClient coordinatorClient,
+      LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       boolean testMode
   )
   {
@@ -274,7 +275,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED
          && !lookupLoadingSpec.getLookupsToLoad().contains(lookupName))) {
       LOG.info(
-          "Skipping notice to add lookup [%s] since current lookup loading mode [%s] does not allow it.",
+          "Skipping notice to add lookup[%s] since current lookup loading mode[%s] does not allow it.",
           lookupName,
           lookupLoadingSpec.getMode()
       );
@@ -467,9 +468,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 
   @Nullable
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
-      throws InterruptedException, ExecutionException
   {
-    return coordinatorClient.fetchLookupForTier(tier).get();
+    return FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier(tier), true);
   }
 
   /**

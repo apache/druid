@@ -99,7 +99,8 @@ public class CoordinatorClientImplTest
         new InjectableValues.Std(ImmutableMap.of(
             DataSegment.PruneSpecsHolder.class.getName(),
             DataSegment.PruneSpecsHolder.DEFAULT
-        )));
+        ))
+    );
     jsonMapper.registerSubtypes(MapLookupExtractorFactory.class);
     serviceClient = new MockServiceClient();
     coordinatorClient = new CoordinatorClientImpl(serviceClient, jsonMapper);
@@ -466,13 +467,14 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_fetchLookupForTier_detailedDisabled() throws Exception
+  public void test_fetchLookupsForTier_detailedEnabled() throws Exception
   {
     LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
         Map.of(
             "77483", "United States",
             "77484", "India"
-        ), true
+        ),
+        true
     );
     LookupExtractorFactoryContainer lookupDataContainer = new LookupExtractorFactoryContainer("v0", lookupData);
     Map<String, LookupExtractorFactoryContainer> lookups = Map.of(
@@ -482,7 +484,7 @@ public class CoordinatorClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/coordinator/v1/lookups/config/country_code?fetchDetails=true"
+            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -491,7 +493,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         lookups,
-        coordinatorClient.fetchLookupForTier("country_code").get()
+        coordinatorClient.fetchLookupsForTier("country_code").get()
     );
   }
 }

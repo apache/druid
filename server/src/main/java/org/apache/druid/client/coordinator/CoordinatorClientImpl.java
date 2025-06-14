@@ -245,12 +245,12 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupForTier(
+  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(
       String tier
   )
   {
     final String path = StringUtils.format(
-        "/druid/coordinator/v1/lookups/config/%s?fetchDetails=true",
+        "/druid/coordinator/v1/lookups/config/%s?detailed=true",
         StringUtils.urlEncode(tier)
     );
 
