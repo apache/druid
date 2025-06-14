@@ -23,7 +23,12 @@ import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { deepGet, oneOf } from '../../utils';
 
-import { AFFINITY_CONFIG_COMPLETIONS, CATEGORY_MAP_COMPLETIONS, NODE_DATA_COMPLETIONS, USER_DATA_COMPLETIONS } from './overlord-dynamic-config-completions';
+import {
+  AFFINITY_CONFIG_COMPLETIONS,
+  CATEGORY_MAP_COMPLETIONS,
+  NODE_DATA_COMPLETIONS,
+  USER_DATA_COMPLETIONS,
+} from './overlord-dynamic-config-completions';
 
 export interface OverlordDynamicConfig {
   selectStrategy?: {

@@ -24,9 +24,7 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of the filter' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of the filter' }],
   },
   {
     path: '$.type',
@@ -73,7 +71,10 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
     condition: typeIs('equals'),
     completions: [
       { value: 'column', documentation: 'Input column or virtual column name to filter on' },
-      { value: 'matchValueType', documentation: 'Type of value to match (STRING, LONG, DOUBLE, etc.)' },
+      {
+        value: 'matchValueType',
+        documentation: 'Type of value to match (STRING, LONG, DOUBLE, etc.)',
+      },
       { value: 'matchValue', documentation: 'Value to match (must not be null)' },
     ],
   },
@@ -107,9 +108,7 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     condition: typeIs('columnComparison'),
-    completions: [
-      { value: 'dimensions', documentation: 'List of DimensionSpec to compare' },
-    ],
+    completions: [{ value: 'dimensions', documentation: 'List of DimensionSpec to compare' }],
   },
 
   // AND filter
@@ -137,9 +136,7 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     condition: typeIs('not'),
-    completions: [
-      { value: 'field', documentation: 'Filter object to negate' },
-    ],
+    completions: [{ value: 'field', documentation: 'Filter object to negate' }],
   },
 
   // In filter
@@ -163,8 +160,14 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'dimension', documentation: 'Input column or virtual column name to filter on' },
       { value: 'lower', documentation: 'Lower bound string match value' },
       { value: 'upper', documentation: 'Upper bound string match value' },
-      { value: 'lowerStrict', documentation: 'Use strict comparison for lower bound (> instead of >=)' },
-      { value: 'upperStrict', documentation: 'Use strict comparison for upper bound (< instead of <=)' },
+      {
+        value: 'lowerStrict',
+        documentation: 'Use strict comparison for lower bound (> instead of >=)',
+      },
+      {
+        value: 'upperStrict',
+        documentation: 'Use strict comparison for upper bound (< instead of <=)',
+      },
       { value: 'ordering', documentation: 'Sorting order for comparisons' },
       { value: 'extractionFn', documentation: 'Extraction function to apply to dimension' },
     ],
@@ -290,9 +293,7 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
     path: '$.query',
     isObject: true,
     condition: typeIs('search'),
-    completions: [
-      { value: 'type', documentation: 'Type of search query' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of search query' }],
   },
   {
     path: '$.query.type',
@@ -336,7 +337,10 @@ export const FILTER_COMPLETIONS: JsonCompletionRule[] = [
     isObject: true,
     condition: typeIs('expression'),
     completions: [
-      { value: 'expression', documentation: 'Druid expression string that evaluates to true/false' },
+      {
+        value: 'expression',
+        documentation: 'Druid expression string that evaluates to true/false',
+      },
     ],
   },
 

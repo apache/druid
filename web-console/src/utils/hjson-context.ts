@@ -148,14 +148,8 @@ export function getHjsonContext(hjson: string): HjsonContext {
       case '{': {
         // Handle Hjson no-comma case
         if (afterColon && currentKey && token.trim()) {
-          const value = tryExtractValueAndKey(token.trim());
-          if (value.hasKey) {
-            getCurrentObject()[currentKey] = parseValue(value.value);
-            path.push(extractKey(value.key!));
-          } else {
-            getCurrentObject()[currentKey] = parseValue(token.trim());
-            if (token.trim()) path.push(currentKey);
-          }
+          getCurrentObject()[currentKey] = parseValue(token.trim());
+          path.push(currentKey);
         } else if (token.trim()) {
           path.push(extractKey(token));
         } else if (afterColon && currentKey) {
@@ -279,18 +273,6 @@ export function getHjsonContext(hjson: string): HjsonContext {
     }
   }
 
-  // Final state determination
-  // Handle Hjson no-comma between value and next key
-  if (afterColon && currentKey && token.trim()) {
-    const value = tryExtractValueAndKey(token.trim());
-    if (value.hasKey) {
-      getCurrentObject()[currentKey] = parseValue(value.value);
-      token = value.key!;
-      afterColon = false;
-      currentKey = undefined;
-    }
-  }
-
   // Determine context
   let isEditingKey: boolean;
   let finalKey: string | undefined;
@@ -364,21 +346,4 @@ function parseValue(token: string): any {
   }
 
   return trimmed;
-}
-
-function tryExtractValueAndKey(token: string): { value: string; key?: string; hasKey: boolean } {
-  // Try patterns for value followed by key
-  const patterns = [
-    /^(".*?"|'.*?'|\S+)\s+([a-zA-Z_"'].*)$/, // With space
-    /^(".*?"|'.*?')([a-zA-Z_].*)$/, // No space after quoted
-  ];
-
-  for (const pattern of patterns) {
-    const match = pattern.exec(token);
-    if (match) {
-      return { value: match[1], key: match[2], hasKey: true };
-    }
-  }
-
-  return { value: token, hasKey: false };
 }

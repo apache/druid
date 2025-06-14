@@ -20,7 +20,7 @@ import type { JsonCompletionRule } from '../../utils';
 
 /**
  * Determines if a type is a supervisor type based on the documentation:
- * "The supervisor type. For streaming ingestion, this can be either kafka, kinesis, or rabbit. 
+ * "The supervisor type. For streaming ingestion, this can be either kafka, kinesis, or rabbit.
  * For automatic compaction, set the type to autocompact."
  */
 function isSupervisorType(type: string): boolean {
@@ -41,9 +41,12 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$',
     isObject: true,
-    condition: (obj) => isSupervisorType(obj.type),
+    condition: obj => isSupervisorType(obj.type),
     completions: [
-      { value: 'suspended', documentation: 'Whether the supervisor is suspended (supervisor only)' },
+      {
+        value: 'suspended',
+        documentation: 'Whether the supervisor is suspended (supervisor only)',
+      },
     ],
   },
   // Type values for tasks
@@ -135,7 +138,10 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'spatialDimensions', documentation: 'Spatial dimension specifications' },
       { value: 'includeAllDimensions', documentation: 'Include all discovered dimensions' },
       { value: 'useSchemaDiscovery', documentation: 'Enable automatic schema discovery' },
-      { value: 'forceSegmentSortByTime', documentation: 'Force segments to be sorted by time first' },
+      {
+        value: 'forceSegmentSortByTime',
+        documentation: 'Force segments to be sorted by time first',
+      },
     ],
   },
   // useSchemaDiscovery values
@@ -170,7 +176,10 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'type', documentation: 'Type of the dimension' },
       { value: 'name', documentation: 'Name of the dimension' },
       { value: 'createBitmapIndex', documentation: 'Whether to create bitmap index (string only)' },
-      { value: 'multiValueHandling', documentation: 'How to handle multi-value fields (string only)' },
+      {
+        value: 'multiValueHandling',
+        documentation: 'How to handle multi-value fields (string only)',
+      },
     ],
   },
   // dimension type values
@@ -312,9 +321,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   // transform type values
   {
     path: '$.spec.dataSchema.transformSpec.transforms.[].type',
-    completions: [
-      { value: 'expression', documentation: 'Expression-based transform' },
-    ],
+    completions: [{ value: 'expression', documentation: 'Expression-based transform' }],
   },
   // filter object properties
   {
@@ -368,7 +375,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'index_parallel' || obj.type === 'index',
+    condition: obj => obj.type === 'index_parallel' || obj.type === 'index',
     completions: [
       { value: 'firehose', documentation: 'Legacy data input (deprecated)' },
       { value: 'appendToExisting', documentation: 'Whether to append to existing segments' },
@@ -379,7 +386,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig',
     isObject: true,
-    condition: (obj) => isSupervisorType(obj.type) && obj.type !== 'autocompact',
+    condition: obj => isSupervisorType(obj.type) && obj.type !== 'autocompact',
     completions: [
       { value: 'taskCount', documentation: 'Number of reading tasks per replica' },
       { value: 'replicas', documentation: 'Number of replica task sets' },
@@ -394,22 +401,28 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'kafka',
+    condition: obj => obj.type === 'kafka',
     completions: [
       { value: 'topic', documentation: 'Kafka topic to consume from' },
       { value: 'consumerProperties', documentation: 'Kafka consumer properties' },
-      { value: 'useEarliestOffset', documentation: 'Start from earliest offset when no stored offset' },
+      {
+        value: 'useEarliestOffset',
+        documentation: 'Start from earliest offset when no stored offset',
+      },
     ],
   },
   // Kinesis-specific ioConfig properties
   {
     path: '$.spec.ioConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'kinesis',
+    condition: obj => obj.type === 'kinesis',
     completions: [
       { value: 'stream', documentation: 'Kinesis stream to consume from' },
       { value: 'endpoint', documentation: 'Kinesis endpoint URL' },
-      { value: 'useEarliestSequenceNumber', documentation: 'Start from earliest when no stored sequence number' },
+      {
+        value: 'useEarliestSequenceNumber',
+        documentation: 'Start from earliest when no stored sequence number',
+      },
     ],
   },
   // appendToExisting values
@@ -448,9 +461,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputSource',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of input source' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of input source' }],
   },
   // inputSource type values
   {
@@ -471,7 +482,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputSource',
     isObject: true,
-    condition: (obj) => obj.type === 'local',
+    condition: obj => obj.type === 'local',
     completions: [
       { value: 'baseDir', documentation: 'Base directory path' },
       { value: 'filter', documentation: 'File filter pattern' },
@@ -482,7 +493,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputSource',
     isObject: true,
-    condition: (obj) => obj.type === 'http',
+    condition: obj => obj.type === 'http',
     completions: [
       { value: 'uris', documentation: 'List of HTTP/HTTPS URIs' },
       { value: 'httpAuthenticationUsername', documentation: 'HTTP authentication username' },
@@ -493,7 +504,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputSource',
     isObject: true,
-    condition: (obj) => obj.type === 's3',
+    condition: obj => obj.type === 's3',
     completions: [
       { value: 'uris', documentation: 'List of S3 URIs' },
       { value: 'prefixes', documentation: 'List of S3 prefixes' },
@@ -505,9 +516,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputFormat',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of input format' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of input format' }],
   },
   // inputFormat type values
   {
@@ -529,7 +538,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputFormat',
     isObject: true,
-    condition: (obj) => obj.type === 'json',
+    condition: obj => obj.type === 'json',
     completions: [
       { value: 'flattenSpec', documentation: 'Specification for flattening nested JSON' },
       { value: 'featureSpec', documentation: 'JSON parsing features' },
@@ -539,7 +548,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.inputFormat',
     isObject: true,
-    condition: (obj) => obj.type === 'csv' || obj.type === 'tsv',
+    condition: obj => obj.type === 'csv' || obj.type === 'tsv',
     completions: [
       { value: 'columns', documentation: 'Column names' },
       { value: 'delimiter', documentation: 'Field delimiter' },
@@ -613,7 +622,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig',
     isObject: true,
-    condition: (obj) => obj.type === 'index_parallel' || obj.type === 'index',
+    condition: obj => obj.type === 'index_parallel' || obj.type === 'index',
     completions: [
       { value: 'partitionsSpec', documentation: 'Partitioning configuration' },
       { value: 'maxNumConcurrentSubTasks', documentation: 'Maximum concurrent subtasks' },
@@ -626,7 +635,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig',
     isObject: true,
-    condition: (obj) => isSupervisorType(obj.type) && obj.type !== 'autocompact',
+    condition: obj => isSupervisorType(obj.type) && obj.type !== 'autocompact',
     completions: [
       { value: 'maxRowsPerSegment', documentation: 'Maximum rows per segment' },
       { value: 'maxTotalRows', documentation: 'Maximum total rows before handoff' },
@@ -641,9 +650,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig.partitionsSpec',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of partitioning' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of partitioning' }],
   },
   // partitionsSpec type values
   {
@@ -659,7 +666,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig.partitionsSpec',
     isObject: true,
-    condition: (obj) => obj.type === 'dynamic',
+    condition: obj => obj.type === 'dynamic',
     completions: [
       { value: 'maxRowsPerSegment', documentation: 'Target rows per segment' },
       { value: 'maxTotalRows', documentation: 'Maximum total rows in memory' },
@@ -669,7 +676,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig.partitionsSpec',
     isObject: true,
-    condition: (obj) => obj.type === 'hashed',
+    condition: obj => obj.type === 'hashed',
     completions: [
       { value: 'targetRowsPerSegment', documentation: 'Target rows per segment' },
       { value: 'numShards', documentation: 'Fixed number of shards' },
@@ -680,7 +687,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig.partitionsSpec',
     isObject: true,
-    condition: (obj) => obj.type === 'range',
+    condition: obj => obj.type === 'range',
     completions: [
       { value: 'targetRowsPerSegment', documentation: 'Target rows per segment' },
       { value: 'partitionDimensions', documentation: 'Dimensions to partition on (required)' },
@@ -704,9 +711,7 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.tuningConfig.indexSpec.bitmap',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Bitmap index type' },
-    ],
+    completions: [{ value: 'type', documentation: 'Bitmap index type' }],
   },
   // bitmap type values
   {
@@ -803,7 +808,10 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'taskCountMax', documentation: 'Maximum task count' },
       { value: 'taskCountMin', documentation: 'Minimum task count' },
       { value: 'taskCountStart', documentation: 'Starting task count' },
-      { value: 'minTriggerScaleActionFrequencyMillis', documentation: 'Minimum time between scale actions' },
+      {
+        value: 'minTriggerScaleActionFrequencyMillis',
+        documentation: 'Minimum time between scale actions',
+      },
       { value: 'autoScalerStrategy', documentation: 'Autoscaler strategy' },
     ],
   },
@@ -818,8 +826,6 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   // autoScalerStrategy values
   {
     path: '$.spec.ioConfig.autoScalerConfig.autoScalerStrategy',
-    completions: [
-      { value: 'lagBased', documentation: 'Scale based on consumer lag' },
-    ],
+    completions: [{ value: 'lagBased', documentation: 'Scale based on consumer lag' }],
   },
 ];

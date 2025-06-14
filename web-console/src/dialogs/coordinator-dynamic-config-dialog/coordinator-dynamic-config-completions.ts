@@ -24,35 +24,103 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     completions: [
-      { value: 'millisToWaitBeforeDeleting', documentation: 'How long the Coordinator needs to be leader before marking overshadowed segments unused (default: 900000)' },
-      { value: 'smartSegmentLoading', documentation: 'Enable smart segment loading mode for optimized performance (default: true)' },
-      { value: 'maxSegmentsToMove', documentation: 'Maximum segments that can be moved in a Historical tier per run (default: 100)' },
-      { value: 'balancerComputeThreads', documentation: 'Thread pool size for computing segment balancing costs (default: num_cores / 2)' },
-      { value: 'killDataSourceWhitelist', documentation: 'List of datasources for which kill tasks can be issued' },
-      { value: 'killTaskSlotRatio', documentation: 'Ratio of total task slots allowed for kill tasks (default: 0.1)' },
-      { value: 'maxKillTaskSlots', documentation: 'Maximum number of task slots for kill tasks (default: Integer.MAX_VALUE)' },
-      { value: 'killPendingSegmentsSkipList', documentation: 'List of datasources to skip when cleaning pendingSegments' },
-      { value: 'maxSegmentsInNodeLoadingQueue', documentation: 'Maximum segments allowed in any server load queue (default: 500)' },
-      { value: 'replicantLifetime', documentation: 'Maximum Coordinator runs a segment can wait in load queue before alert (default: 15)' },
-      { value: 'replicationThrottleLimit', documentation: 'Maximum segment replicas assigned to a tier per run (default: 500)' },
-      { value: 'decommissioningNodes', documentation: 'List of Historical servers to decommission' },
-      { value: 'pauseCoordination', documentation: 'Pause all coordination duties while keeping API available (default: false)' },
-      { value: 'replicateAfterLoadTimeout', documentation: 'Replicate segments that failed to load due to timeout (default: false)' },
-      { value: 'useRoundRobinSegmentAssignment', documentation: 'Use round robin for segment assignment (default: true)' },
-      { value: 'turboLoadingNodes', documentation: 'List of Historical servers to place in turbo loading mode (experimental)' },
+      {
+        value: 'millisToWaitBeforeDeleting',
+        documentation:
+          'How long the Coordinator needs to be leader before marking overshadowed segments unused (default: 900000)',
+      },
+      {
+        value: 'smartSegmentLoading',
+        documentation:
+          'Enable smart segment loading mode for optimized performance (default: true)',
+      },
+      {
+        value: 'maxSegmentsToMove',
+        documentation:
+          'Maximum segments that can be moved in a Historical tier per run (default: 100)',
+      },
+      {
+        value: 'balancerComputeThreads',
+        documentation:
+          'Thread pool size for computing segment balancing costs (default: num_cores / 2)',
+      },
+      {
+        value: 'killDataSourceWhitelist',
+        documentation: 'List of datasources for which kill tasks can be issued',
+      },
+      {
+        value: 'killTaskSlotRatio',
+        documentation: 'Ratio of total task slots allowed for kill tasks (default: 0.1)',
+      },
+      {
+        value: 'maxKillTaskSlots',
+        documentation: 'Maximum number of task slots for kill tasks (default: Integer.MAX_VALUE)',
+      },
+      {
+        value: 'killPendingSegmentsSkipList',
+        documentation: 'List of datasources to skip when cleaning pendingSegments',
+      },
+      {
+        value: 'maxSegmentsInNodeLoadingQueue',
+        documentation: 'Maximum segments allowed in any server load queue (default: 500)',
+      },
+      {
+        value: 'replicantLifetime',
+        documentation:
+          'Maximum Coordinator runs a segment can wait in load queue before alert (default: 15)',
+      },
+      {
+        value: 'replicationThrottleLimit',
+        documentation: 'Maximum segment replicas assigned to a tier per run (default: 500)',
+      },
+      {
+        value: 'decommissioningNodes',
+        documentation: 'List of Historical servers to decommission',
+      },
+      {
+        value: 'pauseCoordination',
+        documentation: 'Pause all coordination duties while keeping API available (default: false)',
+      },
+      {
+        value: 'replicateAfterLoadTimeout',
+        documentation: 'Replicate segments that failed to load due to timeout (default: false)',
+      },
+      {
+        value: 'useRoundRobinSegmentAssignment',
+        documentation: 'Use round robin for segment assignment (default: true)',
+      },
+      {
+        value: 'turboLoadingNodes',
+        documentation: 'List of Historical servers to place in turbo loading mode (experimental)',
+      },
     ],
   },
   // Properties only available when smartSegmentLoading is false
   {
     path: '$',
     isObject: true,
-    condition: (obj) => obj.smartSegmentLoading === false,
+    condition: obj => obj.smartSegmentLoading === false,
     completions: [
-      { value: 'maxSegmentsToMove', documentation: 'Maximum segments that can be moved in a Historical tier per run' },
-      { value: 'maxSegmentsInNodeLoadingQueue', documentation: 'Maximum segments allowed in any server load queue' },
-      { value: 'useRoundRobinSegmentAssignment', documentation: 'Use round robin for segment assignment' },
-      { value: 'replicationThrottleLimit', documentation: 'Maximum segment replicas assigned to a tier per run' },
-      { value: 'replicantLifetime', documentation: 'Maximum Coordinator runs a segment can wait in load queue before alert' },
+      {
+        value: 'maxSegmentsToMove',
+        documentation: 'Maximum segments that can be moved in a Historical tier per run',
+      },
+      {
+        value: 'maxSegmentsInNodeLoadingQueue',
+        documentation: 'Maximum segments allowed in any server load queue',
+      },
+      {
+        value: 'useRoundRobinSegmentAssignment',
+        documentation: 'Use round robin for segment assignment',
+      },
+      {
+        value: 'replicationThrottleLimit',
+        documentation: 'Maximum segment replicas assigned to a tier per run',
+      },
+      {
+        value: 'replicantLifetime',
+        documentation: 'Maximum Coordinator runs a segment can wait in load queue before alert',
+      },
     ],
   },
   // Boolean values
@@ -168,26 +236,18 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   // Array properties - suggest common examples
   {
     path: '$.killDataSourceWhitelist.[]',
-    completions: [
-      { value: 'example_datasource', documentation: 'Example datasource name' },
-    ],
+    completions: [{ value: 'example_datasource', documentation: 'Example datasource name' }],
   },
   {
     path: '$.killPendingSegmentsSkipList.[]',
-    completions: [
-      { value: 'example_datasource', documentation: 'Example datasource name' },
-    ],
+    completions: [{ value: 'example_datasource', documentation: 'Example datasource name' }],
   },
   {
     path: '$.decommissioningNodes.[]',
-    completions: [
-      { value: 'historical-server:8083', documentation: 'Example historical server' },
-    ],
+    completions: [{ value: 'historical-server:8083', documentation: 'Example historical server' }],
   },
   {
     path: '$.turboLoadingNodes.[]',
-    completions: [
-      { value: 'historical-server:8083', documentation: 'Example historical server' },
-    ],
+    completions: [{ value: 'historical-server:8083', documentation: 'Example historical server' }],
   },
 ];

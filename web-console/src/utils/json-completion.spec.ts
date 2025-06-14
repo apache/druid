@@ -61,25 +61,19 @@ describe('json-completion', () => {
       {
         path: '$',
         isObject: true,
-        condition: (obj) => obj.type === 'A',
-        completions: [
-          { value: 'specialPropertyForA', documentation: 'Only for type A' },
-        ],
+        condition: obj => obj.type === 'A',
+        completions: [{ value: 'specialPropertyForA', documentation: 'Only for type A' }],
       },
       // RegExp path
       {
         path: /^\$\.dynamic\.[^.]+$/,
-        completions: [
-          { value: 'dynamicValue', documentation: 'Dynamic property value' },
-        ],
+        completions: [{ value: 'dynamicValue', documentation: 'Dynamic property value' }],
       },
       // Deep nested path
       {
         path: '$.level1.level2.level3',
         isObject: true,
-        completions: [
-          { value: 'deepProperty', documentation: 'Deep nested property' },
-        ],
+        completions: [{ value: 'deepProperty', documentation: 'Deep nested property' }],
       },
     ];
 
@@ -235,12 +229,7 @@ describe('json-completion', () => {
       ];
 
       // Test matrix path
-      const matrixCompletions = getCompletionsForPath(
-        complexRules,
-        ['matrix', '0', '1'],
-        true,
-        {},
-      );
+      const matrixCompletions = getCompletionsForPath(complexRules, ['matrix', '0', '1'], true, {});
       expect(matrixCompletions).toEqual([{ value: 'cell' }]);
 
       // Test nested array path

@@ -25,20 +25,33 @@ export const INDEX_SPEC_COMPLETIONS: JsonCompletionRule[] = [
     isObject: true,
     completions: [
       { value: 'bitmap', documentation: 'Compression format for bitmap indexes' },
-      { value: 'dimensionCompression', documentation: 'Compression format for dimension columns (default: lz4)' },
-      { value: 'stringDictionaryEncoding', documentation: 'Encoding format for string value dictionaries' },
-      { value: 'metricCompression', documentation: 'Compression format for primitive type metric columns (default: lz4)' },
-      { value: 'longEncoding', documentation: 'Encoding format for long-typed columns (default: longs)' },
-      { value: 'jsonCompression', documentation: 'Compression format for nested column raw data (default: lz4)' },
+      {
+        value: 'dimensionCompression',
+        documentation: 'Compression format for dimension columns (default: lz4)',
+      },
+      {
+        value: 'stringDictionaryEncoding',
+        documentation: 'Encoding format for string value dictionaries',
+      },
+      {
+        value: 'metricCompression',
+        documentation: 'Compression format for primitive type metric columns (default: lz4)',
+      },
+      {
+        value: 'longEncoding',
+        documentation: 'Encoding format for long-typed columns (default: longs)',
+      },
+      {
+        value: 'jsonCompression',
+        documentation: 'Compression format for nested column raw data (default: lz4)',
+      },
     ],
   },
   // bitmap object properties
   {
     path: '$.bitmap',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Bitmap compression type' },
-    ],
+    completions: [{ value: 'type', documentation: 'Bitmap compression type' }],
   },
   // bitmap.type values
   {
@@ -66,7 +79,10 @@ export const INDEX_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'lzf', documentation: 'LZF compression' },
       { value: 'zstd', documentation: 'Zstandard compression' },
       { value: 'uncompressed', documentation: 'No compression' },
-      { value: 'none', documentation: 'More efficient than uncompressed (requires newer Druid versions)' },
+      {
+        value: 'none',
+        documentation: 'More efficient than uncompressed (requires newer Druid versions)',
+      },
     ],
   },
   // longEncoding values
@@ -91,25 +107,29 @@ export const INDEX_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.stringDictionaryEncoding',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'String dictionary encoding type' },
-    ],
+    completions: [{ value: 'type', documentation: 'String dictionary encoding type' }],
   },
   // stringDictionaryEncoding.type values
   {
     path: '$.stringDictionaryEncoding.type',
     completions: [
       { value: 'utf8', documentation: 'UTF-8 encoding (default)' },
-      { value: 'frontCoded', documentation: 'Front coding for optimized string compression (experimental)' },
+      {
+        value: 'frontCoded',
+        documentation: 'Front coding for optimized string compression (experimental)',
+      },
     ],
   },
   // bucketSize for frontCoded encoding
   {
     path: '$.stringDictionaryEncoding',
     isObject: true,
-    condition: (obj) => obj.type === 'frontCoded',
+    condition: obj => obj.type === 'frontCoded',
     completions: [
-      { value: 'bucketSize', documentation: 'Number of values per bucket for delta encoding (power of 2, max 128)' },
+      {
+        value: 'bucketSize',
+        documentation: 'Number of values per bucket for delta encoding (power of 2, max 128)',
+      },
       { value: 'formatVersion', documentation: 'Front coding format version (0 or 1)' },
     ],
   },

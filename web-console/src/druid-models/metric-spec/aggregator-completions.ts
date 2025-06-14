@@ -51,10 +51,22 @@ export const AGGREGATOR_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'stringFirst', documentation: 'First string value ordered by time' },
       { value: 'stringLast', documentation: 'Last string value ordered by time' },
       { value: 'thetaSketch', documentation: 'Theta sketch for approximate distinct counting' },
-      { value: 'HLLSketchBuild', documentation: 'HLL sketch builder for approximate distinct counting' },
-      { value: 'HLLSketchMerge', documentation: 'HLL sketch merger for approximate distinct counting' },
-      { value: 'quantilesDoublesSketch', documentation: 'Quantiles sketch for approximate quantile computation' },
-      { value: 'hyperUnique', documentation: 'HyperLogLog for approximate distinct counting (legacy)' },
+      {
+        value: 'HLLSketchBuild',
+        documentation: 'HLL sketch builder for approximate distinct counting',
+      },
+      {
+        value: 'HLLSketchMerge',
+        documentation: 'HLL sketch merger for approximate distinct counting',
+      },
+      {
+        value: 'quantilesDoublesSketch',
+        documentation: 'Quantiles sketch for approximate quantile computation',
+      },
+      {
+        value: 'hyperUnique',
+        documentation: 'HyperLogLog for approximate distinct counting (legacy)',
+      },
       { value: 'filtered', documentation: 'Apply a filter then aggregate' },
     ],
   },
@@ -64,15 +76,30 @@ export const AGGREGATOR_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     condition: typeIs(
-      'longSum', 'doubleSum', 'floatSum',
-      'longMin', 'longMax', 'doubleMin', 'doubleMax', 'floatMin', 'floatMax',
-      'longFirst', 'longLast', 'doubleFirst', 'doubleLast', 'floatFirst', 'floatLast',
-      'stringFirst', 'stringLast', 'thetaSketch', 'HLLSketchBuild', 'HLLSketchMerge',
-      'quantilesDoublesSketch', 'hyperUnique'
+      'longSum',
+      'doubleSum',
+      'floatSum',
+      'longMin',
+      'longMax',
+      'doubleMin',
+      'doubleMax',
+      'floatMin',
+      'floatMax',
+      'longFirst',
+      'longLast',
+      'doubleFirst',
+      'doubleLast',
+      'floatFirst',
+      'floatLast',
+      'stringFirst',
+      'stringLast',
+      'thetaSketch',
+      'HLLSketchBuild',
+      'HLLSketchMerge',
+      'quantilesDoublesSketch',
+      'hyperUnique',
     ),
-    completions: [
-      { value: 'fieldName', documentation: 'Name of the input column to aggregate' },
-    ],
+    completions: [{ value: 'fieldName', documentation: 'Name of the input column to aggregate' }],
   },
 
   // String aggregator specific properties
@@ -91,8 +118,14 @@ export const AGGREGATOR_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     condition: typeIs(
-      'longFirst', 'longLast', 'doubleFirst', 'doubleLast',
-      'floatFirst', 'floatLast', 'stringFirst', 'stringLast'
+      'longFirst',
+      'longLast',
+      'doubleFirst',
+      'doubleLast',
+      'floatFirst',
+      'floatLast',
+      'stringFirst',
+      'stringLast',
     ),
     completions: [
       { value: 'timeColumn', documentation: 'Name of time column (defaults to __time)' },
@@ -131,17 +164,13 @@ export const AGGREGATOR_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     condition: typeIs('quantilesDoublesSketch'),
-    completions: [
-      { value: 'k', documentation: 'Size parameter for quantiles sketch' },
-    ],
+    completions: [{ value: 'k', documentation: 'Size parameter for quantiles sketch' }],
   },
   {
     path: '$',
     isObject: true,
     condition: typeIs('hyperUnique'),
-    completions: [
-      { value: 'isInputHyperUnique', documentation: 'Input is already a hyperUnique' },
-    ],
+    completions: [{ value: 'isInputHyperUnique', documentation: 'Input is already a hyperUnique' }],
   },
 
   // Filtered aggregator

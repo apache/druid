@@ -24,11 +24,26 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     completions: [
-      { value: 'compactionTaskSlotRatio', documentation: 'Ratio of number of slots taken up by compaction tasks to total task slots across all workers (default: 0.1)' },
-      { value: 'maxCompactionTaskSlots', documentation: 'Maximum number of task slots that can be taken up by compaction tasks (default: 2147483647)' },
+      {
+        value: 'compactionTaskSlotRatio',
+        documentation:
+          'Ratio of number of slots taken up by compaction tasks to total task slots across all workers (default: 0.1)',
+      },
+      {
+        value: 'maxCompactionTaskSlots',
+        documentation:
+          'Maximum number of task slots that can be taken up by compaction tasks (default: 2147483647)',
+      },
       { value: 'compactionPolicy', documentation: 'Policy to choose intervals for compaction' },
-      { value: 'useSupervisors', documentation: 'Whether compaction should be run on Overlord using supervisors instead of Coordinator duties (experimental)' },
-      { value: 'engine', documentation: 'Engine used for running compaction tasks (native or msq)' },
+      {
+        value: 'useSupervisors',
+        documentation:
+          'Whether compaction should be run on Overlord using supervisors instead of Coordinator duties (experimental)',
+      },
+      {
+        value: 'engine',
+        documentation: 'Engine used for running compaction tasks (native or msq)',
+      },
     ],
   },
   // compactionTaskSlotRatio values
@@ -61,7 +76,10 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$.compactionPolicy',
     isObject: true,
     completions: [
-      { value: 'type', documentation: 'Policy type (currently only newestSegmentFirst is supported)' },
+      {
+        value: 'type',
+        documentation: 'Policy type (currently only newestSegmentFirst is supported)',
+      },
       { value: 'priorityDatasource', documentation: 'Datasource to prioritize for compaction' },
     ],
   },
@@ -69,7 +87,10 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.compactionPolicy.type',
     completions: [
-      { value: 'newestSegmentFirst', documentation: 'Prioritizes segments with more recent intervals for compaction' },
+      {
+        value: 'newestSegmentFirst',
+        documentation: 'Prioritizes segments with more recent intervals for compaction',
+      },
     ],
   },
   // useSupervisors values
@@ -83,7 +104,7 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   // engine values (only when useSupervisors is true)
   {
     path: '$.engine',
-    condition: (obj) => obj.useSupervisors === true,
+    condition: obj => obj.useSupervisors === true,
     completions: [
       { value: 'native', documentation: 'Native indexing engine (default)' },
       { value: 'msq', documentation: 'Multi-Stage Query engine (requires useSupervisors: true)' },
@@ -92,9 +113,7 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   // engine values (when useSupervisors is not specified or false)
   {
     path: '$.engine',
-    condition: (obj) => !obj.useSupervisors,
-    completions: [
-      { value: 'native', documentation: 'Native indexing engine (default)' },
-    ],
+    condition: obj => !obj.useSupervisors,
+    completions: [{ value: 'native', documentation: 'Native indexing engine (default)' }],
   },
 ];

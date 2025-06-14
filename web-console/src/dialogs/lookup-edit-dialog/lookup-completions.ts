@@ -23,9 +23,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of lookup extractor factory' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of lookup extractor factory' }],
   },
   // type values
   {
@@ -40,29 +38,31 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$',
     isObject: true,
-    condition: (obj) => obj.type === 'map',
-    completions: [
-      { value: 'map', documentation: 'Key-value map for lookups' },
-    ],
+    condition: obj => obj.type === 'map',
+    completions: [{ value: 'map', documentation: 'Key-value map for lookups' }],
   },
   // cachedNamespace type properties
   {
     path: '$',
     isObject: true,
-    condition: (obj) => obj.type === 'cachedNamespace',
+    condition: obj => obj.type === 'cachedNamespace',
     completions: [
       { value: 'extractionNamespace', documentation: 'Configuration for the data source' },
-      { value: 'firstCacheTimeout', documentation: 'How long to wait (in ms) for the first cache population' },
-      { value: 'injective', documentation: 'Whether the lookup is injective (keys and values are unique)' },
+      {
+        value: 'firstCacheTimeout',
+        documentation: 'How long to wait (in ms) for the first cache population',
+      },
+      {
+        value: 'injective',
+        documentation: 'Whether the lookup is injective (keys and values are unique)',
+      },
     ],
   },
   // extractionNamespace object properties
   {
     path: '$.extractionNamespace',
     isObject: true,
-    completions: [
-      { value: 'type', documentation: 'Type of extraction namespace' },
-    ],
+    completions: [{ value: 'type', documentation: 'Type of extraction namespace' }],
   },
   // extractionNamespace.type values
   {
@@ -76,13 +76,16 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace',
     isObject: true,
-    condition: (obj) => obj.type === 'uri',
+    condition: obj => obj.type === 'uri',
     completions: [
       { value: 'uri', documentation: 'URI for the lookup file (file://, hdfs://, s3://, gs://)' },
       { value: 'uriPrefix', documentation: 'URI prefix for directory containing lookup files' },
       { value: 'fileRegex', documentation: 'Regex pattern for matching files under uriPrefix' },
       { value: 'namespaceParseSpec', documentation: 'Specification for parsing the lookup data' },
-      { value: 'pollPeriod', documentation: 'Period between polling for updates (ISO 8601 duration)' },
+      {
+        value: 'pollPeriod',
+        documentation: 'Period between polling for updates (ISO 8601 duration)',
+      },
     ],
   },
   // fileRegex default value
@@ -99,9 +102,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace.namespaceParseSpec',
     isObject: true,
-    completions: [
-      { value: 'format', documentation: 'Format of the lookup data file' },
-    ],
+    completions: [{ value: 'format', documentation: 'Format of the lookup data file' }],
   },
   // namespaceParseSpec.format values
   {
@@ -117,7 +118,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace.namespaceParseSpec',
     isObject: true,
-    condition: (obj) => obj.format === 'csv' || obj.format === 'tsv',
+    condition: obj => obj.format === 'csv' || obj.format === 'tsv',
     completions: [
       { value: 'columns', documentation: 'List of column names in the file' },
       { value: 'keyColumn', documentation: 'Name of the column containing keys' },
@@ -130,7 +131,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace.namespaceParseSpec',
     isObject: true,
-    condition: (obj) => obj.format === 'tsv',
+    condition: obj => obj.format === 'tsv',
     completions: [
       { value: 'delimiter', documentation: 'Field delimiter character' },
       { value: 'listDelimiter', documentation: 'List delimiter character' },
@@ -158,7 +159,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace.namespaceParseSpec',
     isObject: true,
-    condition: (obj) => obj.format === 'customJson',
+    condition: obj => obj.format === 'customJson',
     completions: [
       { value: 'keyFieldName', documentation: 'Name of the field containing keys' },
       { value: 'valueFieldName', documentation: 'Name of the field containing values' },
@@ -168,7 +169,7 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.extractionNamespace',
     isObject: true,
-    condition: (obj) => obj.type === 'jdbc',
+    condition: obj => obj.type === 'jdbc',
     completions: [
       { value: 'connectorConfig', documentation: 'Database connection configuration' },
       { value: 'table', documentation: 'Database table containing lookup data' },
@@ -176,9 +177,15 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'valueColumn', documentation: 'Column containing lookup values' },
       { value: 'tsColumn', documentation: 'Column containing timestamps (optional)' },
       { value: 'filter', documentation: 'WHERE clause filter for the lookup query' },
-      { value: 'pollPeriod', documentation: 'Period between polling for updates (ISO 8601 duration)' },
+      {
+        value: 'pollPeriod',
+        documentation: 'Period between polling for updates (ISO 8601 duration)',
+      },
       { value: 'jitterSeconds', documentation: 'Random jitter to add to polling (in seconds)' },
-      { value: 'loadTimeoutSeconds', documentation: 'Timeout for loading lookup data (in seconds)' },
+      {
+        value: 'loadTimeoutSeconds',
+        documentation: 'Timeout for loading lookup data (in seconds)',
+      },
       { value: 'maxHeapPercentage', documentation: 'Maximum heap percentage for lookup storage' },
     ],
   },
@@ -235,12 +242,15 @@ export const LOOKUP_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$',
     isObject: true,
-    condition: (obj) => obj.type === 'kafka',
+    condition: obj => obj.type === 'kafka',
     completions: [
       { value: 'kafkaTopic', documentation: 'Kafka topic to read lookup data from' },
       { value: 'kafkaProperties', documentation: 'Kafka consumer properties' },
       { value: 'connectTimeout', documentation: 'Connection timeout in milliseconds' },
-      { value: 'isOneToOne', documentation: 'Whether the lookup is one-to-one (keys and values are unique)' },
+      {
+        value: 'isOneToOne',
+        documentation: 'Whether the lookup is one-to-one (keys and values are unique)',
+      },
     ],
   },
   // kafkaProperties object properties

@@ -24,8 +24,14 @@ export const AFFINITY_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$',
     isObject: true,
     completions: [
-      { value: 'affinity', documentation: 'Map of datasource names to lists of Middle Manager host:port values' },
-      { value: 'strong', documentation: 'Whether tasks must be assigned to affinity-mapped workers' },
+      {
+        value: 'affinity',
+        documentation: 'Map of datasource names to lists of Middle Manager host:port values',
+      },
+      {
+        value: 'strong',
+        documentation: 'Whether tasks must be assigned to affinity-mapped workers',
+      },
     ],
   },
   {
@@ -55,7 +61,10 @@ export const CATEGORY_MAP_COMPLETIONS: JsonCompletionRule[] = [
     isObject: true,
     completions: [
       { value: 'defaultCategory', documentation: 'Default worker category for this task type' },
-      { value: 'categoryAffinity', documentation: 'Map of datasource names to specific worker categories' },
+      {
+        value: 'categoryAffinity',
+        documentation: 'Map of datasource names to specific worker categories',
+      },
     ],
   },
 ];
@@ -68,9 +77,18 @@ export const NODE_DATA_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'amiId', documentation: 'AWS AMI ID for new worker instances' },
       { value: 'instanceType', documentation: 'EC2 instance type (e.g., c5.2xlarge)' },
-      { value: 'minInstances', documentation: 'Minimum instances to launch per auto-scaling event' },
-      { value: 'maxInstances', documentation: 'Maximum instances to launch per auto-scaling event' },
-      { value: 'securityGroupIds', documentation: 'List of security group IDs to assign to instances' },
+      {
+        value: 'minInstances',
+        documentation: 'Minimum instances to launch per auto-scaling event',
+      },
+      {
+        value: 'maxInstances',
+        documentation: 'Maximum instances to launch per auto-scaling event',
+      },
+      {
+        value: 'securityGroupIds',
+        documentation: 'List of security group IDs to assign to instances',
+      },
       { value: 'keyName', documentation: 'EC2 key pair name for SSH access' },
       { value: 'subnetId', documentation: 'VPC subnet ID where instances will be launched' },
       { value: 'iamInstanceProfile', documentation: 'IAM instance profile for EC2 instances' },
@@ -101,8 +119,14 @@ export const USER_DATA_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'impl', documentation: 'Implementation type for user data' },
       { value: 'data', documentation: 'User data script or commands to run on instance startup' },
-      { value: 'versionReplacementString', documentation: 'String to replace with actual Druid version' },
-      { value: 'version', documentation: 'Druid version to use for replacement (null for current)' },
+      {
+        value: 'versionReplacementString',
+        documentation: 'String to replace with actual Druid version',
+      },
+      {
+        value: 'version',
+        documentation: 'Druid version to use for replacement (null for current)',
+      },
     ],
   },
   {
