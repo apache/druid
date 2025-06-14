@@ -17,57 +17,60 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller.http;
+package org.apache.druid.sql.calcite.parser;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.calcite.sql.SqlNode;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
- * Class returned by {@link DartSqlResource#doGetRunningQueries}, the "list all queries" API.
+ * Represents a parsed "main" (not SET) SQL statement, plus context derived from SET statements.
  */
-public class GetQueriesResponse
+public class StatementAndSetContext
 {
-  private final List<DartQueryInfo> queries;
+  private final SqlNode mainStatement;
+  private final Map<String, Object> setContext;
 
-  @JsonCreator
-  public GetQueriesResponse(@JsonProperty("queries") List<DartQueryInfo> queries)
+  public StatementAndSetContext(SqlNode mainStatement, Map<String, Object> setContext)
   {
-    this.queries = queries;
+    this.mainStatement = mainStatement;
+    this.setContext = setContext;
   }
 
-  @JsonProperty
-  public List<DartQueryInfo> getQueries()
+  public SqlNode getMainStatement()
   {
-    return queries;
+    return mainStatement;
+  }
+
+  public Map<String, Object> getSetContext()
+  {
+    return setContext;
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GetQueriesResponse response = (GetQueriesResponse) o;
-    return Objects.equals(queries, response.queries);
+    StatementAndSetContext that = (StatementAndSetContext) o;
+    return Objects.equals(mainStatement, that.mainStatement)
+           && Objects.equals(setContext, that.setContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(queries);
+    return Objects.hash(mainStatement, setContext);
   }
 
   @Override
   public String toString()
   {
-    return "GetQueriesResponse{" +
-           "queries=" + queries +
+    return "StatementAndSetContext{" +
+           "mainStatement=" + mainStatement +
+           ", setContext=" + setContext +
            '}';
   }
 }

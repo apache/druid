@@ -217,7 +217,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -581,7 +580,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class),
+        null
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -810,12 +810,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
   )
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
-        new SqlQueryPlus(
-            query,
-            context,
-            parameters,
-            authenticationResult
-        )
+        SqlQueryPlus.builder()
+                    .sql(query)
+                    .context(context)
+                    .parameters(parameters)
+                    .auth(authenticationResult)
+                    .build()
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();

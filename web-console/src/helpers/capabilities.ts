@@ -143,8 +143,11 @@ export class Capabilities {
 
   static async detectMultiStageQueryDart(): Promise<boolean> {
     try {
-      const resp = await Api.instance.get(`/druid/v2/sql/dart/enabled?capabilities`);
-      return Boolean(resp.data.enabled);
+      const resp = (await Api.instance.get(`/druid/v2/sql/engines?capabilities`)).data;
+      return (
+        Array.isArray(resp.engines) &&
+        resp.engines.some(({ name }: { name: string }) => name === 'msq-dart')
+      );
     } catch {
       return false;
     }

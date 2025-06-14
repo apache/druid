@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -29,6 +30,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.Worker;
@@ -37,6 +39,7 @@ import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -63,6 +66,8 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
+  private final CoordinatorClient coordinatorClient;
+  private final QueryToolChestWarehouse warehouse;
 
   @Inject
   public DartWorkerFactoryImpl(
@@ -78,7 +83,9 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
       @Dart DataSegmentProvider dataSegmentProvider,
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
-      Outbox<ControllerMessage> outbox
+      Outbox<ControllerMessage> outbox,
+      CoordinatorClient coordinatorClient,
+      QueryToolChestWarehouse warehouse
   )
   {
     this.selfNode = selfNode;
@@ -94,6 +101,8 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
+    this.coordinatorClient = coordinatorClient;
+    this.warehouse = warehouse;
   }
 
   @Override
@@ -115,7 +124,13 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
         processingBuffersProvider,
         outbox,
         tempDir,
-        queryContext
+        queryContext,
+        new DataServerQueryHandlerFactory(
+            coordinatorClient,
+            serviceClientFactory,
+            jsonMapper,
+            warehouse
+        )
     );
 
     return new WorkerImpl(null, workerContext);

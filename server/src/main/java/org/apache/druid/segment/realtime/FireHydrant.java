@@ -21,46 +21,44 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 /**
  */
 public class FireHydrant
 {
   private final int count;
-  private final AtomicReference<ReferenceCountingSegment> adapter;
+  private final AtomicReference<ReferenceCountedSegmentProvider> segmentReferenceProvider;
   @Nullable
   private volatile IncrementalIndex index;
 
   public FireHydrant(IncrementalIndex index, int count, SegmentId segmentId)
   {
     this.index = index;
-    this.adapter = new AtomicReference<>(
-        ReferenceCountingSegment.wrapRootGenerationSegment(new IncrementalIndexSegment(index, segmentId))
+    this.segmentReferenceProvider = new AtomicReference<>(
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(new IncrementalIndexSegment(index, segmentId))
     );
     this.count = count;
   }
 
-  public FireHydrant(Segment adapter, int count)
+  public FireHydrant(Segment segment, int count)
   {
     this.index = null;
-    this.adapter = new AtomicReference<>(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
+    this.segmentReferenceProvider = new AtomicReference<>(
+        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment)
+    );
     this.count = count;
   }
 
@@ -72,13 +70,13 @@ public class FireHydrant
 
   public SegmentId getSegmentId()
   {
-    return adapter.get().getId();
+    return segmentReferenceProvider.get().getBaseSegment().getId();
   }
 
   public int getSegmentNumDimensionColumns()
   {
     if (hasSwapped()) {
-      final Segment segment = adapter.get().getBaseSegment();
+      final Segment segment = segmentReferenceProvider.get().getBaseSegment();
       if (segment != null) {
         QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
         if (queryableIndex != null) {
@@ -93,18 +91,13 @@ public class FireHydrant
 
   public int getSegmentNumMetricColumns()
   {
-    final Segment segment = adapter.get().getBaseSegment();
+    final Segment segment = segmentReferenceProvider.get().getBaseSegment();
     if (segment != null) {
       final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
       final Metadata metadata = segmentInspector == null ? null : segmentInspector.getMetadata();
       return metadata != null && metadata.getAggregators() != null ? metadata.getAggregators().length : 0;
     }
     return 0;
-  }
-
-  public Interval getSegmentDataInterval()
-  {
-    return adapter.get().getDataInterval();
   }
 
   public int getCount()
@@ -120,25 +113,25 @@ public class FireHydrant
   public void swapSegment(@Nullable Segment newSegment)
   {
     while (true) {
-      ReferenceCountingSegment currentSegment = adapter.get();
+      ReferenceCountedSegmentProvider currentSegment = segmentReferenceProvider.get();
       if (currentSegment == null && newSegment == null) {
         return;
       }
       if (currentSegment != null && newSegment != null &&
-          !newSegment.getId().equals(currentSegment.getId())) {
+          !newSegment.getId().equals(currentSegment.getBaseSegment().getId())) {
         // Sanity check: identifier should not change
         throw new ISE(
             "Cannot swap identifier[%s] -> [%s]",
-            currentSegment.getId(),
+            currentSegment.getBaseSegment().getId(),
             newSegment.getId()
         );
       }
-      if (currentSegment == newSegment) {
+      if (currentSegment != null && currentSegment.getBaseSegment() == newSegment) {
         throw new ISE("Cannot swap to the same segment");
       }
-      ReferenceCountingSegment newReferenceCountingSegment =
-          newSegment != null ? ReferenceCountingSegment.wrapRootGenerationSegment(newSegment) : null;
-      if (adapter.compareAndSet(currentSegment, newReferenceCountingSegment)) {
+      ReferenceCountedSegmentProvider newReferenceCountingSegment =
+          newSegment != null ? ReferenceCountedSegmentProvider.wrapRootGenerationSegment(newSegment) : null;
+      if (segmentReferenceProvider.compareAndSet(currentSegment, newReferenceCountingSegment)) {
         if (currentSegment != null) {
           currentSegment.close();
         }
@@ -148,16 +141,20 @@ public class FireHydrant
     }
   }
 
-  public ReferenceCountingSegment getIncrementedSegment()
+  /**
+   * Get a segment {@link Segment} from {@link #segmentReferenceProvider}
+   */
+  public Segment acquireSegment()
   {
-    ReferenceCountingSegment segment = adapter.get();
+    ReferenceCountedSegmentProvider segment = segmentReferenceProvider.get();
     while (true) {
-      if (segment.increment()) {
-        return segment;
+      final Optional<Segment> maybeSegment = segment.acquireReference();
+      if (maybeSegment.isPresent()) {
+        return maybeSegment.get();
       }
-      // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
-      // swap, the new segment should already be visible.
-      ReferenceCountingSegment newSegment = adapter.get();
+      // segment.acquireReferences() returned false, means it is closed. Since close() in swapSegment() happens after
+      // segment swap, the new segment should already be visible.
+      ReferenceCountedSegmentProvider newSegment = segmentReferenceProvider.get();
       if (segment == newSegment) {
         throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
       }
@@ -169,38 +166,27 @@ public class FireHydrant
     }
   }
 
-  public Pair<ReferenceCountingSegment, Closeable> getAndIncrementSegment()
-  {
-    ReferenceCountingSegment segment = getIncrementedSegment();
-    return new Pair<>(segment, segment.decrementOnceCloseable());
-  }
-
   /**
-   * This method is like a combined form of {@link #getIncrementedSegment} and {@link #getAndIncrementSegment} that
-   * deals in {@link SegmentReference} instead of directly with {@link ReferenceCountingSegment} in order to acquire
-   * reference count for both hydrant's segment and any tracked joinables taking part in the query.
+   * Get a {@link Segment}, applying a {@link SegmentMapFunction} to {@link #segmentReferenceProvider}. Similar to
+   * {@link #acquireSegment()}, but applies the {@link SegmentMapFunction} inside of the loop.
    */
-  public Optional<Pair<SegmentReference, Closeable>> getSegmentForQuery(
-      Function<SegmentReference, SegmentReference> segmentMapFn
-  )
+  public Optional<Segment> getSegmentForQuery(SegmentMapFunction segmentMapFn)
   {
-    ReferenceCountingSegment sinkSegment = adapter.get();
+    ReferenceCountedSegmentProvider sinkSegment = segmentReferenceProvider.get();
 
     if (sinkSegment == null) {
       // adapter can be null if this segment is removed (swapped to null) while being queried.
       return Optional.empty();
     }
 
-    SegmentReference segment = segmentMapFn.apply(sinkSegment);
+    Optional<Segment> segment = segmentMapFn.apply(sinkSegment);
     while (true) {
-      Optional<Closeable> reference = segment.acquireReferences();
-      if (reference.isPresent()) {
-
-        return Optional.of(new Pair<>(segment, reference.get()));
+      if (segment.isPresent()) {
+        return segment;
       }
       // segment.acquireReferences() returned false, means it is closed. Since close() in swapSegment() happens after
       // segment swap, the new segment should already be visible.
-      ReferenceCountingSegment newSinkSegment = adapter.get();
+      ReferenceCountedSegmentProvider newSinkSegment = segmentReferenceProvider.get();
       if (newSinkSegment == null) {
         // adapter can be null if this segment is removed (swapped to null) while being queried.
         return Optional.empty();
@@ -219,9 +205,9 @@ public class FireHydrant
   }
 
   @VisibleForTesting
-  public ReferenceCountingSegment getHydrantSegment()
+  public ReferenceCountedSegmentProvider getHydrantSegment()
   {
-    return adapter.get();
+    return segmentReferenceProvider.get();
   }
 
   @Override
@@ -230,7 +216,7 @@ public class FireHydrant
     // Do not include IncrementalIndex in toString as AbstractIndex.toString() actually prints
     // all the rows in the index
     return "FireHydrant{" +
-           "queryable=" + (adapter.get() == null ? "null" : adapter.get().getId()) +
+           "queryable=" + (segmentReferenceProvider.get() == null ? "null" : segmentReferenceProvider.get().getBaseSegment().getId()) +
            ", count=" + count +
            '}';
   }

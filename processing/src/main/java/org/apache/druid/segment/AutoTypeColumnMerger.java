@@ -244,9 +244,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // pick the least restrictive type for the logical type
         isVariantType = true;
         variantTypeByte = rootTypes.getByteValue();
-        for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
-          logicalType = ColumnType.leastRestrictiveType(logicalType, type);
-        }
+        logicalType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(rootTypes.getByteValue()));
         // empty arrays can be missed since they don't have a type, so handle them here
         if (!logicalType.isArray() && hasArrays) {
           logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);

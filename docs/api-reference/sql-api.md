@@ -38,7 +38,8 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ### Submit a query
 
-Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
+Submits a SQL-based query in the JSON or text format request body. 
+Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
 Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query).
 
@@ -46,7 +47,10 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 `POST` `/druid/v2/sql`
 
-#### Request body
+#### JSON Format Request body
+
+To send queries in JSON format, the `Content-Type` in the HTTP request MUST be `application/json`.
+If there are multiple `Content-Type` headers, the **first** one is used.
 
 The request body takes the following properties:
 
@@ -97,6 +101,36 @@ The request body takes the following properties:
             ]
     }
     ```
+
+##### Text Format Request body
+
+Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
+To do this, just set the `Content-Type` request header to `text/plain` or `application/x-www-form-urlencoded`, and pass SQL via the HTTP Body. 
+
+If `application/x-www-form-urlencoded` is used, make sure the SQL query is URL-encoded.
+
+If there are multiple `Content-Type` headers, the **first** one is used.
+
+For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
+If you want more control over the query context or response format, use the above JSON format request body instead.
+
+The following example demonstrates how to submit a SQL query in text format:
+
+```commandline
+echo 'SELECT 1' | curl -H 'Content-Type: text/plain' http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @- 
+```
+
+We can also use `application/x-www-form-urlencoded` to submit URL-encoded SQL queries as shown by the following examples:
+
+```commandline
+echo 'SELECT%20%31' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @-
+echo 'SELECT 1' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data-urlencode @-
+```
+
+The `curl` tool uses `application/x-www-form-urlencoded` as Content-Type header if the header is not given.
+
+The first example pass the URL-encoded query `SELECT%20%31`, which is `SELECT 1`, to the `curl` and `curl` will directly sends it to the server.
+While the second example passes the raw query `SELECT 1` to `curl` and the `curl` encodes the query to `SELECT%20%31` because of `--data-urlencode` option and sends the encoded text to the server.
 
 #### Responses
 

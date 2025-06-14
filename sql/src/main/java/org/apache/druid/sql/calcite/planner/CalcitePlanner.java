@@ -60,6 +60,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
@@ -230,6 +231,25 @@ public class CalcitePlanner implements Planner, ViewExpander
     SqlNode sqlNode = parser.parseStmtList();
     state = CalcitePlanner.State.STATE_3_PARSED;
     return sqlNode;
+  }
+
+  /**
+   * Skip parsing, moving state along to a {@link State#STATE_3_PARSED}. We have this because we
+   * parse before the planner is even created, using {@link DruidSqlParser}, in order to capture
+   * SET statements as early as possible.
+   */
+  public void skipParse()
+  {
+    switch (state) {
+      case STATE_0_CLOSED:
+      case STATE_1_RESET:
+        ready();
+        break;
+      default:
+        break;
+    }
+    ensure(CalcitePlanner.State.STATE_2_READY);
+    state = CalcitePlanner.State.STATE_3_PARSED;
   }
 
   @Override

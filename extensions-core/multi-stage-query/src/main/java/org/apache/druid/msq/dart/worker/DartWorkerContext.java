@@ -80,6 +80,7 @@ public class DartWorkerContext implements WorkerContext
    */
   @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   DartWorkerContext(
       final String queryId,
@@ -97,11 +98,13 @@ public class DartWorkerContext implements WorkerContext
       final ProcessingBuffersProvider processingBuffersProvider,
       final Outbox<ControllerMessage> outbox,
       final File tempDir,
-      final QueryContext queryContext
+      final QueryContext queryContext,
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
     this.queryId = queryId;
     this.controllerHost = controllerHost;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.workerId = WorkerId.fromDruidNode(selfNode, queryId);
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
@@ -223,7 +226,8 @@ public class DartWorkerContext implements WorkerContext
         dataSegmentProvider,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         memoryParameters,
-        storageParameters
+        storageParameters,
+        dataServerQueryHandlerFactory
     );
   }
 
@@ -236,9 +240,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    // We don't query data servers. Return null so this factory is ignored when the main worker code tries
-    // to close it.
-    return null;
+    return dataServerQueryHandlerFactory;
   }
 
   @Override

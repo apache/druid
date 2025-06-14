@@ -269,7 +269,7 @@ public class FrameBasedIndexedTable implements IndexedTable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     return Optional.of(
         () -> {

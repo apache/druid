@@ -433,6 +433,22 @@ public class FixedBucketsHistogram
   }
 
   /**
+   * Resets all the counts to 0 and min/max values +/- infinity.
+   */
+  public void reset()
+  {
+    readWriteLock.writeLock().lock();
+    this.upperOutlierCount = 0;
+    this.lowerOutlierCount = 0;
+    this.missingValueCount = 0;
+    this.count = 0;
+    this.max = Double.NEGATIVE_INFINITY;
+    this.min = Double.POSITIVE_INFINITY;
+    Arrays.fill(histogram, 0);
+    readWriteLock.writeLock().unlock();
+  }
+
+  /**
    * Merge another datapoint into this one. The other datapoint could be
    *  - base64 encoded string of {@code FixedBucketsHistogram}
    *  - {@code FixedBucketsHistogram} object

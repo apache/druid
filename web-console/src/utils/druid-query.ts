@@ -348,19 +348,6 @@ export async function queryDruidSql<T = any>(
   return sqlResultResp.data;
 }
 
-export async function queryDruidSqlDart<T = any>(
-  sqlQueryPayload: Record<string, any>,
-  cancelToken?: CancelToken,
-): Promise<T[]> {
-  let sqlResultResp: AxiosResponse;
-  try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql/dart', sqlQueryPayload, { cancelToken });
-  } catch (e) {
-    throw new Error(getDruidErrorMessage(e));
-  }
-  return sqlResultResp.data;
-}
-
 export async function getApiArray<T = any>(url: string, cancelToken?: CancelToken): Promise<T[]> {
   const result = (await Api.instance.get(url, { cancelToken })).data;
   if (!Array.isArray(result)) throw new Error('unexpected result');

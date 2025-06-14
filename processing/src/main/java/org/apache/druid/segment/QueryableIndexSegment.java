@@ -100,6 +100,12 @@ public class QueryableIndexSegment implements Segment
     return null;
   }
 
+  @Override
+  public String getDebugString()
+  {
+    return getClass().getSimpleName() + ":" + segmentId;
+  }
+
   @SemanticCreator
   @SuppressWarnings("unused")
   public CloseableShapeshifter toCloseableShapeshifter()

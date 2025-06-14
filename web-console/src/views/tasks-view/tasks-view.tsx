@@ -68,6 +68,7 @@ const taskTableColumns: string[] = [
   'Type',
   'Datasource',
   'Status',
+  'Error',
   'Created time',
   'Duration',
   'Location',
@@ -167,6 +168,7 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
+        ['Error'],
       ),
     };
 
@@ -475,6 +477,15 @@ ORDER BY
               }
             },
             show: visibleColumns.shown('Status'),
+          },
+          {
+            Header: 'Error',
+            id: 'error',
+            accessor: row => row.error_msg || '',
+            width: 300,
+            Cell: this.renderTaskFilterableCell('error'),
+            Aggregated: () => '',
+            show: visibleColumns.shown('Error'),
           },
           {
             Header: 'Created time',

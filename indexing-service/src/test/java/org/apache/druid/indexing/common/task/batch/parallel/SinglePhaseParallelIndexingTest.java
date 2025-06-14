@@ -93,13 +93,13 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, useSegmentCache={2}")
+  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, useSegmentCache={2}, useConcurrentLocks={3}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true, true},
-        new Object[]{LockGranularity.SEGMENT, true, false}
+        new Object[]{LockGranularity.TIME_CHUNK, false, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true, true, true},
+        new Object[]{LockGranularity.SEGMENT, true, false, true}
     );
   }
 
@@ -108,18 +108,21 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
 
   private final LockGranularity lockGranularity;
   private final boolean useInputFormatApi;
+  private final boolean useConcurrentLocks;
 
   private File inputDir;
 
   public SinglePhaseParallelIndexingTest(
       LockGranularity lockGranularity,
       boolean useInputFormatApi,
-      boolean useSegmentMetadataCache
+      boolean useSegmentMetadataCache,
+      boolean useConcurrentLocks
   )
   {
     super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE, useSegmentMetadataCache);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
+    this.useConcurrentLocks = useConcurrentLocks;
   }
 
   @Before
@@ -1004,7 +1007,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         null,
         null,
         ingestionSpec,
-        Collections.emptyMap()
+        Map.of(Tasks.USE_CONCURRENT_LOCKS, useConcurrentLocks)
     );
   }
 

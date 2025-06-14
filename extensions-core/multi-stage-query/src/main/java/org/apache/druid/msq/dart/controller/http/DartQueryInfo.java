@@ -27,6 +27,8 @@ import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.QueryInfo;
 import org.joda.time.DateTime;
 
 import java.util.Objects;
@@ -34,7 +36,7 @@ import java.util.Objects;
 /**
  * Class included in {@link GetQueriesResponse}.
  */
-public class DartQueryInfo
+public class DartQueryInfo implements QueryInfo
 {
   private final String sqlQueryId;
   private final String dartQueryId;

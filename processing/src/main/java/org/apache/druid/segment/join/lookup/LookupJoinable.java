@@ -173,7 +173,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     // nothing to close for lookup joinables, they are managed externally and have no per query accounting of usage
     return Optional.of(() -> {});

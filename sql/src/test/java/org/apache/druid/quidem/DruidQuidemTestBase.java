@@ -29,10 +29,6 @@ import net.hydromatic.quidem.Quidem.ConfigBuilder;
 import org.apache.calcite.test.DiffTestCase;
 import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
-import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.commons.io.filefilter.OrFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
@@ -48,14 +44,17 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -101,7 +100,8 @@ public abstract class DruidQuidemTestBase
 
   private static final String PROPERTY_FILTER = "quidem.filter";
 
-  private final FileFilter filter;
+  private final String filterStr;
+  private final PathMatcher filterMatcher;
 
   private DruidQuidemRunner druidQuidemRunner;
 
@@ -112,25 +112,31 @@ public abstract class DruidQuidemTestBase
 
   public DruidQuidemTestBase(DruidQuidemRunner druidQuidemRunner)
   {
-    String filterStr = System.getProperty(PROPERTY_FILTER, null);
-    filter = buildFileFilter(filterStr);
+    this.filterStr = System.getProperty(PROPERTY_FILTER, null);
+    this.filterMatcher = buildFilterMatcher(filterStr);
     this.druidQuidemRunner = druidQuidemRunner;
   }
 
-  private IOFileFilter buildFileFilter(String filterStr)
+  private static PathMatcher buildFilterMatcher(@Nullable String filterStr)
   {
     if (null == filterStr) {
-      return TrueFileFilter.INSTANCE;
+      return f -> true;
     }
-    List<IOFileFilter> fileFilters = new ArrayList<>();
-    for (String filter : filterStr.split(",")) {
 
-      if (!filter.endsWith("*") && !filter.endsWith(IQ_SUFFIX)) {
-        filter = filterStr + IQ_SUFFIX;
+    final FileSystem fileSystem = FileSystems.getDefault();
+    final List<PathMatcher> filterMatchers = new ArrayList<>();
+    for (String filterGlob : filterStr.split(",")) {
+      if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
+        filterGlob = filterStr + IQ_SUFFIX;
       }
-      fileFilters.add(new WildcardFileFilter(filter));
+      filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
     }
-    return new OrFileFilter(fileFilters);
+
+    if (filterMatchers.isEmpty()) {
+      return f -> true;
+    } else {
+      return f -> filterMatchers.stream().anyMatch(m -> m.matches(f));
+    }
   }
 
   protected static class QuidemTestCaseConfiguration
@@ -221,7 +227,7 @@ public abstract class DruidQuidemTestBase
     if (!commandLimitIgnoredFiles.contains(inFile.getName()) && nCommands > 80) {
       throw DruidException.defensive(
           "There are too many commands [%s] in file [%s] which would make working with the test harder. "
-              + "Please reduce the number of queries/commands/etc",
+          + "Please reduce the number of queries/commands/etc",
           nCommands,
           inFile
       );
@@ -292,10 +298,10 @@ public abstract class DruidQuidemTestBase
           connectionFactory.onSet("componentSupplier", componentSupplier);
         }
         ConfigBuilder configBuilder = Quidem.configBuilder()
-            .withConnectionFactory(connectionFactory)
-            .withPropertyHandler(connectionFactory)
-            .withEnv(connectionFactory::envLookup)
-            .withCommandHandler(commandHandler);
+                                            .withConnectionFactory(connectionFactory)
+                                            .withPropertyHandler(connectionFactory)
+                                            .withEnv(connectionFactory::envLookup)
+                                            .withCommandHandler(commandHandler);
 
         Config config = configBuilder
             .withReader(reader)
@@ -357,27 +363,28 @@ public abstract class DruidQuidemTestBase
     }
 
     for (File f : Files.fileTraverser().breadthFirst(testRoot)) {
-      if (isTestIncluded(f)) {
+      if (isTestIncluded(testRoot, f)) {
         Path relativePath = testRoot.toPath().relativize(f.toPath());
         ret.add(relativePath.toString());
       }
     }
     if (ret.isEmpty()) {
       throw new IAE(
-          "There are no test cases in directory [%s] or there are no matches to filter [%s]",
+          "There are no test cases in directory[%s] or there are no matches to filter[%s]",
           testRoot,
-          filter
+          filterStr
       );
     }
     Collections.sort(ret);
     return ret;
   }
 
-  private boolean isTestIncluded(File f)
+  private boolean isTestIncluded(File testRoot, File f)
   {
+    Path relativePath = testRoot.toPath().relativize(f.toPath());
     return !f.isDirectory()
            && f.getName().endsWith(IQ_SUFFIX)
-           && filter.accept(f);
+           && filterMatcher.matches(relativePath);
   }
 
   protected abstract File getTestRoot();

@@ -340,6 +340,28 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumMisses());
   }
 
+  @Test
+  public void testPopulateCacheThrowsException()
+  {
+    cache = Mockito.spy(cache);
+    Mockito.doThrow(new RuntimeException("some error")).when(cache).put(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
+        newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
+        query
+    );
+
+    queryRunner1.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    ).toList();
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+  }
+
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(
       CacheConfig cacheConfig,
       Query<T> query
