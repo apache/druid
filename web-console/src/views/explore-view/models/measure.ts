@@ -221,6 +221,13 @@ export class Measure extends ExpressionMeta {
     return this.expression.equals(other.expression);
   }
 
+  public isSavedMeasure(): boolean {
+    const { expression } = this;
+    return (
+      expression instanceof SqlFunction && expression.getEffectiveFunctionName() === 'AGGREGATE'
+    );
+  }
+
   public toAggregateBasedMeasure(): Measure {
     return this.changeExpression(F(Measure.AGGREGATE, L(this.name)));
   }

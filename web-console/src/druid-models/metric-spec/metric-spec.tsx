@@ -23,7 +23,10 @@ import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { filterMap, typeIsKnown } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
+import { FILTER_COMPLETIONS } from '../filter/filter-completions';
 import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
+
+import { AGGREGATOR_COMPLETIONS } from './aggregator-completions';
 
 export interface MetricSpec {
   readonly type: string;
@@ -177,12 +180,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     type: 'json',
     defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
+    jsonCompletions: FILTER_COMPLETIONS,
   },
   {
     name: 'aggregator',
     type: 'json',
     defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
+    jsonCompletions: AGGREGATOR_COMPLETIONS,
   },
   // thetaSketch
   {

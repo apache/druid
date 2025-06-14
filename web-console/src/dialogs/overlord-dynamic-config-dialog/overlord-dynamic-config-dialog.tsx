@@ -30,6 +30,8 @@ import { Api, AppToaster } from '../../singletons';
 import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
 
+import { OVERLORD_DYNAMIC_CONFIG_COMPLETIONS } from './overlord-dynamic-config-completions';
+
 import './overlord-dynamic-config-dialog.scss';
 
 export interface OverlordDynamicConfigDialogProps {
@@ -130,6 +132,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
               height="50vh"
               onChange={setDynamicConfig}
               setError={setJsonError}
+              jsonCompletions={OVERLORD_DYNAMIC_CONFIG_COMPLETIONS}
             />
           )}
         </>
