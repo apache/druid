@@ -79,10 +79,6 @@ export function getHjsonContext(hjson: string): HjsonContext {
   let currentKey: string | undefined;
   let afterColon = false;
 
-  // Comment preservation
-  let preCommentKey: string | undefined;
-  let preCommentAfterColon = false;
-
   // Process each character
   for (let i = 0; i < hjson.length; i++) {
     const ch = hjson[i];
@@ -122,16 +118,12 @@ export function getHjsonContext(hjson: string): HjsonContext {
     // Normal state processing
     // Check for comment start
     if (ch === '/' && next === '/') {
-      preCommentKey = currentKey;
-      preCommentAfterColon = afterColon;
       state = 'single-comment';
       i++; // Skip second '/'
       continue;
     }
 
     if (ch === '/' && next === '*') {
-      preCommentKey = currentKey;
-      preCommentAfterColon = afterColon;
       state = 'multi-comment';
       i++; // Skip '*'
       continue;
@@ -294,7 +286,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
   }
 
   // Determine context
-  let isEditingKey = true;
+  let isEditingKey: boolean;
   let finalKey: string | undefined;
 
   if (containerStack.length === 0) {
@@ -321,18 +313,11 @@ export function getHjsonContext(hjson: string): HjsonContext {
     }
   }
 
-  // Handle comments
-  const isInComment = state === 'single-comment' || state === 'multi-comment';
-  if (isInComment) {
-    isEditingKey = !preCommentAfterColon;
-    finalKey = preCommentKey;
-  }
-
   return {
     path,
     isEditingKey,
     currentKey: finalKey,
-    isEditingComment: isInComment,
+    isEditingComment: state === 'single-comment' || state === 'multi-comment',
     currentObject: getCurrentObject(),
   };
 
@@ -344,17 +329,14 @@ export function getHjsonContext(hjson: string): HjsonContext {
 }
 
 function extractKey(token: string): string {
-  const trimmed = token.trim().replace(/:$/, '').trim();
-
   if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    (token.startsWith('"') && token.endsWith('"')) ||
+    (token.startsWith("'") && token.endsWith("'"))
   ) {
-    return trimmed.slice(1, -1);
+    return token.slice(1, -1);
   }
 
-  const match = /^([a-zA-Z_$][a-zA-Z0-9_$]*)/.exec(trimmed);
-  return match ? match[1] : trimmed;
+  return token;
 }
 
 function parseValue(token: string): any {
@@ -371,7 +353,7 @@ function parseValue(token: string): any {
   if (trimmed === 'false') return false;
   if (trimmed === 'null') return null;
 
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
     return trimmed.includes('.') ? parseFloat(trimmed) : parseInt(trimmed, 10);
   }
 
