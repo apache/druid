@@ -25,10 +25,14 @@ import com.google.inject.Injector;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -74,6 +78,8 @@ public class DartWorkerContext implements WorkerContext
   private final Outbox<ControllerMessage> outbox;
   private final File tempDir;
   private final QueryContext queryContext;
+  private final ServiceEmitter emitter;
+  private final ServiceMetricEvent.Builder metricBuilder;
 
   /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
@@ -99,7 +105,8 @@ public class DartWorkerContext implements WorkerContext
       final Outbox<ControllerMessage> outbox,
       final File tempDir,
       final QueryContext queryContext,
-      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
+      final ServiceEmitter emitter
   )
   {
     this.queryId = queryId;
@@ -120,6 +127,12 @@ public class DartWorkerContext implements WorkerContext
     this.outbox = outbox;
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
+    this.emitter = emitter;
+
+    // Set up metric dimensions
+    this.metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setDartQueryIdDimensions(this.metricBuilder, queryContext);
+    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 
   @Override
@@ -175,6 +188,12 @@ public class DartWorkerContext implements WorkerContext
       throw new IAE("Illegal maxConcurrentStages[%s]", retVal);
     }
     return retVal;
+  }
+
+  @Override
+  public void emitMetric(String metric, Number value)
+  {
+    emitter.emit(metricBuilder.setMetric(metric, value));
   }
 
   @Override

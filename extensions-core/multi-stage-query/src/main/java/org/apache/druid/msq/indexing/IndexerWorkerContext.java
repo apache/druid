@@ -29,11 +29,14 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -88,6 +91,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final int maxConcurrentStages;
   private final boolean includeAllCounters;
+  private final ServiceMetricEvent.Builder metricBuilder;
 
   @GuardedBy("this")
   private ServiceLocator controllerLocator;
@@ -129,6 +133,10 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                         .toInstance(storageConnector));
+
+    this.metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(this.metricBuilder, task);
+    MSQMetricUtils.setTaskQueryIdDimensions(this.metricBuilder, queryContext);
   }
 
   public static IndexerWorkerContext createProductionInstance(
@@ -202,6 +210,12 @@ public class IndexerWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public void emitMetric(String metric, Number value)
+  {
+    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 
   @Override

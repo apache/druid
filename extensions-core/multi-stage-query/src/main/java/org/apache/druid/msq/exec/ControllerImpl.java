@@ -81,6 +81,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -376,6 +377,7 @@ public class ControllerImpl implements Controller
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
@@ -553,9 +555,15 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
+    emitQueryMetrics(stopwatch);
     // Emit summary metrics
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
+  }
+
+  private void emitQueryMetrics(Stopwatch stopwatch)
+  {
+    context.emitMetric("query/time", stopwatch.millisElapsed());
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)

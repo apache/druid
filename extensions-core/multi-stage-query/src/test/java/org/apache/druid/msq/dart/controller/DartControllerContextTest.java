@@ -31,6 +31,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -58,8 +59,13 @@ public class DartControllerContextTest
   /**
    * Context returned by {@link #query}. Overrides "maxConcurrentStages".
    */
-  private QueryContext queryContext =
-      QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3));
+  private final QueryContext queryContext =
+      QueryContext.of(
+          ImmutableMap.of(
+              MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3,
+              QueryContexts.CTX_DART_QUERY_ID, "test"
+          )
+      );
   private MemoryIntrospector memoryIntrospector;
   private AutoCloseable mockCloser;
 
@@ -101,7 +107,7 @@ public class DartControllerContextTest
   public void test_queryKernelConfig()
   {
     final DartControllerContext controllerContext =
-        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null, null);
+        new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null, queryContext);
     final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(QUERY_ID, querySpec);
 
     Assertions.assertFalse(queryKernelConfig.isFaultTolerant());
