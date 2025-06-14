@@ -421,11 +421,11 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
                  ? SegmentTransactionalAppendAction
                      .forSegmentsAndMetadata(segmentsToPush, runner.getSupervisorId(), startMetadata, endMetadata, segmentSchemaMapping)
                  : SegmentTransactionalInsertAction
-                     .appendAction(runner.getSupervisorId(), runner.getAppenderator().getDataSource(), segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
+                     .appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), startMetadata, endMetadata, segmentSchemaMapping);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)
-                 : SegmentTransactionalInsertAction.appendAction(runner.getSupervisorId(), runner.getAppenderator().getDataSource(), segmentsToPush, null, null, segmentSchemaMapping);
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), null, null, segmentSchemaMapping);
       }
 
       return toolbox.getTaskActionClient().submit(action);

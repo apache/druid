@@ -926,7 +926,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }
@@ -2878,7 +2878,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }

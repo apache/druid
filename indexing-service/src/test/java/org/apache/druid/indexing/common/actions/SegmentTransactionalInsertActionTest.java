@@ -100,9 +100,9 @@ public class SegmentTransactionalInsertActionTest
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result1 = SegmentTransactionalInsertAction.appendAction(
-        DATA_SOURCE,
-        DATA_SOURCE,
         ImmutableSet.of(SEGMENT1),
+        DATA_SOURCE,
+        DATA_SOURCE,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableList.of(1)),
         null
@@ -113,9 +113,9 @@ public class SegmentTransactionalInsertActionTest
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
-        DATA_SOURCE,
-        DATA_SOURCE,
         ImmutableSet.of(SEGMENT2),
+        DATA_SOURCE,
+        DATA_SOURCE,
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2)),
         null
@@ -144,9 +144,9 @@ public class SegmentTransactionalInsertActionTest
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result1 = SegmentTransactionalInsertAction.appendAction(
+        ImmutableSet.of(SEGMENT1),
         SUPERVISOR_ID,
         DATA_SOURCE,
-        ImmutableSet.of(SEGMENT1),
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableList.of(1)),
         null
@@ -157,9 +157,9 @@ public class SegmentTransactionalInsertActionTest
     Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
+        ImmutableSet.of(SEGMENT2),
         SUPERVISOR_ID,
         DATA_SOURCE,
-        ImmutableSet.of(SEGMENT2),
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2)),
         null
@@ -188,9 +188,9 @@ public class SegmentTransactionalInsertActionTest
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
-        DATA_SOURCE,
-        DATA_SOURCE,
         ImmutableSet.of(SEGMENT1),
+        DATA_SOURCE,
+        DATA_SOURCE,
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2)),
         null
