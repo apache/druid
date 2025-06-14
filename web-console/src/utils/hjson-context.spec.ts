@@ -232,6 +232,8 @@ describe('getHjsonContext', () => {
         {
           // This is a comment
           "queryType": "scan",
+          # This is also a comment
+          interval: "..."
           /* Multi-line
              comment */
           "dataSource":
@@ -241,7 +243,7 @@ describe('getHjsonContext', () => {
         isEditingKey: false,
         currentKey: 'dataSource',
         isEditingComment: false,
-        currentObject: { queryType: 'scan' },
+        currentObject: { queryType: 'scan', interval: '...' },
       });
     });
 

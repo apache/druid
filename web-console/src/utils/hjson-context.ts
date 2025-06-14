@@ -73,7 +73,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
   const containerStack: { type: 'object' | 'array'; index: number }[] = [];
   const objectStack: any[] = [{}];
 
-  let state: 'normal' | 'string' | 'single-comment' | 'multi-comment' = 'normal';
+  let state: 'normal' | 'quoted-string' | 'single-line-comment' | 'multi-line-comment' = 'normal';
   let stringDelim = '';
   let token = '';
   let currentKey: string | undefined;
@@ -85,7 +85,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
     const next = hjson[i + 1];
 
     // State transitions
-    if (state === 'string') {
+    if (state === 'quoted-string') {
       token += ch;
       if (ch === stringDelim && hjson[i - 1] !== '\\') {
         state = 'normal';
@@ -102,12 +102,12 @@ export function getHjsonContext(hjson: string): HjsonContext {
       continue;
     }
 
-    if (state === 'single-comment') {
+    if (state === 'single-line-comment') {
       if (ch === '\n') state = 'normal';
       continue;
     }
 
-    if (state === 'multi-comment') {
+    if (state === 'multi-line-comment') {
       if (ch === '*' && next === '/') {
         state = 'normal';
         i++; // Skip '/'
@@ -116,22 +116,28 @@ export function getHjsonContext(hjson: string): HjsonContext {
     }
 
     // Normal state processing
+
     // Check for comment start
+    if (ch === '#') {
+      state = 'single-line-comment';
+      continue;
+    }
+
     if (ch === '/' && next === '/') {
-      state = 'single-comment';
+      state = 'single-line-comment';
       i++; // Skip second '/'
       continue;
     }
 
     if (ch === '/' && next === '*') {
-      state = 'multi-comment';
+      state = 'multi-line-comment';
       i++; // Skip '*'
       continue;
     }
 
     // String start
     if (ch === '"' || ch === "'") {
-      state = 'string';
+      state = 'quoted-string';
       stringDelim = ch;
       token += ch;
       continue;
@@ -317,7 +323,7 @@ export function getHjsonContext(hjson: string): HjsonContext {
     path,
     isEditingKey,
     currentKey: finalKey,
-    isEditingComment: state === 'single-comment' || state === 'multi-comment',
+    isEditingComment: state === 'single-line-comment' || state === 'multi-line-comment',
     currentObject: getCurrentObject(),
   };
 
