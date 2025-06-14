@@ -22,13 +22,20 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.utils.CloseableUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class ProcessingBuffersSetTest
 {
@@ -93,5 +100,51 @@ public class ProcessingBuffersSetTest
     Assert.assertEquals("Unexpected call to get()", e.getMessage());
 
     nilHolder.close(); // Should do nothing
+  }
+
+  @Test
+  public void test_acquireForStage_usesProcessingBuffersFalse()
+  {
+    // Create a mock StageDefinition and FrameProcessorFactory
+    final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
+    final FrameProcessorFactory<?, ?, ?> processorFactory = Mockito.mock(FrameProcessorFactory.class);
+
+    // Configure mocks: processor factory does not use processing buffers
+    Mockito.when(stageDef.getProcessorFactory()).thenReturn(processorFactory);
+    Mockito.when(processorFactory.usesProcessingBuffers()).thenReturn(false);
+
+    // Create a ProcessingBuffersSet
+    final ProcessingBuffersSet buffersSet =
+        ProcessingBuffersSet.fromCollection(
+            Collections.singletonList(
+                Collections.singletonList(ByteBuffer.allocate(1024))));
+
+    // Acquire for stage
+    final ResourceHolder<ProcessingBuffers> holder = buffersSet.acquireForStage(stageDef);
+    MatcherAssert.assertThat(holder, CoreMatchers.instanceOf(ProcessingBuffersSet.NilResourceHolder.class));
+  }
+
+  @Test
+  public void test_acquireForStage_usesProcessingBuffersTrue()
+  {
+    // Create a mock StageDefinition and FrameProcessorFactory
+    final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
+    final FrameProcessorFactory<?, ?, ?> processorFactory = Mockito.mock(FrameProcessorFactory.class);
+
+    // Configure mocks: processor factory does not use processing buffers
+    Mockito.when(stageDef.getProcessorFactory()).thenReturn(processorFactory);
+    Mockito.when(processorFactory.usesProcessingBuffers()).thenReturn(true);
+
+    // Create a ProcessingBuffersSet
+    final ProcessingBuffersSet buffersSet =
+        ProcessingBuffersSet.fromCollection(
+            Collections.singletonList(
+                Collections.singletonList(ByteBuffer.allocate(1024))));
+
+    // Acquire for stage
+    final ResourceHolder<ProcessingBuffers> holder = buffersSet.acquireForStage(stageDef);
+    final ProcessingBuffers buffers = holder.get();
+    Assert.assertEquals(1024, buffers.getBufferPool().take().get().capacity());
+    Assert.assertThrows(NoSuchElementException.class, () -> buffers.getBufferPool().take());
   }
 }
