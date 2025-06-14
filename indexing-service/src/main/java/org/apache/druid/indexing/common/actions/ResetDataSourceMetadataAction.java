@@ -41,7 +41,10 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null");
-    this.supervisorId = Configs.valueOrDefault(supervisorId, dataSource);
+    this.supervisorId = Preconditions.checkNotNull(
+        Configs.valueOrDefault(supervisorId, dataSource),
+        "supervisorId cannot be null"
+    );
     this.resetMetadata = resetMetadata;
   }
 

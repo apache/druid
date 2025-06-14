@@ -81,28 +81,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   /**
    * Base constructor for SeekableStreamSupervisors.
-   *
-   * @param id                                The unique identifier for the supervisor. If this parameter is null,
-   *                                          the constructor will use the non-null `ingestionSchema` to provide
-   *                                          a default `dataSource` value as the supervisor ID. This ensures that
-   *                                          every supervisor has a non-null ID, either user-specified or defaulting to
-   *                                          the target `dataSource`.
-   * @param ingestionSchema                   The ingestion schema that defines the configuration
-   *                                          for the supervisor.
-   * @param context                           A map of additional context parameters.
-   * @param suspended                         Indicates whether the supervisor is initially
-   *                                          suspended.
-   * @param taskStorage                       The storage for tasks.
-   * @param taskMaster                        The task master responsible for task management.
-   * @param indexerMetadataStorageCoordinator The coordinator for indexer
-   *                                          metadata storage.
-   * @param indexTaskClientFactory            The factory for creating index task clients.
-   * @param mapper                            The ObjectMapper for JSON serialization and deserialization.
-   * @param emitter                           The service emitter for metrics and alerts.
-   * @param monitorSchedulerConfig            The configuration for the monitor scheduler.
-   * @param rowIngestionMetersFactory         The factory for creating row ingestion meters.
-   * @param supervisorStateManagerConfig      The configuration for the supervisor
-   *                                          state manager.
+   * The unique identifier for the supervisor. Null {@param id} implies the constructor will use the
+   * non-null `dataSource` in `ingestionSchema` for backwards compatibility.
    */
   public SeekableStreamSupervisorSpec(
       @Nullable final String id,

@@ -147,6 +147,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     private BaseTestSeekableStreamSupervisor()
     {
       super(
+          "testSupervisorId",
           taskStorage,
           taskMaster,
           indexerMetadataStorageCoordinator,

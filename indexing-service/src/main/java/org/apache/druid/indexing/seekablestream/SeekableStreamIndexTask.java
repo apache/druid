@@ -107,9 +107,9 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
   }
 
-  protected static String getFormattedGroupId(String dataSource, String type)
+  protected static String getFormattedGroupId(String supervisorId, String type)
   {
-    return StringUtils.format("%s_%s", type, dataSource);
+    return StringUtils.format("%s_%s", type, supervisorId);
   }
 
   @Override
