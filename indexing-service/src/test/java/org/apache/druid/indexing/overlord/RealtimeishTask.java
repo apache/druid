@@ -130,6 +130,6 @@ public class RealtimeishTask extends AbstractTask
                      .size(0)
                      .build();
     return SegmentTransactionalInsertAction
-        .appendAction(null, null, Collections.singleton(segmentToInsert), null, null, null);
+        .appendAction(Collections.singleton(segmentToInsert), null, null, null, null, null);
   }
 }

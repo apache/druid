@@ -1063,7 +1063,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .build();
 
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.appendAction(null, null, ImmutableSet.of(segment), null, null, null)
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null, null, null, null)
         );
         return TaskStatus.success(getId());
       }
@@ -1106,7 +1106,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .build();
 
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.appendAction(null, null, ImmutableSet.of(segment), null, null, null)
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null, null, null, null)
         );
         return TaskStatus.success(getId());
       }
@@ -1150,7 +1150,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .build();
 
         toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.appendAction(null, null, ImmutableSet.of(segment), null, null, null)
+            SegmentTransactionalInsertAction.appendAction(ImmutableSet.of(segment), null, null, null, null, null)
         );
         return TaskStatus.success(getId());
       }
