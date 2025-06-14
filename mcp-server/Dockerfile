@@ -1,34 +1,34 @@
+# Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Install the MCP server globally
-RUN npm install -g apache-druid-mcp@latest
+# Copy package files first for better caching
+COPY package*.json ./
 
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S druid -u 1001
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci
 
-# Set default environment variables
-ENV DRUID_URL=http://localhost:8888
-ENV DRUID_TIMEOUT=30000
-ENV NODE_ENV=production
+# Copy source code
+COPY . .
 
-# Switch to non-root user
-USER druid
+# Build TypeScript to JavaScript
+RUN npm run build
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "console.log('Health check')" || exit 1
+# Remove dev dependencies after build
+RUN npm prune --production
+
+# Expose port (default 3000, can be overridden)
+EXPOSE 3000
 
 # Run the MCP server
-CMD ["apache-druid-mcp"]
+ENTRYPOINT ["node", "dist/index.js"]
 
 # Labels for metadata
 LABEL org.opencontainers.image.title="Apache Druid MCP Server"
 LABEL org.opencontainers.image.description="Model Context Protocol server for Apache Druid"
-LABEL org.opencontainers.image.url="https://github.com/AnilPuram/druid"
-LABEL org.opencontainers.image.source="https://github.com/AnilPuram/druid"
+LABEL org.opencontainers.image.url="https://github.com/apache/druid"
+LABEL org.opencontainers.image.source="https://github.com/apache/druid"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

@@ -1,65 +1,19 @@
 version: '3.8'
 
 services:
-  apache-druid-mcp:
+  druid-mcp:
     build: .
     container_name: apache-druid-mcp
+    ports:
+      - "3000:3000"
     environment:
       - DRUID_URL=${DRUID_URL:-http://localhost:8888}
       - DRUID_USERNAME=${DRUID_USERNAME:-}
       - DRUID_PASSWORD=${DRUID_PASSWORD:-}
       - DRUID_TIMEOUT=${DRUID_TIMEOUT:-30000}
+      - NODE_ENV=production
     restart: unless-stopped
-    networks:
-      - druid-network
-    # Uncomment if you want to expose as HTTP service
-    # ports:
-    #   - "3000:3000"
-    healthcheck:
-      test: ["CMD", "node", "-e", "console.log('Health check')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # Example Druid services (uncomment if you want to run Druid locally)
-  # druid-zookeeper:
-  #   image: zookeeper:3.5
-  #   container_name: druid-zookeeper
-  #   environment:
-  #     - ZOO_MY_ID=1
-  #   networks:
-  #     - druid-network
-  
-  # druid-coordinator:
-  #   image: apache/druid:latest
-  #   container_name: druid-coordinator
-  #   environment:
-  #     - druid_zk_service_host=druid-zookeeper
-  #   depends_on:
-  #     - druid-zookeeper
-  #   networks:
-  #     - druid-network
-  
-  # druid-broker:
-  #   image: apache/druid:latest
-  #   container_name: druid-broker
-  #   ports:
-  #     - "8888:8888"
-  #   environment:
-  #     - druid_zk_service_host=druid-zookeeper
-  #   depends_on:
-  #     - druid-zookeeper
-  #     - druid-coordinator
-  #   networks:
-  #     - druid-network
 
 networks:
-  druid-network:
-    driver: bridge
-
-# Example with environment file
-# Create a .env file with:
-# DRUID_URL=http://druid-broker:8888
-# DRUID_USERNAME=admin
-# DRUID_PASSWORD=secret
+  default:
+    driver: bridge 

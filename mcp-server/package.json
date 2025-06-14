@@ -1,6 +1,6 @@
 {
   "name": "apache-druid-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Model Context Protocol (MCP) server for Apache Druid - provides tools and resources for querying and managing Druid datasources",
   "main": "dist/index.js",
   "bin": {
@@ -14,7 +14,12 @@
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "npm run clean && npm run build",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "help": "node dist/index.js --help",
+    "docker:build": "docker build -t apache-druid-mcp .",
+    "docker:run": "docker run -p 3000:3000 apache-druid-mcp",
+    "docker:compose": "docker-compose up --build",
+    "docker:down": "docker-compose down"
   },
   "keywords": [
     "mcp",
@@ -30,11 +35,11 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AnilPuram/druid.git",
+    "url": "git+https://github.com/apache/druid.git",
     "directory": "mcp-server"
   },
   "bugs": {
-    "url": "https://github.com/AnilPuram/druid/issues"
+    "url": "https://github.com/apache/druid/issues"
   },
   "homepage": "https://druid.apache.org",
   "engines": {
@@ -46,8 +51,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.0"
   },
