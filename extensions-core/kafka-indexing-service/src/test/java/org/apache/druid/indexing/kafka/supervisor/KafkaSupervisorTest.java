@@ -1375,7 +1375,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }
@@ -3285,7 +3285,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();
-    taskRunner.unregisterListener(DATASOURCE);
+    taskRunner.unregisterListener(StringUtils.format("KafkaSupervisor-%s", DATASOURCE));
     replayAll();
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -3599,7 +3599,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor [testDS] for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }

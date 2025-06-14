@@ -52,6 +52,7 @@ import org.testng.Assert;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -172,7 +173,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   {
     return listResources(DATA_RESOURCE_ROOT)
         .stream()
-        .filter(r -> !r.endsWith(".json")) // filter out top-level spec files
+        .filter(resource -> new File(DATA_RESOURCE_ROOT, resource).isDirectory()) // include only subdirs
         .collect(Collectors.toList());
   }
 

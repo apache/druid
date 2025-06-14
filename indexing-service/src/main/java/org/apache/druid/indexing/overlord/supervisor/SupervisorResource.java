@@ -227,7 +227,7 @@ public class SupervisorResource
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                     if (theSpec.isPresent()) {
                       theBuilder.withSpec(theSpec.get())
-                          .withDataSource(theSpec.get().getDataSources().get(0));
+                          .withDataSource(theSpec.get().getDataSources().stream().findFirst().orElse(null));
                     }
                   }
                   if (includeSystem) {
@@ -245,7 +245,6 @@ public class SupervisorResource
                         throw new RuntimeException(e);
                       }
                       theBuilder.withType(manager.getSupervisorSpec(x).get().getType())
-                                .withDataSource(manager.getSupervisorSpec(x).get().getDataSources().get(0))
                                 .withSource(manager.getSupervisorSpec(x).get().getSource())
                                 .withSuspended(manager.getSupervisorSpec(x).get().isSuspended());
                     }

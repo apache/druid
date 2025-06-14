@@ -464,14 +464,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
             return;
           }
-          log.debug("PendingCompletionTaskGroups is [%s] for supervisor [%s] for dataSource [%s]", pendingCompletionTaskGroups,
+          log.debug("PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]", pendingCompletionTaskGroups,
                     supervisorId,
                     dataSource
           );
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             if (!list.isEmpty()) {
               log.info(
-                  "Skipping DynamicAllocationTasksNotice execution for supervisor [%s] for datasource [%s] because following tasks are pending [%s]",
+                  "Skipping DynamicAllocationTasksNotice execution for supervisor[%s] for datasource[%s] because following tasks are pending [%s]",
                   supervisorId,
                   dataSource,
                   list
@@ -486,7 +486,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
-                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for supervisor [%s] for dataSource [%s], skipping it! desired task count is [%s], active task count is [%s]",
+                "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for supervisor[%s] for dataSource[%s], skipping it! desired task count is [%s], active task count is [%s]",
                 nowTime - dynamicTriggerLastRunTime,
                 autoScalerConfig.getMinTriggerScaleActionFrequencyMillis(),
                 supervisorId,
@@ -553,7 +553,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return false;
     } else {
       log.info(
-          "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor [%s] for dataSource [%s].",
+          "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
           currentActiveTaskCount,
           desiredActiveTaskCount,
           supervisorId,
@@ -575,7 +575,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          AUTOSCALER_SCALING_TIME_METRIC,
                                          scaleActionStopwatch.millisElapsed()
                                      ));
-      log.info("Changed taskCount to [%s] for supervisor [%s] for dataSource [%s].", desiredActiveTaskCount, supervisorId, dataSource);
+      log.info("Changed taskCount to [%s] for supervisor[%s] of dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
       return true;
     }
   }
@@ -589,11 +589,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
         metadataSupervisorManager.insert(supervisorId, spec);
       } else {
-        log.error("supervisorManager is null in taskMaster, skipping scale action for supervisor [%s] for dataSource [%s].", supervisorId, dataSource);
+        log.error("supervisorManager is null in taskMaster, skipping scale action for supervisor[%s] for dataSource[%s].", supervisorId, dataSource);
       }
     }
     catch (Exception e) {
-      log.error(e, "Failed to sync taskCount to MetaStorage for supervisor [%s] for dataSource [%s].", supervisorId, dataSource);
+      log.error(e, "Failed to sync taskCount to MetaStorage for supervisor[%s] for dataSource[%s].", supervisorId, dataSource);
     }
   }
 
@@ -855,6 +855,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
+
+  /**
+   * Type-verbose id for identifying this supervisor in thread-names, listeners, etc.
+  */
+  private final String supervisorTag;
   private final TaskInfoProvider taskInfoProvider;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   /**
@@ -900,6 +905,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final IdleConfig idleConfig;
 
   public SeekableStreamSupervisor(
+      final String supervisorTag,
       final TaskStorage taskStorage,
       final TaskMaster taskMaster,
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -910,6 +916,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final boolean useExclusiveStartingSequence
   )
   {
+    this.supervisorTag = Preconditions.checkNotNull(supervisorTag, "supervisorTag");
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
@@ -924,9 +931,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.tuningConfig = spec.getTuningConfig();
     this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = spec.getId();
-    this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId));
-    this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Scheduler-%d");
-    this.reportingExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Reporting-%d");
+    this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorTag));
+    this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Scheduler-%d");
+    this.reportingExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Reporting-%d");
 
     this.stateManager = new SeekableStreamSupervisorStateManager(
         spec.getSupervisorStateManagerConfig(),
@@ -935,7 +942,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     int workerThreads;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
-      log.info("Running Task autoscaler for supervisor [%s] for datasource [%s]", supervisorId, dataSource);
+      log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
 
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
                        ? this.tuningConfig.getWorkerThreads()
@@ -966,10 +973,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.workerExec = MoreExecutors.listeningDecorator(
         ScheduledExecutors.fixed(
             workerThreads,
-            StringUtils.encodeForFormat(supervisorId) + "-Worker-%d"
+            StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d"
         )
     );
-    log.info("Created worker pool with [%d] threads for supervisor [%s] for dataSource [%s]", workerThreads, this.supervisorId, this.dataSource);
+    log.info("Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]", workerThreads, this.supervisorId, this.dataSource);
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
@@ -1074,7 +1081,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (started) {
           Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
           if (taskRunner.isPresent()) {
-            taskRunner.get().unregisterListener(supervisorId);
+            taskRunner.get().unregisterListener(supervisorTag);
           }
 
           // Stopping gracefully will synchronize the end sequences of the tasks and signal them to publish, and will block
@@ -1124,7 +1131,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public ListenableFuture<Void> stopAsync()
   {
     ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorId) + "--%d")
+        Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorTag) + "--%d")
     );
     return shutdownExec.submit(() -> {
       stop(false);
@@ -1708,15 +1715,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // if suspended, ensure tasks have been requested to gracefully stop
         if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
-          log.debug("Supervisor [%s] for datasource[%s] is already stopping.", supervisorId, dataSource);
+          log.debug("Supervisor[%s] for datasource[%s] is already stopping.", supervisorId, dataSource);
         } else if (stateManager.isIdle()) {
-          log.debug("Supervisor [%s] for datasource[%s] is idle.", supervisorId, dataSource);
+          log.debug("Supervisor[%s] for datasource[%s] is idle.", supervisorId, dataSource);
         } else if (!spec.isSuspended()) {
-          log.debug("Supervisor [%s] for datasource[%s] is running.", supervisorId, dataSource);
+          log.debug("Supervisor[%s] for datasource[%s] is running.", supervisorId, dataSource);
           stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
           createNewTasks();
         } else {
-          log.debug("Supervisor [%s] for datasource[%s] is suspended.", supervisorId, dataSource);
+          log.debug("Supervisor[%s] for datasource[%s] is suspended.", supervisorId, dataSource);
           gracefulShutdownInternal();
         }
       }
@@ -1725,7 +1732,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
-      log.makeAlert(e, "Exception in supervisor run loop for supervisor [%s] for dataSource [%s]", supervisorId, dataSource).emit();
+      log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
     }
     finally {
       stateManager.markRunFinished();
@@ -1753,7 +1760,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             @Override
             public String getListenerId()
             {
-              return supervisorId;
+              return supervisorTag;
             }
 
             @Override
@@ -1936,7 +1943,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
           (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
       final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
-      log.info("Current checkpointed metadata[%s], new metadata[%s] for supervisor [%s] for dataSource[%s]", currentMetadata, newMetadata, supervisorId, dataSource);
+      log.info("Current checkpointed metadata[%s], new metadata[%s] for supervisor[%s] for dataSource[%s]", currentMetadata, newMetadata, supervisorId, dataSource);
       try {
         metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
       }

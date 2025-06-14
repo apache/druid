@@ -94,8 +94,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   }
 
   public static SegmentTransactionalInsertAction appendAction(
-      String supervisorId,
-      String dataSource,
+      @Nullable String supervisorId,
+      @Nullable String dataSource,
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,

@@ -2440,7 +2440,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();
-    taskRunner.unregisterListener(DATASOURCE);
+    taskRunner.unregisterListener(StringUtils.format("KinesisSupervisor-%s", DATASOURCE));
     replayAll();
 
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
