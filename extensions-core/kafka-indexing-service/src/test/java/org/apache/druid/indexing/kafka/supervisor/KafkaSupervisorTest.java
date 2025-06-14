@@ -120,6 +120,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -365,6 +366,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(ingestionSchema);
 
     SeekableStreamSupervisorSpec testableSupervisorSpec = new KafkaSupervisorSpec(
+        null,
         ingestionSchema,
         dataSchema,
         tuningConfigOri,
@@ -1372,7 +1374,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }
@@ -3596,7 +3598,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
+        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
         alert.getDescription()
     );
   }
@@ -4069,7 +4071,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "SeekableStreamSupervisor[testDS] failed to handle notice",
+        "SeekableStreamSupervisor[testDS] for datasource=[testDS] failed to handle notice",
         alert.getDescription()
     );
     Assert.assertEquals(
@@ -5129,6 +5131,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void test_doesTaskMatchSupervisor()
+  {
+    supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, null, new Period("PT1H"), new Period("PT1H"), false, kafkaHost, null);
+
+    KafkaIndexTask kafkaTaskMatch = createMock(KafkaIndexTask.class);
+    EasyMock.expect(kafkaTaskMatch.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(kafkaTaskMatch);
+
+    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(kafkaTaskMatch));
+
+    KafkaIndexTask kafkaTaskNoMatch = createMock(KafkaIndexTask.class);
+    EasyMock.expect(kafkaTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
+    EasyMock.replay(kafkaTaskNoMatch);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(kafkaTaskNoMatch));
+
+    SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
+    EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(differentTaskType);
+  }
+
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     // create topic manually
@@ -5217,6 +5241,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5242,6 +5267,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5267,6 +5293,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5281,6 +5308,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   private TestableKafkaSupervisor getTestableSupervisor(
+      @Nullable String id,
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -5374,6 +5402,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            id,
             null,
             dataSchema,
             tuningConfig,
@@ -5491,6 +5520,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kafkaSupervisorIOConfig,
@@ -5581,6 +5611,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KafkaSupervisorSpec(
+            null,
             null,
             dataSchema,
             tuningConfig,
@@ -5681,6 +5712,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     return new KafkaIndexTask(
         id,
+        null,
         null,
         schema,
         tuningConfig,

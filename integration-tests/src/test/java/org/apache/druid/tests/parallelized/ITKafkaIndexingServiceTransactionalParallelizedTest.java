@@ -61,4 +61,17 @@ public class ITKafkaIndexingServiceTransactionalParallelizedTest extends Abstrac
   {
     doTestIndexDataWithStreamReshardSplit(true);
   }
+
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * with supervisor(s) maintained and scoped within this test only
+   */
+  @Test
+  public void testKafkaIndexMultiSupervisorWithTransaction() throws Exception
+  {
+    doTestMultiSupervisorIndexDataStableState(
+        true,
+        2
+    );
+  }
 }

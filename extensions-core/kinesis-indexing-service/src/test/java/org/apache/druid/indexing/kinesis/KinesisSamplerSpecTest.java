@@ -122,6 +122,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   {
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KinesisSupervisorIOConfig(
@@ -201,6 +202,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
         null,
+        null,
         dataSchema,
         null,
         new KinesisSupervisorIOConfig(
@@ -253,6 +255,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   public void testGetInputSourceResources()
   {
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
         null,
         DATA_SCHEMA,
         null,

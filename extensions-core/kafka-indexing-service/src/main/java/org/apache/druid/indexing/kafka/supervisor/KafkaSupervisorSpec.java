@@ -54,6 +54,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public KafkaSupervisorSpec(
+      @JsonProperty("id") @Nullable String id,
       @JsonProperty("spec") @Nullable KafkaSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
       @JsonProperty("tuningConfig") @Nullable KafkaSupervisorTuningConfig tuningConfig,
@@ -72,6 +73,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
+        id,
         ingestionSchema != null
         ? ingestionSchema
         : new KafkaSupervisorIngestionSpec(
@@ -156,6 +158,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   protected KafkaSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KafkaSupervisorSpec(
+        getId(),
         getSpec(),
         getDataSchema(),
         getTuningConfig(),

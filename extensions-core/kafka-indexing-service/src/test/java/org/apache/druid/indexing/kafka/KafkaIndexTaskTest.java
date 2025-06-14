@@ -2925,6 +2925,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
         null,
+        null,
         cloneDataSchema(dataSchema),
         tuningConfig,
         ioConfig,

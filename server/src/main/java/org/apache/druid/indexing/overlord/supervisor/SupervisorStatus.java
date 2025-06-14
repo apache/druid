@@ -37,6 +37,7 @@ import java.util.Objects;
 public class SupervisorStatus
 {
   private final String id;
+  private final String dataSource;
   private final String state;
   private final String detailedState;
   private final boolean healthy;
@@ -56,6 +57,7 @@ public class SupervisorStatus
   )
   {
     this.id = Preconditions.checkNotNull(builder.id, "id");
+    this.dataSource = builder.dataSource;
     this.state = builder.state;
     this.detailedState = builder.detailedState;
     this.healthy = builder.healthy;
@@ -78,6 +80,7 @@ public class SupervisorStatus
     SupervisorStatus that = (SupervisorStatus) o;
     return healthy == that.healthy &&
            Objects.equals(id, that.id) &&
+           Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(state, that.state) &&
            Objects.equals(detailedState, that.detailedState) &&
            Objects.equals(spec, that.spec) &&
@@ -90,13 +93,19 @@ public class SupervisorStatus
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, state, detailedState, healthy, spec, specString, type, source, suspended);
+    return Objects.hash(id, dataSource, state, detailedState, healthy, spec, specString, type, source, suspended);
   }
 
   @JsonProperty
   public String getId()
   {
     return id;
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
   }
 
   @JsonProperty
@@ -152,6 +161,8 @@ public class SupervisorStatus
   {
     @JsonProperty("id")
     private String id;
+    @JsonProperty("dataSource")
+    private String dataSource;
     @JsonProperty("state")
     private String state;
     @JsonProperty("detailedState")
@@ -173,6 +184,13 @@ public class SupervisorStatus
     public Builder withId(String id)
     {
       this.id = Preconditions.checkNotNull(id, "id");
+      return this;
+    }
+
+    @JsonProperty
+    public Builder withDataSource(String dataSource)
+    {
+      this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
       return this;
     }
 

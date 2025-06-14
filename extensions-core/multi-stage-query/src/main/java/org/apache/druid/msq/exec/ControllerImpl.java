@@ -1526,7 +1526,7 @@ public class ControllerImpl implements Controller
     if (taskLockType.equals(TaskLockType.APPEND)) {
       return SegmentTransactionalAppendAction.forSegments(segments, null);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null, null, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }

@@ -371,7 +371,12 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(
           SegmentTransactionalInsertAction.appendAction(
-              ImmutableSet.copyOf(segmentCollection), null, null, null
+              ImmutableSet.copyOf(segmentCollection),
+              null,
+              null,
+              null,
+              null,
+              null
           )
       );
     }
