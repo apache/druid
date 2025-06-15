@@ -25,7 +25,7 @@ import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
+import org.apache.druid.msq.querykit.scan.ScanQueryStageProcessor;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
@@ -79,12 +79,12 @@ public class LogicalStageBuilder
           .columns(signature.getColumnNames())
           .columnTypes(signature.getColumnTypes())
           .build();
-      ScanQueryFrameProcessorFactory scanProcessorFactory = new ScanQueryFrameProcessorFactory(s);
+      ScanQueryStageProcessor scanProcessor = new ScanQueryStageProcessor(s);
       StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId())
           .inputs(inputs)
           .signature(signature)
           .shuffleSpec(MixShuffleSpec.instance())
-          .processorFactory(scanProcessorFactory);
+          .processor(scanProcessor);
       return sdb.build(getIdForBuilder());
     }
 

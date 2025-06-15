@@ -83,17 +83,14 @@ public class OutputChannelTest
     Assert.assertEquals("Readable channel is not ready", e1.getMessage());
     Assert.assertSame(theChannel.writable(), channel.getWritableChannel());
     Assert.assertSame(allocator, channel.getFrameMemoryAllocator());
-    Assert.assertFalse(channel.isReadableChannelReady());
 
     // Close writable channel; now readable channel is ready.
     theChannel.writable().close();
-    Assert.assertTrue(channel.isReadableChannelReady());
 
     Assert.assertEquals(1, channel.getPartitionNumber());
     Assert.assertSame(theChannel.readable(), channel.getReadableChannel());
     Assert.assertSame(theChannel.writable(), channel.getWritableChannel());
     Assert.assertSame(allocator, channel.getFrameMemoryAllocator());
-    Assert.assertTrue(channel.isReadableChannelReady());
 
     // Use mapWritableChannel to replace the writable channel with an open one; readable channel is no longer ready.
     final WritableFrameFileChannel otherWritableChannel = new WritableFrameFileChannel(null);
@@ -107,7 +104,6 @@ public class OutputChannelTest
     Assert.assertEquals("Readable channel is not ready", e2.getMessage());
     Assert.assertSame(otherWritableChannel, mappedChannel.getWritableChannel());
     Assert.assertSame(allocator, mappedChannel.getFrameMemoryAllocator());
-    Assert.assertFalse(mappedChannel.isReadableChannelReady());
   }
 
   @Test
@@ -126,7 +122,6 @@ public class OutputChannelTest
     Assert.assertSame(theChannel.readable(), channel.getReadableChannel());
     Assert.assertSame(theChannel.writable(), channel.getWritableChannel());
     Assert.assertSame(allocator, channel.getFrameMemoryAllocator());
-    Assert.assertTrue(channel.isReadableChannelReady());
 
     // Use mapWritableChannel to replace the writable channel.
     final WritableFrameFileChannel otherWritableChannel = new WritableFrameFileChannel(null);
@@ -136,6 +131,5 @@ public class OutputChannelTest
     Assert.assertSame(theChannel.readable(), mappedChannel.getReadableChannel());
     Assert.assertSame(otherWritableChannel, mappedChannel.getWritableChannel());
     Assert.assertSame(allocator, mappedChannel.getFrameMemoryAllocator());
-    Assert.assertTrue(channel.isReadableChannelReady());
   }
 }

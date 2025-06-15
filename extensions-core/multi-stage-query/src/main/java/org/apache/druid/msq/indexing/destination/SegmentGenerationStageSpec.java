@@ -27,7 +27,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
@@ -42,7 +42,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,8 +76,8 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
     return StageDefinition.builder(queryDef.getNextStageNumber())
                        .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
                        .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                       .processorFactory(
-                           new SegmentGeneratorFrameProcessorFactory(
+                       .processor(
+                           new SegmentGeneratorStageProcessor(
                                dataSchema,
                                columnMappings,
                                tuningConfig

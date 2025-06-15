@@ -17,25 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.msq.exec.std;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.msq.exec.ExtraInfoHolder;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.processor.OutputChannels;
 
-@JsonTypeName("nil")
-public class NilExtraInfoHolder extends ExtraInfoHolder<Object>
+/**
+ * Represents the completion of some processing ({@link #resultFuture()}) and the output channels associated
+ * with that processing ({@link #outputChannels()}).
+ */
+public class ResultAndChannels<T>
 {
-  private static final NilExtraInfoHolder INSTANCE = new NilExtraInfoHolder();
+  private final ListenableFuture<T> result;
+  private final OutputChannels outputChannels;
 
-  private NilExtraInfoHolder()
+  public ResultAndChannels(
+      ListenableFuture<T> result,
+      OutputChannels outputChannels
+  )
   {
-    super(null);
+    this.result = result;
+    this.outputChannels = outputChannels;
   }
 
-  @JsonCreator
-  public static NilExtraInfoHolder instance()
+  public ListenableFuture<T> resultFuture()
   {
-    return INSTANCE;
+    return result;
+  }
+
+  public OutputChannels outputChannels()
+  {
+    return outputChannels;
   }
 }
