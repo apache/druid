@@ -118,7 +118,7 @@ class JodaStuff
         return DateTimes.ISO_DATE_OR_TIME_WITH_OFFSET.parse(str);
       }
       ctxt.reportWrongTokenException(handledType(), JsonToken.VALUE_NUMBER_INT, "expected int or string token");
-      return null; // required for compiler, but ctxt.reportWrongTokenException always throws
+      return null; // unreachable ... required for compiler, but ctxt.reportWrongTokenException always throws
     }
   }
 }
