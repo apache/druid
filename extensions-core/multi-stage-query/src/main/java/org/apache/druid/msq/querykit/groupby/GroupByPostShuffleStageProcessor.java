@@ -34,15 +34,15 @@ import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 
