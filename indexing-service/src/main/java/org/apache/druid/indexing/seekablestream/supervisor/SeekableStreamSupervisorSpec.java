@@ -81,7 +81,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   /**
    * Base constructor for SeekableStreamSupervisors.
-   * The unique identifier for the supervisor. Null {@param id} implies the constructor will use the
+   * The unique identifier for the supervisor. A null {@code id} implies the constructor will use the
    * non-null `dataSource` in `ingestionSchema` for backwards compatibility.
    */
   public SeekableStreamSupervisorSpec(

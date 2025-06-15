@@ -502,7 +502,7 @@ public class MaterializedViewSupervisor implements Supervisor
 
   private void commitDataSourceMetadata(DataSourceMetadata dataSourceMetadata)
   {
-    if (!metadataStorageCoordinator.insertDataSourceMetadata(supervisorId, dataSourceMetadata)) {
+    if (!metadataStorageCoordinator.insertDataSourceMetadata(dataSource, dataSourceMetadata)) {
       try {
         metadataStorageCoordinator.resetDataSourceMetadata(
             dataSource,

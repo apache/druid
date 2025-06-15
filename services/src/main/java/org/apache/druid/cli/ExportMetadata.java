@@ -267,11 +267,10 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        String newLine = parsed[0] + "," //supervisorId
-                         + parsed[1] + "," //dataSource
-                         + parsed[2] + "," //created_date
-                         + rewriteHexPayloadAsEscapedJson(parsed[3]) + "," //commit_metadata_payload
-                         + parsed[4] //commit_metadata_sha1
+        String newLine = parsed[0] + "," //dataSource
+                         + parsed[1] + "," //created_date
+                         + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
+                         + parsed[3] //commit_metadata_sha1
                          + "\n";
         writer.write(newLine);
 

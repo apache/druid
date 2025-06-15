@@ -2994,7 +2994,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )
     {
       return new SeekableStreamSupervisorReportPayload<>(
-          DATASOURCE,
+          SUPERVISOR_ID,
           DATASOURCE,
           STREAM,
           1,

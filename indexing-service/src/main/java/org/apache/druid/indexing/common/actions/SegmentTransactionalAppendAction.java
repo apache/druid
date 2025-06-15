@@ -72,7 +72,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 
   public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
   {
-    return new SegmentTransactionalAppendAction(null, segments, null, null, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(segments, null, null, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
@@ -83,13 +83,13 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalAppendAction(supervisorId, segments, startMetadata, endMetadata, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(segments, supervisorId, startMetadata, endMetadata, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
-      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
       @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping

@@ -575,7 +575,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          AUTOSCALER_SCALING_TIME_METRIC,
                                          scaleActionStopwatch.millisElapsed()
                                      ));
-      log.info("Changed taskCount to [%s] for supervisor[%s] of dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
+      log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
       return true;
     }
   }
@@ -2246,7 +2246,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         stopFutures.add(stopTask(taskId, false));
       }
     }
-    log.debug("Found [%d] seekablestream indexing tasks for supervisor [%s] for datasource[%s]", taskCount, supervisorId, dataSource);
+    log.debug("Found [%d] seekablestream indexing tasks for supervisor[%s] for datasource[%s]", taskCount, supervisorId, dataSource);
 
     if (!stopFutures.isEmpty()) {
       coalesceAndAwait(stopFutures);

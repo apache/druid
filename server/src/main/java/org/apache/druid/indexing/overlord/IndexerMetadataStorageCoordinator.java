@@ -315,7 +315,8 @@ public interface IndexerMetadataStorageCoordinator
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
    * {@param segments} and dropping {@param segmentsToDrop}.
    *
-   * @param supervisorId   (optional) supervisorID which is committing the segments
+   * @param supervisorId   supervisorID which is committing the segments. Cannot be null if `startMetadata`
+   *                       and endMetadata` are both non-null.
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
    *                       {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
@@ -408,7 +409,7 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Retrieves supervisor's metadata from the metadata store. Returns null if there is no metadata.
+   * Retrieves {@link DataSourceMetadata} entry for {@code supervisorId} from the metadata store. Returns null if there is no metadata.
    */
   @Nullable DataSourceMetadata retrieveDataSourceMetadata(String supervisorId);
 
@@ -422,7 +423,7 @@ public interface IndexerMetadataStorageCoordinator
   boolean deleteDataSourceMetadata(String supervisorId);
 
   /**
-   * Resets dataSourceMetadata entry for 'supervisorId' to the one supplied.
+   * Resets {@link DataSourceMetadata} entry for {@code supervisorId} to the one supplied.
    *
    * @param supervisorId         identifier
    * @param dataSourceMetadata value to set
@@ -432,7 +433,7 @@ public interface IndexerMetadataStorageCoordinator
   boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata) throws IOException;
 
   /**
-   * Insert dataSourceMetadata entry for 'supervisorId'.
+   * Insert {@link DataSourceMetadata} entry for {@code supervisorId}.
    *
    * @param supervisorId       identifier
    * @param dataSourceMetadata value to set
@@ -442,7 +443,7 @@ public interface IndexerMetadataStorageCoordinator
   boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata);
 
   /**
-   * Remove datasource metadata created before the given timestamp and not in given excludeSupervisorIds set.
+   * Remove supervisors' datasource metadata created before the given timestamp and not in given excludeSupervisorIds set.
    *
    * @param timestamp timestamp in milliseconds
    * @param excludeSupervisorIds set of supervisor ids to exclude from removal

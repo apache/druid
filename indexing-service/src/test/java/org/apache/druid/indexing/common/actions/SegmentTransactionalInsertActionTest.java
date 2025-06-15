@@ -101,7 +101,7 @@ public class SegmentTransactionalInsertActionTest
 
     SegmentPublishResult result1 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
-        DATA_SOURCE,
+        SUPERVISOR_ID,
         DATA_SOURCE,
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableList.of(1)),
@@ -114,7 +114,7 @@ public class SegmentTransactionalInsertActionTest
 
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT2),
-        DATA_SOURCE,
+        SUPERVISOR_ID,
         DATA_SOURCE,
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2)),
@@ -132,7 +132,7 @@ public class SegmentTransactionalInsertActionTest
 
     Assert.assertEquals(
         new ObjectMetadata(ImmutableList.of(2)),
-        actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(DATA_SOURCE)
+        actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(SUPERVISOR_ID)
     );
   }
 
@@ -189,7 +189,7 @@ public class SegmentTransactionalInsertActionTest
 
     SegmentPublishResult result = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT1),
-        DATA_SOURCE,
+        SUPERVISOR_ID,
         DATA_SOURCE,
         new ObjectMetadata(ImmutableList.of(1)),
         new ObjectMetadata(ImmutableList.of(2)),
