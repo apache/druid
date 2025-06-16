@@ -30,8 +30,8 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
