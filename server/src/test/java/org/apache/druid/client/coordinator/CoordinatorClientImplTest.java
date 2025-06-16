@@ -496,4 +496,35 @@ public class CoordinatorClientImplTest
         coordinatorClient.fetchLookupsForTier("country_code").get()
     );
   }
+
+  @Test
+  public void test_fetchLookupsForTier_receiveHTTPResponseException() throws Exception
+  {
+    LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
+        Map.of(
+            "77483", "United States",
+            "77484", "India"
+        ),
+        true
+    );
+    LookupExtractorFactoryContainer lookupDataContainer = new LookupExtractorFactoryContainer("v0", lookupData);
+    Map<String, LookupExtractorFactoryContainer> lookups = Map.of(
+        "country_code", lookupDataContainer
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(lookups)
+    );
+
+    Assert.assertEquals(
+        lookups,
+        coordinatorClient.fetchLookupsForTier("country_code").get()
+    );
+  }
 }
