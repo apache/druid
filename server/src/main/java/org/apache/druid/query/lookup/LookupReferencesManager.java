@@ -477,10 +477,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     catch (Exception e) {
       HttpResponseException httpEx = (HttpResponseException) e.getCause();
       LOG.warn(
-          "No lookups found for tier [%s], status [%s], response [%s]",
+          "No lookups found for tier [%s], status [%s]",
           tier,
-          httpEx.getResponse().getStatus(),
-          httpEx.getResponse()
+          httpEx.getResponse().getStatus()
       );
     }
     return Map.of();
