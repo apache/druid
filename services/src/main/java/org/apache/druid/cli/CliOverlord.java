@@ -35,7 +35,6 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
@@ -515,7 +514,7 @@ public class CliOverlord extends ServerRunnable
       );
 
       // add some paths not to be redirected to leader.
-      final FilterHolder guiceFilterHolder = new FilterHolder(injector.getInstance(GuiceFilter.class));
+      final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
       root.addFilter(guiceFilterHolder, "/status/*", null);
       root.addFilter(guiceFilterHolder, "/druid-internal/*", null);
 
