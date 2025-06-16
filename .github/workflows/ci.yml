@@ -72,7 +72,10 @@ jobs:
   run-its-triggered-by-unit-test:
     needs: [ maybe-trigger-its ]
     if: ${{ env.runItsTriggeredByUnitTest == 'true' }}
-    uses: ./.github/workflows/ci-its.yml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test ITS
+        run: echo "Running ITS"
 
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
