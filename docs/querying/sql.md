@@ -55,7 +55,6 @@ Druid SQL supports SELECT queries with the following structure:
 ```
 [ EXPLAIN PLAN FOR ]
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
-[ SET <parameter> = <value>;]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))]
