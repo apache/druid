@@ -55,6 +55,25 @@ jobs:
           check_retries: true
           truncate_stack_traces: false
 
+  maybe-trigger-its:
+    runs-on: ubuntu-latest
+    needs: [ test-report ]
+    if: ${{ needs.test-report.result == 'success' }}
+    steps:
+      - name: Determine if its workflow should run
+        id: skip_duplicate
+        uses: fkirc/skip-duplicate-actions@v5.3.0
+        with:
+          concurrent_skipping: 'always'
+      - name: Set env
+        if: ${{ steps.skip_duplicate.outputs.should_skip != 'true' }}
+        run: echo "runItsTriggeredByUnitTest=true" >> $GITHUB_ENV
+
+  run-its-triggered-by-unit-test:
+    needs: [ maybe-trigger-its ]
+    if: ${{ env.runItsTriggeredByUnitTest == 'true' }}
+    uses: ./.github/workflows/ci-its.yml
+
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
     needs: run-unit-tests

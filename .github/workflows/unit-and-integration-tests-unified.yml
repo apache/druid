@@ -194,28 +194,47 @@ jobs:
         if: ${{ env.isPR == 'false' }}
         run: echo "::set-output name=runIts::true"
 
+  maybe-trigger-its:
+    runs-on: ubuntu-latest
+    needs: [post-build-check]
+    if: ${{ !cancelled() && needs.post-build-check.outputs.runIts == 'true' }}
+    steps:
+      - name: Determine if main workflow should run
+        id: skip_duplicate
+        uses: fkirc/skip-duplicate-actions@v5.3.0
+        with:
+          concurrent_skipping: 'always'
+      - name: Set env
+        if: ${{ steps.skip_duplicate.outputs.should_skip != 'true' }}
+        run: echo "runItsTriggeredByBuild=true" >> $GITHUB_ENV
+
+  run-its-triggered-by-build:
+    needs: [ maybe-trigger-its ]
+    if: ${{ env.runItsTriggeredByBuild == 'true' }}
+    uses: ./.github/workflows/ci-its.yml
+
   unit-tests:
     name: "unit tests"
     uses: ./.github/workflows/ci.yml
 
-  standard-its:
-    needs: [unit-tests, post-build-check]
-    if: ${{ !cancelled() && (needs.post-build-check.outputs.runIts == 'true' || needs.unit-tests.result == 'success') }}
-    uses: ./.github/workflows/standard-its.yml
-
-  revised-its:
-    needs: [unit-tests, post-build-check]
-    if: ${{ !cancelled() && (needs.post-build-check.outputs.runIts == 'true' || needs.unit-tests.result == 'success') }}
-    uses: ./.github/workflows/revised-its.yml
-    with:
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-
-  actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its]
-    runs-on: ubuntu-latest
-    if: ${{ !cancelled() }}
-    steps:
-      - uses: Kesin11/actions-timeline@427ee2cf860166e404d0d69b4f2b24012bb7af4f
+#  standard-its:
+#    needs: [unit-tests, post-build-check]
+#    if: ${{ !cancelled() && (needs.post-build-check.outputs.runIts == 'true' || needs.unit-tests.result == 'success') }}
+#    uses: ./.github/workflows/standard-its.yml
+#
+#  revised-its:
+#    needs: [unit-tests, post-build-check]
+#    if: ${{ !cancelled() && (needs.post-build-check.outputs.runIts == 'true' || needs.unit-tests.result == 'success') }}
+#    uses: ./.github/workflows/revised-its.yml
+#    with:
+#      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+#      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+#      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+#
+#  actions-timeline:
+#    needs: [build, unit-tests, revised-its, standard-its]
+#    runs-on: ubuntu-latest
+#    if: ${{ !cancelled() }}
+#    steps:
+#      - uses: Kesin11/actions-timeline@427ee2cf860166e404d0d69b4f2b24012bb7af4f
