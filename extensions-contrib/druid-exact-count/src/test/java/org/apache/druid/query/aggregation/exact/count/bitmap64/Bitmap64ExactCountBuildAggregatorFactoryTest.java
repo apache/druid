@@ -19,10 +19,13 @@
 
 package org.apache.druid.query.aggregation.exact.count.bitmap64;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +61,7 @@ public class Bitmap64ExactCountBuildAggregatorFactoryTest
   public void testFactorize()
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(selectorFactory.getColumnCapabilities(FIELD_NAME)).andReturn(null);
     EasyMock.expect(selectorFactory.makeColumnValueSelector(FIELD_NAME))
             .andReturn(new TestObjectColumnSelector<>(null)); // Return a dummy selector
     EasyMock.replay(selectorFactory);
@@ -67,9 +71,29 @@ public class Bitmap64ExactCountBuildAggregatorFactoryTest
   }
 
   @Test
+  public void testFactorizeWithNonNumericColumnThrowsIAE()
+  {
+    ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    ColumnCapabilities capabilities = EasyMock.createMock(ColumnCapabilities.class);
+
+    EasyMock.expect(selectorFactory.getColumnCapabilities(FIELD_NAME)).andReturn(capabilities);
+    EasyMock.expect(capabilities.getType()).andReturn(ValueType.STRING);
+
+    EasyMock.replay(selectorFactory, capabilities);
+
+    Assertions.assertThrows(
+        IAE.class,
+        () -> factory.factorize(selectorFactory)
+    );
+
+    EasyMock.verify(selectorFactory, capabilities);
+  }
+
+  @Test
   public void testFactorizeBuffered()
   {
     ColumnSelectorFactory selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+    EasyMock.expect(selectorFactory.getColumnCapabilities(FIELD_NAME)).andReturn(null);
     EasyMock.expect(selectorFactory.makeColumnValueSelector(FIELD_NAME))
             .andReturn(new TestObjectColumnSelector<>(null)); // Return a dummy selector
     EasyMock.replay(selectorFactory);

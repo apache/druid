@@ -125,7 +125,7 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
         )
     );
 
-    Assertions.assertTrue(e.getMessage().contains("Aggregation [BITMAP64_EXACT_COUNT] does not support type [VARCHAR]"));
+    Assertions.assertTrue(e.getMessage().contains("Aggregation [BITMAP64_EXACT_COUNT] does not support type [STRING]"));
   }
 
   @Test

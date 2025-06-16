@@ -30,7 +30,6 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountBuildAggregatorFactory;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.SimpleSqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -106,56 +106,72 @@ public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
-    if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn())
-                       .map(type -> type.is(ValueType.COMPLEX))
-                       .orElse(false)) {
-      aggregatorFactory = new Bitmap64ExactCountMergeAggregatorFactory(
-          aggregatorName,
-          columnArg.getDirectColumn()
-      );
+    // Create Merge Aggregator if is already Bitmap64 complex type, else create Build Aggregator.
+    if (isBitmap64ComplexType(columnArg, rowSignature)) {
+      aggregatorFactory = new Bitmap64ExactCountMergeAggregatorFactory(aggregatorName, columnArg.getDirectColumn());
     } else {
-      // Reject implicit casts from non-numeric types (e.g., STRING) to numeric.
-      if (columnRexNode.isA(SqlKind.CAST)) {
-        final RelDataType operandType = ((RexCall) columnRexNode).operands.get(0).getType();
-        final ColumnType operandDruidType = Calcites.getColumnTypeForRelDataType(operandType);
-        if (operandDruidType == null || !operandDruidType.isNumeric()) {
-          throw InvalidSqlInput.exception(
-              "Aggregation [%s] does not support type [%s], column [%s]",
-              NAME, operandType.getSqlTypeName(), name
-          );
-        }
-      }
-
-      final RelDataType dataType = columnRexNode.getType();
-      final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
-      if (inputType == null) {
-        throw new ISE(
-            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
-            dataType.getSqlTypeName(),
-            aggregatorName
-        );
-      }
-
-      final DimensionSpec dimensionSpec;
-
-      if (columnArg.isDirectColumnAccess()) {
-        dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
-      } else {
-        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            columnArg,
-            dataType
-        );
-        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
-      }
-
-      aggregatorFactory = new Bitmap64ExactCountBuildAggregatorFactory(
-          aggregatorName,
-          dimensionSpec.getDimension()
-      );
+      rejectImplicitCastsToNumericType(columnRexNode, name);
+      aggregatorFactory = createBuildAggregatorFactory(columnRexNode, columnArg, virtualColumnRegistry, aggregatorName);
     }
 
     return toAggregation(name, finalizeAggregations, aggregatorFactory);
+  }
+
+  private boolean isBitmap64ComplexType(DruidExpression columnArg, RowSignature rowSignature)
+  {
+    return columnArg.isDirectColumnAccess()
+           && rowSignature.getColumnType(columnArg.getDirectColumn())
+                          .map(type -> type.is(ValueType.COMPLEX))
+                          .orElse(false);
+  }
+
+  /**
+   * Rejects SQL queries pertaining to using non-numeric columns that can be implicitly cast to numeric values (e.g. String).
+   * There is a second layer of protection at {@link Bitmap64ExactCountBuildAggregatorFactory#validateNumericColumn},
+   * which checks the column types when given a query in Druid Native.
+   *
+   * <p>
+   * This function aims to keep the Exception type consistent with the rest of Druid.
+   * </p>
+   */
+  private void rejectImplicitCastsToNumericType(RexNode columnRexNode, String columnName)
+  {
+    if (columnRexNode.isA(SqlKind.CAST)) {
+      final RelDataType operandType = ((RexCall) columnRexNode).operands.get(0).getType();
+      final ColumnType operandDruidType = Calcites.getColumnTypeForRelDataType(operandType);
+      if (operandDruidType == null || !operandDruidType.isNumeric()) {
+        throw SimpleSqlAggregator.badTypeException(columnName, NAME, ColumnType.STRING);
+      }
+    }
+  }
+
+  private AggregatorFactory createBuildAggregatorFactory(
+      final RexNode columnRexNode,
+      final DruidExpression columnArg,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final String aggregatorName
+  )
+  {
+    final RelDataType dataType = columnRexNode.getType();
+    final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
+    if (inputType == null) {
+      throw new ISE(
+          "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
+          dataType.getSqlTypeName(),
+          aggregatorName
+      );
+    }
+
+    final DimensionSpec dimensionSpec;
+
+    if (columnArg.isDirectColumnAccess()) {
+      dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
+    } else {
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(columnArg, dataType);
+      dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
+    }
+
+    return new Bitmap64ExactCountBuildAggregatorFactory(aggregatorName, dimensionSpec.getDimension());
   }
 
   private Aggregation toAggregation(String name, boolean finalizeAggregations, AggregatorFactory aggregatorFactory)

@@ -21,11 +21,14 @@ package org.apache.druid.query.aggregation.exact.count.bitmap64;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
 public class Bitmap64ExactCountBuildAggregatorFactory extends Bitmap64ExactCountAggregatorFactory
 {
@@ -49,12 +52,14 @@ public class Bitmap64ExactCountBuildAggregatorFactory extends Bitmap64ExactCount
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
+    validateNumericColumn(metricFactory);
     return new Bitmap64ExactCountBuildAggregator(metricFactory.makeColumnValueSelector(getFieldName()));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
+    validateNumericColumn(metricFactory);
     return new Bitmap64ExactCountBuildBufferAggregator(metricFactory.makeColumnValueSelector(getFieldName()));
   }
 
@@ -68,5 +73,25 @@ public class Bitmap64ExactCountBuildAggregatorFactory extends Bitmap64ExactCount
   public ColumnType getResultType()
   {
     return ColumnType.LONG;
+  }
+
+  /**
+   * Ensures that the column referenced by {@link #getFieldName()} is of a numeric type when this aggregator is used
+   * in a native Druid query. We must enforce the constraint here to provide a clear and early failure if the
+   * query references a non-numeric (e.g., STRING) column.
+   *
+   * @throws IllegalArgumentException if the column exists and is not numeric.
+   */
+  private void validateNumericColumn(ColumnSelectorFactory metricFactory)
+  {
+    final ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(getFieldName());
+    if (capabilities != null) {
+      final ValueType valueType = capabilities.getType();
+      if (!valueType.isNumeric()) {
+        throw new IAE(
+            "Aggregation [%s] does not support column [%s] of type [%s]. Supported types: numeric.",
+            Bitmap64ExactCountModule.BUILD_TYPE_NAME, getFieldName(), valueType);
+      }
+    }
   }
 }
