@@ -113,6 +113,17 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExactCountOnStringColumnTypeThrowsError()
+  {
+    cannotVectorize();
+    testQuery(
+          "SELECT BITMAP64_EXACT_COUNT(dim1) FROM " + DATA_SOURCE,
+          ImmutableList.of(),
+          ImmutableList.of()
+    );
+  }
+
+  @Test
   public void testExactCountOnHyperUniqueColumnTypeThrowsError()
   {
     DruidException e = Assertions.assertThrows(

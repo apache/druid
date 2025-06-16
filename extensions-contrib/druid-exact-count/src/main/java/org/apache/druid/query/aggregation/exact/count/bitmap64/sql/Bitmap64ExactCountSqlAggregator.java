@@ -87,7 +87,7 @@ public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
   )
   {
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
-    // for string columns.
+    // for Bitmap64ExactCountBuild / Bitmap64ExactCountMerge columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
         rexBuilder.getTypeFactory(),
         rowSignature,
@@ -140,25 +140,15 @@ public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
       );
     }
 
-    return toAggregation(
-        name,
-        finalizeAggregations,
-        aggregatorFactory
-    );
+    return toAggregation(name, finalizeAggregations, aggregatorFactory);
   }
 
-  private Aggregation toAggregation(
-      String name,
-      boolean finalizeAggregations,
-      AggregatorFactory aggregatorFactory
-  )
+  private Aggregation toAggregation(String name, boolean finalizeAggregations, AggregatorFactory aggregatorFactory)
   {
     return Aggregation.create(
         Collections.singletonList(aggregatorFactory),
-        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(
-            name,
-            aggregatorFactory.getName()
-        ) : null
+        finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorFactory.getName())
+                             : null
     );
   }
 }
