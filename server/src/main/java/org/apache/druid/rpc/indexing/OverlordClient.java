@@ -31,6 +31,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
@@ -175,6 +176,15 @@ public interface OverlordClient
    * that have a {@link ClientTaskQuery} model or are subclasses of {@link ClientTaskQuery}.
    */
   ListenableFuture<TaskPayloadResponse> taskPayload(String taskId);
+
+  /**
+   * Submits a supervisor spec to the Overlord.
+   * <p>
+   * API: {@code /druid/indexer/v1/supervisor}
+   *
+   * @return Map containing a single entry "id"
+   */
+  ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor);
 
   /**
    * Returns all current supervisor statuses.

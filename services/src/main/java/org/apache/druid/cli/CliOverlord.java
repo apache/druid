@@ -515,16 +515,17 @@ public class CliOverlord extends ServerRunnable
       );
 
       // add some paths not to be redirected to leader.
-      root.addFilter(GuiceFilter.class, "/status/*", null);
-      root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
+      final FilterHolder guiceFilterHolder = new FilterHolder(injector.getInstance(GuiceFilter.class));
+      root.addFilter(guiceFilterHolder, "/status/*", null);
+      root.addFilter(guiceFilterHolder, "/druid-internal/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
 
       // Can't use /* here because of Guice and Jetty static content conflicts
-      root.addFilter(GuiceFilter.class, "/druid/*", null);
+      root.addFilter(guiceFilterHolder, "/druid/*", null);
 
-      root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+      root.addFilter(guiceFilterHolder, "/druid-ext/*", null);
 
       RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
       JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);

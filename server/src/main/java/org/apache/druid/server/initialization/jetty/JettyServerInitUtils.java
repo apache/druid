@@ -22,6 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
@@ -36,7 +37,6 @@ import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -142,6 +142,20 @@ public class JettyServerInitUtils
       rewriteHandler.addRule(getHSTSHeaderPattern());
       handlerList.addHandler(rewriteHandler);
     }
+  }
+
+  /**
+   * Using this {@link FilterHolder} forces the underlying {@link GuiceFilter}
+   * to be instantiated with the 1-argument constructor that uses an injected
+   * non-static FilterPipeline. Since the FilterPipeline is non-static, multiple
+   * Jetty servers may be initialized by separate Guice Injectors running in the
+   * same JVM. This is currently needed only for running simulation tests.
+   *
+   * @see GuiceFilter#GuiceFilter
+   */
+  public static FilterHolder getGuiceFilterHolder(Injector injector)
+  {
+    return new FilterHolder(injector.getInstance(GuiceFilter.class));
   }
 
   private static HeaderPatternRule getHSTSHeaderPattern()

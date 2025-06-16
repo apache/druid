@@ -47,7 +47,7 @@ public class CuratorTestBase
 
   private int batchCtr = 0;
 
-  protected void setupServerAndCurator() throws Exception
+  public void setupServerAndCurator() throws Exception
   {
     server = new TestingServer();
     timing = new Timing();
@@ -185,7 +185,7 @@ public class CuratorTestBase
     curator.delete().guaranteed().forPath(batchPath);
   }
 
-  protected void tearDownServerAndCurator()
+  public void tearDownServerAndCurator()
   {
     try {
       curator.close();
@@ -196,6 +196,8 @@ public class CuratorTestBase
     }
   }
 
+  public String getConnectString()
+  {
+    return server.getConnectString();
+  }
 }
-
-//Build at Tue Dec 22 21:30:00 CST 2015

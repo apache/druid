@@ -147,7 +147,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
         jsonMapper
     );
 
-    root.addFilter(GuiceFilter.class, "/*", null);
+    final FilterHolder guiceFilterHolder = new FilterHolder(injector.getInstance(GuiceFilter.class));
+    root.addFilter(guiceFilterHolder, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
     // Do not change the order of the handlers that have already been added
