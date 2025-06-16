@@ -104,7 +104,7 @@ The following example shows a query that fetches data from an external JSON sour
 The example specifies two query context parameters:
 
 - `maxNumTasks=3`: Limits the maximum number of parallel tasks to 3.
-- `finalizeAggregations=false`: Prevents Druid from performing final data aggregation during loading. It's useful if you want to work with intermediate data states or control aggregation later. For more information, see [Rollup](../multi-stage-query/concepts.md#rollup).
+- `finalizeAggregations=false`: Ensures Druid saving intermediate data aggregation during loading. It's useful if you want to work with intermediate data states or control aggregation later. For more information, see [Rollup](../multi-stage-query/concepts.md#rollup).
 
 
 <Tabs>
