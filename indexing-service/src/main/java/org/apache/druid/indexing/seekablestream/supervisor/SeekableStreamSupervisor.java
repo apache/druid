@@ -4537,7 +4537,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           ServiceMetricEvent.builder()
                             .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .setMetric(StringUtils.format("ingest/%s/fetchOffsets/time", spec.getType()), timeInMillis)
+                            .setMetric(StringUtils.format("ingest/%s/updateOffsets/time", spec.getType()), timeInMillis)
       );
     }
     catch (Exception e) {
