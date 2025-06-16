@@ -116,11 +116,16 @@ public class Bitmap64ExactCountSqlAggregatorTest extends BaseCalciteQueryTest
   public void testExactCountOnStringColumnTypeThrowsError()
   {
     cannotVectorize();
-    testQuery(
-          "SELECT BITMAP64_EXACT_COUNT(dim1) FROM " + DATA_SOURCE,
-          ImmutableList.of(),
-          ImmutableList.of()
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT BITMAP64_EXACT_COUNT(dim1) FROM " + DATA_SOURCE,
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
     );
+
+    Assertions.assertTrue(e.getMessage().contains("Aggregation [BITMAP64_EXACT_COUNT] does not support type [VARCHAR]"));
   }
 
   @Test

@@ -23,11 +23,14 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountBuildAggregatorFactory;
@@ -112,6 +115,18 @@ public class Bitmap64ExactCountSqlAggregator implements SqlAggregator
           columnArg.getDirectColumn()
       );
     } else {
+      // Reject implicit casts from non-numeric types (e.g., STRING) to numeric.
+      if (columnRexNode.isA(SqlKind.CAST)) {
+        final RelDataType operandType = ((RexCall) columnRexNode).operands.get(0).getType();
+        final ColumnType operandDruidType = Calcites.getColumnTypeForRelDataType(operandType);
+        if (operandDruidType == null || !operandDruidType.isNumeric()) {
+          throw InvalidSqlInput.exception(
+              "Aggregation [%s] does not support type [%s], column [%s]",
+              NAME, operandType.getSqlTypeName(), name
+          );
+        }
+      }
+
       final RelDataType dataType = columnRexNode.getType();
       final ColumnType inputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (inputType == null) {
