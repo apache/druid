@@ -25,7 +25,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.std.StandardStageOperations;
+import org.apache.druid.msq.exec.std.StandardShuffleOperations;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -55,7 +55,7 @@ public interface ExecutionContext
 
   /**
    * For {@link ShuffleKind#GLOBAL_SORT}, a future that resolves to the global {@link ClusterByPartitions} (when known).
-   * Used by {@link StandardStageOperations#globalSort(ListenableFuture, OutputChannelFactory)}.
+   * Used by {@link StandardShuffleOperations#globalSort(ListenableFuture, OutputChannelFactory)}.
    */
   ListenableFuture<ClusterByPartitions> globalClusterByPartitions();
 
@@ -96,7 +96,7 @@ public interface ExecutionContext
    * down the prior stage.
    * (2) With {@link ShuffleKind#GLOBAL_SORT}, this provides statistics that are used to determine global boundaries.
    *
-   * Typically called by {@link StandardStageOperations#gatherResultKeyStatisticsIfNeeded(ListenableFuture)}.
+   * Typically called by {@link StandardShuffleOperations#gatherResultKeyStatisticsIfNeeded(ListenableFuture)}.
    */
   void onDoneReadingInput(@Nullable ClusterByStatisticsSnapshot snapshot);
 

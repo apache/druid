@@ -172,7 +172,7 @@ public class StandardStageRunner<T, R>
   private void makeAndRunShuffleProcessors()
   {
     final ShuffleSpec shuffleSpec = workOrder.getStageDefinition().getShuffleSpec();
-    final StandardStageOperations stageOperations = new StandardStageOperations(executionContext);
+    final StandardShuffleOperations stageOperations = new StandardShuffleOperations(executionContext);
 
     pipelineFuture = stageOperations.gatherResultKeyStatisticsIfNeeded(pipelineFuture);
 

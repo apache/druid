@@ -67,14 +67,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Helper class for performing common stage processing operations. Used by {@link StageProcessor} implementations.
+ * Helper class for performing common shuffle-related operations. Used by {@link StageProcessor} implementations.
  */
-public class StandardStageOperations
+public class StandardShuffleOperations
 {
   private final ExecutionContext executionContext;
   private final WorkOrder workOrder;
 
-  public StandardStageOperations(final ExecutionContext executionContext)
+  public StandardShuffleOperations(final ExecutionContext executionContext)
   {
     this.executionContext = executionContext;
     this.workOrder = executionContext.workOrder();
