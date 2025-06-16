@@ -37,6 +37,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,6 +45,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
@@ -263,6 +265,26 @@ public class OverlordClientImplTest
     Assert.assertEquals(
         Collections.emptyMap(),
         overlordClient.findLockedIntervals(requests).get()
+    );
+  }
+
+  @Test
+  public void test_postSupervisor() throws Exception
+  {
+    final String supervisorId = "wiki_supervisor";
+    final SupervisorSpec supervisorSpec = new TestSupervisorSpec(supervisorId, "data");
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true")
+            .jsonContent(jsonMapper, supervisorSpec),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Map.of("id", supervisorId))
+    );
+
+    Assert.assertEquals(
+        Map.of("id", supervisorId),
+        overlordClient.postSupervisor(supervisorSpec).get()
     );
   }
 
