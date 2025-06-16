@@ -216,8 +216,7 @@ public class StandardShuffleOperations
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> hashPartition(
       final ListenableFuture<ResultAndChannels<T>> arg,
-      final OutputChannelFactory outputChannelFactory,
-      final boolean isOutputChannelBuffered
+      final OutputChannelFactory outputChannelFactory
   )
   {
     return transformAsync(
@@ -254,7 +253,7 @@ public class StandardShuffleOperations
           final ResultAndChannels<Long> retVal =
               new ResultAndChannels<>(partitionerFuture, OutputChannels.wrap(outputChannels));
 
-          if (isOutputChannelBuffered) {
+          if (outputChannelFactory.isBuffered()) {
             return FutureUtils.transform(partitionerFuture, ignored -> retVal);
           } else {
             return Futures.immediateFuture(retVal);
@@ -314,6 +313,12 @@ public class StandardShuffleOperations
                 }
 
                 return outputChannelFactory.openNilChannel(channel.getPartitionNumber());
+              }
+
+              @Override
+              public boolean isBuffered()
+              {
+                return outputChannelFactory.isBuffered();
               }
             };
 

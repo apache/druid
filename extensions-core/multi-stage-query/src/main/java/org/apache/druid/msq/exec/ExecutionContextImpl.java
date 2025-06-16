@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -141,6 +142,16 @@ public class ExecutionContextImpl implements ExecutionContext
   public String cancellationId()
   {
     return cancellationId;
+  }
+
+  @Override
+  public Bouncer processingBouncer()
+  {
+    if (workOrder.getStageDefinition().getProcessor().usesProcessingBuffers()) {
+      return frameContext.processingBuffers().getBouncer();
+    } else {
+      return Bouncer.unlimited();
+    }
   }
 
   @Override

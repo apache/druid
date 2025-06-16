@@ -174,7 +174,6 @@ public class RunWorkOrder
 
     try {
       exec.registerCancellationId(cancellationId);
-      initInputSliceReader();
       initGlobalSortPartitionBoundariesIfNeeded();
       startStageProcessor();
       setUpCompletionCallbacks();
@@ -411,7 +410,7 @@ public class RunWorkOrder
     return new ExecutionContextImpl(
         workOrder,
         exec,
-        initInputSliceReader(),
+        makeInputSliceReader(),
         this::makeIntermediateOutputChannelFactory,
         makeStageOutputChannelFactory(),
         stagePartitionBoundariesFuture,
@@ -423,7 +422,7 @@ public class RunWorkOrder
     );
   }
 
-  private InputSliceReader initInputSliceReader()
+  private InputSliceReader makeInputSliceReader()
   {
     final String queryId = workOrder.getQueryDefinition().getQueryId();
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());

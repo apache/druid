@@ -23,22 +23,17 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
-import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.msq.counters.CounterNames;
-import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.kernel.WorkOrder;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
@@ -52,10 +47,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public class StandardStageRunner<T, R>
 {
   private final ExecutionContext executionContext;
-  private final WorkOrder workOrder;
-  private final CounterTracker counterTracker;
-  private final FrameProcessorExecutor exec;
-  private final String cancellationId;
   private final int threadCount;
   private final FrameContext frameContext;
 
@@ -69,10 +60,6 @@ public class StandardStageRunner<T, R>
   public StandardStageRunner(final ExecutionContext executionContext)
   {
     this.executionContext = executionContext;
-    this.workOrder = executionContext.workOrder();
-    this.counterTracker = executionContext.counters();
-    this.exec = executionContext.executor();
-    this.cancellationId = executionContext.cancellationId();
     this.threadCount = executionContext.threadCount();
     this.frameContext = executionContext.frameContext();
   }
@@ -82,11 +69,11 @@ public class StandardStageRunner<T, R>
    */
   public ListenableFuture<R> run(final ProcessorsAndChannels<T, R> processors)
   {
-    final StageDefinition stageDef = workOrder.getStageDefinition();
+    final StageDefinition stageDefinition = executionContext.workOrder().getStageDefinition();
 
     makeAndRunWorkProcessors(processors);
 
-    if (stageDef.doesShuffle()) {
+    if (stageDefinition.doesShuffle()) {
       makeAndRunShuffleProcessors();
     }
 
@@ -111,9 +98,10 @@ public class StandardStageRunner<T, R>
       return workOutputChannelFactory;
     }
 
+    final StageDefinition stageDefinition = executionContext.workOrder().getStageDefinition();
     final OutputChannelFactory baseOutputChannelFactory;
 
-    if (workOrder.getStageDefinition().doesShuffle()) {
+    if (stageDefinition.doesShuffle()) {
       // Writing to a consumer in the same JVM (which will be set up later on in this method).
       baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
     } else {
@@ -123,15 +111,15 @@ public class StandardStageRunner<T, R>
 
     workOutputChannelFactory = new CountingOutputChannelFactory(
         baseOutputChannelFactory,
-        counterTracker.channel(CounterNames.outputChannel())
+        executionContext.counters().channel(CounterNames.outputChannel())
     );
 
     return workOutputChannelFactory;
   }
 
   /**
-   * Executes processors using {@link #exec}. Saves the result future in {@link #workResultFuture} and saves the
-   * current pipeline state (result and output channels) in {@link #pipelineFuture}.
+   * Executes processors using {@link ExecutionContext#executor()}. Saves the result future in {@link #workResultFuture}
+   * and saves the current pipeline state (result and output channels) in {@link #pipelineFuture}.
    */
   private void makeAndRunWorkProcessors(final ProcessorsAndChannels<T, R> processors)
   {
@@ -148,13 +136,11 @@ public class StandardStageRunner<T, R>
           Math.max(1, Math.min(threadCount, processors.getOutputChannels().getAllChannels().size()));
     }
 
-    final boolean usesProcessingBuffers = workOrder.getStageDefinition().getProcessor().usesProcessingBuffers();
-
-    workResultFuture = exec.runAllFully(
-        counterTracker.trackCpu(processorManager, CpuCounters.LABEL_MAIN),
+    workResultFuture = executionContext.executor().runAllFully(
+        executionContext.counters().trackCpu(processorManager, CpuCounters.LABEL_MAIN),
         maxOutstandingProcessors,
-        usesProcessingBuffers ? frameContext.processingBuffers().getBouncer() : Bouncer.unlimited(),
-        cancellationId
+        executionContext.processingBouncer(),
+        executionContext.cancellationId()
     );
 
     final ResultAndChannels<R> workResultAndChannels = new ResultAndChannels<>(
@@ -171,14 +157,14 @@ public class StandardStageRunner<T, R>
    */
   private void makeAndRunShuffleProcessors()
   {
-    final ShuffleSpec shuffleSpec = workOrder.getStageDefinition().getShuffleSpec();
+    final ShuffleSpec shuffleSpec = executionContext.workOrder().getStageDefinition().getShuffleSpec();
     final StandardShuffleOperations stageOperations = new StandardShuffleOperations(executionContext);
 
     pipelineFuture = stageOperations.gatherResultKeyStatisticsIfNeeded(pipelineFuture);
 
     final OutputChannelFactory stageOutputChannelFactory = new CountingOutputChannelFactory(
         executionContext.outputChannelFactory(),
-        counterTracker.channel(CounterNames.shuffleChannel())
+        executionContext.counters().channel(CounterNames.shuffleChannel())
     );
 
     switch (shuffleSpec.kind()) {
@@ -187,29 +173,22 @@ public class StandardStageRunner<T, R>
         break;
 
       case HASH:
-        pipelineFuture = stageOperations.hashPartition(
-            pipelineFuture,
-            stageOutputChannelFactory,
-            executionContext.workOrder().getOutputChannelMode() != OutputChannelMode.MEMORY
-        );
+        pipelineFuture = stageOperations.hashPartition(pipelineFuture, stageOutputChannelFactory);
         break;
 
       case HASH_LOCAL_SORT:
         final OutputChannelFactory hashOutputChannelFactory;
-        final boolean hashOutputBuffered;
 
         if (shuffleSpec.partitionCount() == 1) {
           // Single partition; no need to write temporary files.
           hashOutputChannelFactory =
               new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
-          hashOutputBuffered = false;
         } else {
           // Multi-partition; write temporary files and then sort each one file-by-file.
           hashOutputChannelFactory = executionContext.makeIntermediateOutputChannelFactory("hash-parts");
-          hashOutputBuffered = true;
         }
 
-        pipelineFuture = stageOperations.hashPartition(pipelineFuture, hashOutputChannelFactory, hashOutputBuffered);
+        pipelineFuture = stageOperations.hashPartition(pipelineFuture, hashOutputChannelFactory);
         pipelineFuture = stageOperations.localSort(pipelineFuture, stageOutputChannelFactory);
         break;
 

@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -89,6 +90,12 @@ public interface ExecutionContext
    * Cancellation ID that must be provided to {@link FrameProcessorExecutor} when running work.
    */
   String cancellationId();
+
+  /**
+   * Bouncer that must be used when submitting work to the {@link FrameProcessorExecutor} that uses
+   * {@link ProcessingBuffers}.
+   */
+  Bouncer processingBouncer();
 
   /**
    * Callback that must be called when input is done being read. This is essential for two reasons:
