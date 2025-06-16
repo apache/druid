@@ -1945,7 +1945,7 @@ For example, you might configure monitors on all services for system and JVM inf
 druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
-On the otherhand, some monitors should only be configured for certain services. For these, update the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `coordinator-overlord/runtime.properties` file:
+On the other hand, some monitors should only be configured for certain services. For these, update the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `coordinator-overlord/runtime.properties` file:
 
 ```
 druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor"]
