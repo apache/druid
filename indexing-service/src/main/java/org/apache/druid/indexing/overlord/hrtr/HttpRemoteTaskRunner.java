@@ -1349,24 +1349,19 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     WorkerHolder workerHolderRunningTask = null;
     synchronized (statusLock) {
-      log.info("Shutdown task[%s] because: [%s]", taskId, reason);
+      log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.get(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
           workerHolderRunningTask = workers.get(taskRunnerWorkItem.getWorker().getHost());
           if (workerHolderRunningTask == null) {
-            log.info("Cannot shutdown task[%s] as no worker is running it.", taskId);
+            log.info("Can't shutdown! No worker running task[%s]", taskId);
           }
         } else if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.COMPLETE) {
           tasks.remove(taskId);
-        } else {
-          log.info(
-              "Cannot shutdown task[%s] as it is currently in state[%s].",
-              taskId, taskRunnerWorkItem.getState()
-          );
         }
       } else {
-        log.info("Ignoring shutdown request for task[%s] as there is no existing work item for it.", taskId);
+        log.info("Received shutdown task[%s], but can't find it. Ignored.", taskId);
       }
     }
 
