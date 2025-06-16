@@ -146,7 +146,7 @@ The compaction task has two kinds of `inputSpec`:
 
 ## Compaction transform spec
 
-Only filters are supported for compaction transform specs.
+Unlike other transform specs, you can only specify filters for compaction transform spec, not transforms. For more information about transforms specs, see [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
 |Field|Description|Required|
 |-----|-----------|--------|
