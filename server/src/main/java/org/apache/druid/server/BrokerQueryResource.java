@@ -26,11 +26,14 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.ServerViewUtil;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
@@ -58,20 +61,24 @@ public class BrokerQueryResource extends QueryResource
   public BrokerQueryResource(
       QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
+      @Smile ObjectMapper smileMapper,
       QueryScheduler queryScheduler,
+      AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
-      QueryResourceQueryResultPusherFactory queryResultPusherFactory,
-      ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
+      ResponseContextConfig responseContextConfig,
+      @Self DruidNode selfNode,
       TimelineServerView brokerServerView
   )
   {
     super(
         queryLifecycleFactory,
         jsonMapper,
+        smileMapper,
         queryScheduler,
+        authConfig,
         authorizerMapper,
-        queryResultPusherFactory,
-        resourceIOReaderWriterFactory
+        responseContextConfig,
+        selfNode
     );
     this.brokerServerView = brokerServerView;
   }
@@ -89,7 +96,7 @@ public class BrokerQueryResource extends QueryResource
       @Context final HttpServletRequest req
   ) throws IOException
   {
-    final ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter = resourceIOReaderWriterFactory.factorize(req, pretty != null);
+    final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
     final CloneQueryMode cloneQueryMode = QueryContexts.getAsEnum(
         QueryContexts.CLONE_QUERY_MODE,
         cloneQueryModeString,
