@@ -496,4 +496,40 @@ public class CoordinatorClientImplTest
         coordinatorClient.fetchLookupsForTier("country_code").get()
     );
   }
+
+  @Test
+  public void test_fetchLookupsForTier_returnsNullOnNotFound() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
+        ),
+        HttpResponseStatus.NOT_FOUND,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    Assert.assertNull(
+        coordinatorClient.fetchLookupsForTier("country_code").get()
+    );
+  }
+
+  @Test
+  public void test_fetchLookupsForTier_returnsNullOnServerError() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
+        ),
+        HttpResponseStatus.SERVICE_UNAVAILABLE,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    Assert.assertNull(
+        coordinatorClient.fetchLookupsForTier("country_code").get()
+    );
+  }
 }
