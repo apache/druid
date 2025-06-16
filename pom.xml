@@ -1703,6 +1703,8 @@
                                     <excludes>
                                         <!--LGPL licenced library-->
                                         <exclude>com.google.code.findbugs:annotations</exclude>
+                                        <!-- See https://github.com/apache/druid/pull/17370 -->
+                                        <exclude>javax.xml.bind:jaxb-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>
