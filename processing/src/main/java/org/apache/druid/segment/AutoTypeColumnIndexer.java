@@ -444,10 +444,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       FieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      ColumnType logicalType = null;
-      for (ColumnType type : FieldTypeInfo.convertToSet(rootField.getTypes().getByteValue())) {
-        logicalType = ColumnType.leastRestrictiveType(logicalType, type);
-      }
+      ColumnType logicalType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(rootField.getTypes().getByteValue()));
       if (logicalType != null) {
         // special handle empty arrays
         if (!rootField.getTypes().hasUntypedArray() || logicalType.isArray()) {

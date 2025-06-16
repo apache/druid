@@ -172,22 +172,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              0L,
                              StructuredData.wrap(
                                  Map.of(
-                                     "a", 100,
-                                     "b", Map.of(
-                                         "x", "a",
-                                         "y", 1.1,
-                                         "z", List.of(1, 2, 3, 4)
-                                     ),
-                                     "c", 100,
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 Map.of(
                                      "a", 200,
                                      "b", Map.of(
                                          "x", "b",
@@ -242,6 +226,22 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                          "z", Arrays.asList(9, null, 9, 9)
                                      ),
                                      "c", null,
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 100,
+                                     "b", Map.of(
+                                         "x", "a",
+                                         "y", 1.1,
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", List.of(100),
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -307,22 +307,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              0L,
                              StructuredData.wrap(
                                  Map.of(
-                                     "a", 100,
-                                     "b", Map.of(
-                                         "x", "a",
-                                         "y", 1.1,
-                                         "z", List.of(1, 2, 3, 4)
-                                     ),
-                                     "c", 100,
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 Map.of(
                                      "a", 200,
                                      "b", Map.of(
                                          "x", "b",
@@ -384,6 +368,22 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          },
                          new Object[]{
                              0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 100,
+                                     "b", Map.of(
+                                         "x", "a",
+                                         "y", 1.1,
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", List.of(100),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
                              StructuredData.wrap(Map.of("a", 300)),
                              1L
                          }
@@ -435,11 +435,11 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedResultRows(List.of(
                          new Object[]{"{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"c\":12.3,\"v\":\"b\"}"},
-                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":100,\"v\":[]}"},
                          new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}"},
                          new Object[]{"{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"c\":{\"a\":1},\"v\":[]}"},
                          new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"c\":\"hello\",\"v\":\"a\"}"},
                          new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"c\":null,\"v\":[]}"},
+                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":[100],\"v\":[]}"},
                          new Object[]{"{\"a\":300}"}
                      ))
                      .verifyResults();

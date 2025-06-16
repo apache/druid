@@ -704,15 +704,14 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     cast = eval.castTo(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA));
     Assert.assertArrayEquals(new Object[]{"1", "2", "foo", null, "3.3"}, (Object[]) cast.value());
 
-    ExprEval<?> finalEval = eval;
-    Throwable t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.LONG));
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [LONG]", t.getMessage());
+    cast = eval.castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
 
-    t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.DOUBLE));
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [DOUBLE]", t.getMessage());
+    cast = eval.castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
 
-    t = Assert.assertThrows(IAE.class, () -> finalEval.castTo(ExpressionType.STRING));
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [STRING]", t.getMessage());
+    cast = eval.castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
 
     eval = ExprEval.ofType(ExpressionType.LONG_ARRAY, new Object[]{1234L});
 
