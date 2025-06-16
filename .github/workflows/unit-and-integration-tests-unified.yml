@@ -210,8 +210,8 @@ jobs:
 
   run-its-triggered-by-build:
     needs: [ maybe-trigger-its ]
-    if: ${{ env.runItsTriggeredByBuild == 'true' }}
-    uses: ./.github/workflows/ci-its.yml
+    if: ${{ !cancelled() && env.runItsTriggeredByBuild == 'true' }}
+    uses: ./.github/workflows/standard-its.yml
 
   unit-tests:
     name: "unit tests"
