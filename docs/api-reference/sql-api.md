@@ -188,11 +188,11 @@ If you detect a truncated response, treat it as an error.
 
 #### Sample request
 
-This sample request demonstrates the following actions:
-- This query retrieves all rows from the `wikipedia` datasource.
-- This query also filters the results where the `user` value is `BlueMoon2662`.
-- The `sqlTimeZone` context parameter sets the time zone to `America/Los_Angeles` for query results.
-- The query results also include descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
+In the following example, this query demonstrates the following actions:
+- Retrieves all rows from the `wikipedia` datasource.
+- Filters the results where the `user` value is `BlueMoon2662`.
+- Applies the `sqlTimeZone` context parameter to set the time zone of results to `America/Los_Angeles`.
+- Returns descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
 
 
 <Tabs>

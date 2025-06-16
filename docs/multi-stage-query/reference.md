@@ -129,7 +129,6 @@ SELECT
 FROM <table>
 ```
 
-When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
 For details on applying context parameters using SET, see [SET statements](../querying/sql.md#set-statements).
 
 
