@@ -469,7 +469,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Nullable
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
   {
-    return FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier(tier), true);
+    Map<String, LookupExtractorFactoryContainer> lookup = FutureUtils.getUnchecked(
+        coordinatorClient.fetchLookupsForTier(tier), true);
+    if (lookup == null || lookup.isEmpty()) {
+      LOG.info("No lookups found for tier[%s] in coordinator.", tier);
+    }
+    return lookup;
   }
 
   /**

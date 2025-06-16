@@ -45,7 +45,6 @@ import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -268,17 +267,6 @@ public class CoordinatorClientImpl implements CoordinatorClient
 
   private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
   {
-    if (holder.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-      LOG.warn("No lookups found for tier[%s], response[%s]", holder.getResponse().getStatus(), holder.getResponse());
-      return null;
-    } else if (!holder.getResponse().getStatus().equals(HttpResponseStatus.OK)) {
-      LOG.warn(
-          "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
-          holder.getResponse().getStatus(),
-          holder.getContent()
-      );
-      return null;
-    }
     Map<String, Object> lookupNameToGenericConfig = JacksonUtils.readValue(
         jsonMapper,
         holder.getContent(),
