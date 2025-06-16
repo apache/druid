@@ -146,7 +146,7 @@ The compaction task has two kinds of `inputSpec`:
 
 ## Compaction transform spec
 
-Only filters are supported for compaction transform specs. If you include something other than a filter, such as an expression, Druid ignores the field.
+Only filters are supported for compaction transform specs.
 
 |Field|Description|Required|
 |-----|-----------|--------|
