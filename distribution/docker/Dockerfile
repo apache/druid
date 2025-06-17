@@ -19,68 +19,96 @@
 
 ARG JDK_VERSION=17
 
+# By default we build the entire distribution from source in docker
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
+
+#===============================================================
+# web-console building stage
+#===============================================================
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3.9 as builder
+FROM --platform=linux/amd64 node:20.9.0-slim AS web-console-builder
 
-# Rebuild from source in this stage
-# This can be unset if the tarball was already built outside of Docker
-ARG BUILD_FROM_SOURCE="true"
+RUN npm install -g npm@10.9.0
 
-RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -qq update \
+# Only copy necessary files to web-console to build to try the best to use docker cache
+COPY ./web-console /src/web-console
+COPY ./docs /src/docs
+WORKDIR /src/web-console
+
+# Re-declare the ARG to make it available in this stage
+ARG BUILD_FROM_SOURCE
+
+# Suppress a building error saying error:0308010C:digital envelope routines::unsupported
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
+# The directory of output, during the package stage, files will be copied from this directory
+RUN mkdir /output
+
+# The ls command below is just for debug purpose helping us know which files are updated that docker cache are invalidated
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+  ls -l && \
+  npm ci \
+; fi
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+   ./script/build \
+   && ./script/cp-to ./output \
+; fi
+
+#===============================================================
+# Declare a builder stage to build the Druid distribution
+#===============================================================
+FROM maven:3.9.9-eclipse-temurin-${JDK_VERSION} AS builder
+RUN apt-get -qq update \
     && apt-get -qq -y install --no-install-recommends python3 python3-yaml
 
 COPY . /src
 WORKDIR /src
+
+# Copy the web-console resources from the web-console-builder to include it in this stage to package
+COPY --from=web-console-builder /output /src/web-console/target/resources
+
+# Re-declare the ARG to make it available in this stage
+ARG BUILD_FROM_SOURCE
+
+# Note: use web.console.skip to exclude building of web-console but include the package of web-console
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff -q \
+      rm -fr distribution/target/ && \
+      mvn -B -ff -ntp \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true -T1C \
-      ; fi
+      -Dweb.console.skip=true \
+      -pl '!org.apache.druid:druid-benchmarks, !org.apache.druid:druid-integration-tests, !org.apache.druid.integration-tests:druid-it-tools, !org.apache.druid.integration-tests:druid-it-image, !org.apache.druid.integration-tests:druid-it-cases' \
+      -T1C \
+; fi
 
-RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
-      -Dexpression=project.version -DforceStdout=true \
-    ) \
- && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && mv /opt/apache-druid-${VERSION} /opt/druid
 
-FROM alpine:3 as bash-static
-ARG TARGETARCH
-#
-# Download bash-static binary to execute scripts that require bash.
-# Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
-#
-ARG BASH_URL_BASE="https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3"
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      BASH_URL="${BASH_URL_BASE}/bash-linux-aarch64" ; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-      BASH_URL="${BASH_URL_BASE}/bash-linux-x86_64" ; \
-    else \
-      echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
-    fi; \
-    echo "Downloading bash-static from ${BASH_URL}" \
-    && wget ${BASH_URL} -O /bin/bash
+# RUN ls ./distribution/target
+RUN DISTRIBUTION=$(ls ./distribution/target/apache-druid-*-bin.tar.gz) \
+ && tar -zxf ${DISTRIBUTION} -C /opt \
+ && mv /opt/apache-druid-* /opt/druid
 
-FROM busybox:1.35.0-glibc as busybox
-
-FROM gcr.io/distroless/java$JDK_VERSION-debian12
+#===============================================================
+# Final stage
+#===============================================================
+# Above bulding staging uses images based on eclipse-temurin,
+# however here we directly use alpine because eclipse-temurin-alpine for JRE17 does not ship a image with ARM64 architecture.
+FROM alpine:latest
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
-COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
+# Re-daclare the ARG to make it available in this stage
+ARG JDK_VERSION
 
-
-RUN addgroup -S -g 1000 druid \
+# Install necessary packages to easier debugging
+RUN apk add --no-cache openjdk${JDK_VERSION}-jre bash curl net-tools strace lsof \
+ && addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
-
-COPY --from=bash-static /bin/bash /bin/bash
-RUN chmod 755 /bin/bash
+ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk
 
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
