@@ -30,7 +30,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 ## Comparison with Similar Aggregations
 
-The [Distinct Count Aggregator](https://druid.apache.org/docs/latest/development/extensions-contrib/distinctcount/) works in a similar way to the Exact Count Aggregator. Hence, it is important to understand the difference between the behaviour of these two aggregators. 
+The [Distinct Count Aggregator](https://druid.apache.org/docs/latest/development/extensions-contrib/distinctcount/) works in a similar way to the Exact Count Aggregator. Hence, it is important to understand the difference between the behavior of these two aggregators. 
 
 | Exact Count | Distinct Count |
 | -- | -- |
