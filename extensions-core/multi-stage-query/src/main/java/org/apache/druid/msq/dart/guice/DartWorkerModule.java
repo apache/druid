@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -49,8 +50,8 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartDataSegmentProvider;
-import org.apache.druid.msq.dart.worker.DartWorkerFactory;
-import org.apache.druid.msq.dart.worker.DartWorkerFactoryImpl;
+import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
+import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
@@ -93,8 +94,8 @@ public class DartWorkerModule implements DruidModule
       LifecycleModule.register(binder, DartWorkerRunner.class);
       LifecycleModule.registerKey(binder, Key.get(MessageRelayMonitor.class, Dart.class));
 
-      binder.bind(DartWorkerFactory.class)
-            .to(DartWorkerFactoryImpl.class)
+      binder.bind(DartWorkerContextFactory.class)
+            .to(DartWorkerContextFactoryImpl.class)
             .in(LazySingleton.class);
 
       binder.bind(DataSegmentProvider.class)
@@ -111,7 +112,7 @@ public class DartWorkerModule implements DruidModule
     @ManageLifecycle
     public DartWorkerRunner createWorkerRunner(
         @Self final DruidNode selfNode,
-        final DartWorkerFactory workerFactory,
+        final DartWorkerContextFactory workerFactory,
         final DruidNodeDiscoveryProvider discoveryProvider,
         final DruidProcessingConfig processingConfig,
         @Dart final ResourcePermissionMapper permissionMapper,
@@ -124,7 +125,7 @@ public class DartWorkerModule implements DruidModule
           new File(processingConfig.getTmpDir(), StringUtils.format("dart_%s", selfNode.getPortToUse()));
       return new DartWorkerRunner(
           workerFactory,
-          exec,
+          MoreExecutors.listeningDecorator(exec),
           discoveryProvider,
           permissionMapper,
           authorizerMapper,

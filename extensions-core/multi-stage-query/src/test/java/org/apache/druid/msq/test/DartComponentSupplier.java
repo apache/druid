@@ -37,7 +37,7 @@ import org.apache.druid.msq.dart.guice.DartControllerModule;
 import org.apache.druid.msq.dart.guice.DartModules;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
@@ -154,7 +154,7 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Provides
     @LazySingleton
     @Dart
-    Map<String, Worker> workerMap()
+    Map<String, WorkerRunRef> workerMap()
     {
       return new ConcurrentHashMap<>();
     }

@@ -284,10 +284,14 @@ public class MSQErrorReport
         );
 
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
-        return new QueryRuntimeFault(StringUtils.format(
-            "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
-            ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
-        ), cause.getMessage());
+        return new QueryRuntimeFault(
+            StringUtils.format(
+                "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
+                ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
+            ), cause.getMessage()
+        );
+      } else if (cause instanceof InterruptedException) {
+        return CanceledFault.unknown();
       } else if (cause.getClass().getPackage().getName().startsWith("org.apache.druid.query")) {
         // catch all for all query runtime exception faults.
         return new QueryRuntimeFault(e.getMessage(), null);
