@@ -52,7 +52,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -423,7 +422,7 @@ public class SqlResourceTest extends CalciteTestBase
         // We set uncoveredIntervalsLimit more for the funzies than anything.  The underlying setup of the test doesn't
         // actually look at it or operate with it.  Instead, we set the supplier of the ResponseContext to mock what
         // we would expect from the normal query pipeline
-        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id", "uncoveredIntervalsLimit", 1),
+        ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), "id", "uncoveredIntervalsLimit", 1),
         null
     );
 
@@ -1554,7 +1553,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1, BaseQuery.SQL_QUERY_ID, "id"),
+            ImmutableMap.of(GroupByQueryConfig.CTX_KEY_BUFFER_GROUPER_MAX_SIZE, 1, QueryContexts.SQL_QUERY_ID.name(), "id"),
             null
         )
     ).lhs;
@@ -1587,7 +1586,7 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             false,
-            ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
+            ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), "id"),
             null
         ),
         DruidException.Category.INVALID_INPUT.getExpectedStatus()
@@ -1762,7 +1761,7 @@ public class SqlResourceTest extends CalciteTestBase
                   false,
                   false,
                   false,
-                  ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                  ImmutableMap.of("priority", -5, QueryContexts.SQL_QUERY_ID.name(), sqlQueryId),
                   null
               ),
               makeRegularUserReq()
@@ -1785,7 +1784,7 @@ public class SqlResourceTest extends CalciteTestBase
                 false,
                 false,
                 false,
-                ImmutableMap.of("priority", -5, BaseQuery.SQL_QUERY_ID, sqlQueryId),
+                ImmutableMap.of("priority", -5, QueryContexts.SQL_QUERY_ID.name(), sqlQueryId),
                 null
             ),
             makeRegularUserReq()
@@ -1834,7 +1833,7 @@ public class SqlResourceTest extends CalciteTestBase
     Map<String, Object> queryContext = ImmutableMap.of(
         QueryContexts.TIMEOUT_KEY,
         1,
-        BaseQuery.SQL_QUERY_ID,
+        QueryContexts.SQL_QUERY_ID.name(),
         sqlQueryId
     );
 
@@ -1980,7 +1979,7 @@ public class SqlResourceTest extends CalciteTestBase
     Map<String, Object> queryContext = ImmutableMap.of(
         QueryContexts.TIMEOUT_KEY,
         "2000'",
-        BaseQuery.SQL_QUERY_ID,
+        QueryContexts.SQL_QUERY_ID.name(),
         sqlQueryId
     );
     final ErrorResponse errorResponse = doPost(
@@ -2039,7 +2038,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(user, stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-    Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(queryContext.containsKey(QueryContexts.SQL_QUERY_ID.name()));
     if (success) {
       Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
     } else {
@@ -2049,7 +2048,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
+    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), sqlQueryId), null);
   }
 
   private Pair<ErrorResponse, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception

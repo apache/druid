@@ -17,26 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.scheduling;
+package org.apache.druid.setting;
 
-import org.apache.druid.client.SegmentServerSelector;
-import org.apache.druid.query.QueryPlus;
-import org.apache.druid.server.QueryPrioritizationStrategy;
 
-import java.util.Optional;
-import java.util.Set;
-
-/**
- * Does nothing, the user must set the {@link org.apache.druid.query.QueryContexts#PRIORITY} on the query context
- * to get a priority.
- */
-public class ManualQueryPrioritizationStrategy implements QueryPrioritizationStrategy
+public interface ISettingRegistry
 {
-  public static final QueryPrioritizationStrategy INSTANCE = new ManualQueryPrioritizationStrategy();
-
-  @Override
-  public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)
-  {
-    return Optional.empty();
-  }
+  <T> SettingEntry<T> register(SettingEntry<T> entry);
 }

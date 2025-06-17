@@ -110,7 +110,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
         null
     );
 
-    String dartQueryId = queryContext.getString(QueryContexts.CTX_DART_QUERY_ID);
+    String dartQueryId = queryContext.getValue(QueryContexts.DART_QUERY_ID);
 
     QueryDefinition queryDef = new QueryKitBasedMSQPlanner(
         querySpec,

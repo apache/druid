@@ -36,6 +36,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -160,7 +161,7 @@ public class CachingClusteredClientPerfTest
     return new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(interval)),
-        ImmutableMap.of(BaseQuery.QUERY_ID, "testQuery")
+        ImmutableMap.of(QueryContexts.QUERY_ID.name(), "testQuery")
     );
   }
 

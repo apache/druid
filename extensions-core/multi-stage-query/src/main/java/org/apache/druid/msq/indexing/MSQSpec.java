@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Objects;
@@ -87,7 +87,7 @@ public abstract class MSQSpec
 
   public String getId()
   {
-    return getContext().getString(BaseQuery.QUERY_ID);
+    return getContext().getValue(QueryContexts.QUERY_ID);
   }
 
   @Override

@@ -54,7 +54,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -382,7 +381,7 @@ public class CachingClusteredClientBenchmark
                        .granularity(Granularity.fromString(queryGranularity))
                        .context(
                            ImmutableMap.of(
-                               BaseQuery.QUERY_ID, "BenchmarkQuery",
+                               QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                                QueryContexts.BROKER_PARALLELISM, parallelism
                            )
@@ -413,7 +412,7 @@ public class CachingClusteredClientBenchmark
         .threshold(10_000) // we are primarily measuring 'broker' merge time, so collect a significant number of results
         .context(
             ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
+                QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                 QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )
@@ -446,7 +445,7 @@ public class CachingClusteredClientBenchmark
         .setGranularity(Granularity.fromString(queryGranularity))
         .setContext(
             ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
+                QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
                 QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )
@@ -469,7 +468,7 @@ public class CachingClusteredClientBenchmark
                                               query.getDataSource(),
                                               query.getId(),
                                               query.getSqlQueryId(),
-                                              query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+                                              query.context().getValue(QueryContexts.QUERY_RESOURCE_ID)
                                           ));
   }
 

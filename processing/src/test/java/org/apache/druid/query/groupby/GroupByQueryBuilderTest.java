@@ -20,7 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -52,7 +52,7 @@ public class GroupByQueryBuilderTest
     final GroupByQuery query = builder
         .queryId("queryId")
         .build();
-    Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "queryId"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "queryId"), query.getContext());
   }
 
   @Test
@@ -62,17 +62,17 @@ public class GroupByQueryBuilderTest
         .setContext(ImmutableMap.of("my", "context"))
         .queryId("queryId")
         .build();
-    Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "queryId", "my", "context"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "queryId", "my", "context"), query.getContext());
   }
 
   @Test
   public void testQueryIdWhenBuilderHasNonnullContextWithQueryIdReturnMergedContext()
   {
     final GroupByQuery query = builder
-        .setContext(ImmutableMap.of("my", "context", BaseQuery.QUERY_ID, "queryId"))
-        .queryId("realQueryId")
-        .build();
-    Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
+        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name(), "queryId"))
+                  .queryId("realQueryId")
+          .build();
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "realQueryId", "my", "context"), query.getContext());
   }
 
   @Test
@@ -90,8 +90,8 @@ public class GroupByQueryBuilderTest
   {
     final GroupByQuery query = builder
         .queryId("queryId")
-        .setContext(ImmutableMap.of("my", "context", BaseQuery.QUERY_ID, "realQueryId"))
+        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name(), "realQueryId"))
         .build();
-    Assert.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "realQueryId", "my", "context"), query.getContext());
   }
 }

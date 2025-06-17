@@ -254,7 +254,7 @@ public class DartSqlEngine implements SqlEngine
      * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
      */
     final String dartQueryId = UUID.randomUUID().toString();
-    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
+    contextMap.put(QueryContexts.DART_QUERY_ID.name(), dartQueryId);
   }
 
   @Override
@@ -322,7 +322,7 @@ public class DartSqlEngine implements SqlEngine
   @Override
   public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
-    final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
+    final Object dartQueryId = plannerContext.queryContext().getValue(QueryContexts.DART_QUERY_ID);
     if (dartQueryId instanceof String) {
       final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
       if (holder != null) {
@@ -331,7 +331,7 @@ public class DartSqlEngine implements SqlEngine
     } else {
       log.warn(
           "%s[%s] for query[%s] is not a string, cannot cancel.",
-          QueryContexts.CTX_DART_QUERY_ID,
+          QueryContexts.DART_QUERY_ID.name(),
           dartQueryId,
           plannerContext.getSqlQueryId()
       );

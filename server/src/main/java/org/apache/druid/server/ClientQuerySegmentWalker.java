@@ -211,7 +211,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getDataSource(),
         query.getId(),
         query.getSqlQueryId(),
-        query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+        query.context().getValue(QueryContexts.QUERY_RESOURCE_ID)
     ));
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
@@ -684,7 +684,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       }
 
       query.withOverriddenContext(Collections.singletonMap(
-          QueryContexts.QUERY_RESOURCE_ID,
+          QueryContexts.QUERY_RESOURCE_ID.name(),
           parentQueryResourceId
       ));
 
