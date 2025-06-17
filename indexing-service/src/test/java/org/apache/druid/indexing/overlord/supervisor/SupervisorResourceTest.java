@@ -351,8 +351,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertTrue(
         specs.stream()
              .allMatch(spec ->
-                           ("id1".equals(spec.getId()) && SPEC1.equals(spec.getSpec())) ||
-                           ("id2".equals(spec.getId()) && SPEC2.equals(spec.getSpec()))
+                           ("id1".equals(spec.getId()) && spec.getDataSource().equals("datasource1") && SPEC1.equals(spec.getSpec())) ||
+                           ("id2".equals(spec.getId()) && spec.getDataSource().equals("datasource2") && SPEC2.equals(spec.getSpec()))
              )
     );
   }
@@ -398,8 +398,8 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
     EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(SUPERVISOR_IDS).atLeastOnce();
-    EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(SPEC1)).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(SPEC2)).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id1")).andReturn(Optional.of(SPEC1)).times(2);
+    EasyMock.expect(supervisorManager.getSupervisorSpec("id2")).andReturn(Optional.of(SPEC2)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorState("id1")).andReturn(Optional.of(state1)).times(1);
     EasyMock.expect(supervisorManager.getSupervisorState("id2")).andReturn(Optional.of(state2)).times(1);
     setupMockRequest();
@@ -417,11 +417,13 @@ public class SupervisorResourceTest extends EasyMockSupport
                 if ("id1".equals(id)) {
                   return state1.toString().equals(state.getState())
                          && state1.toString().equals(state.getDetailedState())
-                         && (Boolean) state.isHealthy() == state1.isHealthy();
+                         && (Boolean) state.isHealthy() == state1.isHealthy()
+                         && state.getDataSource().equals("datasource1");
                 } else if ("id2".equals(id)) {
                   return state2.toString().equals(state.getState())
                          && state2.toString().equals(state.getDetailedState())
-                         && (Boolean) state.isHealthy() == state2.isHealthy();
+                         && (Boolean) state.isHealthy() == state2.isHealthy()
+                         && state.getDataSource().equals("datasource2");
                 }
                 return false;
               })
