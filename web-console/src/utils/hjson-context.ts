@@ -73,7 +73,12 @@ export function getHjsonContext(hjson: string): HjsonContext {
   const containerStack: { type: 'object' | 'array'; index: number }[] = [];
   const objectStack: any[] = [{}];
 
-  let state: 'normal' | 'quoted-string' | 'single-line-comment' | 'multi-line-comment' = 'normal';
+  let state:
+    | 'normal'
+    | 'quoted-string'
+    | 'single-line-comment'
+    | 'multi-line-comment'
+    | 'multiline-string' = 'normal';
   let stringDelim = '';
   let token = '';
   let currentKey: string | undefined;
@@ -115,6 +120,24 @@ export function getHjsonContext(hjson: string): HjsonContext {
       continue;
     }
 
+    if (state === 'multiline-string') {
+      if (ch === "'" && next === "'" && hjson[i + 2] === "'") {
+        // End of multiline string
+        state = 'normal';
+        i += 2; // Skip the other two quotes
+        // Process the completed multiline string value
+        if (afterColon && currentKey) {
+          getCurrentObject()[currentKey] = parseMultilineString(token);
+          token = '';
+          currentKey = undefined;
+          afterColon = false;
+        }
+      } else {
+        token += ch;
+      }
+      continue;
+    }
+
     // Normal state processing
 
     // Check for comment start
@@ -132,6 +155,14 @@ export function getHjsonContext(hjson: string): HjsonContext {
     if (ch === '/' && next === '*') {
       state = 'multi-line-comment';
       i++; // Skip '*'
+      continue;
+    }
+
+    // Check for multiline string start
+    if (ch === "'" && next === "'" && hjson[i + 2] === "'") {
+      state = 'multiline-string';
+      token = ''; // Don't include the triple quotes
+      i += 2; // Skip the other two quotes
       continue;
     }
 
@@ -346,4 +377,32 @@ function parseValue(token: string): any {
   }
 
   return trimmed;
+}
+
+function parseMultilineString(content: string): string {
+  // Hjson multiline strings preserve line breaks but trim common leading whitespace
+  const lines = content.split('\n');
+
+  // Find minimum leading whitespace (excluding empty lines)
+  let minIndent = Infinity;
+  for (const line of lines) {
+    if (line.trim()) {
+      const match = /^(\s*)/.exec(line);
+      const leadingSpaces = match?.[0].length || 0;
+      minIndent = Math.min(minIndent, leadingSpaces);
+    }
+  }
+
+  // Remove common leading whitespace
+  const processedLines = lines.map(line => line.slice(minIndent === Infinity ? 0 : minIndent));
+
+  // Trim first and last line if empty
+  if (processedLines.length > 0 && !processedLines[0].trim()) {
+    processedLines.shift();
+  }
+  if (processedLines.length > 0 && !processedLines[processedLines.length - 1].trim()) {
+    processedLines.pop();
+  }
+
+  return processedLines.join('\n');
 }
