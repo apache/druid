@@ -28,6 +28,15 @@ This extension provides exact cardinality counting functionality for LONG type c
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-exact-count` in the extensions load list.
 
+## Comparison with Similar Aggregations
+
+The [Distinct Count Aggregator](https://druid.apache.org/docs/latest/development/extensions-contrib/distinctcount/) works in a similar way to the Exact Count Aggregator. Hence, it is important to understand the difference between the behaviour of these two aggregators. 
+
+| Exact Count | Distinct Count |
+| -- | -- |
+| No prerequisites needed (e.g. configuring hash partition, segment granularity) | Prerequisites needed to perform aggregation |
+| Works on 64-bit number columns only (BIGINT) | Works on dimension columns (Including Strings, Complex Types, etc) |
+
 ## How it Works
 
 The extension uses `Roaring64NavigableMap` as its underlying data structure to efficiently store and compute exact cardinality of 64-bit integers. It provides two types of aggregators that serve different purposes:
@@ -37,7 +46,7 @@ The extension uses `Roaring64NavigableMap` as its underlying data structure to e
 The BUILD aggregator is used when you want to compute cardinality directly from raw LONG values:
 
 - Used during ingestion or when querying raw data
-- Must be used on columns of type LONG, otherwise the output will be 1.
+- Must be used on columns of type LONG.
 
 Example:
 
@@ -54,8 +63,8 @@ Example:
 The MERGE aggregator is used when working with pre-computed bitmaps:
 
 - Used for querying pre-aggregated data (columns that were previously aggregated using BUILD)
-- Combines multiple bitmaps using bitwise operations
-- Must be used on columns that are aggregated using BUILD
+- Combines multiple bitmaps using bitwise operations.
+- Must be used on columns that are aggregated using BUILD, or by a previous MERGE.
 - `Bitmap64ExactCountMerge` aggregator is recommended for use in `timeseries` type queries, though it also works for `topN` and `groupBy` queries.
 
 Example:
@@ -131,7 +140,7 @@ You can also use the post-aggregator for further processing:
 
 - **Memory Usage**: While Roaring Bitmaps are efficient, storing exact unique values will generally consume more memory than approximate algorithms like HyperLogLog.
 - **Input Type**: This aggregator only works with LONG (64-bit integer) columns. String or other data types must be converted to longs before using this aggregator.
-- **Build vs Merge**: Always use BUILD for raw data and MERGE for pre-aggregated data. Using BUILD on pre-aggregated data or MERGE on raw data will not work correctly.
+- **Build vs Merge**: Always use BUILD for raw numeric data and MERGE for pre-aggregated data. Using BUILD on pre-aggregated data or MERGE on raw data will not work correctly.
 
 ## Example Use Cases
 
