@@ -1029,8 +1029,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       catch (Exception e) {
         if (!started) {
           log.warn(
-              "First initialization attempt failed for SeekableStreamSupervisor[%s], starting retries...",
-              supervisorId
+              "First initialization attempt failed for SeekableStreamSupervisor[%s] for dataSource[%s], starting retries...",
+              supervisorId,
+              dataSource
           );
 
           exec.submit(
