@@ -29,7 +29,6 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -55,7 +54,6 @@ import java.util.Set;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
-  private static final Logger LOG = new Logger(CoordinatorClientImpl.class);
   private final ServiceClient client;
   private final ObjectMapper jsonMapper;
 

@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -478,53 +479,22 @@ public class CoordinatorClientImplTest
     );
     LookupExtractorFactoryContainer lookupDataContainer = new LookupExtractorFactoryContainer("v0", lookupData);
     Map<String, LookupExtractorFactoryContainer> lookups = Map.of(
-        "country_code", lookupDataContainer
+        "default_tier", lookupDataContainer
     );
 
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
+            "/druid/coordinator/v1/lookups/config/default_tier?detailed=true"
         ),
         HttpResponseStatus.OK,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(lookups)
     );
 
     Assert.assertEquals(
         lookups,
-        coordinatorClient.fetchLookupsForTier("country_code").get()
-    );
-  }
-
-  @Test
-  public void test_fetchLookupsForTier_receiveHTTPResponseException() throws Exception
-  {
-    LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
-        Map.of(
-            "77483", "United States",
-            "77484", "India"
-        ),
-        true
-    );
-    LookupExtractorFactoryContainer lookupDataContainer = new LookupExtractorFactoryContainer("v0", lookupData);
-    Map<String, LookupExtractorFactoryContainer> lookups = Map.of(
-        "country_code", lookupDataContainer
-    );
-
-    serviceClient.expectAndRespond(
-        new RequestBuilder(
-            HttpMethod.GET,
-            "/druid/coordinator/v1/lookups/config/country_code?detailed=true"
-        ),
-        HttpResponseStatus.OK,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        DefaultObjectMapper.INSTANCE.writeValueAsBytes(lookups)
-    );
-
-    Assert.assertEquals(
-        lookups,
-        coordinatorClient.fetchLookupsForTier("country_code").get()
+        FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier("default_tier"), true)
     );
   }
 }

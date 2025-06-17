@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -475,12 +476,16 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           coordinatorClient.fetchLookupsForTier(tier), true);
     }
     catch (Exception e) {
-      HttpResponseException httpEx = (HttpResponseException) e.getCause();
-      LOG.warn(
-          "No lookups found for tier [%s], status [%s]",
-          tier,
-          httpEx.getResponse().getStatus()
-      );
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        HttpResponseException httpEx = (HttpResponseException) rootCause;
+        LOG.warn(
+            "No lookups found for tier [%s], status [%s]",
+            tier,
+            httpEx.getResponse().getStatus()
+        );
+        return null;
+      }
     }
     return Map.of();
   }
