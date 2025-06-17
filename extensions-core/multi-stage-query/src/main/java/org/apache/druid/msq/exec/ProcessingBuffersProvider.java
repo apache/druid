@@ -32,7 +32,7 @@ public interface ProcessingBuffersProvider
   /**
    * Acquire buffers for a {@link Worker}.
    */
-  ResourceHolder<ProcessingBuffersSet> acquire(int poolSize);
+  ResourceHolder<ProcessingBuffersSet> acquire(int poolSize, long timeoutMillis);
 
   /**
    * Acquire buffers for a {@link Worker}, using a pool size equal to the minimum of
@@ -53,6 +53,6 @@ public interface ProcessingBuffersProvider
                       .count()
     );
 
-    return acquire(poolSize);
+    return acquire(poolSize, queryDef.getContext().getTimeout());
   }
 }

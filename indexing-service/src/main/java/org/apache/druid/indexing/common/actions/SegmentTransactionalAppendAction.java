@@ -66,26 +66,30 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Nullable
   private final DataSourceMetadata endMetadata;
   @Nullable
+  private final String supervisorId;
+  @Nullable
   private final SegmentSchemaMapping segmentSchemaMapping;
 
   public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(segments, null, null, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
       Set<DataSegment> segments,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentSchemaMapping);
+    return new SegmentTransactionalAppendAction(segments, supervisorId, startMetadata, endMetadata, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
       @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
       @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
@@ -95,11 +99,26 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
 
+    if (supervisorId == null && !segments.isEmpty()) {
+      this.supervisorId = segments.stream().findFirst().get().getDataSource();
+    } else {
+      this.supervisorId = supervisorId;
+    }
+
     if ((startMetadata == null && endMetadata != null)
         || (startMetadata != null && endMetadata == null)) {
       throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
+    } else if (startMetadata != null && supervisorId == null) {
+      throw InvalidInput.exception("supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
     }
     this.segmentSchemaMapping = segmentSchemaMapping;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
@@ -175,6 +194,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
           segments,
           segmentToReplaceLock,
+          supervisorId,
           startMetadata,
           endMetadata,
           taskAllocatorId,
@@ -210,6 +230,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentTransactionalAppendAction{" +
+           "supervisorId='" + supervisorId + '\'' +
            "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }
