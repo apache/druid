@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
@@ -643,9 +644,9 @@ public interface IndexerMetadataStorageCoordinator
   )
   {
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
-      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+      throw InvalidInput.exception("start/end metadata pair must be either null or non-null");
     } else if (startMetadata != null && supervisorId == null) {
-      throw new IllegalArgumentException(
+      throw InvalidInput.exception(
           "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
     }
   }
