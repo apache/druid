@@ -592,7 +592,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                     query,
                     objectMapper,
                     cache,
-                    cacheConfig
+                    cacheConfig,
+                    emitter
                 )
         );
   }
