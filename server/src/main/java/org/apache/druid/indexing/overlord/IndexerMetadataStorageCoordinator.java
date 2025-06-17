@@ -315,8 +315,8 @@ public interface IndexerMetadataStorageCoordinator
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
    * {@param segments} and dropping {@param segmentsToDrop}.
    *
-   * @param supervisorId   supervisorID which is committing the segments. Cannot be null if `startMetadata`
-   *                       and endMetadata` are both non-null.
+   * @param supervisorId   supervisorID which is committing the segments. Cannot be null if {@code startMetadata}
+   *                       and {@code endMetadata} are both non-null.
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
    *                       {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
@@ -632,4 +632,21 @@ public interface IndexerMetadataStorageCoordinator
    */
   boolean markSegmentAsUsed(SegmentId segmentId);
 
+  /**
+   * Validates the given supervisorId and given metadata to ensure
+   * that start/end metadata non-null implies supervisor ID is non-null.
+   */
+  static void validateDataSourceMetadata(
+      @Nullable final String supervisorId,
+      @Nullable final DataSourceMetadata startMetadata,
+      @Nullable final DataSourceMetadata endMetadata
+  )
+  {
+    if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
+      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+    } else if (startMetadata != null && supervisorId == null) {
+      throw new IllegalArgumentException(
+          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
+    }
+  }
 }

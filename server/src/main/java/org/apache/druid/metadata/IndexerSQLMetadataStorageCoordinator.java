@@ -433,14 +433,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     verifySegmentsToCommit(segments);
-
-    if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
-      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
-    } else if (startMetadata != null && supervisorId == null) {
-      throw new IllegalArgumentException(
-          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
-    }
-
+    IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
     final String dataSource = segments.iterator().next().getDataSource();
 
     try {
@@ -1189,13 +1182,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     final String dataSource = verifySegmentsToCommit(appendSegments);
-    if ((startMetadata == null && endMetadata != null)
-        || (startMetadata != null && endMetadata == null)) {
-      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
-    } else if (startMetadata != null && supervisorId == null) {
-      throw new IllegalArgumentException(
-          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
-    }
+    IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
 
     final List<PendingSegmentRecord> segmentIdsForNewVersions = inReadOnlyDatasourceTransaction(
         dataSource,
@@ -1237,8 +1224,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           transaction -> {
             // Try to update datasource metadata first
             if (startMetadata != null) {
-              final SegmentPublishResult metadataUpdateResult
-                  = updateDataSourceMetadataInTransaction(
+              final SegmentPublishResult metadataUpdateResult = updateDataSourceMetadataInTransaction(
                   transaction,
                   supervisorId,
                   dataSource,
@@ -2289,12 +2275,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     if (publishResult.isSuccess()) {
       log.info(
-          "Updated metadata for supervisor[%s] for datasource[%s] from[%s] to[%s].",
+          "Updated metadata for supervisor[%s], datasource[%s] from[%s] to[%s].",
           supervisorId, dataSource, oldCommitMetadataFromDb, newCommitMetadata
       );
     } else {
       log.info(
-          "Failed to update metadata for supervisor[%s] for datasource[%s] due to reason[%s].",
+          "Failed to update metadata for supervisor[%s], datasource[%s] due to reason[%s].",
           supervisorId, dataSource, publishResult.getErrorMsg()
       );
     }

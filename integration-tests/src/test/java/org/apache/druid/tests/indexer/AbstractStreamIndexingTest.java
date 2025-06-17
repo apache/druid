@@ -73,7 +73,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   static final int TOTAL_NUMBER_OF_SECOND = 10;
 
   private static final Logger LOG = new Logger(AbstractStreamIndexingTest.class);
-  // Since this integration test can terminates or be killed un-expectedly, this tag is added to all streams created
+  // Since this integration test can be terminated or be killed un-expectedly, this tag is added to all streams created
   // to help make stream clean up easier. (Normally, streams should be cleanup automattically by the teardown method)
   // The value to this tag is a timestamp that can be used by a lambda function to remove unused stream.
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
@@ -998,14 +998,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       }
 
       for (GeneratedTestConfig testConfig : testConfigs) {
-        ITRetryUtil.retryUntil(
-            () -> SupervisorStateManager.BasicState.RUNNING.equals(
-                indexer.getSupervisorStatus(testConfig.getSupervisorId())
-            ),
-            true,
+        ITRetryUtil.retryUntilEquals(
+            () -> indexer.getSupervisorStatus(testConfig.getSupervisorId()),
+            SupervisorStateManager.BasicState.RUNNING,
             10_000,
             30,
-            "Waiting for supervisor [" + testConfig.getSupervisorId() + "] to be running"
+            "State of supervisor[" + testConfig.getSupervisorId() + "]"
         );
 
         ITRetryUtil.retryUntil(

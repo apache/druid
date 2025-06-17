@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -33,6 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -134,12 +134,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.supervisorId = Configs.valueOrDefault(supervisorId, dataSource);
     this.segmentSchemaMapping = segmentSchemaMapping;
 
-    if ((startMetadata == null && endMetadata != null)
-        || (startMetadata != null && endMetadata == null)) {
-      throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
-    } else if (startMetadata != null && supervisorId == null) {
-      throw InvalidInput.exception("supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
-    }
+    IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
   }
 
   @JsonProperty

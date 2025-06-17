@@ -162,6 +162,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return emitter;
   }
 
+  /**
+   * Returns the identifier for this supervisor.
+   * If unspecified, defaults to the dataSource being written to.
+   */
   @Override
   @JsonProperty
   public String getId()

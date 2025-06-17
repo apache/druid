@@ -857,7 +857,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final String supervisorId;
 
   /**
-   * Type-verbose id for identifying this supervisor in thread-names, listeners, etc.
+   * Tag for identifying this supervisor in thread-names, listeners, etc. tag = (type + supervisorId).
   */
   private final String supervisorTag;
   private final TaskInfoProvider taskInfoProvider;
@@ -1264,7 +1264,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   }
                   catch (Throwable e) {
                     stateManager.recordThrowableEvent(e);
-                    log.makeAlert(e, "SeekableStreamSupervisor[%s] for datasource=[%s] failed to handle notice", supervisorId, dataSource)
+                    log.makeAlert(e, "Supervisor[%s] for datasource[%s] failed to handle notice", supervisorId, dataSource)
                        .addData("noticeClass", notice.getClass().getSimpleName())
                        .emit();
                   }
