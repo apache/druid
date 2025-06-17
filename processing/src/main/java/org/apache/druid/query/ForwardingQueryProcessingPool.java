@@ -21,10 +21,12 @@ package org.apache.druid.query;
 
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Default implementation of {@link QueryProcessingPool} that just forwards operations, including query execution tasks,
@@ -43,6 +45,17 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
   public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
     return delegate().submit(task);
+  }
+
+  @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(
+      PrioritizedQueryRunnerCallable<T, V> task,
+      long timeout,
+      TimeUnit unit
+  )
+  {
+    final ListenableFuture<T> future = delegate().submit(task);
+    return ListenableFutureTask.create(() -> future.get(timeout, unit));
   }
 
   @Override
