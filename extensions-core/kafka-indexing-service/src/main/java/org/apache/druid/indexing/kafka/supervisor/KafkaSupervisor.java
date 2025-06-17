@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -107,7 +108,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   )
   {
     super(
-        StringUtils.format("KafkaSupervisor-%s", spec.getDataSchema().getDataSource()),
+        StringUtils.format("KafkaSupervisor-%s", spec.getId()),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -152,9 +153,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof KafkaIndexTask;
+    if (task instanceof KafkaIndexTask) {
+      final String supervisorId = ((KafkaIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -166,6 +172,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<KafkaTopicPartition, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new KafkaSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
@@ -237,6 +244,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KafkaIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (KafkaIndexTaskTuningConfig) taskTuningConfig,

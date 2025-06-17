@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -101,7 +102,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       final RowIngestionMetersFactory rowIngestionMetersFactory)
   {
     super(
-        StringUtils.format("RabbitSupervisor-%s", spec.getDataSchema().getDataSource()),
+        StringUtils.format("RabbitSupervisor-%s", spec.getId()),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -142,9 +143,14 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof RabbitStreamIndexTask;
+    if (task instanceof RabbitStreamIndexTask) {
+      final String supervisorId = ((RabbitStreamIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -155,6 +161,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
     RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new RabbitStreamSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
@@ -218,12 +225,14 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new RabbitStreamIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper));
+          sortingMapper
+      ));
     }
     return taskList;
   }
