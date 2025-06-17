@@ -473,24 +473,23 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
   {
     try {
-      return FutureUtils.getUnchecked(
-          coordinatorClient.fetchLookupsForTier(tier), true);
+      return FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier(tier), true);
     }
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
-        HttpResponseException httpEx = (HttpResponseException) rootCause;
-        if (httpEx.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        final HttpResponseException httpException = (HttpResponseException) rootCause;
+        if (httpException.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
           LOG.info(
               "No lookups found for tier [%s], status [%s]",
               tier,
-              httpEx.getResponse().getStatus()
+              httpException.getResponse().getStatus()
           );
           return null;
         }
       }
+      throw e;
     }
-    return Map.of();
   }
 
   /**
