@@ -26,9 +26,14 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -36,6 +41,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -751,7 +757,16 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.ALL).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andThrow(new RuntimeException()).anyTimes();
+    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(
+        Futures.immediateFailedFuture(
+            new HttpResponseException(
+                new StringFullResponseHolder(
+                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                    StandardCharsets.UTF_8
+                )
+            )
+        )
+    ).anyTimes();
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(
