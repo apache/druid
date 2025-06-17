@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -479,12 +480,14 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         HttpResponseException httpEx = (HttpResponseException) rootCause;
-        LOG.warn(
-            "No lookups found for tier [%s], status [%s]",
-            tier,
-            httpEx.getResponse().getStatus()
-        );
-        return null;
+        if (httpEx.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+          LOG.info(
+              "No lookups found for tier [%s], status [%s]",
+              tier,
+              httpEx.getResponse().getStatus()
+          );
+          return null;
+        }
       }
     }
     return Map.of();
