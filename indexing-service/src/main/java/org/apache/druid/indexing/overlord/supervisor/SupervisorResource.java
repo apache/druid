@@ -225,9 +225,10 @@ public class SupervisorResource
                   }
                   Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
                   if (theSpec.isPresent()) {
-                    theBuilder.withDataSource(theSpec.get().getDataSources().stream().findFirst().orElse(null));
+                    final SupervisorSpec spec = theSpec.get();
+                    theBuilder.withDataSource(spec.getDataSources().stream().findFirst().orElse(null));
                     if (includeFull) {
-                      theBuilder.withSpec(theSpec.get());
+                      theBuilder.withSpec(spec);
                     }
                     if (includeSystem) {
                       try {
@@ -236,14 +237,14 @@ public class SupervisorResource
                         // payload of SupervisorSpec object when they don't have guice bindings for all the fields
                         // for example, broker does not have bindings for all fields of `KafkaSupervisorSpec` or
                         // `KinesisSupervisorSpec`
-                        theBuilder.withSpecString(objectMapper.writeValueAsString(theSpec.get()));
+                        theBuilder.withSpecString(objectMapper.writeValueAsString(spec));
                       }
                       catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                       }
-                      theBuilder.withType(theSpec.get().getType())
-                                .withSource(theSpec.get().getSource())
-                                .withSuspended(theSpec.get().isSuspended());
+                      theBuilder.withType(spec.getType())
+                                .withSource(spec.getSource())
+                                .withSuspended(spec.isSuspended());
                     }
                   }
                   return theBuilder.build();

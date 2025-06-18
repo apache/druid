@@ -644,10 +644,10 @@ public interface IndexerMetadataStorageCoordinator
   )
   {
     if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
-      throw InvalidInput.exception("start/end metadata pair must be either null or non-null");
+      throw InvalidInput.exception("'startMetadata' and 'endMetadata' must either both be null or both non-null");
     } else if (startMetadata != null && supervisorId == null) {
       throw InvalidInput.exception(
-          "supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
+          "'supervisorId' cannot be null if 'startMetadata' and 'endMetadata' are both non-null.");
     }
   }
 }
