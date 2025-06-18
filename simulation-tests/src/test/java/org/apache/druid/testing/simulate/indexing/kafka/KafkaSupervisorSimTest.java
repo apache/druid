@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.task;
+package org.apache.druid.testing.simulate.indexing.kafka;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -25,6 +25,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -36,57 +37,50 @@ import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
-import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-public class KafkaSupervisorSimTest
+/**
+ * TODO:
+ * - wait for a task to start
+ * - wait for segments to be handed off
+ */
+public class KafkaSupervisorSimTest extends DruidClusterTest
 {
-  private static final EmbeddedOverlord OVERLORD = EmbeddedOverlord.create();
-  private static final EmbeddedDruidCluster CLUSTER
-      = EmbeddedDruidCluster.builder()
-                            .with(new EmbeddedCoordinator())
-                            .with(EmbeddedIndexer.create())
-                            .with(OVERLORD)
-                            .withKafka()
-                            .withDb()
-                            .build();
+  private EmbeddedKafkaServer kafkaServer;
+  private EmbeddedDruidCluster cluster;
 
-  @ClassRule
-  public static final RuleChain RULE_CHAIN = CLUSTER.ruleChain();
+  @Override
+  public EmbeddedDruidCluster setupCluster()
+  {
+    cluster = EmbeddedDruidCluster.withExtensions(List.of(KafkaIndexTaskModule.class))
+                                  .addServer(new EmbeddedCoordinator())
+                                  .addServer(EmbeddedIndexer.create())
+                                  .addServer(EmbeddedOverlord.create());
+
+    kafkaServer = new EmbeddedKafkaServer(cluster.getZookeeper(), cluster.getTestFolder(), Map.of());
+    cluster.addResource(kafkaServer);
+
+    return cluster;
+  }
 
   @Test
   public void test_runKafkaTask() throws Exception
   {
     // Set up a topic
     final String topic = TestDataSource.WIKI;
-    try (Admin admin = CLUSTER.kafkaServer().newAdminClient()) {
-      admin.createTopics(
-          List.of(new NewTopic(topic, 2, (short) 1))
-      ).all().get();
-    }
+    kafkaServer.createTopic(topic, 2);
 
     // Produce some records to the topic
     final List<ProducerRecord<byte[], byte[]>> records = List.of(
         new ProducerRecord<>(topic, 0, StringUtils.toUtf8("key1"), StringUtils.toUtf8("value1")),
         new ProducerRecord<>(topic, 1, StringUtils.toUtf8("key2"), StringUtils.toUtf8("value2"))
     );
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = CLUSTER.kafkaServer().newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.flush();
-      kafkaProducer.abortTransaction();
-    }
+    kafkaServer.produceRecordsToTopic(records);
 
     // Submit and start a supervisor
     final KafkaSupervisorSpec kafkaSupervisorSpec = new KafkaSupervisorSpec(
@@ -102,7 +96,7 @@ public class KafkaSupervisorSimTest
             null,
             new CsvInputFormat(List.of("col1"), null, null, false, 0, false),
             null, null, null,
-            CLUSTER.kafkaServer().consumerProperties(),
+            kafkaServer.consumerProperties(),
             null, null, null, null, null,
             true,
             null, null, null, null, null, null, null,
@@ -114,21 +108,21 @@ public class KafkaSupervisorSimTest
     );
 
     final Map<String, String> startSupervisorResult = getResult(
-        CLUSTER.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
+        cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
     );
     System.out.println("Start supervisor result = " + startSupervisorResult);
 
     CloseableIterator<SupervisorStatus> supervisorStatuses = getResult(
-        CLUSTER.leaderOverlord().supervisorStatuses()
+        cluster.leaderOverlord().supervisorStatuses()
     );
     for (SupervisorStatus status : ImmutableList.copyOf(supervisorStatuses)) {
       System.out.printf("Supervisor status: id[%s], state[%s]%n", status.getId(), status.getState());
     }
 
     Thread.sleep(10_000L);
-    
+
     supervisorStatuses = getResult(
-        CLUSTER.leaderOverlord().supervisorStatuses()
+        cluster.leaderOverlord().supervisorStatuses()
     );
     for (SupervisorStatus status : ImmutableList.copyOf(supervisorStatuses)) {
       System.out.printf("Supervisor status: id[%s], state[%s]%n", status.getId(), status.getState());
@@ -140,7 +134,7 @@ public class KafkaSupervisorSimTest
 
     // Suspend supervisor
     final Map<String, String> suspendSupervisorResult = getResult(
-        CLUSTER.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
+        cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
     System.out.println("Suspend supervisor result = " + suspendSupervisorResult);
   }

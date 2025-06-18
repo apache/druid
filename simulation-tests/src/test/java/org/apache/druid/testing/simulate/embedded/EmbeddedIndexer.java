@@ -27,9 +27,8 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
-import org.jetbrains.annotations.Nullable;
-import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,12 +79,12 @@ public class EmbeddedIndexer extends EmbeddedDruidServer
 
   @Override
   Properties buildStartupProperties(
-      TemporaryFolder tempDir,
+      TestFolder testFolder,
       EmbeddedZookeeper zk,
       @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
   ) throws IOException
   {
-    final Properties properties = super.buildStartupProperties(tempDir, zk, dbRule);
+    final Properties properties = super.buildStartupProperties(testFolder, zk, dbRule);
     properties.putAll(DEFAULT_PROPERTIES);
     properties.putAll(overrideProperties);
     return properties;

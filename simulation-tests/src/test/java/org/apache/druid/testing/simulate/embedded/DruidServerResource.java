@@ -24,57 +24,59 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
- * JUnit {@link ExternalResource} for an {@link EmbeddedDruidServer} server.
- * This class can be used with {@code Rule}, {@code ClassRule} or {@code RuleChain}.
- *
- * @see EmbeddedDruidCluster#ruleChain()
+ * {@link EmbeddedDruidResource} for an {@link EmbeddedDruidServer}.
+ * Handles the lifecycle of the server.
  */
-public class DruidServerJunitResource extends ExternalResource
+class DruidServerResource implements EmbeddedDruidResource
 {
-  private static final Logger log = new Logger(DruidServerJunitResource.class);
+  private static final Logger log = new Logger(DruidServerResource.class);
 
   private final EmbeddedDruidServer server;
 
-  private final TemporaryFolder tempDir;
+  private final TestFolder testFolder;
   private final EmbeddedZookeeper zk;
   private final TestDerbyConnector.DerbyConnectorRule dbRule;
+  private final List<Class<? extends DruidModule>> extensionModules;
 
   private ExecutorService executorService;
   private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>();
 
-  DruidServerJunitResource(
+  DruidServerResource(
       EmbeddedDruidServer server,
-      TemporaryFolder tempDir,
+      TestFolder testFolder,
       EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
+      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule,
+      List<Class<? extends DruidModule>> extensionModules
   )
   {
     this.server = server;
     this.zk = zk;
     this.dbRule = dbRule;
-    this.tempDir = tempDir;
+    this.testFolder = testFolder;
+    this.extensionModules = extensionModules;
   }
 
   @Override
-  protected void before() throws Throwable
+  public void before() throws Exception
   {
-    log.info("Starting server[%s] ...", server.getName());
+    log.info("Starting server[%s] with extensions[%s] ...", server.getName(), extensionModules);
 
     // Create and start the ServerRunnable
     final CountDownLatch lifecycleCreated = new CountDownLatch(1);
@@ -91,7 +93,7 @@ public class DruidServerJunitResource extends ExternalResource
           public void onLifecycleInit(Lifecycle lifecycle)
           {
             lifecycleCreated.countDown();
-            DruidServerJunitResource.this.lifecycle.set(lifecycle);
+            DruidServerResource.this.lifecycle.set(lifecycle);
           }
         }
     );
@@ -105,7 +107,7 @@ public class DruidServerJunitResource extends ExternalResource
   }
 
   @Override
-  protected void after()
+  public void after()
   {
     log.info("Stopping server[%s] ...", server.getName());
 
@@ -155,8 +157,13 @@ public class DruidServerJunitResource extends ExternalResource
   private void runServer(ServerRunnable runnable)
   {
     try {
+      final Properties serverProperties = new Properties();
+      serverProperties.setProperty("druid.extensions.modulesForSimulation", getExtensionModuleProperty());
+      serverProperties.putAll(server.buildStartupProperties(testFolder, zk, dbRule));
+
       final Injector injector = new StartupInjectorBuilder()
-          .withProperties(server.buildStartupProperties(tempDir, zk, dbRule))
+          .withProperties(serverProperties)
+          .withExtensions()
           .add(binder -> {
             binder.bind(RuntimeInfo.class).toInstance(server.getRuntimeInfo());
             binder.requestStaticInjection(JvmUtils.class);
@@ -177,5 +184,14 @@ public class DruidServerJunitResource extends ExternalResource
     finally {
       log.info("Stopped server[%s].", server.getName());
     }
+  }
+
+  private String getExtensionModuleProperty()
+  {
+    final String moduleNamesCsv = extensionModules.stream()
+                                                  .map(Class::getName)
+                                                  .map(name -> "\"" + name + "\"")
+                                                  .collect(Collectors.joining(","));
+    return "[" + moduleNamesCsv + "]";
   }
 }

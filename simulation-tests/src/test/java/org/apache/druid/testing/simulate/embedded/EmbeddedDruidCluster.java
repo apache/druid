@@ -20,16 +20,19 @@
 package org.apache.druid.testing.simulate.embedded;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.simulate.indexing.kafka.EmbeddedKafkaServer;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Builder for an embedded Druid cluster that can be used in simulation tests.
@@ -59,58 +62,131 @@ import java.util.Map;
  * @see TestDerbyConnector
  * @see EmbeddedDruidServer
  */
-public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider
+public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, EmbeddedDruidResource
 {
-  private final List<EmbeddedDruidServer> servers;
-  private final EmbeddedZookeeper zookeeper;
-  private final EmbeddedKafkaServer kafka;
-  private final TemporaryFolder tempDir;
+  private static final Logger log = new Logger(EmbeddedDruidCluster.class);
+
+  private final TestFolder testFolder = new TestFolder();
+  private final EmbeddedZookeeper zookeeper = new EmbeddedZookeeper();
   private final TestDerbyConnector.DerbyConnectorRule dbRule;
 
-  private EmbeddedDruidCluster(
-      List<EmbeddedDruidServer> servers,
-      boolean hasKafka,
-      boolean hasMetadataStore
-  )
+  private final List<EmbeddedDruidServer> servers = new ArrayList<>();
+  private final List<EmbeddedDruidResource> resources = new ArrayList<>();
+  private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
+
+  private boolean started = false;
+
+  private EmbeddedDruidCluster(boolean hasMetadataStore)
   {
-    this.tempDir = new TemporaryFolder();
-    this.servers = List.copyOf(servers);
-    this.zookeeper = new EmbeddedZookeeper();
-    this.dbRule = hasMetadataStore ? new TestDerbyConnector.DerbyConnectorRule() : null;
-    this.kafka = hasKafka ? new EmbeddedKafkaServer(zookeeper, tempDir, Map.of()) : null;
+    resources.add(testFolder);
+    resources.add(zookeeper);
+
+    if (hasMetadataStore) {
+      this.dbRule = new TestDerbyConnector.DerbyConnectorRule();
+      resources.add(new DerbyResource(dbRule));
+    } else {
+      this.dbRule = null;
+    }
   }
 
-  public static EmbeddedDruidCluster.Builder builder()
+  public static EmbeddedDruidCluster create()
   {
-    return new EmbeddedDruidCluster.Builder();
+    return new EmbeddedDruidCluster(true);
   }
 
   /**
-   * Builds a {@link RuleChain} that can be used with JUnit {@code Rule} or
-   * {@code ClassRule} to run simulation tests with this cluster.
+   * Creates a cluster with the given extensions. The list of extensions is
+   * populated in the property {@code druid.extensions.modulesForSimulation}.
    */
-  public RuleChain ruleChain()
+  public static EmbeddedDruidCluster withExtensions(List<Class<? extends DruidModule>> moduleClasses)
   {
-    RuleChain ruleChain = RuleChain.outerRule(tempDir);
-    ruleChain = ruleChain.around(zookeeper);
-
-    if (dbRule != null) {
-      ruleChain = ruleChain.around(dbRule);
-    }
-    if (kafka != null) {
-      ruleChain = ruleChain.around(kafka);
-    }
-
-    for (EmbeddedDruidServer server : servers) {
-      ruleChain = ruleChain.around(server.junitResource(tempDir, zookeeper, dbRule));
-    }
-
-    return ruleChain;
+    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster(true);
+    cluster.extensionModules.addAll(moduleClasses);
+    return cluster;
   }
 
-  public EmbeddedKafkaServer kafkaServer()
+  /**
+   * Adds a Druid service to this cluster.
+   */
+  public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
-    return kafka;
+    validateNotStarted();
+
+    servers.add(server);
+    resources.add(server.resource(testFolder, zookeeper, dbRule, extensionModules));
+
+    return this;
+  }
+
+  /**
+   * Adds a resource to this cluster. This method should not be used to add
+   * Druid services to the cluster, use {@link #addServer} instead.
+   * Resources and servers are started in the same order in which they are added
+   * to the cluster using {@link #addServer} or this method.
+   */
+  public EmbeddedDruidCluster addResource(EmbeddedDruidResource resource)
+  {
+    validateNotStarted();
+    resources.add(resource);
+
+    return this;
+  }
+
+  public TestFolder getTestFolder()
+  {
+    return testFolder;
+  }
+
+  public EmbeddedZookeeper getZookeeper()
+  {
+    return zookeeper;
+  }
+
+  @Nullable
+  public TestDerbyConnector.DerbyConnectorRule getDbRule()
+  {
+    return dbRule;
+  }
+
+  /**
+   * Initializes all the resources used by this cluster. Typically invoked from
+   * JUnit setup methods annotated with {@code Before} or {@code BeforeClass}.
+   */
+  @Override
+  public void before() throws Exception
+  {
+    Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
+
+    // Start the resources in order
+    started = true;
+    for (EmbeddedDruidResource resource : resources) {
+      try {
+        resource.before();
+      }
+      catch (Exception e) {
+        // Clean up the resources that have already been started
+        after();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Cleans up all the resources used by this cluster. Typically invoked from
+   * JUnit tear down methods annotated with {@code After} or {@code AfterClass}.
+   */
+  @Override
+  public void after()
+  {
+    // Stop the resources in reverse order
+    for (EmbeddedDruidResource resource : Lists.reverse(resources)) {
+      try {
+        resource.after();
+      }
+      catch (Exception e) {
+        log.error(e, "Could not clean up resource[%s]. Continuing cleanup of other resources.", resource);
+      }
+    }
   }
 
   @Override
@@ -131,46 +207,32 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider
     return servers.get(0).anyBroker();
   }
 
-  /**
-   * Builder for an {@link EmbeddedDruidCluster}.
-   */
-  public static class Builder
+  private void validateNotStarted()
   {
-    private final List<EmbeddedDruidServer> servers = new ArrayList<>();
-    private boolean hasMetadataStore = false;
-    private boolean hasKafka = false;
+    if (started) {
+      throw new ISE("Cluster has already started");
+    }
+  }
 
-    /**
-     * Adds an in-memory Derby metadata store to this cluster.
-     */
-    public Builder withDb()
+  private static class DerbyResource implements EmbeddedDruidResource
+  {
+    private final TestDerbyConnector.DerbyConnectorRule dbRule;
+
+    private DerbyResource(TestDerbyConnector.DerbyConnectorRule dbRule)
     {
-      this.hasMetadataStore = true;
-      return this;
+      this.dbRule = dbRule;
     }
 
-    /**
-     * Adds an {@link EmbeddedKafkaServer} to this cluster.
-     */
-    public Builder withKafka()
+    @Override
+    public void before()
     {
-      this.hasKafka = true;
-      return this;
+      dbRule.before();
     }
 
-    /**
-     * Adds a server to this cluster.
-     */
-    public Builder with(EmbeddedDruidServer server)
+    @Override
+    public void after()
     {
-      servers.add(server);
-      return this;
-    }
-
-    public EmbeddedDruidCluster build()
-    {
-      Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
-      return new EmbeddedDruidCluster(servers, hasKafka, hasMetadataStore);
+      dbRule.after();
     }
   }
 }

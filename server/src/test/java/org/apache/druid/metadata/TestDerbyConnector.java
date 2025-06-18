@@ -189,7 +189,7 @@ public class TestDerbyConnector extends DerbyConnector
     }
 
     @Override
-    protected void before()
+    public void before()
     {
       connector = new TestDerbyConnector(
           connectorConfig,
@@ -200,7 +200,7 @@ public class TestDerbyConnector extends DerbyConnector
     }
 
     @Override
-    protected void after()
+    public void after()
     {
       connector.tearDown();
     }

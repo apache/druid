@@ -19,34 +19,9 @@
 
 package org.apache.druid.testing.simulate.embedded;
 
-import org.apache.druid.curator.CuratorTestBase;
-
-/**
- * {@link EmbeddedDruidResource} for an embedded zookeeper cluster that can be used
- * as a JUnit Rule in simulation tests.
- */
-public class EmbeddedZookeeper implements EmbeddedDruidResource
+public interface EmbeddedDruidResource
 {
-  private final CuratorTestBase zk = new CuratorTestBase();
+  void before() throws Exception;
 
-  @Override
-  public void before() throws Exception
-  {
-    zk.setupServerAndCurator();
-  }
-
-  @Override
-  public void after()
-  {
-    zk.tearDownServerAndCurator();
-  }
-
-  /**
-   * Connection string for this embedded Zookeeper.
-   * @return A valid Zookeeper string only after {@link #before()} has been called.
-   */
-  public String getConnectString()
-  {
-    return zk.getConnectString();
-  }
+  void after() throws Exception;
 }

@@ -57,9 +57,8 @@ import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.utils.RuntimeInfo;
-import org.jetbrains.annotations.Nullable;
-import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,12 +157,12 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
 
   @Override
   Properties buildStartupProperties(
-      TemporaryFolder tempDir,
+      TestFolder testFolder,
       EmbeddedZookeeper zk,
       @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
   ) throws IOException
   {
-    final Properties properties = super.buildStartupProperties(tempDir, zk, dbRule);
+    final Properties properties = super.buildStartupProperties(testFolder, zk, dbRule);
     properties.putAll(DEFAULT_PROPERTIES);
     properties.putAll(overrideProperties);
     return properties;
@@ -249,12 +248,13 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
   }
 
   /**
-   * Overrides {@link HttpRemoteTaskRunnerFactory} to be able to register the
+   * Wraps around {@link HttpRemoteTaskRunnerFactory} to be able to register the
    * {@link #taskRunnerListener} on the created {@link HttpRemoteTaskRunner}.
    */
-  private static class TestHttpRemoteTaskRunnerFactory extends HttpRemoteTaskRunnerFactory
+  private static class TestHttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemoteTaskRunner>
   {
     private final TaskRunnerListener listener;
+    private final HttpRemoteTaskRunnerFactory delegate;
 
     @Inject
     public TestHttpRemoteTaskRunnerFactory(
@@ -273,7 +273,7 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
         final TaskRunnerListener listener
     )
     {
-      super(
+      this.delegate = new HttpRemoteTaskRunnerFactory(
           smileMapper,
           httpRemoteTaskRunnerConfig, httpClient, workerConfigRef,
           provisioningSchedulerConfig, provisioningStrategy, druidNodeDiscoveryProvider,
@@ -285,10 +285,15 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
     @Override
     public HttpRemoteTaskRunner build()
     {
-      final HttpRemoteTaskRunner runner = super.build();
+      final HttpRemoteTaskRunner runner = delegate.build();
       runner.registerListener(listener, MoreExecutors.directExecutor());
-
       return runner;
+    }
+
+    @Override
+    public HttpRemoteTaskRunner get()
+    {
+      return delegate.get();
     }
   }
 

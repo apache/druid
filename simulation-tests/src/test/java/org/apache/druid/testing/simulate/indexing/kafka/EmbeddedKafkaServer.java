@@ -17,56 +17,62 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate.indexing.kafka;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.simulate.embedded.EmbeddedDruidResource;
+import org.apache.druid.testing.simulate.embedded.EmbeddedZookeeper;
+import org.apache.druid.testing.simulate.embedded.TestFolder;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.TemporaryFolder;
 import scala.Some;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class EmbeddedKafkaServer extends ExternalResource
+public class EmbeddedKafkaServer implements EmbeddedDruidResource
 {
   private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final EmbeddedZookeeper zk;
-  private final TemporaryFolder tempDir;
+  private final TestFolder testFolder;
   private final Map<String, String> brokerProperties;
 
   private volatile KafkaServer server;
+  private volatile String bootstrapServerUrl;
 
-  EmbeddedKafkaServer(
+  public EmbeddedKafkaServer(
       EmbeddedZookeeper zk,
-      TemporaryFolder tempDir,
+      TestFolder testFolder,
       Map<String, String> brokerProperties
   )
   {
     this.zk = zk;
-    this.tempDir = tempDir;
+    this.testFolder = testFolder;
     this.brokerProperties = brokerProperties == null ? Map.of() : brokerProperties;
   }
 
   @Override
-  protected void before() throws IOException
+  public void before() throws IOException
   {
     final Properties props = new Properties();
     props.setProperty("zookeeper.connect", zk.getConnectString());
     props.setProperty("zookeeper.session.timeout.ms", "30000");
     props.setProperty("zookeeper.connection.timeout.ms", "30000");
-    props.setProperty("log.dirs", tempDir.newFolder().toString());
+    props.setProperty("log.dirs", testFolder.newFolder().toString());
     props.setProperty("broker.id", String.valueOf(1));
     props.setProperty("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
     props.setProperty("advertised.host.name", "localhost");
@@ -83,11 +89,13 @@ public class EmbeddedKafkaServer extends ExternalResource
         Some.apply(StringUtils.format("EmbeddedKafka[1]-")),
         false
     );
+
     server.startup();
+    bootstrapServerUrl = StringUtils.format("localhost:%d", getPort());
   }
 
   @Override
-  protected void after()
+  public void after()
   {
     if (server != null) {
       server.shutdown();
@@ -95,49 +103,73 @@ public class EmbeddedKafkaServer extends ExternalResource
     }
   }
 
-  public int getPort()
+  public Map<String, Object> consumerProperties()
+  {
+    final Map<String, Object> props = new HashMap<>(KafkaConsumerConfigs.getConsumerProperties());
+    props.put("bootstrap.servers", bootstrapServerUrl);
+    return props;
+  }
+
+  public void createTopic(String topicName, int numPartitions)
+  {
+    try (Admin admin = newAdminClient()) {
+      admin.createTopics(
+          List.of(new NewTopic(topicName, numPartitions, (short) 1))
+      ).all().get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // TODO: simplify this API
+  // TODO: are headers needed in the records?
+  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.flush();
+      kafkaProducer.abortTransaction();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private int getPort()
   {
     return server.advertisedListeners().apply(0).port();
   }
 
-  public KafkaProducer<byte[], byte[]> newProducer()
+  private KafkaProducer<byte[], byte[]> newProducer()
   {
     return new KafkaProducer<>(producerProperties());
   }
 
-  public Admin newAdminClient()
+  private Admin newAdminClient()
   {
-    return Admin.create(adminClientProperties());
+    return Admin.create(commonClientProperties());
   }
 
-  private Map<String, Object> adminClientProperties()
+  private Map<String, Object> producerProperties()
   {
-    final Map<String, Object> props = new HashMap<>();
-    commonClientProperties(props);
-    return props;
-  }
+    final Map<String, Object> props = new HashMap<>(commonClientProperties());
 
-  public Map<String, Object> producerProperties()
-  {
-    final Map<String, Object> props = new HashMap<>();
-    commonClientProperties(props);
     props.put("key.serializer", ByteArraySerializer.class.getName());
     props.put("value.serializer", ByteArraySerializer.class.getName());
     props.put("acks", "all");
     props.put("enable.idempotence", "true");
     props.put("transactional.id", String.valueOf(RANDOM.nextInt()));
+
     return props;
   }
 
-  private void commonClientProperties(Map<String, Object> props)
+  private Map<String, Object> commonClientProperties()
   {
-    props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
-  }
-
-  public Map<String, Object> consumerProperties()
-  {
-    final Map<String, Object> props = KafkaConsumerConfigs.getConsumerProperties();
-    props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
-    return props;
+    return Map.of("bootstrap.servers", bootstrapServerUrl);
   }
 }

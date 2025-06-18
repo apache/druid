@@ -17,36 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate.junit5;
 
-import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.junit5.EmbeddedDruidClusterExtension;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
 
 /**
- * {@link EmbeddedDruidResource} for an embedded zookeeper cluster that can be used
- * as a JUnit Rule in simulation tests.
+ * JUnit 5 test that uses an {@link EmbeddedDruidCluster}.
+ *
+ * @see EmbeddedDruidClusterExtension for usage instructions
  */
-public class EmbeddedZookeeper implements EmbeddedDruidResource
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public abstract class DruidClusterTest
 {
-  private final CuratorTestBase zk = new CuratorTestBase();
+  protected EmbeddedDruidCluster cluster;
 
-  @Override
-  public void before() throws Exception
+  protected abstract EmbeddedDruidCluster setupCluster();
+
+  @BeforeAll
+  protected void setup() throws Exception
   {
-    zk.setupServerAndCurator();
+    cluster = setupCluster();
+    cluster.before();
   }
 
-  @Override
-  public void after()
+  @AfterAll
+  protected void tearDown()
   {
-    zk.tearDownServerAndCurator();
-  }
-
-  /**
-   * Connection string for this embedded Zookeeper.
-   * @return A valid Zookeeper string only after {@link #before()} has been called.
-   */
-  public String getConnectString()
-  {
-    return zk.getConnectString();
+    if (cluster != null) {
+      cluster.after();
+    }
   }
 }

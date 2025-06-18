@@ -30,6 +30,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SQLMetadataStorageDruidModule;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -45,7 +46,6 @@ import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.rules.ExternalResource;
-import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -121,10 +121,11 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
   /**
    * Builds properties to be used in the {@code StartupInjectorBuilder} while
-   * launching this server.
+   * launching this server. This must be called only after the required resources,
+   * test folder, zookeeper and metadata store have been initialized.
    */
   Properties buildStartupProperties(
-      TemporaryFolder tempDir,
+      TestFolder testFolder,
       EmbeddedZookeeper zk,
       @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
   ) throws IOException
@@ -132,9 +133,9 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
     final Properties serverProperties = new Properties();
 
     // Add properties for temporary directories used by the servers
-    final String logsDirectory = tempDir.getRoot().getAbsolutePath();
-    final String taskDirectory = tempDir.newFolder().getAbsolutePath();
-    final String storageDirectory = tempDir.newFolder().getAbsolutePath();
+    final String logsDirectory = testFolder.getOrCreateFolder("indexer-logs").getAbsolutePath();
+    final String taskDirectory = testFolder.newFolder().getAbsolutePath();
+    final String storageDirectory = testFolder.newFolder().getAbsolutePath();
     log.info(
         "Server[%s] using directories: task directory[%s], logs directory[%s], storage directory[%s].",
         name, taskDirectory, logsDirectory, storageDirectory
@@ -175,13 +176,14 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
    * Creates a JUnit {@link ExternalResource} for this server that can be used
    * with {@code Rule}, {@code ClassRule} or in a {@code RuleChain}.
    */
-  ExternalResource junitResource(
-      TemporaryFolder tempDir,
+  DruidServerResource resource(
+      TestFolder testFolder,
       EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
+      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule,
+      List<Class<? extends DruidModule>> extensionModules
   )
   {
-    return new DruidServerJunitResource(this, tempDir, zk, dbRule);
+    return new DruidServerResource(this, testFolder, zk, dbRule, extensionModules);
   }
 
   /**

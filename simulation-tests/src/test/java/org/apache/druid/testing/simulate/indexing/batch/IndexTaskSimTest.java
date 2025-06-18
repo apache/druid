@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.task;
+package org.apache.druid.testing.simulate.indexing.batch;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
 import org.apache.druid.testing.simulate.embedded.EmbeddedBroker;
 import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
@@ -46,10 +47,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,29 +60,30 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class IndexTaskSimTest
+public class IndexTaskSimTest extends DruidClusterTest
 {
-  private static final EmbeddedOverlord OVERLORD = EmbeddedOverlord.create();
-  private static final EmbeddedDruidCluster CLUSTER
-      = EmbeddedDruidCluster.builder()
-                            .with(new EmbeddedCoordinator())
-                            .with(EmbeddedIndexer.withProps(Map.of("druid.worker.capacity", "25")))
-                            .with(OVERLORD)
-                            .with(new EmbeddedHistorical())
-                            .with(new EmbeddedBroker())
-                            .withDb()
-                            .build();
+  private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
 
-  @ClassRule
-  public static final RuleChain CLUSTER_RULE_CHAIN = CLUSTER.ruleChain();
+  @Override
+  public EmbeddedDruidCluster setupCluster()
+  {
+    return EmbeddedDruidCluster.create()
+                               .addServer(new EmbeddedCoordinator())
+                               .addServer(EmbeddedIndexer.withProps(Map.of("druid.worker.capacity", "25")))
+                               .addServer(overlord)
+                               .addServer(new EmbeddedHistorical())
+                               .addServer(new EmbeddedBroker());
+  }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(60)
   public void test_run10Tasks_concurrently()
   {
     runTasksConcurrently(10);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(60)
   public void test_run50Tasks_oneByOne()
   {
     for (int i = 0; i < 25; ++i) {
@@ -90,19 +91,22 @@ public class IndexTaskSimTest
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(60)
   public void test_run25Tasks_concurrently()
   {
     runTasksConcurrently(25);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(60)
   public void test_run100Tasks_concurrently()
   {
     runTasksConcurrently(100);
   }
 
   @Test
+  @Timeout(60)
   public void test_runIndexTask_forInlineDatasource()
   {
     final String txnData10Days
@@ -121,37 +125,34 @@ public class IndexTaskSimTest
     final Task task = createIndexTaskForInlineData(TestDataSource.WIKI, txnData10Days);
     final String taskId = task.getId();
 
-    getResult(OVERLORD.client().runTask(taskId, task));
+    getResult(overlord.client().runTask(taskId, task));
     verifyTaskHasSucceeded(taskId);
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
-        OVERLORD.segmentsMetadataStorage().retrieveAllUsedSegments(TestDataSource.WIKI, null)
+        overlord.segmentsMetadataStorage().retrieveAllUsedSegments(TestDataSource.WIKI, null)
     );
     segments.sort(
         (o1, o2) -> Comparators.intervalsByStartThenEnd()
                                .compare(o1.getInterval(), o2.getInterval())
     );
 
-    Assert.assertEquals(10, segments.size());
+    Assertions.assertEquals(10, segments.size());
     DateTime start = DateTimes.of("2025-06-01");
     for (DataSegment segment : segments) {
-      Assert.assertEquals(TestDataSource.WIKI, segment.getDataSource());
-      Assert.assertEquals(
-          new Interval(start, Period.days(1)),
-          segment.getInterval()
-      );
+      Assertions.assertEquals(TestDataSource.WIKI, segment.getDataSource());
+      Assertions.assertEquals(new Interval(start, Period.days(1)), segment.getInterval());
       start = start.plusDays(1);
     }
 
     // TODO: wait for segments to be loaded and broker to be aware of it
 
     final Object result = getResult(
-        CLUSTER.anyBroker().submitSqlQuery(
+        cluster.anyBroker().submitSqlQuery(
             new ClientSqlQuery("SELECT * FROM sys.segments", null, true, true, true, Map.of(), List.of())
         )
     );
-    System.out.println("Query result = " + result);
+    // System.out.println("Query result = " + result);
   }
 
   private static Task createIndexTaskForInlineData(String dataSource, String inlineData)
@@ -193,7 +194,7 @@ public class IndexTaskSimTest
 
     for (Task task : tasks) {
       getResult(
-          OVERLORD.client().runTask(task.getId(), task)
+          overlord.client().runTask(task.getId(), task)
       );
     }
     for (Task task : tasks) {
@@ -201,17 +202,17 @@ public class IndexTaskSimTest
     }
   }
 
-  private static void verifyTaskHasSucceeded(String taskId)
+  private void verifyTaskHasSucceeded(String taskId)
   {
-    OVERLORD.waitUntilTaskFinishes(taskId);
+    overlord.waitUntilTaskFinishes(taskId);
     final TaskStatusResponse currentStatus = getResult(
-        OVERLORD.client().taskStatus(taskId)
+        overlord.client().taskStatus(taskId)
     );
-    Assert.assertNotNull(currentStatus.getStatus());
-    Assert.assertEquals(
-        StringUtils.format("Task[%s] has failed", taskId),
+    Assertions.assertNotNull(currentStatus.getStatus());
+    Assertions.assertEquals(
         TaskState.SUCCESS,
-        currentStatus.getStatus().getStatusCode()
+        currentStatus.getStatus().getStatusCode(),
+        StringUtils.format("Task[%s] has failed", taskId)
     );
   }
 
