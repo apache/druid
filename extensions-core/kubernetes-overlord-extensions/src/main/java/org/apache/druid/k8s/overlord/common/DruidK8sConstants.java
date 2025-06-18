@@ -19,7 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 
 public class DruidK8sConstants
 {
@@ -47,5 +47,5 @@ public class DruidK8sConstants
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final String BASE_TEMPLATE_NAME = "base";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
-  static final Predicate<Throwable> IS_TRANSIENT = e -> e instanceof KubernetesResourceNotFoundException;
+  public static final ImmutableList<String> BLACKLISTED_PEON_POD_ERROR_MESSAGES = ImmutableList.of();
 }
