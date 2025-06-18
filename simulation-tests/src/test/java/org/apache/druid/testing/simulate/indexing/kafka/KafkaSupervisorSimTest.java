@@ -85,6 +85,7 @@ public class KafkaSupervisorSimTest extends DruidClusterTest
     // Submit and start a supervisor
     final KafkaSupervisorSpec kafkaSupervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DataSchema.builder()
                   .withDataSource(TestDataSource.WIKI)
                   .withTimestamp(new TimestampSpec("time", null, null))
