@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.timeline.DataSegment;
@@ -85,7 +86,7 @@ public class SegmentMetadataEvent implements Event
   )
   {
     this.dataSource = dataSource;
-    this.createdTime = createdTime;
+    this.createdTime = createdTime != null ? createdTime : DateTimes.nowUtc();
     this.startTime = startTime;
     this.endTime = endTime;
     this.version = version;
@@ -104,6 +105,7 @@ public class SegmentMetadataEvent implements Event
 
     return EventMap.builder()
         .put(FEED, getFeed())
+        .put("timestamp", createdTime.toString())
         .put(DATASOURCE, dataSource)
         .put(CREATED_TIME, createdTime)
         .put(START_TIME, startTime)
