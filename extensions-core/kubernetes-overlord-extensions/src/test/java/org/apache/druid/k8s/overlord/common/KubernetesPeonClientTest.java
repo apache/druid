@@ -591,11 +591,13 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonPodWithRetries_withoutPod_raisesKubernetesResourceNotFoundException()
   {
-    Assertions.assertThrows(
+    String k8sJobName = new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName();
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
-        () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName(), 1, 1),
-        StringUtils.format("K8s pod with label: job-name=%s not found", ID)
+        () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 1, 1)
     );
+
+    Assertions.assertEquals(e.getMessage(), StringUtils.format("K8s pod with label[job-name=%s] not found", k8sJobName));
   }
 
   @Test
