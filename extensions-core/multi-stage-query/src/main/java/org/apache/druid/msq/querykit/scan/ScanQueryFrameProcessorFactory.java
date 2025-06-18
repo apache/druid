@@ -65,7 +65,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
     this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
   }
 
-  public static ScanQueryFrameProcessorFactory makeScanFrameProcessor(
+  public static ScanQueryFrameProcessorFactory makeScanFrameProcessorFactory(
       VirtualColumns virtualColumns,
       RowSignature signature,
       DimFilter dimFilter)

@@ -64,7 +64,7 @@ public class StageMaker
       RowSignature signature,
       DimFilter dimFilter)
   {
-    return ScanQueryFrameProcessorFactory.makeScanFrameProcessor(virtualColumns, signature, dimFilter);
+    return ScanQueryFrameProcessorFactory.makeScanFrameProcessorFactory(virtualColumns, signature, dimFilter);
   }
 
   public StageDefinitionBuilder buildStage(LogicalStage stage)
