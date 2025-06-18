@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate;
+package org.apache.druid.indexing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
@@ -39,9 +39,9 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedIndexer;
+import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.indexing.batch;
+package org.apache.druid.indexing;
 
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
@@ -34,12 +34,12 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.testing.simulate.embedded.EmbeddedBroker;
-import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.simulate.embedded.EmbeddedHistorical;
-import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.simulate.EmbeddedBroker;
+import org.apache.druid.testing.simulate.EmbeddedCoordinator;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedHistorical;
+import org.apache.druid.testing.simulate.EmbeddedIndexer;
+import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;

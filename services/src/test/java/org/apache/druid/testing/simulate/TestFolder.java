@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -28,7 +28,7 @@ import java.io.IOException;
 /**
  * Modeled after JUnit {@code TemporaryFolder} but uses Druid {@link FileUtils}.
  */
-public class TestFolder implements EmbeddedDruidResource
+public class TestFolder implements EmbeddedResource
 {
   private File rootFolder;
 

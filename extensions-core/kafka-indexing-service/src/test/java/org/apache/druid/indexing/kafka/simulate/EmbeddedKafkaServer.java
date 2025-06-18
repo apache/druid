@@ -17,15 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.indexing.kafka;
+package org.apache.druid.indexing.kafka.simulate;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidResource;
-import org.apache.druid.testing.simulate.embedded.EmbeddedZookeeper;
-import org.apache.druid.testing.simulate.embedded.TestFolder;
+import org.apache.druid.testing.simulate.EmbeddedResource;
+import org.apache.druid.testing.simulate.EmbeddedZookeeper;
+import org.apache.druid.testing.simulate.TestFolder;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -42,7 +42,10 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class EmbeddedKafkaServer implements EmbeddedDruidResource
+/**
+ * Embedded Kafka server used in Druid simulation tests.
+ */
+public class EmbeddedKafkaServer implements EmbeddedResource
 {
   private static final Random RANDOM = ThreadLocalRandom.current();
 

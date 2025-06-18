@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
@@ -41,10 +41,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
- * {@link EmbeddedDruidResource} for an {@link EmbeddedDruidServer}.
+ * {@link EmbeddedResource} for an {@link EmbeddedDruidServer}.
  * Handles the lifecycle of the server.
  */
-class DruidServerResource implements EmbeddedDruidResource
+class DruidServerResource implements EmbeddedResource
 {
   private static final Logger log = new Logger(DruidServerResource.class);
 

@@ -17,28 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate;
 
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.cli.CliBroker;
+import org.apache.druid.cli.CliCoordinator;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
- * Embedded mode of {@link CliBroker} used in simulation tests.
+ * Embedded mode of {@link CliCoordinator} used in simulation tests.
  */
-public class EmbeddedBroker extends EmbeddedDruidServer
+public class EmbeddedCoordinator extends EmbeddedDruidServer
 {
   @Override
   ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
-    return new Broker(handler);
+    return new Coordinator(handler);
   }
 
   @Override
@@ -48,11 +52,26 @@ public class EmbeddedBroker extends EmbeddedDruidServer
     return new DruidProcessingConfigTest.MockRuntimeInfo(2, mem100Mb, mem100Mb);
   }
 
-  private static class Broker extends CliBroker
+  @Override
+  Properties buildStartupProperties(
+      TestFolder testFolder,
+      EmbeddedZookeeper zk,
+      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
+  ) throws IOException
+  {
+    final Properties properties = super.buildStartupProperties(testFolder, zk, dbRule);
+
+    properties.setProperty("druid.coordinator.startDelay", "PT0.1S");
+    properties.setProperty("druid.coordinator.period", "PT1S");
+
+    return properties;
+  }
+
+  private static class Coordinator extends CliCoordinator
   {
     private final LifecycleInitHandler handler;
 
-    private Broker(LifecycleInitHandler handler)
+    private Coordinator(LifecycleInitHandler handler)
     {
       this.handler = handler;
     }

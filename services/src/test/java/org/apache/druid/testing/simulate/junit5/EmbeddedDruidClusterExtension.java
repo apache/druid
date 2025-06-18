@@ -20,14 +20,16 @@
 package org.apache.druid.testing.simulate.junit5;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * JUnit 5 extension to run unit tests with embedded Druid clusters.
- * <p>
+ *
+ * @see EmbeddedDruidCluster
+ * @see DruidSimulationTestBase
  */
 public class EmbeddedDruidClusterExtension implements BeforeAllCallback, AfterAllCallback
 {

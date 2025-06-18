@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.embedded;
+package org.apache.druid.testing.simulate;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.testing.simulate.indexing.kafka.EmbeddedKafkaServer;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -43,12 +42,16 @@ import java.util.List;
  * - simplify Kafka producer API
  *
  * Builder for an embedded Druid cluster that can be used in simulation tests.
+ * <p>
  * A cluster is initialized with the following:
  * <ul>
- * <li>One or more Druid servers</li>
- * <li>A single Zookeeper server used by all the Druid services</li>
+ * <li>One or more {@link EmbeddedDruidServer}</li>
+ * <li>{@link TestFolder} to write segments, task logs, reports, etc.</li>
+ * <li>A single {@link EmbeddedZookeeper} server used by all the Druid services</li>
  * <li>An optional in-memory Derby metadata store</li>
- * <li>Temporary folder for segment and task storage</li>
+ * <li>Other {@link EmbeddedResource} to be used in the cluster. For example,
+ * an {@code EmbeddedKafkaServer}</li>
+ * <li>List of {@link DruidModule} to load specific extensions</li>
  * </ul>
  * <p>
  * Example usage:
@@ -65,11 +68,10 @@ import java.util.List;
  * </pre>
  *
  * @see EmbeddedZookeeper
- * @see EmbeddedKafkaServer
  * @see TestDerbyConnector
  * @see EmbeddedDruidServer
  */
-public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, EmbeddedDruidResource
+public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
 
@@ -78,7 +80,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   private final TestDerbyConnector.DerbyConnectorRule dbRule;
 
   private final List<EmbeddedDruidServer> servers = new ArrayList<>();
-  private final List<EmbeddedDruidResource> resources = new ArrayList<>();
+  private final List<EmbeddedResource> resources = new ArrayList<>();
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
 
   private boolean started = false;
@@ -131,7 +133,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
    * Resources and servers are started in the same order in which they are added
    * to the cluster using {@link #addServer} or this method.
    */
-  public EmbeddedDruidCluster addResource(EmbeddedDruidResource resource)
+  public EmbeddedDruidCluster addResource(EmbeddedResource resource)
   {
     validateNotStarted();
     resources.add(resource);
@@ -166,7 +168,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
 
     // Start the resources in order
     started = true;
-    for (EmbeddedDruidResource resource : resources) {
+    for (EmbeddedResource resource : resources) {
       try {
         resource.before();
       }
@@ -186,7 +188,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   public void after()
   {
     // Stop the resources in reverse order
-    for (EmbeddedDruidResource resource : Lists.reverse(resources)) {
+    for (EmbeddedResource resource : Lists.reverse(resources)) {
       try {
         resource.after();
       }
@@ -221,7 +223,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     }
   }
 
-  private static class DerbyResource implements EmbeddedDruidResource
+  private static class DerbyResource implements EmbeddedResource
   {
     private final TestDerbyConnector.DerbyConnectorRule dbRule;
 

@@ -21,7 +21,7 @@ package org.apache.druid.testing.simulate.junit5;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;

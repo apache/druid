@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate.indexing.kafka;
+package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -30,10 +30,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.simulate.EmbeddedCoordinator;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedIndexer;
+import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
