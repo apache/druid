@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -104,14 +105,9 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     } else {
       this.supervisorId = supervisorId;
     }
-
-    if ((startMetadata == null && endMetadata != null)
-        || (startMetadata != null && endMetadata == null)) {
-      throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
-    } else if (startMetadata != null && supervisorId == null) {
-      throw InvalidInput.exception("supervisorId cannot be null if startMetadata and endMetadata are both non-null.");
-    }
     this.segmentSchemaMapping = segmentSchemaMapping;
+
+    IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
   }
 
   @Nullable

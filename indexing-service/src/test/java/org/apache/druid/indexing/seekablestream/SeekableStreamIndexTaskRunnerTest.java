@@ -167,7 +167,7 @@ public class SeekableStreamIndexTaskRunnerTest
   }
 
   @Test
-  public void testIfSupervisorIdIsNullThenUsesDatasource()
+  public void testGetSupervisorId()
   {
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Arrays.asList(
@@ -202,12 +202,10 @@ public class SeekableStreamIndexTaskRunnerTest
     Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
     Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
 
-    // Return null supervisorId
-    Mockito.when(task.getSupervisorId()).thenReturn(null);
-    Mockito.when(task.getDataSource()).thenReturn("dataSource");
+    Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
     TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
                                                                                                LockGranularity.TIME_CHUNK);
-    Assert.assertEquals("dataSource", runner.getSupervisorId());
+    Assert.assertEquals("supervisorId", runner.getSupervisorId());
   }
 
   static class TestasbleSeekableStreamIndexTaskRunner extends SeekableStreamIndexTaskRunner
