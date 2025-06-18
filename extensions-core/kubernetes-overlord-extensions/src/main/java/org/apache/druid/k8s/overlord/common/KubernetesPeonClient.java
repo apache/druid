@@ -310,7 +310,7 @@ public class KubernetesPeonClient
             List<Event> events = getPeonEvents(client, jobName);
 
             if (events.isEmpty()) {
-              throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + jobName + " not found");
+              throw new KubernetesResourceNotFoundException("K8s pod with label[job-name=%s] not found", jobName);
             } else {
               Event latestEvent = events.get(events.size() - 1);
               throw new KubernetesResourceNotFoundException(
@@ -322,7 +322,7 @@ public class KubernetesPeonClient
     }
     catch (KubernetesResourceNotFoundException e) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
                           .build(e, e.getMessage());
     }
     catch (Exception e) {
