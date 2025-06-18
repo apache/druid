@@ -21,7 +21,6 @@ package org.apache.druid.testing.simulate.junit5;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -29,23 +28,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 /**
  * JUnit 5 extension to run unit tests with embedded Druid clusters.
  * <p>
- * Usage:
- * <pre>
- * &#64;TestInstance(TestInstance.Lifecycle.PER_CLASS)
- * &#64;ExtendWith(EmbeddedDruidClusterExtension.class)
- * public class MyDruidTest implements DruidClusterTest
- * {
- *    &#64;Override
- *    public EmbeddedDruidCluster buildCluster()
- *    {
- *      return EmbeddedDruidCluster.withMetadataStore()
- *                                 .withServer(new EmbeddedOverlord())
- *                                 .withServer(new EmbeddedCoordinator())
- *                                 .withServer(new EmbeddedIndexer())
- *                                 .build();
- *    }
- * }
- * </pre>
  */
 public class EmbeddedDruidClusterExtension implements BeforeAllCallback, AfterAllCallback
 {
@@ -59,11 +41,11 @@ public class EmbeddedDruidClusterExtension implements BeforeAllCallback, AfterAl
             "Test class must be annotated with '@TestInstance(TestInstance.Lifecycle.PER_CLASS)'"
         )
     );
-    if (!(testInstance instanceof DruidClusterTest)) {
+    if (!(testInstance instanceof DruidSimulationTestBase)) {
       throw new ISE("Test class must implement DruidClusterTest");
     }
 
-    cluster = ((DruidClusterTest) testInstance).setupCluster();
+    cluster = ((DruidSimulationTestBase) testInstance).createCluster();
     cluster.before();
   }
 

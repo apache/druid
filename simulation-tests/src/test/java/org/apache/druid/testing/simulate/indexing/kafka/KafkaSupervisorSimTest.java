@@ -19,9 +19,6 @@
 
 package org.apache.druid.testing.simulate.indexing.kafka;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -37,25 +34,20 @@ import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
+import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * TODO:
- * - wait for a task to start
- * - wait for segments to be handed off
- */
-public class KafkaSupervisorSimTest extends DruidClusterTest
+public class KafkaSupervisorSimTest extends DruidSimulationTestBase
 {
   private EmbeddedKafkaServer kafkaServer;
   private EmbeddedDruidCluster cluster;
 
   @Override
-  public EmbeddedDruidCluster setupCluster()
+  public EmbeddedDruidCluster createCluster()
   {
     cluster = EmbeddedDruidCluster.withExtensions(List.of(KafkaIndexTaskModule.class))
                                   .addServer(new EmbeddedCoordinator())
@@ -73,7 +65,7 @@ public class KafkaSupervisorSimTest extends DruidClusterTest
   {
     // Set up a topic
     final String topic = TestDataSource.WIKI;
-    kafkaServer.createTopic(topic, 2);
+    kafkaServer.createTopicWithPartitions(topic, 2);
 
     // Produce some records to the topic
     final List<ProducerRecord<byte[], byte[]>> records = List.of(
@@ -111,23 +103,10 @@ public class KafkaSupervisorSimTest extends DruidClusterTest
     final Map<String, String> startSupervisorResult = getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
     );
-    System.out.println("Start supervisor result = " + startSupervisorResult);
 
     CloseableIterator<SupervisorStatus> supervisorStatuses = getResult(
         cluster.leaderOverlord().supervisorStatuses()
     );
-    for (SupervisorStatus status : ImmutableList.copyOf(supervisorStatuses)) {
-      System.out.printf("Supervisor status: id[%s], state[%s]%n", status.getId(), status.getState());
-    }
-
-    Thread.sleep(10_000L);
-
-    supervisorStatuses = getResult(
-        cluster.leaderOverlord().supervisorStatuses()
-    );
-    for (SupervisorStatus status : ImmutableList.copyOf(supervisorStatuses)) {
-      System.out.printf("Supervisor status: id[%s], state[%s]%n", status.getId(), status.getState());
-    }
 
     // Get the task ID
     // Let that task finish
@@ -137,11 +116,5 @@ public class KafkaSupervisorSimTest extends DruidClusterTest
     final Map<String, String> suspendSupervisorResult = getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
-    System.out.println("Suspend supervisor result = " + suspendSupervisorResult);
-  }
-
-  private static <T> T getResult(ListenableFuture<T> future)
-  {
-    return FutureUtils.getUnchecked(future, true);
   }
 }

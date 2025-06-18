@@ -19,9 +19,7 @@
 
 package org.apache.druid.testing.simulate.indexing.batch;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskStatusResponse;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -36,13 +34,13 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
 import org.apache.druid.testing.simulate.embedded.EmbeddedBroker;
 import org.apache.druid.testing.simulate.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,12 +58,12 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class IndexTaskSimTest extends DruidClusterTest
+public class IndexTaskSimTest extends DruidSimulationTestBase
 {
   private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
 
   @Override
-  public EmbeddedDruidCluster setupCluster()
+  public EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.create()
                                .addServer(new EmbeddedCoordinator())
@@ -145,14 +143,11 @@ public class IndexTaskSimTest extends DruidClusterTest
       start = start.plusDays(1);
     }
 
-    // TODO: wait for segments to be loaded and broker to be aware of it
-
     final Object result = getResult(
         cluster.anyBroker().submitSqlQuery(
             new ClientSqlQuery("SELECT * FROM sys.segments", null, true, true, true, Map.of(), List.of())
         )
     );
-    // System.out.println("Query result = " + result);
   }
 
   private static Task createIndexTaskForInlineData(String dataSource, String inlineData)
@@ -214,11 +209,5 @@ public class IndexTaskSimTest extends DruidClusterTest
         currentStatus.getStatus().getStatusCode(),
         StringUtils.format("Task[%s] has failed", taskId)
     );
-  }
-
-
-  private static <T> T getResult(ListenableFuture<T> future)
-  {
-    return FutureUtils.getUnchecked(future, true);
   }
 }

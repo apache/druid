@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskStatusResponse;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -43,7 +42,7 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.simulate.junit5.DruidClusterTest;
+import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -61,7 +60,7 @@ import java.util.stream.Collectors;
  * Tests all the REST APIs exposed by the Overlord using the
  * {@link org.apache.druid.rpc.indexing.OverlordClient}.
  */
-public class OverlordClientSimTest extends DruidClusterTest
+public class OverlordClientSimTest extends DruidSimulationTestBase
 {
   private static final String UNKNOWN_TASK_ID
       = IdUtils.newTaskId("sim_test_noop", "dummy", null);
@@ -71,7 +70,7 @@ public class OverlordClientSimTest extends DruidClusterTest
   private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
 
   @Override
-  public EmbeddedDruidCluster setupCluster()
+  public EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.create()
                                .addServer(EmbeddedIndexer.create())
@@ -118,9 +117,6 @@ public class OverlordClientSimTest extends DruidClusterTest
   @Disabled
   public void test_cancelTask_ofTypeNoop_andLongRunDuration()
   {
-    // TODO: Discovered race condition here
-    //  even though task is being immediately shutdown, it is still being sent to the worker
-
     // Start a long-running task
     final long taskRunDuration = 10_000L;
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
@@ -316,11 +312,6 @@ public class OverlordClientSimTest extends DruidClusterTest
         )
     );
     Assertions.assertNotNull(result);
-  }
-
-  private static <T> T getResult(ListenableFuture<T> future)
-  {
-    return FutureUtils.getUnchecked(future, true);
   }
 
   private static <T> void verifyFailsWith(ListenableFuture<T> future, String message)

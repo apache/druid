@@ -22,7 +22,6 @@ package org.apache.druid.testing.simulate.indexing.kafka;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.simulate.embedded.EmbeddedDruidResource;
 import org.apache.druid.testing.simulate.embedded.EmbeddedZookeeper;
@@ -110,7 +109,7 @@ public class EmbeddedKafkaServer implements EmbeddedDruidResource
     return props;
   }
 
-  public void createTopic(String topicName, int numPartitions)
+  public void createTopicWithPartitions(String topicName, int numPartitions)
   {
     try (Admin admin = newAdminClient()) {
       admin.createTopics(
@@ -122,7 +121,6 @@ public class EmbeddedKafkaServer implements EmbeddedDruidResource
     }
   }
 
-  // TODO: simplify this API
   // TODO: are headers needed in the records?
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
