@@ -54,7 +54,7 @@ If there are multiple `Content-Type` headers, the **first** one is used.
 
 The request body takes the following properties:
 
-* `query`: SQL query string. HTTP requests are permitted to include multiple `SET` statements to assign [SQL query context parameter](../querying/sql-query-context.md) values to apply to the query statement, see [SET statements](../querying/sql.md#set-statements) for details. Context parameters set by `SET` statements take priority over values set in `context`.
+* `query`: SQL query string. HTTP requests are permitted to include multiple `SET` statements to assign [SQL query context parameter](../querying/sql-query-context.md) values to apply to the query statement, see [SET statements](../querying/sql.md#set) for details. Context parameters set by `SET` statements take priority over values set in `context`.
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
   * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
      Object field names match the columns returned by the SQL query in the same order as the SQL query.
@@ -86,7 +86,7 @@ The request body takes the following properties:
    * The `header` property is set to true.
    * The version of Druid supports `typesHeader` and `sqlTypesHeader`, regardless of whether either property is set.
 
-* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
+* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count. You can also set the context through `SET` command. For how to using `SET` Command in your Druid SQL query, see [SET statement](../querying/sql.md#set) for more information.
 
 * `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For more information on using dynamic parameters, see [Dynamic parameters](../querying/sql.md#dynamic-parameters). For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
