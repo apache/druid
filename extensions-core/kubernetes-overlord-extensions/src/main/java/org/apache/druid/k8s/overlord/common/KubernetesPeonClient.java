@@ -38,7 +38,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -307,8 +306,7 @@ public class KubernetesPeonClient
               return maybePod.get();
             }
 
-            // If the pod is missing, the next best thing we can do is to take a look at what's happening to the job.
-            // Use getLatestEventForJob to ensure we consider the actual most recent event.
+            // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
             List<Event> events = getPeonEvents(client, jobName);
 
             if (events.isEmpty()) {
@@ -323,7 +321,9 @@ public class KubernetesPeonClient
       );
     }
     catch (KubernetesResourceNotFoundException e) {
-      throw e;
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, e.getMessage());
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
