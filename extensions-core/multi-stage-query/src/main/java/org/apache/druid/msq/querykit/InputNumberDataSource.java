@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.query.LeafDataSource;
+
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;

@@ -64,7 +64,7 @@ public class ProcessingBuffersSet
    */
   public ResourceHolder<ProcessingBuffers> acquireForStage(final StageDefinition stageDef)
   {
-    if (!stageDef.getProcessorFactory().usesProcessingBuffers()) {
+    if (!stageDef.getProcessor().usesProcessingBuffers()) {
       return new NilResourceHolder<>();
     } else {
       return acquire();

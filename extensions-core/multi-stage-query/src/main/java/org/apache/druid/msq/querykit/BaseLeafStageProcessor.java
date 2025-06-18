@@ -37,6 +37,9 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -45,8 +48,6 @@ import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -67,11 +68,11 @@ import java.util.function.Function;
  * other stages. The term "leaf" represents the fact that they are capable of being leaves in the query tree. However,
  * they do not *need* to be leaves. They can read from prior stages as well.
  */
-public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFactory
+public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
 {
   private final Query<?> query;
 
-  protected BaseLeafFrameProcessorFactory(Query<?> query)
+  protected BaseLeafStageProcessor(Query<?> query)
   {
     this.query = query;
   }
@@ -91,7 +92,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final boolean removeNullBytes
   ) throws IOException
   {
-    // BaseLeafFrameProcessorFactory is used for native Druid queries, where the following input cases can happen:
+    // BaseLeafStageProcessor is used for native Druid queries, where the following input cases can happen:
     //   1) Union datasources: N nonbroadcast inputs, which are treated as one big input
     //   2) Join datasources: one nonbroadcast input, N broadcast inputs
     //   3) All other datasources: single input
@@ -184,7 +185,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final FrameContext frameContext
   )
   {
-    final BaseLeafFrameProcessorFactory factory = this;
+    final BaseLeafStageProcessor factory = this;
     // Read all base inputs in separate processors, one per processor.
     final Iterable<ReadableInput> processorBaseInputs = readBaseInputs(
         stageDefinition,

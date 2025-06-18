@@ -37,7 +37,7 @@ import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
-import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
@@ -174,7 +174,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
                        .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
-                       .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
+                       .processor(new ScanQueryStageProcessor(queryToRun))
     );
 
     if (hasLimitOrOffset) {
@@ -184,8 +184,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                          .signature(signatureToUse)
                          .maxWorkerCount(1)
                          .shuffleSpec(finalShuffleSpec) // Apply the final shuffling after limit spec.
-                         .processorFactory(
-                             new OffsetLimitFrameProcessorFactory(
+                         .processor(
+                             new OffsetLimitStageProcessor(
                                  queryToRun.getScanRowsOffset(),
                                  queryToRun.isLimited() ? queryToRun.getScanRowsLimit() : null
                              )

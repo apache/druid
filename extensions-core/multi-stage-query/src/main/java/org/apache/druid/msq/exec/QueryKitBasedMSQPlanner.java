@@ -43,8 +43,8 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
-import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
-import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.ExportResultsStageProcessor;
+import org.apache.druid.msq.querykit.results.QueryResultStageProcessor;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -216,7 +216,7 @@ public class QueryKitBasedMSQPlanner
                                    .maxWorkerCount(tuningConfig.getMaxNumWorkers())
                                    .signature(finalShuffleStageDef.getSignature())
                                    .shuffleSpec(null)
-                                   .processorFactory(new QueryResultFrameProcessorFactory())
+                                   .processor(new QueryResultStageProcessor())
         );
         return builder.build();
       } else {
@@ -234,7 +234,7 @@ public class QueryKitBasedMSQPlanner
                                  .maxWorkerCount(tuningConfig.getMaxNumWorkers())
                                  .signature(queryDef.getFinalStageDefinition().getSignature())
                                  .shuffleSpec(null)
-                                 .processorFactory(new ExportResultsFrameProcessorFactory(
+                                 .processor(new ExportResultsStageProcessor(
                                      queryKitSpec.getQueryId(),
                                      exportStorageProvider,
                                      resultFormat,

@@ -43,7 +43,6 @@ public class OutputChannelsTest
     Assert.assertEquals(IntSets.emptySet(), channels.getPartitionNumbers());
     Assert.assertEquals(Collections.emptyList(), channels.getAllChannels());
     Assert.assertEquals(Collections.emptyList(), channels.getChannelsForPartition(0));
-    Assert.assertTrue(channels.areReadableChannelsReady());
   }
 
   @Test
@@ -55,7 +54,6 @@ public class OutputChannelsTest
     Assert.assertEquals(1, channels.getAllChannels().size());
     Assert.assertEquals(Collections.emptyList(), channels.getChannelsForPartition(0));
     Assert.assertEquals(1, channels.getChannelsForPartition(1).size());
-    Assert.assertTrue(channels.areReadableChannelsReady());
   }
 
   @Test
@@ -77,7 +75,6 @@ public class OutputChannelsTest
     Assert.assertEquals(IntSet.of(1), readOnlyChannels.getPartitionNumbers());
     Assert.assertEquals(1, readOnlyChannels.getAllChannels().size());
     Assert.assertEquals(1, channels.getChannelsForPartition(1).size());
-    Assert.assertTrue(channels.areReadableChannelsReady());
 
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,

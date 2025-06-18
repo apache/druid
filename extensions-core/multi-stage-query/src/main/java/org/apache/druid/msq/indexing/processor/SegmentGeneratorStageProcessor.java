@@ -39,15 +39,15 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardStageProcessor;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.ExtraInfoHolder;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.segment.IndexSpec;
@@ -77,15 +77,15 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
-public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
+public class SegmentGeneratorStageProcessor
+    extends StandardStageProcessor<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
 
   @JsonCreator
-  public SegmentGeneratorFrameProcessorFactory(
+  public SegmentGeneratorStageProcessor(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
       @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
@@ -256,7 +256,7 @@ public class SegmentGeneratorFrameProcessorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SegmentGeneratorFrameProcessorFactory that = (SegmentGeneratorFrameProcessorFactory) o;
+    SegmentGeneratorStageProcessor that = (SegmentGeneratorStageProcessor) o;
     return Objects.equals(dataSchema, that.dataSchema)
            && Objects.equals(columnMappings, that.columnMappings)
            && Objects.equals(tuningConfig, that.tuningConfig);

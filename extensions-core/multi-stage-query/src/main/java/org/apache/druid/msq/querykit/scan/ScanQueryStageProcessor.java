@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.querykit.groupby;
+package org.apache.druid.msq.querykit.scan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,43 +27,56 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
-import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.SegmentMapFunction;
 
-@JsonTypeName("groupByPreShuffle")
-public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
+import javax.annotation.Nullable;
+import java.util.concurrent.atomic.AtomicLong;
+
+@JsonTypeName("scan")
+public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
-  private final GroupByQuery query;
+  private final ScanQuery query;
+
+  /**
+   * Instantiated and passed to all the {@link ScanQueryFrameProcessor}s created from this factory to keep a track
+   * of the number of rows processed so far in case the query is limited (without any order by) because one doesn't need
+   * to scan through all the rows in that case.
+   * This is not ideal because nothing really guarantees this factory is used for a single makeWorkers call
+   */
+  @Nullable
+  private final AtomicLong runningCountForLimit;
 
   @JsonCreator
-  public GroupByPreShuffleFrameProcessorFactory(@JsonProperty("query") GroupByQuery query)
+  public ScanQueryStageProcessor(@JsonProperty("query") ScanQuery query)
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
+    this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
   }
 
   @JsonProperty
-  public GroupByQuery getQuery()
+  public ScanQuery getQuery()
   {
     return query;
   }
 
   @Override
   protected FrameProcessor<Object> makeProcessor(
-      final ReadableInput baseInput,
-      final SegmentMapFunction segmentMapFn,
-      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
-      final FrameContext frameContext
+      ReadableInput baseInput,
+      SegmentMapFunction segmentMapFn,
+      ResourceHolder<WritableFrameChannel> outputChannelHolder,
+      ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
+      FrameContext frameContext
   )
   {
-    return new GroupByPreShuffleFrameProcessor(
+    return new ScanQueryFrameProcessor(
         query,
-        frameContext.groupingEngine(),
-        frameContext.processingBuffers().getBufferPool(),
+        runningCountForLimit,
+        frameContext.jsonMapper(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
@@ -74,6 +87,6 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   @Override
   public boolean usesProcessingBuffers()
   {
-    return true;
+    return false;
   }
 }

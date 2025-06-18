@@ -117,5 +117,11 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public boolean isBuffered()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }

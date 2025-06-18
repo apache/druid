@@ -44,7 +44,7 @@ import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.stage.StripedReadablePartitions;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -71,7 +71,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(1, 2, 3))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -100,7 +100,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(1, 2, 3))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -129,7 +129,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec())
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -158,7 +158,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs()
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -184,7 +184,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec())
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -211,7 +211,7 @@ public class WorkerInputsTest
                        .inputs(new TestInputSpec())
                        .broadcastInputs(IntSet.of(0))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -237,7 +237,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(1, 2, 3))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -263,7 +263,7 @@ public class WorkerInputsTest
         StageDefinition.builder(1)
                        .inputs(new StageInputSpec(0))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -311,7 +311,7 @@ public class WorkerInputsTest
         StageDefinition.builder(1)
                        .inputs(new StageInputSpec(0))
                        .maxWorkerCount(1)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -349,7 +349,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(200_000_000L, 200_000_001L, 200_000_002L))
                        .maxWorkerCount(4)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -376,7 +376,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(1, 2, 30_000_000_000L, 4, 5, 6, 7, 8, 9, 10, 11))
                        .maxWorkerCount(2)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -409,7 +409,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(new TestInputSpec(4_000_000_000L, 4_000_000_001L, 4_000_000_002L))
                        .maxWorkerCount(1)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     final WorkerInputs inputs = WorkerInputs.create(
@@ -439,7 +439,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(inputSpecToSplit)
                        .maxWorkerCount(3)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));
@@ -483,7 +483,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(inputSpecToSplit)
                        .maxWorkerCount(3)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));
@@ -526,7 +526,7 @@ public class WorkerInputsTest
         StageDefinition.builder(0)
                        .inputs(inputSpecToSplit)
                        .maxWorkerCount(3)
-                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .processor(new OffsetLimitStageProcessor(0, 0L))
                        .build(QUERY_ID);
 
     TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));

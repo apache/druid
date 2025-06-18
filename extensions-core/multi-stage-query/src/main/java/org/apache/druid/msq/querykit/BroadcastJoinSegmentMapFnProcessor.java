@@ -116,7 +116,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
   }
 
   /**
-   * Helper that enables implementations of {@link BaseLeafFrameProcessorFactory} to set up an instance of this class.
+   * Helper that enables implementations of {@link BaseLeafStageProcessor} to set up an instance of this class.
    */
   public static BroadcastJoinSegmentMapFnProcessor create(
       final Query<?> query,

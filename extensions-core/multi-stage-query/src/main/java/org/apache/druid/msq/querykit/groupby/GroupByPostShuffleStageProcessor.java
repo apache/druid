@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.msq.querykit.results;
+package org.apache.druid.msq.querykit.groupby;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -33,28 +34,40 @@ import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 
-@JsonTypeName("selectResults")
-public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
+@JsonTypeName("groupByPostShuffle")
+public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcessor
 {
+  private final GroupByQuery query;
 
   @JsonCreator
-  public QueryResultFrameProcessorFactory()
+  public GroupByPostShuffleStageProcessor(
+      @JsonProperty("query") GroupByQuery query
+  )
   {
+    this.query = query;
+  }
+
+  @JsonProperty
+  public GroupByQuery getQuery()
+  {
+    return query;
   }
 
   @Override
@@ -74,11 +87,7 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
   {
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
-
-    if (inputSliceReader.numReadableInputs(slice) == 0) {
-      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
-    }
-
+    final GroupingEngine engine = frameContext.groupingEngine();
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
     for (final ReadablePartition partition : slice.getPartitions()) {
@@ -103,9 +112,14 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
 
-          return new QueryResultsFrameProcessor(
+          return new GroupByPostShuffleFrameProcessor(
+              query,
+              engine,
               readableInput.getChannel(),
-              outputChannel.getWritableChannel()
+              outputChannel.getWritableChannel(),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
+              readableInput.getChannelFrameReader(),
+              frameContext.jsonMapper()
           );
         }
     );

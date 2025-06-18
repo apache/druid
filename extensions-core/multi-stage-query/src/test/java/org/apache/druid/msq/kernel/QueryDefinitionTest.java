@@ -26,7 +26,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -46,7 +46,7 @@ public class QueryDefinitionTest
             .add(
                 StageDefinition
                     .builder(0)
-                    .processorFactory(new OffsetLimitFrameProcessorFactory(0, 1L))
+                    .processor(new OffsetLimitStageProcessor(0, 1L))
                     .shuffleSpec(
                         new GlobalSortMaxCountShuffleSpec(
                             new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),

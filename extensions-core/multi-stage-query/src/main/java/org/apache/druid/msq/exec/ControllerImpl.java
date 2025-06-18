@@ -124,7 +124,7 @@ import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
-import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -945,7 +945,7 @@ public class ControllerImpl implements Controller
           try {
             convertedResultObject = context.jsonMapper().convertValue(
                 resultObject,
-                queryKernel.getStageDefinition(stageId).getProcessorFactory().getResultTypeReference()
+                queryKernel.getStageDefinition(stageId).getProcessor().getResultTypeReference()
             );
           }
           catch (IllegalArgumentException e) {
@@ -1642,8 +1642,8 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         } else {
-          DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
-              .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
+          DataSchema dataSchema = ((SegmentGeneratorStageProcessor) queryKernel
+              .getStageDefinition(finalStageId).getProcessor()).getDataSchema();
 
           ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
           ClusterBy clusterBy = queryKernel.getStageDefinition(finalStageId).getClusterBy();
@@ -2182,7 +2182,7 @@ public class ControllerImpl implements Controller
     /**
      * Segments to generate. Populated prior to launching the final stage of a query with destination
      * {@link DataSourceMSQDestination} (which originate from SQL INSERT or REPLACE). The final stage of such a query
-     * uses {@link SegmentGeneratorFrameProcessorFactory}, which requires a list of segment IDs to generate.
+     * uses {@link SegmentGeneratorStageProcessor}, which requires a list of segment IDs to generate.
      */
     private List<SegmentIdWithShardSpec> segmentsToGenerate;
 

@@ -36,16 +36,16 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.ResultsContext;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardStageProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.ExtraInfoHolder;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
@@ -58,7 +58,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 @JsonTypeName("exportResults")
-public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<Object, Object, Object>
+public class ExportResultsStageProcessor extends StandardStageProcessor<Object, Object, Object>
 {
   private final String queryId;
   private final ExportStorageProvider exportStorageProvider;
@@ -67,7 +67,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   private final ResultsContext resultsContext;
 
   @JsonCreator
-  public ExportResultsFrameProcessorFactory(
+  public ExportResultsStageProcessor(
       @JsonProperty("queryId") String queryId,
       @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
       @JsonProperty("exportFormat") ResultFormat exportFormat,

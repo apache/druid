@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.QueueNonBlockingPool;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.msq.kernel.FrameContext;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;

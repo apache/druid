@@ -59,7 +59,6 @@ import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -401,9 +400,7 @@ public class WorkerImpl implements Worker
         cancellationId,
         context,
         frameContext,
-        makeRunWorkOrderListener(workOrder, controllerClient, criticalWarningCodes, maxVerboseParseExceptions),
-        MultiStageQueryContext.isReindex(workOrder.getWorkerContext()),
-        MultiStageQueryContext.removeNullBytes(workOrder.getWorkerContext())
+        makeRunWorkOrderListener(workOrder, controllerClient, criticalWarningCodes, maxVerboseParseExceptions)
     );
 
     // Set up processorCloser (called when processing is done).

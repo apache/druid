@@ -17,18 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.msq.kernel.WorkOrder;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Holds extra info that will be passed as the "extra" parameter to
- * {@link FrameProcessorFactory#makeProcessors}.
+ * Holds extra info that will be included in {@link WorkOrder}.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public abstract class ExtraInfoHolder<ExtraInfoType>

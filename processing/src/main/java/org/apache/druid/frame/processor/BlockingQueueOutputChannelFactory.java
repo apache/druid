@@ -57,4 +57,10 @@ public class BlockingQueueOutputChannelFactory implements OutputChannelFactory
   {
     return OutputChannel.nil(partitionNumber);
   }
+
+  @Override
+  public boolean isBuffered()
+  {
+    return false;
+  }
 }

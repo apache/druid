@@ -61,6 +61,12 @@ public class ListeningOutputChannelFactory implements OutputChannelFactory
     throw new UnsupportedOperationException("Listening to partitioned channels is not supported");
   }
 
+  @Override
+  public boolean isBuffered()
+  {
+    return delegate.isBuffered();
+  }
+
   private OutputChannel notifyListener(OutputChannel channel)
   {
     listener.channelOpened(channel);

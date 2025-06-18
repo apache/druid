@@ -859,7 +859,7 @@ class ControllerStageTracker
         this.resultObject = resultObject;
       } else {
         //noinspection unchecked
-        this.resultObject = getStageDefinition().getProcessorFactory()
+        this.resultObject = getStageDefinition().getProcessor()
                                                 .mergeAccumulatedResult(this.resultObject, resultObject);
       }
     } else {

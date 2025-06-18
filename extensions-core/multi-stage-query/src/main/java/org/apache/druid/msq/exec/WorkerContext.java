@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -87,7 +85,7 @@ public interface WorkerContext
   File tempDir();
 
   /**
-   * Create a context with useful objects required by {@link FrameProcessorFactory#makeProcessors}.
+   * Create a context with useful objects required by {@link StageProcessor#makeProcessors}.
    */
   FrameContext frameContext(WorkOrder workOrder);
 

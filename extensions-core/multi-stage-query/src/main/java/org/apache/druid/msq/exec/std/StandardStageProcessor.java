@@ -17,15 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.msq.exec.std;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
-import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
+import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -33,21 +37,22 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Property of {@link StageDefinition} that describes its computation logic.
+ * Base class for {@link StageProcessor} that want to build a {@link ProcessorsAndChannels} for some shuffle-agnostic
+ * work, then have the shuffle work taken care of by {@link StandardStageRunner}. In general, this allows the
+ * {@link StageProcessor} implementation to be simpler, and comes at the cost of not being able to do shuffle-specific
+ * optimizations.
  *
- * Workers call {@link #makeProcessors} to generate the processors that perform computations within that worker's
- * {@link org.apache.druid.frame.processor.FrameProcessorExecutor}. Additionally, provides
- * {@link #mergeAccumulatedResult(Object, Object)} for merging results from {@link ProcessorManager#result()}.
+ * This abstract class may be removed someday, in favor of its subclasses using {@link StandardStageRunner} directly.
+ * It was introduced mainly to minimize code changes in a refactor.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface FrameProcessorFactory<T, R, ExtraInfoType>
+public abstract class StandardStageProcessor<T, R, ExtraInfoType> implements StageProcessor<R, ExtraInfoType>
 {
   /**
    * Create processors for a particular worker in a particular stage. The processors will be run on a thread pool,
    * with at most "maxOutstandingProcessors" number of processors outstanding at once.
    *
    * The Sequence returned by {@link ProcessorsAndChannels#getProcessorManager()} is passed directly to
-   * {@link org.apache.druid.frame.processor.FrameProcessorExecutor#runAllFully}.
+   * {@link FrameProcessorExecutor#runAllFully}.
    *
    * @param stageDefinition          stage definition
    * @param workerNumber             current worker number; some factories use this to determine what work to do
@@ -64,7 +69,7 @@ public interface FrameProcessorFactory<T, R, ExtraInfoType>
    *
    * @return a processor sequence, which may be computed lazily; and a list of output channels.
    */
-  ProcessorsAndChannels<T, R> makeProcessors(
+  public abstract ProcessorsAndChannels<T, R> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -78,23 +83,31 @@ public interface FrameProcessorFactory<T, R, ExtraInfoType>
       boolean removeNullBytes
   ) throws IOException;
 
-  /**
-   * Whether processors from this factory use {@link org.apache.druid.msq.exec.ProcessingBuffers}.
-   */
-  boolean usesProcessingBuffers();
+  @Override
+  public ListenableFuture<R> execute(ExecutionContext context)
+  {
+    try {
+      final StandardStageRunner<T, R> stageRunner = new StandardStageRunner<>(context);
 
-  @Nullable
-  TypeReference<R> getResultTypeReference();
+      @SuppressWarnings("unchecked")
+      final ProcessorsAndChannels<T, R> processors = makeProcessors(
+          context.workOrder().getStageDefinition(),
+          context.workOrder().getWorkerNumber(),
+          context.workOrder().getInputs(),
+          context.inputSliceReader(),
+          (ExtraInfoType) context.workOrder().getExtraInfo(),
+          stageRunner.workOutputChannelFactory(),
+          context.frameContext(),
+          context.threadCount(),
+          context.counters(),
+          context::onWarning,
+          MultiStageQueryContext.removeNullBytes(context.workOrder().getWorkerContext())
+      );
 
-  /**
-   * Merges two accumulated results. May modify the left-hand side {@code accumulated}. Does not modify the right-hand
-   * side {@code current}.
-   */
-  R mergeAccumulatedResult(R accumulated, R otherAccumulated);
-
-  /**
-   * Produces an {@link ExtraInfoHolder} wrapper that allows serialization of {@code ExtraInfoType}.
-   */
-  @SuppressWarnings("rawtypes")
-  ExtraInfoHolder makeExtraInfoHolder(@Nullable ExtraInfoType extra);
+      return stageRunner.run(processors);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
