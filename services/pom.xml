@@ -307,6 +307,13 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- This is needed only for EmbeddedOverlord. When ZK-based cleanup thread
+        is removed from HttpTaskRunner, this dependency can be removed too. -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

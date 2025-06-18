@@ -27,6 +27,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 
 /**
+ * TODO:
+ * - wait for segments to be loaded
+ * - wait for task to be launched
+ * - fix shutdown race condition in HttpRemoteTaskRunner and enable that test
+ * - fix the other race condition causing status to return RUNNING even after completion callback has been received
+ * - simplify Kafka producer API
+ *
  * Base class for JUnit 5 tests that use an {@link EmbeddedDruidCluster}.
  * This base class is responsible for setting up the cluster before <b>ANY<b/>
  * test method has run and tearing it down after <b>ALL</b> the tests have run.

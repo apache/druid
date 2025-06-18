@@ -34,13 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TODO:
- * - wait for segments to be loaded
- * - wait for task to be launched
- * - fix shutdown race condition in HttpRemoteTaskRunner and enable that test
- * - fix the other race condition causing status to return RUNNING even after completion callback has been received
- * - simplify Kafka producer API
- *
  * Builder for an embedded Druid cluster that can be used in simulation tests.
  * <p>
  * A cluster is initialized with the following:

@@ -35,11 +35,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.NoopMetadataStorageProvider;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageProvider;
@@ -227,8 +225,6 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
     public void configure(Binder binder)
     {
       super.configure(binder);
-
-      binder.bind(MetadataStorage.class).toProvider(NoopMetadataStorageProvider.class);
 
       PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))
               .addBinding(TYPE)

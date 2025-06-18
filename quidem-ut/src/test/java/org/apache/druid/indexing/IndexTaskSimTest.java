@@ -75,36 +75,6 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
 
   @Test
   @Timeout(60)
-  public void test_run10Tasks_concurrently()
-  {
-    runTasksConcurrently(10);
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_run50Tasks_oneByOne()
-  {
-    for (int i = 0; i < 25; ++i) {
-      runTasksConcurrently(1);
-    }
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_run25Tasks_concurrently()
-  {
-    runTasksConcurrently(25);
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_run100Tasks_concurrently()
-  {
-    runTasksConcurrently(100);
-  }
-
-  @Test
-  @Timeout(60)
   public void test_runIndexTask_forInlineDatasource()
   {
     final String txnData10Days
@@ -148,6 +118,36 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
             new ClientSqlQuery("SELECT * FROM sys.segments", null, true, true, true, Map.of(), List.of())
         )
     );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_run10Tasks_concurrently()
+  {
+    runTasksConcurrently(10);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_run50Tasks_oneByOne()
+  {
+    for (int i = 0; i < 25; ++i) {
+      runTasksConcurrently(1);
+    }
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_run25Tasks_concurrently()
+  {
+    runTasksConcurrently(25);
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_run100Tasks_concurrently()
+  {
+    runTasksConcurrently(100);
   }
 
   private static Task createIndexTaskForInlineData(String dataSource, String inlineData)
