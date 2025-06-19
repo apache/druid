@@ -28,6 +28,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -89,12 +90,19 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
     return clientHolder.broker;
   }
 
+  @Override
+  public StubServiceEmitter serviceEmitter()
+  {
+    return clientHolder.serviceEmitter;
+  }
+
   /**
    * Creates a {@link ServerRunnable} corresponding to a specific Druid service.
-   * Implementations of this class must try to avoid overriding any default
-   * Druid module unless it is through extensions and enabled via Druid properties.
-   * Such override should also be visible in the unit tests so that there is no
-   * hidden config and the embedded cluster closely replicates a real cluster.
+   * Implementations of this class must avoid overriding any default Druid module
+   * so that the embedded clsuter closely replicates a real cluster.
+   * If an override is needed, it must be done using extensions and Druid
+   * properties, which are visible to the unit test so that there is no hidden
+   * config.
    */
   abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
@@ -185,5 +193,8 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
     @Inject
     BrokerClient broker;
+
+    @Inject
+    StubServiceEmitter serviceEmitter;
   }
 }

@@ -73,12 +73,11 @@ public class TestDerbyConnector extends DerbyConnector
     this(
         connectorConfig,
         tablesConfig,
-        "jdbc:derby:memory:druidTest" + dbSafeUUID(),
         CentralizedDatasourceSchemaConfig.create()
     );
   }
 
-  protected TestDerbyConnector(
+  public TestDerbyConnector(
       MetadataStorageConnectorConfig connectorConfig,
       MetadataStorageTablesConfig tablesConfig,
       String jdbcUri,

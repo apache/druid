@@ -29,6 +29,7 @@ import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Embedded mode of {@link CliBroker} used in simulation tests.
@@ -46,6 +47,14 @@ public class EmbeddedBroker extends EmbeddedDruidServer
   {
     final long mem100Mb = 100_000_000;
     return new DruidProcessingConfigTest.MockRuntimeInfo(2, mem100Mb, mem100Mb);
+  }
+
+  @Override
+  Properties buildStartupProperties(TestFolder testFolder, EmbeddedZookeeper zk)
+  {
+    final Properties properties = super.buildStartupProperties(testFolder, zk);
+    properties.setProperty("druid.broker.segment.awaitInitializationOnStart", "false");
+    return properties;
   }
 
   private static class Broker extends CliBroker

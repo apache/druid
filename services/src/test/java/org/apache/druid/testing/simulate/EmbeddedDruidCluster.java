@@ -26,6 +26,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.testing.simulate.derby.InMemoryDerbyModule;
@@ -85,6 +86,9 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   {
     resources.add(testFolder);
     resources.add(zookeeper);
+
+    addCommonProperty("druid.emitter", StubServiceEmitter.TYPE);
+    extensionModules.add(StubServiceEmitterModule.class);
 
     if (hasMetadataStore) {
       resources.add(new InMemoryDerbyResource(this));
@@ -218,6 +222,12 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   public BrokerClient anyBroker()
   {
     return servers.get(0).anyBroker();
+  }
+
+  @Override
+  public StubServiceEmitter serviceEmitter()
+  {
+    throw new ISE("There is no cluster-level service emitter. Use service specific emitters instead.");
   }
 
   private void validateNotStarted()

@@ -21,6 +21,8 @@ package org.apache.druid.testing.simulate;
 
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.OverlordClient;
 
 /**
@@ -34,4 +36,6 @@ public interface EmbeddedServiceClientProvider
   OverlordClient leaderOverlord();
 
   BrokerClient anyBroker();
+
+  StubServiceEmitter serviceEmitter();
 }

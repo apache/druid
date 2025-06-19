@@ -71,7 +71,7 @@ class DruidServerResource implements EmbeddedResource
   @Override
   public void before() throws Exception
   {
-    log.info("Starting server[%s] ...", server.getName());
+    log.info("Starting server[%s] with common properties[%s]...", server.getName(), commonProperties);
 
     // Create and start the ServerRunnable
     final CountDownLatch lifecycleCreated = new CountDownLatch(1);

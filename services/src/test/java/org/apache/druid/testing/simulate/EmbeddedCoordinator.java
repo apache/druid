@@ -58,7 +58,8 @@ public class EmbeddedCoordinator extends EmbeddedDruidServer
     final Properties properties = super.buildStartupProperties(testFolder, zk);
 
     properties.setProperty("druid.coordinator.startDelay", "PT0.1S");
-    properties.setProperty("druid.coordinator.period", "PT1S");
+    properties.setProperty("druid.coordinator.period", "PT0.5S");
+    properties.setProperty("druid.manager.segments.pollDuration", "PT0.1S");
 
     return properties;
   }

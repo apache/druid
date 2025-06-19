@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -31,9 +32,12 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.simulate.EmbeddedBroker;
 import org.apache.druid.testing.simulate.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
@@ -61,21 +65,24 @@ import java.util.stream.IntStream;
 public class IndexTaskSimTest extends DruidSimulationTestBase
 {
   private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.create()
-                               .addServer(new EmbeddedCoordinator())
+                               .addServer(coordinator)
                                .addServer(EmbeddedIndexer.withProps(Map.of("druid.worker.capacity", "25")))
                                .addServer(overlord)
-                               .addServer(new EmbeddedHistorical())
-                               .addServer(new EmbeddedBroker());
+                               .addServer(historical)
+                               .addServer(broker);
   }
 
   @Test
   @Timeout(60)
-  public void test_runIndexTask_forInlineDatasource()
+  public void test_runIndexTask_forInlineDatasource() throws Exception
   {
     final String txnData10Days
         = "time,item,value"
@@ -90,7 +97,7 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
           + "\n2025-06-09,shirt,99"
           + "\n2025-06-10,toys,101";
 
-    final Task task = createIndexTaskForInlineData(TestDataSource.WIKI, txnData10Days);
+    final Task task = createIndexTaskForInlineData(dataSource, txnData10Days);
     final String taskId = task.getId();
 
     getResult(overlord.client().runTask(taskId, task));
@@ -98,7 +105,7 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
-        overlord.segmentsMetadataStorage().retrieveAllUsedSegments(TestDataSource.WIKI, null)
+        overlord.segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
     );
     segments.sort(
         (o1, o2) -> Comparators.intervalsByStartThenEnd()
@@ -108,16 +115,34 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
     Assertions.assertEquals(10, segments.size());
     DateTime start = DateTimes.of("2025-06-01");
     for (DataSegment segment : segments) {
-      Assertions.assertEquals(TestDataSource.WIKI, segment.getDataSource());
+      Assertions.assertEquals(dataSource, segment.getDataSource());
       Assertions.assertEquals(new Interval(start, Period.days(1)), segment.getInterval());
       start = start.plusDays(1);
     }
 
-    final Object result = getResult(
+    // Wait for Broker to discover these segments
+    broker.serviceEmitter().waitForEvent(
+        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    final String queryResult = getResult(
         cluster.anyBroker().submitSqlQuery(
-            new ClientSqlQuery("SELECT * FROM sys.segments", null, true, true, true, Map.of(), List.of())
+            new ClientSqlQuery(
+                "SELECT COUNT(*) AS c FROM " + dataSource,
+                ResultFormat.OBJECTLINES.name(),
+                false,
+                false,
+                false,
+                null,
+                null
+            )
         )
     );
+    Map<String, Object> queryResultMap = TestHelper.JSON_MAPPER.readValue(
+        queryResult,
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(Map.of("c", 10), queryResultMap);
   }
 
   @Test

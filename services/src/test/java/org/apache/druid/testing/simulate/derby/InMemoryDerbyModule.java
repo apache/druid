@@ -35,6 +35,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageProvider;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 
 import java.util.Properties;
 
@@ -68,12 +69,12 @@ public class InMemoryDerbyModule extends SQLMetadataStorageDruidModule implement
   {
     super.configure(binder);
 
+    final String connectURI = properties.getProperty("druid.metadata.storage.connector.connectURI");
     final TestDerbyConnector connector = new TestDerbyConnector(
-        MetadataStorageConnectorConfig.create(
-            properties.getProperty("druid.metadata.storage.connector.connectURI"),
-            null, null, null
-        ),
-        MetadataStorageTablesConfig.fromBase(properties.getProperty("druid.metadata.storage.tables.base"))
+        MetadataStorageConnectorConfig.create(connectURI, null, null, null),
+        MetadataStorageTablesConfig.fromBase(properties.getProperty("druid.metadata.storage.tables.base")),
+        connectURI,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))

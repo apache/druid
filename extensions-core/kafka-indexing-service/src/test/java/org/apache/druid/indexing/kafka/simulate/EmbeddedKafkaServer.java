@@ -124,6 +124,16 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     }
   }
 
+  public void deleteTopic(String topicName)
+  {
+    try (Admin admin = newAdminClient()) {
+      admin.deleteTopics(List.of(topicName)).all().get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   // TODO: are headers needed in the records?
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
@@ -131,10 +141,9 @@ public class EmbeddedKafkaServer implements EmbeddedResource
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
+        kafkaProducer.send(record);
       }
-      kafkaProducer.flush();
-      kafkaProducer.abortTransaction();
+      kafkaProducer.commitTransaction();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

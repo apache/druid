@@ -18,3 +18,4 @@
 #
 
 org.apache.druid.testing.simulate.derby.InMemoryDerbyModule
+org.apache.druid.testing.simulate.StubServiceEmitterModule

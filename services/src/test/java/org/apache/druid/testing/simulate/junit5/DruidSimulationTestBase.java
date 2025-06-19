@@ -21,19 +21,15 @@ package org.apache.druid.testing.simulate.junit5;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * TODO:
- * - wait for segments to be loaded
- * - wait for task to be launched
- * - fix shutdown race condition in HttpRemoteTaskRunner and enable that test
- * - fix the other race condition causing status to return RUNNING even after completion callback has been received
- * - simplify Kafka producer API
- *
  * Base class for JUnit 5 tests that use an {@link EmbeddedDruidCluster}.
  * This base class is responsible for setting up the cluster before <b>ANY<b/>
  * test method has run and tearing it down after <b>ALL</b> the tests have run.
@@ -54,7 +50,7 @@ import org.junit.jupiter.api.TestInstance;
  *                                 .build();
  *    }
  *
- *    &#;Test
+ *    &#64;Test
  *    public void test_runIndexTask()
  *    {
  *      final String taskId = IdUtils.newTaskId();
@@ -69,8 +65,6 @@ import org.junit.jupiter.api.TestInstance;
  *    }
  * }
  * </pre>
- *
- * @see EmbeddedDruidClusterExtension for usage instructions
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DruidSimulationTestBase
@@ -82,6 +76,11 @@ public abstract class DruidSimulationTestBase
    * should not start the cluster as it is done in {@link #setup()}.
    */
   protected abstract EmbeddedDruidCluster createCluster();
+
+  /**
+   * Random test datasource name that is freshly generated for each test method.
+   */
+  protected String dataSource;
 
   @BeforeAll
   protected void setup() throws Exception
@@ -98,8 +97,19 @@ public abstract class DruidSimulationTestBase
     }
   }
 
+  @BeforeEach
+  protected void beforeEachTest()
+  {
+    dataSource = createTestDataourceName();
+  }
+
   protected <T> T getResult(ListenableFuture<T> future)
   {
     return FutureUtils.getUnchecked(future, true);
+  }
+
+  protected static String createTestDataourceName()
+  {
+    return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
   }
 }
