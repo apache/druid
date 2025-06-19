@@ -180,10 +180,15 @@ public class LoggingRequestLoggerTest
             true
         ))
         .build();
-    final Logger logger = (Logger)
-        LogManager.getLogger(LoggingRequestLogger.class);
-    appender.start();
+
+    Logger logger = (Logger) LogManager.getLogger(LoggingRequestLogger.class);
     logger.addAppender(appender);
+
+    appender.start();
+    configuration.addAppender(appender);
+    loggerContext.getRootLogger().addAppender(loggerContext.getConfiguration().getAppender(appender.getName()));
+    loggerContext.updateLoggers();
+    org.apache.logging.log4j.core.config.Configurator.reconfigure();
   }
 
   @After
