@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.EventListBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodListBuilder;
@@ -597,7 +598,46 @@ public class KubernetesPeonClientTest
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 1, 1)
     );
 
-    Assertions.assertEquals(e.getMessage(), StringUtils.format("K8s pod with label[job-name=%s] not found", k8sJobName));
+    Assertions.assertEquals(e.getMessage(),
+                            StringUtils.format("K8s pod with label[job-name=%s] not found", k8sJobName));
+  }
+
+  @Test
+  void test_getPeonPodWithRetries_withoutPod_noRestartForBlacklistedEvent_raisesKubernetesResourceNotFoundException()
+  {
+    String k8sJobName = new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName();
+    String blacklistedMessage = DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES.get(0);
+
+    final String eventsPath = "/api/v1/namespaces/namespace/events?fieldSelector=" +
+                        "involvedObject.name%3D" + k8sJobName +
+                        "%2CinvolvedObject.namespace%3D" + NAMESPACE +
+                        "%2CinvolvedObject.kind%3DJob" +
+                        "%2CinvolvedObject.apiVersion%3Dbatch%2Fv1";
+
+    server.expect().get()
+          .withPath(eventsPath)
+          .andReturn(HttpURLConnection.HTTP_OK, new EventListBuilder()
+              .addNewItem()
+              .withMessage(blacklistedMessage)
+              .withNewInvolvedObject()
+              .withApiVersion("batch/v1")
+              .withKind("Job")
+              .withName(k8sJobName)
+              .withNamespace(NAMESPACE)
+              .endInvolvedObject()
+              .endItem()
+              .build())
+          // Test will fail if task is retried more than once.
+          .once();
+
+    // Task declared to retry for 3 times should only try once when blacklisted event message is found.
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 0, 3)
+    );
+
+    // Ensure event message is propagated to the users.
+    Assertions.assertTrue(e.getMessage().contains(blacklistedMessage));
   }
 
   @Test

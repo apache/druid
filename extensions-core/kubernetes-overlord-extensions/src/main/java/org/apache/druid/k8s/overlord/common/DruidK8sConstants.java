@@ -47,5 +47,10 @@ public class DruidK8sConstants
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final String BASE_TEMPLATE_NAME = "base";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
-  public static final ImmutableList<String> BLACKLISTED_PEON_POD_ERROR_MESSAGES = ImmutableList.of();
+
+  public static final ImmutableList<String> BLACKLISTED_PEON_POD_ERROR_MESSAGES = ImmutableList.of(
+      // Catches limit to ratio constraint: https://github.com/kubernetes/kubernetes/blob/3e39d1074fc717a883aaf57b966dd7a06dfca2ec/plugin/pkg/admission/limitranger/admission.go#L359
+      // {resource} max limit to request ratio per Container is {value}, but provided ratio is {value}
+      "max limit to request ratio"
+  );
 }
