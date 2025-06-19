@@ -25,12 +25,9 @@ import org.apache.druid.cli.CliHistorical;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -57,11 +54,10 @@ public class EmbeddedHistorical extends EmbeddedDruidServer
   @Override
   Properties buildStartupProperties(
       TestFolder testFolder,
-      EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
-  ) throws IOException
+      EmbeddedZookeeper zk
+  )
   {
-    final Properties properties = super.buildStartupProperties(testFolder, zk, dbRule);
+    final Properties properties = super.buildStartupProperties(testFolder, zk);
     properties.setProperty(
         "druid.segmentCache.locations",
         StringUtils.format(

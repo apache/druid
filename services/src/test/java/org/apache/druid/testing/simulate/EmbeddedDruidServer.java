@@ -19,34 +19,18 @@
 
 package org.apache.druid.testing.simulate;
 
-import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.SQLMetadataStorageDruidModule;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.utils.RuntimeInfo;
-import org.junit.rules.ExternalResource;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -107,6 +91,10 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
   /**
    * Creates a {@link ServerRunnable} corresponding to a specific Druid service.
+   * Implementations of this class must try to avoid overriding any default
+   * Druid module unless it is through extensions and enabled via Druid properties.
+   * Such override should also be visible in the unit tests so that there is no
+   * hidden config and the embedded cluster closely replicates a real cluster.
    */
   abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
@@ -124,9 +112,8 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
    */
   Properties buildStartupProperties(
       TestFolder testFolder,
-      EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
-  ) throws IOException
+      EmbeddedZookeeper zk
+  )
   {
     final Properties serverProperties = new Properties();
 
@@ -142,46 +129,26 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
     serverProperties.setProperty("druid.indexer.logs.directory", logsDirectory);
     serverProperties.setProperty("druid.storage.storageDirectory", storageDirectory);
 
-    // Add properties for Zookeeper and metadata store
+    // Add properties for Zookeeper
     serverProperties.setProperty("druid.zk.service.host", zk.getConnectString());
-    if (dbRule != null) {
-      serverProperties.setProperty("druid.metadata.storage.type", TestDerbyModule.TYPE);
-      serverProperties.setProperty(
-          "druid.metadata.storage.tables.base",
-          dbRule.getConnector().getMetadataTablesConfig().getBase()
-      );
-    }
-
     return serverProperties;
   }
 
   /**
+   * This method return "read-only" modules that read the dependencies injected
+   * into Druid. It should not return any module that overrides any behaviour of
+   * the default Druid modules. This ensures that the embedded cluster remains
+   * true to a real-life Druid cluster.
+   *
    * @see LifecycleInitHandler#getInitModules()
+   * @see #createRunnable(LifecycleInitHandler)
    */
-  List<? extends Module> getInitModules(
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule
-  )
+  List<? extends Module> getInitModules()
   {
     final Module referenceHolderModule
         = binder -> binder.bind(ServiceClientHolder.class).toInstance(clientHolder);
 
-    return dbRule == null
-           ? List.of(referenceHolderModule)
-           : List.of(referenceHolderModule, new TestDerbyModule(dbRule.getConnector()));
-  }
-
-  /**
-   * Creates a JUnit {@link ExternalResource} for this server that can be used
-   * with {@code Rule}, {@code ClassRule} or in a {@code RuleChain}.
-   */
-  DruidServerResource resource(
-      TestFolder testFolder,
-      EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule,
-      List<Class<? extends DruidModule>> extensionModules
-  )
-  {
-    return new DruidServerResource(this, testFolder, zk, dbRule, extensionModules);
+    return List.of(referenceHolderModule);
   }
 
   /**
@@ -203,47 +170,6 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
      * from {@link ServerRunnable#initLifecycle(Injector)}.
      */
     void onLifecycleInit(Lifecycle lifecycle);
-  }
-
-  /**
-   * Guice module to bind {@link SQLMetadataConnector} to {@link TestDerbyConnector}.
-   * Used in Coordinator and Overlord simulations to connect to an in-memory Derby
-   * database.
-   */
-  private static class TestDerbyModule extends SQLMetadataStorageDruidModule
-  {
-    public static final String TYPE = "derbyInMemory";
-    private final TestDerbyConnector connector;
-
-    public TestDerbyModule(TestDerbyConnector connector)
-    {
-      super(TYPE);
-      this.connector = connector;
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-      super.configure(binder);
-
-      PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))
-              .addBinding(TYPE)
-              .to(DerbyMetadataStorageProvider.class)
-              .in(LazySingleton.class);
-
-      PolyBind.optionBinder(binder, Key.get(MetadataStorageConnector.class))
-              .addBinding(TYPE)
-              .toInstance(connector);
-
-      PolyBind.optionBinder(binder, Key.get(SQLMetadataConnector.class))
-              .addBinding(TYPE)
-              .toInstance(connector);
-
-      PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
-              .addBinding(TYPE)
-              .to(DerbyMetadataStorageActionHandlerFactory.class)
-              .in(LazySingleton.class);
-    }
   }
 
   /**

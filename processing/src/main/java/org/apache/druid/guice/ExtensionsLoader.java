@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.inject.Inject;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -414,9 +413,10 @@ public class ExtensionsLoader
       this.isSimulation = extensionsConfig.getModulesForSimulation() != null;
       if (isSimulation) {
         log.warn(
-            "Running service in simulation testing mode. This is an unsafe test-only"
-            + " mode and must never be used in a production cluster."
-            + " Remove property[druid.extensions.modulesForSimulation] to disable simulation mode."
+            "Running service in simulation testing mode with allowed modules[%s]."
+            + "This is an unsafe test-only mode and must never be used in a production cluster."
+            + " Remove property 'druid.extensions.modulesForSimulation' to disable simulation mode.",
+            extensionsConfig.getModulesForSimulation()
         );
       }
 
@@ -470,8 +470,8 @@ public class ExtensionsLoader
             serviceImpl.getClass().getName()
         );
       } else if (isSimulation && !extensionsConfig.getModulesForSimulation().contains(serviceImplName)) {
-        log.warn(
-            "Kashif: Skipping extension[%s] as it is not listed in config[%s]",
+        log.debug(
+            "Skipping extension[%s] as it is not listed in config[%s]",
             serviceImplName, extensionsConfig.getModulesForSimulation()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {

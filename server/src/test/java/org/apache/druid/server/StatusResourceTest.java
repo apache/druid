@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.ServerInjectorBuilderTest;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,7 +45,7 @@ public class StatusResourceTest
   public void testLoadedModules()
   {
 
-    Collection<DruidModule> modules = ImmutableList.of(new ServerInjectorBuilderTest.TestDruidModule());
+    Collection<DruidModule> modules = ImmutableList.of(new TestDruidModule());
     List<StatusResource.ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());

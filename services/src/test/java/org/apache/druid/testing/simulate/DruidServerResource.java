@@ -24,21 +24,19 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * {@link EmbeddedResource} for an {@link EmbeddedDruidServer}.
@@ -52,8 +50,7 @@ class DruidServerResource implements EmbeddedResource
 
   private final TestFolder testFolder;
   private final EmbeddedZookeeper zk;
-  private final TestDerbyConnector.DerbyConnectorRule dbRule;
-  private final List<Class<? extends DruidModule>> extensionModules;
+  private final Properties commonProperties;
 
   private ExecutorService executorService;
   private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>();
@@ -62,21 +59,19 @@ class DruidServerResource implements EmbeddedResource
       EmbeddedDruidServer server,
       TestFolder testFolder,
       EmbeddedZookeeper zk,
-      @Nullable TestDerbyConnector.DerbyConnectorRule dbRule,
-      List<Class<? extends DruidModule>> extensionModules
+      Properties commonProperties
   )
   {
     this.server = server;
     this.zk = zk;
-    this.dbRule = dbRule;
     this.testFolder = testFolder;
-    this.extensionModules = extensionModules;
+    this.commonProperties = commonProperties;
   }
 
   @Override
   public void before() throws Exception
   {
-    log.info("Starting server[%s] with extensions[%s] ...", server.getName(), extensionModules);
+    log.info("Starting server[%s] ...", server.getName());
 
     // Create and start the ServerRunnable
     final CountDownLatch lifecycleCreated = new CountDownLatch(1);
@@ -86,7 +81,7 @@ class DruidServerResource implements EmbeddedResource
           @Override
           public List<? extends Module> getInitModules()
           {
-            return server.getInitModules(dbRule);
+            return server.getInitModules();
           }
 
           @Override
@@ -102,8 +97,11 @@ class DruidServerResource implements EmbeddedResource
     executorService.submit(() -> runServer(serverRunnable));
 
     // Wait for lifecycle to be created and started
-    lifecycleCreated.await();
-    awaitLifecycleStart();
+    if (lifecycleCreated.await(1, TimeUnit.MINUTES)) {
+      awaitLifecycleStart();
+    } else {
+      throw new ISE("Timed out waiting for lifecycle of server[%s] to be created", server.getName());
+    }
   }
 
   @Override
@@ -142,8 +140,11 @@ class DruidServerResource implements EmbeddedResource
           }
       );
 
-      started.await();
-      log.info("Server[%s] is now running.", server.getName());
+      if (started.await(1, TimeUnit.MINUTES)) {
+        log.info("Server[%s] is now running.", server.getName());
+      } else {
+        throw new ISE("Timed out waiting for lifecycle of server[%s] to be started", server.getName());
+      }
     }
     catch (Exception e) {
       log.error(e, "Exception while waiting for server[%s] to start.", server.getName());
@@ -158,8 +159,8 @@ class DruidServerResource implements EmbeddedResource
   {
     try {
       final Properties serverProperties = new Properties();
-      serverProperties.setProperty("druid.extensions.modulesForSimulation", getExtensionModuleProperty());
-      serverProperties.putAll(server.buildStartupProperties(testFolder, zk, dbRule));
+      serverProperties.putAll(commonProperties);
+      serverProperties.putAll(server.buildStartupProperties(testFolder, zk));
 
       final Injector injector = new StartupInjectorBuilder()
           .withProperties(serverProperties)
@@ -184,14 +185,5 @@ class DruidServerResource implements EmbeddedResource
     finally {
       log.info("Stopped server[%s].", server.getName());
     }
-  }
-
-  private String getExtensionModuleProperty()
-  {
-    final String moduleNamesCsv = extensionModules.stream()
-                                                  .map(Class::getName)
-                                                  .map(name -> "\"" + name + "\"")
-                                                  .collect(Collectors.joining(","));
-    return "[" + moduleNamesCsv + "]";
   }
 }

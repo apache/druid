@@ -28,10 +28,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.testing.simulate.derby.InMemoryDerbyModule;
+import org.apache.druid.testing.simulate.derby.InMemoryDerbyResource;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * Builder for an embedded Druid cluster that can be used in simulation tests.
@@ -70,11 +73,11 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
 
   private final TestFolder testFolder = new TestFolder();
   private final EmbeddedZookeeper zookeeper = new EmbeddedZookeeper();
-  private final TestDerbyConnector.DerbyConnectorRule dbRule;
 
   private final List<EmbeddedDruidServer> servers = new ArrayList<>();
   private final List<EmbeddedResource> resources = new ArrayList<>();
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
+  private final Properties commonProperties = new Properties();
 
   private boolean started = false;
 
@@ -84,10 +87,8 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     resources.add(zookeeper);
 
     if (hasMetadataStore) {
-      this.dbRule = new TestDerbyConnector.DerbyConnectorRule();
-      resources.add(new DerbyResource(dbRule));
-    } else {
-      this.dbRule = null;
+      resources.add(new InMemoryDerbyResource(this));
+      extensionModules.add(InMemoryDerbyModule.class);
     }
   }
 
@@ -115,7 +116,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     validateNotStarted();
 
     servers.add(server);
-    resources.add(server.resource(testFolder, zookeeper, dbRule, extensionModules));
+    resources.add(new DruidServerResource(server, testFolder, zookeeper, commonProperties));
 
     return this;
   }
@@ -134,6 +135,17 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     return this;
   }
 
+  /**
+   * Adds a property to be applied to all the Druid servers in this cluster.
+   * These properties can be overridden by service-specific properties.
+   */
+  public EmbeddedDruidCluster addCommonProperty(String key, String value)
+  {
+    validateNotStarted();
+    commonProperties.setProperty(key, value);
+    return this;
+  }
+
   public TestFolder getTestFolder()
   {
     return testFolder;
@@ -142,12 +154,6 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   public EmbeddedZookeeper getZookeeper()
   {
     return zookeeper;
-  }
-
-  @Nullable
-  public TestDerbyConnector.DerbyConnectorRule getDbRule()
-  {
-    return dbRule;
   }
 
   /**
@@ -159,8 +165,10 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   {
     Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
 
+    addCommonProperty("druid.extensions.modulesForSimulation", getExtensionModuleProperty());
+    log.info("Starting cluster with common properties[%s].", commonProperties);
+
     // Start the resources in order
-    started = true;
     for (EmbeddedResource resource : resources) {
       try {
         resource.before();
@@ -171,6 +179,9 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
         throw e;
       }
     }
+
+    // Mark the cluster as added so that no new resource, server or property is added
+    started = true;
   }
 
   /**
@@ -216,25 +227,13 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     }
   }
 
-  private static class DerbyResource implements EmbeddedResource
+  private String getExtensionModuleProperty()
   {
-    private final TestDerbyConnector.DerbyConnectorRule dbRule;
-
-    private DerbyResource(TestDerbyConnector.DerbyConnectorRule dbRule)
-    {
-      this.dbRule = dbRule;
-    }
-
-    @Override
-    public void before()
-    {
-      dbRule.before();
-    }
-
-    @Override
-    public void after()
-    {
-      dbRule.after();
-    }
+    final String moduleNamesCsv = extensionModules.stream()
+                                                  .map(Class::getName)
+                                                  .map(name -> "\"" + name + "\"")
+                                                  .collect(Collectors.joining(","));
+    return "[" + moduleNamesCsv + "]";
   }
+
 }

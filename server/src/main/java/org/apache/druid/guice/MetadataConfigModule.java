@@ -46,6 +46,7 @@ public class MetadataConfigModule implements Module
   @Override
   public void configure(Binder binder)
   {
+    System.out.println("Kashif: Metadata config init done");
     JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
     JsonConfigProvider.bind(binder, MetadataStorageConnectorConfig.PROPERTY_BASE, MetadataStorageConnectorConfig.class);
 
