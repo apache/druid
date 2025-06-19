@@ -66,6 +66,7 @@ public class SegmentReplicaCount
         ++moving;
         break;
       case DROP:
+      case MOVE_FROM:
         ++dropping;
         break;
       default:

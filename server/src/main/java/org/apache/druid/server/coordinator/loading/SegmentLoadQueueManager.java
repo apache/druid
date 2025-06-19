@@ -126,7 +126,7 @@ public class SegmentLoadQueueManager
                 && (taskMaster.isHttpLoading()
                     || serverInventoryView.isSegmentLoadedByServer(serverNameB, segment))) {
               peonA.unmarkSegmentToDrop(segment);
-              peonA.dropSegment(segment, moveFinishCallback);
+              dropSegment(segment, serverA);
             } else {
               moveFinishCallback.execute(success);
             }
