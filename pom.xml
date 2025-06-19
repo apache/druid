@@ -1706,6 +1706,8 @@
                                     <excludes>
                                         <!--LGPL licenced library-->
                                         <exclude>com.google.code.findbugs:annotations</exclude>
+                                        <!-- shouldn't be loaded alongside with log4j-slf4j2-impl -->
+                                        <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>
