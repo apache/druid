@@ -1,0 +1,727 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7][3]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| ["S1","S2"] |
+| ["S1","S2"] |
+| [null,"S2"] |
+| [null,"S2"] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(a_null, 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[4]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7][4]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(a_empty, 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[5]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7][5]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-------------+
+| col         |
++-------------+
+| [null,null] |
+| [null,null] |
+| [null,null] |
+| [null,null] |
++-------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(a_mixed, 0, 2) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| ["true","1"] |
+| ["true","1"] |
+| [null,"S1"]  |
+| [null,"S1"]  |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[6]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| ["true","1"] |
+| ["true","1"] |
+| [null,"S1"]  |
+| [null,"S1"]  |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7][6]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| ["true","1"] |
+| ["true","1"] |
+| [null,"S1"]  |
+| [null,"S1"]  |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(a_nested, 0, 2) AS col
+FROM test_array;
+Cannot apply 'MV_SLICE' to arguments of type 'MV_SLICE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B13_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_slice(json_value(a_nested, '$[7][7]' RETURNING varchar array), 0, 2) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_bool, '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|0|null |
+| 1|0|null |
+| null|0|1 |
+| null|0|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[0]' RETURNING boolean array), '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|0|null |
+| 1|0|null |
+| null|0|1 |
+| null|0|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][0]' RETURNING boolean array), '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|0|null |
+| 1|0|null |
+| null|0|1 |
+| null|0|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_int, '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|2|null |
+| 1|2|null |
+| null|2|1 |
+| null|2|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[1]' RETURNING bigint array), '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|2|null |
+| 1|2|null |
+| null|2|1 |
+| null|2|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][1]' RETURNING bigint array), '|') AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| 1|2|null |
+| 1|2|null |
+| null|2|1 |
+| null|2|1 |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_float, '|') AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| 0.1|0.2|null |
+| 0.1|0.2|null |
+| null|0.2|0.1 |
+| null|0.2|0.1 |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[2]' RETURNING decimal array), '|') AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| 0.1|0.2|null |
+| 0.1|0.2|null |
+| null|0.2|0.1 |
+| null|0.2|0.1 |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][2]' RETURNING decimal array), '|') AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| 0.1|0.2|null |
+| 0.1|0.2|null |
+| null|0.2|0.1 |
+| null|0.2|0.1 |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_str, '|') AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| S1|S2|null |
+| S1|S2|null |
+| null|S2|S1 |
+| null|S2|S1 |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[3]' RETURNING varchar array), '|') AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| S1|S2|null |
+| S1|S2|null |
+| null|S2|S1 |
+| null|S2|S1 |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][3]' RETURNING varchar array), '|') AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| S1|S2|null |
+| S1|S2|null |
+| null|S2|S1 |
+| null|S2|S1 |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_null, '|') AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| null|null|null |
+| null|null|null |
+| null|null|null |
+| null|null|null |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[4]' RETURNING varchar array), '|') AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| null|null|null |
+| null|null|null |
+| null|null|null |
+| null|null|null |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][4]' RETURNING varchar array), '|') AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| null|null|null |
+| null|null|null |
+| null|null|null |
+| null|null|null |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_empty, '|') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[5]' RETURNING varchar array), '|') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][5]' RETURNING varchar array), '|') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_mixed, '|') AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| null|S1|0.1|1|true |
+| null|S1|0.1|1|true |
+| true|1|0.1|S1|null |
+| true|1|0.1|S1|null |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[6]' RETURNING varchar array), '|') AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| null|S1|0.1|1|true |
+| null|S1|0.1|1|true |
+| true|1|0.1|S1|null |
+| true|1|0.1|S1|null |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][6]' RETURNING varchar array), '|') AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| null|S1|0.1|1|true |
+| null|S1|0.1|1|true |
+| true|1|0.1|S1|null |
+| true|1|0.1|S1|null |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(a_nested, '|') AS col
+FROM test_array;
+Cannot apply 'MV_TO_STRING' to arguments of type 'MV_TO_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7]' RETURNING varchar array), '|') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B14_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_to_string(json_value(a_nested, '$[7][7]' RETURNING varchar array), '|') AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C0_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv('true|1|0.1|S1|null', '\|') AS col
+FROM test_array;
++--------------------------------+
+| col                            |
++--------------------------------+
+| ["true","1","0.1","S1","null"] |
+| ["true","1","0.1","S1","null"] |
+| ["true","1","0.1","S1","null"] |
+| ["true","1","0.1","S1","null"] |
++--------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C1_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(a_bool, '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C2_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[0]' RETURNING boolean array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C3_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[7][0]' RETURNING boolean array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C4_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(a_int, '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C5_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[1]' RETURNING bigint array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C6_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[7][1]' RETURNING bigint array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C7_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(a_float, '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C8_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[2]' RETURNING decimal array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C9_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[7][2]' RETURNING decimal array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C10_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(a_str, '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C11_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[3]' RETURNING varchar array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B15_C12_D1
+#-------------------------------------------------------------------------
+SELECT string_to_mv(json_value(a_nested, '$[7][3]' RETURNING varchar array), '\|') AS col
+FROM test_array;
+Cannot apply 'STRING_TO_MV' to arguments of type 'STRING_TO_MV(
+!error
+

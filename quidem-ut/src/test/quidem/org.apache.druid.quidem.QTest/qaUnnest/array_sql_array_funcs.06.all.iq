@@ -1,0 +1,883 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C4_D2
+#-------------------------------------------------------------------------
+SELECT array_slice(array[s_int, c, 3],1, 2) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_slice(array[s_int, c, 3],1, 2)<ARRAY[99999]);
++--------+
+| col    |
++--------+
+| [1]    |
+| [1]    |
+| [1]    |
+| [2]    |
+| [2]    |
+| [2]    |
+| [null] |
+| [null] |
+| [null] |
++--------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C5_D1
+#-------------------------------------------------------------------------
+SELECT array_slice(array[c, s_int, 3],1, 2) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_slice(array[c, s_int, 3],1, 2)<ARRAY[99999]);
++--------+
+| col    |
++--------+
+| [1]    |
+| [1]    |
+| [1]    |
+| [2]    |
+| [2]    |
+| [2]    |
+| [null] |
+| [null] |
+| [null] |
++--------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C5_D2
+#-------------------------------------------------------------------------
+SELECT array_slice(array[c, s_int, 3],1, 2) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_slice(array[c, s_int, 3],1, 2)<ARRAY[99999]);
++--------+
+| col    |
++--------+
+| [1]    |
+| [1]    |
+| [1]    |
+| [2]    |
+| [2]    |
+| [2]    |
+| [null] |
+| [null] |
+| [null] |
++--------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C6_D1
+#-------------------------------------------------------------------------
+SELECT array_slice(array[s_int, s_int, 3],1, 2) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_slice(array[s_int, s_int, 3],1, 2)<ARRAY[99999]);
++--------+
+| col    |
++--------+
+| [1]    |
+| [1]    |
+| [1]    |
+| [2]    |
+| [2]    |
+| [2]    |
+| [null] |
+| [null] |
+| [null] |
++--------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B12_C6_D2
+#-------------------------------------------------------------------------
+SELECT array_slice(array[s_int, s_int, 3],1, 2) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_slice(array[s_int, s_int, 3],1, 2)<ARRAY[99999]);
++--------+
+| col    |
++--------+
+| [1]    |
+| [1]    |
+| [1]    |
+| [2]    |
+| [2]    |
+| [2]    |
+| [null] |
+| [null] |
+| [null] |
++--------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C1_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(c, '|')<'0'
+       OR array_to_string(c, '|')>'0');
+Cannot apply 'ARRAY_TO_STRING' to arguments of type 'ARRAY_TO_STRING(<BIGINT>, <CHAR(1)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C1_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(c, '|')<'0'
+       OR array_to_string(c, '|')>'0');
+Cannot apply 'ARRAY_TO_STRING' to arguments of type 'ARRAY_TO_STRING(<BIGINT>, <CHAR(1)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C2_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(s_int, '|')<'0'
+       OR array_to_string(s_int, '|')>'0');
+Cannot apply 'ARRAY_TO_STRING' to arguments of type 'ARRAY_TO_STRING(<BIGINT>, <CHAR(1)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C2_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(s_int, '|')<'0'
+       OR array_to_string(s_int, '|')>'0');
+Cannot apply 'ARRAY_TO_STRING' to arguments of type 'ARRAY_TO_STRING(<BIGINT>, <CHAR(1)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C3_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[c, c, 3],'|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[c, c, 3],'|')<'0'
+       OR array_to_string(array[c, c, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|1|3       |
+| 1|1|3       |
+| 2|2|3       |
+| 2|2|3       |
+| 2|2|3       |
+| null|null|3 |
+| null|null|3 |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C3_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[c, c, 3],'|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[c, c, 3],'|')<'0'
+       OR array_to_string(array[c, c, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|1|3       |
+| 1|1|3       |
+| 2|2|3       |
+| 2|2|3       |
+| 2|2|3       |
+| null|null|3 |
+| null|null|3 |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C4_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[s_int, c, 3],'|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[s_int, c, 3],'|')<'0'
+       OR array_to_string(array[s_int, c, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|2|3       |
+| 1|null|3    |
+| 2|1|3       |
+| 2|2|3       |
+| 2|null|3    |
+| null|1|3    |
+| null|2|3    |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C4_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[s_int, c, 3],'|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[s_int, c, 3],'|')<'0'
+       OR array_to_string(array[s_int, c, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|2|3       |
+| 1|null|3    |
+| 2|1|3       |
+| 2|2|3       |
+| 2|null|3    |
+| null|1|3    |
+| null|2|3    |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C5_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[c, s_int, 3],'|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[c, s_int, 3],'|')<'0'
+       OR array_to_string(array[c, s_int, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|2|3       |
+| 1|null|3    |
+| 2|1|3       |
+| 2|2|3       |
+| 2|null|3    |
+| null|1|3    |
+| null|2|3    |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C5_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[c, s_int, 3],'|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[c, s_int, 3],'|')<'0'
+       OR array_to_string(array[c, s_int, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|2|3       |
+| 1|null|3    |
+| 2|1|3       |
+| 2|2|3       |
+| 2|null|3    |
+| null|1|3    |
+| null|2|3    |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C6_D1
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[s_int, s_int, 3],'|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[s_int, s_int, 3],'|')<'0'
+       OR array_to_string(array[s_int, s_int, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|1|3       |
+| 1|1|3       |
+| 2|2|3       |
+| 2|2|3       |
+| 2|2|3       |
+| null|null|3 |
+| null|null|3 |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B13_C6_D2
+#-------------------------------------------------------------------------
+SELECT array_to_string(array[s_int, s_int, 3],'|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_string(array[s_int, s_int, 3],'|')<'0'
+       OR array_to_string(array[s_int, s_int, 3],'|')>'0');
++-------------+
+| col         |
++-------------+
+| 1|1|3       |
+| 1|1|3       |
+| 1|1|3       |
+| 2|2|3       |
+| 2|2|3       |
+| 2|2|3       |
+| null|null|3 |
+| null|null|3 |
+| null|null|3 |
++-------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C1_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(c, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c, '|')<ARRAY['99999']
+       OR string_to_array(c, ',') IS NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C1_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(c, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c, '|')<ARRAY['99999']
+       OR string_to_array(c, ',') IS NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C2_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int, '|')<ARRAY['99999']
+       OR string_to_array(s_int, ',') IS NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C2_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int, '|')<ARRAY['99999']
+       OR string_to_array(s_int, ',') IS NULL);
++-----+
+| col |
++-----+
+| [1] |
+| [1] |
+| [1] |
+| [2] |
+| [2] |
+| [2] |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C3_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(c||','||c||','||3, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c||','||c||','||3, '|')<ARRAY['99999']
+       OR string_to_array(c||','||c||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C3_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(c||','||c||','||3, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c||','||c||','||3, '|')<ARRAY['99999']
+       OR string_to_array(c||','||c||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C4_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int||','||c||','||3, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int||','||c||','||3, ',')<ARRAY['99999']
+       OR string_to_array(s_int||','||c||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 2, 3] |
+| [2, 1, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C4_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int||','||c||','||3, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int||','||c||','||3, ',')<ARRAY['99999']
+       OR string_to_array(s_int||','||c||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 2, 3] |
+| [2, 1, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C5_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(c||','||s_int||','||3, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c||','||s_int||','||3, ',')<ARRAY['99999']
+       OR string_to_array(c||','||s_int||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 2, 3] |
+| [2, 1, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C5_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(c||','||s_int||','||3, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(c||','||s_int||','||3, ',')<ARRAY['99999']
+       OR string_to_array(c||','||s_int||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 2, 3] |
+| [2, 1, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C6_D1
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int||','||s_int||','||3, ',') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int||','||s_int||','||3, ',')<ARRAY['99999']
+       OR string_to_array(s_int||','||s_int||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B14_C6_D2
+#-------------------------------------------------------------------------
+SELECT string_to_array(s_int||','||s_int||','||3, ',') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (string_to_array(s_int||','||s_int||','||3, ',')<ARRAY['99999']
+       OR string_to_array(s_int||','||s_int||','||3, ',') IS NULL);
++-----------+
+| col       |
++-----------+
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [1, 1, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+| [2, 2, 3] |
+|           |
+|           |
+|           |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C1_D1
+#-------------------------------------------------------------------------
+SELECT array_to_mv(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_mv(c) IS NOT NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C1_D2
+#-------------------------------------------------------------------------
+SELECT array_to_mv(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_mv(c) IS NOT NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C2_D1
+#-------------------------------------------------------------------------
+SELECT array_to_mv(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_mv(s_int) IS NOT NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(6 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B15_C2_D2
+#-------------------------------------------------------------------------
+SELECT array_to_mv(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_to_mv(s_int) IS NOT NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(6 rows)
+
+!ok
+
