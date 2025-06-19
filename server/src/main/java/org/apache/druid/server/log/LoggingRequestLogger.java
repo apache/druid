@@ -34,11 +34,7 @@ import java.util.Map;
 
 public class LoggingRequestLogger implements RequestLogger
 {
-  private static final Logger LOG ;
-
-  static {
-      LOG = new Logger(LoggingRequestLogger.class);
-  };
+  private static final Logger LOG = new Logger(LoggingRequestLogger.class);
 
   private final ObjectMapper mapper;
   private final boolean setMDC;
