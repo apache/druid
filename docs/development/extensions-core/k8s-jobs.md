@@ -818,7 +818,7 @@ rules:
     resources: ["jobs"]
     verbs: ["get", "watch", "list", "delete", "create"]
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
+    resources: ["pods", "pods/log", "events"]
     verbs: ["get", "watch", "list", "delete", "create"]
 ---
 kind: RoleBinding
