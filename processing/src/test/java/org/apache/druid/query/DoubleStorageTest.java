@@ -197,6 +197,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -245,6 +246,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         ),
         330,
         MAX_ROWS,
+        null,
         null,
         null,
         null,

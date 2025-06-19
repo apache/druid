@@ -218,6 +218,7 @@ public class SystemSchema extends AbstractSchema
   static final RowSignature SUPERVISOR_SIGNATURE = RowSignature
       .builder()
       .add("supervisor_id", ColumnType.STRING)
+      .add("datasource", ColumnType.STRING)
       .add("state", ColumnType.STRING)
       .add("detailed_state", ColumnType.STRING)
       .add("healthy", ColumnType.LONG)
@@ -988,6 +989,7 @@ public class SystemSchema extends AbstractSchema
               final SupervisorStatus supervisor = it.next();
               return new Object[]{
                   supervisor.getId(),
+                  supervisor.getDataSource(),
                   supervisor.getState(),
                   supervisor.getDetailedState(),
                   supervisor.isHealthy() ? 1L : 0L,
