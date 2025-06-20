@@ -117,6 +117,11 @@ public class SegmentReplicaCount
     return movingTo;
   }
 
+  /**
+   * Number of moving segments which have been loaded on the target server but
+   * are yet to be dropped from the source server. This value can be negative
+   * only if the source server disappears before the move has finished.
+   */
   int moveCompletedPendingDrop()
   {
     return movingFrom - movingTo;

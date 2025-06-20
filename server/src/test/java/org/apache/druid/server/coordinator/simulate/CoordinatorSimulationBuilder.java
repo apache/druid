@@ -348,7 +348,9 @@ public class CoordinatorSimulationBuilder
       );
 
       final BlockingExecutorService loadQueueExecutor = env.executorFactory.loadQueueExecutor;
-      while (loadQueueExecutor.hasPendingTasks()) {
+      final BlockingExecutorService loadCallbackExecutor = env.executorFactory.loadCallbackExecutor;
+      while (loadQueueExecutor.hasPendingTasks()
+             || (executeCallbacks && loadCallbackExecutor.hasPendingTasks())) {
         // Drain all the items from the load queue executor
         // This sends at most 1 load/drop request to each server
         loadQueueExecutor.finishAllPendingTasks();

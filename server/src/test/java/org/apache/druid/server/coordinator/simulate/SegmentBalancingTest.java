@@ -126,6 +126,11 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     verifyNotEmitted(Metric.DROPPED_COUNT);
     verifyNotEmitted(Metric.MOVED_COUNT);
+
+    // Finish the move operations
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
   }
 
   @Test

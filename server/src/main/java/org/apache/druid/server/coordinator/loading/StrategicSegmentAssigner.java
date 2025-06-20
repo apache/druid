@@ -265,7 +265,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     final int projectedReplicas = replicaCountOnTier.loadedNotDropping()
                                   + replicaCountOnTier.loading()
-                                  - replicaCountOnTier.moveCompletedPendingDrop();
+                                  - Math.max(0, replicaCountOnTier.moveCompletedPendingDrop());
 
     final int movingReplicas = replicaCountOnTier.moving();
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
