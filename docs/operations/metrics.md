@@ -23,7 +23,7 @@ title: "Metrics"
   -->
 
 
-You can configure Druid to [emit metrics](../configuration/index.md#enabling-metrics) that are essential for monitoring query execution, ingestion, coordination, and so on.
+You can configure Druid to [emit metrics](../configuration/index.md#metrics-monitors) that are essential for monitoring query execution, ingestion, coordination, and so on.
 
 All Druid metrics share a common set of fields:
 
@@ -371,7 +371,7 @@ These metrics are emitted only if [auto-kill of unused segments](../data-managem
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`.
-See [Enabling metrics](../configuration/index.md#enabling-metrics) for more details.
+See [Enabling metrics](../configuration/index.md#metrics-monitors) for more details.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -473,7 +473,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 ### JVM
 
 These metrics are only available if the `JvmMonitor` module is included in `druid.monitoring.monitors`.
-For more information, see [Enabling Metrics](../configuration/index.md#enabling-metrics).
+For more information, see [Enabling Metrics](../configuration/index.md#metrics-monitors).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -489,7 +489,7 @@ For more information, see [Enabling Metrics](../configuration/index.md#enabling-
 |`jvm/mem/used`|Used memory|`memKind`, `jvmVersion`|< max memory|
 |`jvm/mem/committed`|Committed memory|`memKind`, `jvmVersion`|Close to max memory|
 |`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young), `jvmVersion`|Varies|
-|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`, `jvmVersion`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
+|`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`, `jvmVersion`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#metrics-monitors)). |
 
 ### ZooKeeper
 
