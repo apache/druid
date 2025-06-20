@@ -266,4 +266,5 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyValue(Metric.MOVED_COUNT, 500L);
     verifyNotEmitted(Metric.MOVE_SKIPPED);
   }
+
 }
