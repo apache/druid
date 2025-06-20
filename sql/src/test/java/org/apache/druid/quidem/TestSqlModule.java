@@ -22,7 +22,7 @@ package org.apache.druid.quidem;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
+import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;

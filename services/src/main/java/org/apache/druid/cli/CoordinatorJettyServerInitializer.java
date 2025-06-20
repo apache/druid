@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.server.http.OverlordProxyServlet;
 import org.apache.druid.server.http.RedirectFilter;
@@ -110,23 +109,24 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     );
 
     // add some paths not to be redirected to leader.
-    root.addFilter(GuiceFilter.class, "/status/*", null);
-    root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
+    final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
+    root.addFilter(guiceFilterHolder, "/status/*", null);
+    root.addFilter(guiceFilterHolder, "/druid-internal/*", null);
 
     // redirect anything other than status to the current lead
     root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
 
     // The coordinator really needs a standarized api path
     // Can't use '/*' here because of Guice and Jetty static content conflicts
-    root.addFilter(GuiceFilter.class, "/info/*", null);
-    root.addFilter(GuiceFilter.class, "/druid/coordinator/*", null);
+    root.addFilter(guiceFilterHolder, "/info/*", null);
+    root.addFilter(guiceFilterHolder, "/druid/coordinator/*", null);
     if (beOverlord) {
-      root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
+      root.addFilter(guiceFilterHolder, "/druid/indexer/*", null);
     }
-    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+    root.addFilter(guiceFilterHolder, "/druid-ext/*", null);
 
     // this will be removed in the next major release
-    root.addFilter(GuiceFilter.class, "/coordinator/*", null);
+    root.addFilter(guiceFilterHolder, "/coordinator/*", null);
 
     if (!beOverlord) {
       root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");

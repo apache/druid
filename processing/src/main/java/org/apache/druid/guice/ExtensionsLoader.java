@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.inject.Inject;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -404,12 +403,23 @@ public class ExtensionsLoader
 
   private class ServiceLoadingFromExtensions<T>
   {
+    private final boolean isSimulation;
     private final Class<T> serviceClass;
     private final List<T> implsToLoad = new ArrayList<>();
     private final Set<String> implClassNamesToLoad = new HashSet<>();
 
     private ServiceLoadingFromExtensions(Class<T> serviceClass)
     {
+      this.isSimulation = extensionsConfig.getModulesForSimulation() != null;
+      if (isSimulation) {
+        log.warn(
+            "Running service in simulation testing mode with allowed modules[%s]."
+            + "This is an unsafe test-only mode and must never be used in a production cluster."
+            + " Remove property 'druid.extensions.modulesForSimulation' to disable simulation mode.",
+            extensionsConfig.getModulesForSimulation()
+        );
+      }
+
       this.serviceClass = serviceClass;
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
@@ -458,6 +468,11 @@ public class ExtensionsLoader
             "Implementation %s was ignored because it doesn't have a canonical name, "
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
+        );
+      } else if (isSimulation && !extensionsConfig.getModulesForSimulation().contains(serviceImplName)) {
+        log.debug(
+            "Skipping extension[%s] as it is not listed in config[%s]",
+            serviceImplName, extensionsConfig.getModulesForSimulation()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.debug(

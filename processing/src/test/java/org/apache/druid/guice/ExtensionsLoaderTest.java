@@ -50,6 +50,11 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
+/**
+ * Some of the tests in this class rely on the file
+ * {@code src/test/resources/META-INF/services/org.apache.druid.initialization.DruidModule}
+ * containing an entry for the {@link TestDruidModule}.
+ */
 public class ExtensionsLoaderTest
 {
   @Rule
@@ -438,7 +443,35 @@ public class ExtensionsLoaderTest
     );
   }
 
+  @Test
+  public void test_getModules_inSimulationMode_returnsOnlyAllowedModules()
+  {
+    // Verify with 1 module configured
+    final ExtensionsConfig configWithAllowedModules = new ExtensionsConfig() {
+      @Override
+      public LinkedHashSet<String> getModulesForSimulation()
+      {
+        return new LinkedHashSet<>(List.of(TestDruidModule.class.getName()));
+      }
+    };
 
+    final ExtensionsLoader loaderWithAllowedModules = new ExtensionsLoader(configWithAllowedModules, objectMapper);
+    final List<DruidModule> modules = List.copyOf(loaderWithAllowedModules.getModules());
+    Assert.assertEquals(1, modules.size());
+    Assert.assertEquals(TestDruidModule.class, modules.get(0).getClass());
+
+    // Verify with no modules configured
+    final ExtensionsConfig configWithNoModules = new ExtensionsConfig() {
+      @Override
+      public LinkedHashSet<String> getModulesForSimulation()
+      {
+        return new LinkedHashSet<>();
+      }
+    };
+
+    final ExtensionsLoader loaderWithNoModules = new ExtensionsLoader(configWithNoModules, objectMapper);
+    Assert.assertTrue(loaderWithNoModules.getModules().isEmpty());
+  }
 
   private void createNewJar(File jarFileLocation, Map<String, byte[]> jarFileContents) throws IOException
   {

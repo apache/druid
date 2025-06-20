@@ -431,6 +431,12 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-services</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
             <type>test-jar</type>
@@ -525,10 +531,16 @@
             <artifactId>hamcrest-core</artifactId>
             <scope>compile</scope>
         </dependency>
-	    <dependency>
-	      <groupId>org.mockito</groupId>
-	      <artifactId>mockito-core</artifactId>
-	    </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
