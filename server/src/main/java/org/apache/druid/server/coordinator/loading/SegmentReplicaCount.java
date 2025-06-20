@@ -172,5 +172,6 @@ public class SegmentReplicaCount
     this.loading += other.loading;
     this.dropping += other.dropping;
     this.movingTo += other.movingTo;
+    this.movingFrom += other.movingFrom;
   }
 }
