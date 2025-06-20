@@ -33,6 +33,8 @@ import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
 import { getDruidErrorMessage, wait } from '../../utils';
 
+import { COMPACTION_DYNAMIC_CONFIG_COMPLETIONS } from './compaction-dynamic-config-completions';
+
 export interface CompactionDynamicConfigDialogProps {
   onClose(): void;
 }
@@ -144,6 +146,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
                 height="50vh"
                 onChange={setDynamicConfig}
                 setError={setJsonError}
+                jsonCompletions={COMPACTION_DYNAMIC_CONFIG_COMPLETIONS}
               />
             )}
           </div>

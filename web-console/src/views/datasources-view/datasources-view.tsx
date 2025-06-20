@@ -1012,7 +1012,8 @@ GROUP BY 1, 2`;
       goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
+        onAction: () =>
+          goToQuery({ queryString: SqlQuery.selectStarFrom(T(datasource)).toString() }),
       });
     }
 

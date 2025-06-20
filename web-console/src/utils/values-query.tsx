@@ -60,7 +60,7 @@ function isJsonString(x: unknown): boolean {
 
 export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
   const { header, rows } = sample;
-  return SqlQuery.create(
+  return SqlQuery.selectStarFrom(
     new SqlAlias({
       expression: SqlValues.create(
         rows.map(row =>

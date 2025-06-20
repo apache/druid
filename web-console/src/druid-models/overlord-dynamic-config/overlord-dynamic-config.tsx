@@ -23,6 +23,13 @@ import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { deepGet, oneOf } from '../../utils';
 
+import {
+  AFFINITY_CONFIG_COMPLETIONS,
+  CATEGORY_MAP_COMPLETIONS,
+  NODE_DATA_COMPLETIONS,
+  USER_DATA_COMPLETIONS,
+} from './overlord-dynamic-config-completions';
+
 export interface OverlordDynamicConfig {
   selectStrategy?: {
     type: string;
@@ -78,6 +85,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     name: 'selectStrategy.affinityConfig.affinity',
     type: 'json',
     placeholder: `{"datasource1":["host1:port","host2:port"], "datasource2":["host3:port"]}`,
+    jsonCompletions: AFFINITY_CONFIG_COMPLETIONS,
     defined: c =>
       oneOf(
         deepGet(c, 'selectStrategy.type') ?? 'equalDistribution',
@@ -118,6 +126,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     name: 'selectStrategy.workerCategorySpec.categoryMap',
     type: 'json',
     defaultValue: '{}',
+    jsonCompletions: CATEGORY_MAP_COMPLETIONS,
     defined: c =>
       oneOf(
         deepGet(c, 'selectStrategy.type'),
@@ -201,6 +210,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     type: 'json',
     defined: c => deepGet(c, 'autoScaler.type') === 'ec2',
     required: true,
+    jsonCompletions: NODE_DATA_COMPLETIONS,
     info: 'A JSON object that describes how to launch new nodes.',
   },
   {
@@ -208,6 +218,7 @@ export const OVERLORD_DYNAMIC_CONFIG_FIELDS: Field<OverlordDynamicConfig>[] = [
     label: 'Auto scaler user data',
     type: 'json',
     defined: c => deepGet(c, 'autoScaler.type') === 'ec2',
+    jsonCompletions: USER_DATA_COMPLETIONS,
   },
 
   // GCE

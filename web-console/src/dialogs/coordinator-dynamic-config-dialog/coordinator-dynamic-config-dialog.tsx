@@ -30,6 +30,8 @@ import { Api, AppToaster } from '../../singletons';
 import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
 
+import { COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS } from './coordinator-dynamic-config-completions';
+
 import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps {
@@ -130,6 +132,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
               height="50vh"
               onChange={setDynamicConfig}
               setError={setJsonError}
+              jsonCompletions={COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS}
             />
           )}
         </>
