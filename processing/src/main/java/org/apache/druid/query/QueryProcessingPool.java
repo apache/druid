@@ -23,6 +23,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * This class implements the logic of how units of query execution run concurrently. It is used in {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}.
  * In a most straightforward implementation, each unit will be submitted to an {@link PrioritizedExecutorService}. Extensions,
@@ -48,4 +50,17 @@ public interface QueryProcessingPool extends ListeningExecutorService
    * @return - Future object for tracking the task completion.
    */
   <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task);
+
+
+  /**
+   * Submits the query execution unit task for asynchronous execution, with a provided timeout.
+   *
+   * @param task    - Task to be submitted.
+   * @param <T>     - Task result type
+   * @param <V>     - Query runner sequence type
+   * @param timeout - Timeout value
+   * @param unit   - Timeout unit
+   * @return - Future object for tracking the task completion.
+   */
+  <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task, long timeout, TimeUnit unit);
 }

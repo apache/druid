@@ -56,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
@@ -287,6 +288,51 @@ public class GroupByQueryRunnerFailureTest
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
         .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
+
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void testPerSegmentTimeoutCausesQueryTimeout()
+  {
+    final Map<String, Object> context = ImmutableMap.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10);
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .setContext(context)
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000))
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
