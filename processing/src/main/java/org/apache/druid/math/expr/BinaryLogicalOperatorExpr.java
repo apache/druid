@@ -23,6 +23,13 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -270,6 +277,53 @@ class BinEqExpr extends BinaryBooleanOpExprBase
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     return VectorComparisonProcessors.equals().asProcessor(inspector, left, right);
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector)
+  {
+    final ColumnIndexSupplier indexSupplier;
+    final ColumnType matchType;
+    final Object matchValue;
+    final ColumnType sourceType;
+    if (right.isLiteral()) {
+      final ExpressionType matchExprType = right.getOutputType(InputBindings.nilBindings());
+      matchType = matchExprType != null ? ExpressionType.toColumnType(matchExprType) : ColumnType.STRING;
+      matchValue = right.getLiteralValue();
+      indexSupplier = left.asColumnIndexSupplier(selector, matchType);
+      final ExpressionType sourceExprType = left.getOutputType(selector);
+      sourceType = sourceExprType != null ? ExpressionType.toColumnType(sourceExprType) : null;
+    } else if (left.isLiteral()) {
+      final ExpressionType matchExprType = left.getOutputType(InputBindings.nilBindings());
+      matchType = matchExprType != null ? ExpressionType.toColumnType(matchExprType) : ColumnType.STRING;
+      matchValue = left.getLiteralValue();
+      indexSupplier = right.asColumnIndexSupplier(selector, matchType);
+      final ExpressionType sourceExprType = right.getOutputType(selector);
+      sourceType = sourceExprType != null ? ExpressionType.toColumnType(sourceExprType) : null;
+    } else {
+      indexSupplier = null;
+      matchValue = null;
+      matchType = null;
+      sourceType = null;
+    }
+    if (indexSupplier == null) {
+      return null;
+    }
+    // if the source type is string, we have to use a predicate index instead of value index so just fall through to
+    // default implementation
+    if (matchType.isNumeric() && (sourceType == null || sourceType.is(ValueType.STRING))) {
+      return null;
+    }
+
+    final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
+    if (valueIndexes == null) {
+      return null;
+    }
+    if (matchValue == null) {
+      return new AllUnknownBitmapColumnIndex(selector);
+    }
+    return valueIndexes.forValue(matchValue, matchType);
   }
 }
 
