@@ -51,6 +51,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
 
   @Override
   Function<String, String> generateStreamIngestionPropsTransform(
+      String supervisorId,
       String streamName,
       String fullDatasourceName,
       String parserType,
@@ -68,6 +69,11 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
     KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     return spec -> {
       try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SUPERVISOR_ID%%",
+            supervisorId
+        );
         spec = StringUtils.replace(
             spec,
             "%%DATASOURCE%%",

@@ -28,9 +28,12 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class CalciteDartTest extends BaseCalciteQueryTest
 {
   @Override
@@ -55,7 +58,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_SORT)
   @Test
   public void testOrderBy()
   {
@@ -69,6 +71,42 @@ public class CalciteDartTest extends BaseCalciteQueryTest
                 new Object[] {2},
                 new Object[] {2},
                 new Object[] {2}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testOrderByVirtual()
+  {
+    testBuilder()
+        .sql("SELECT l1 from numfoo order by -l1")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{325323L},
+                new Object[]{7L},
+                new Object[]{0L}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testOrderByVirtualDesc()
+  {
+    testBuilder()
+        .sql("SELECT l1 from numfoo order by -l1 desc")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{0L},
+                new Object[]{7L},
+                new Object[]{325323L},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null}
             )
         )
         .run();

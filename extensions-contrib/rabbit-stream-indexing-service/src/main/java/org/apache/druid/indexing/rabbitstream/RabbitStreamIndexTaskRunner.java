@@ -47,15 +47,15 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * RabbitStream indexing task runner supporting incremental segments publishing
+ * RabbitStream indexing task runner that supports incremental segment publishing.
  */
-public class IncrementalPublishingRabbitStreamIndexTaskRunner
+public class RabbitStreamIndexTaskRunner
     extends SeekableStreamIndexTaskRunner<String, Long, ByteEntity>
 {
-  private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingRabbitStreamIndexTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(RabbitStreamIndexTaskRunner.class);
   private final RabbitStreamIndexTask task;
 
-  IncrementalPublishingRabbitStreamIndexTaskRunner(
+  RabbitStreamIndexTaskRunner(
       RabbitStreamIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       LockGranularity lockGranularityToUse

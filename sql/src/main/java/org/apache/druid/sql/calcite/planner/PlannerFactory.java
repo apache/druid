@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import org.apache.calcite.avatica.util.Casing;
-import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -32,7 +30,7 @@ import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
 import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
@@ -46,7 +44,8 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
+import org.apache.druid.sql.calcite.parser.StatementAndSetContext;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -59,16 +58,6 @@ import java.util.Properties;
 
 public class PlannerFactory extends PlannerToolbox
 {
-  static final SqlParser.Config PARSER_CONFIG = SqlParser
-      .configBuilder()
-      .setCaseSensitive(true)
-      .setUnquotedCasing(Casing.UNCHANGED)
-      .setQuotedCasing(Casing.UNCHANGED)
-      .setQuoting(Quoting.DOUBLE_QUOTE)
-      .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
-      .build();
-
   @Inject
   public PlannerFactory(
       final DruidSchemaCatalog rootSchema,
@@ -108,25 +97,33 @@ public class PlannerFactory extends PlannerToolbox
    * the parser is allowed to parse multi-part SQL statements where all statements in the list except the last one are
    * SET statements, for example 'SET x = 'y'; SET foo = 123; SELECT ...', where these values will be added to the
    * {@link org.apache.druid.query.QueryContext} of the final statement.
+   *
+   * @param engine       current SQL engine
+   * @param sql          sql query string
+   * @param sqlNode      parsed sql query, from {@link DruidSqlParser#parse(String, boolean)}. This is the main
+   *                     statement from {@link StatementAndSetContext#getMainStatement()}.
+   * @param queryContext query context including {@link StatementAndSetContext#getSetContext()}
+   * @param hook         calcite planner hook
    */
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
+      final SqlNode sqlNode,
       final Map<String, Object> queryContext,
-      final PlannerHook hook,
-      boolean allowSetStatementsToBuildContext
+      final PlannerHook hook
   )
   {
     final PlannerContext context = PlannerContext.create(
         this,
         sql,
+        sqlNode,
         engine,
         queryContext,
         hook
     );
     context.dispatchHook(DruidHook.SQL, sql);
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook, allowSetStatementsToBuildContext);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
 
   /**
@@ -140,7 +137,16 @@ public class PlannerFactory extends PlannerToolbox
       final Map<String, Object> queryContext
   )
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null, true);
+    final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
+    final DruidPlanner thePlanner = createPlanner(
+        engine,
+        sql,
+        statementAndSetContext.getMainStatement(),
+        statementAndSetContext.getSetContext().isEmpty()
+        ? queryContext
+        : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),
+        null
+    );
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     thePlanner.validate();
@@ -166,7 +172,7 @@ public class PlannerFactory extends PlannerToolbox
 
     Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
-        .parserConfig(PARSER_CONFIG)
+        .parserConfig(DruidSqlParser.PARSER_CONFIG)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
         .convertletTable(new DruidConvertletTable(plannerContext))
         .operatorTable(operatorTable)

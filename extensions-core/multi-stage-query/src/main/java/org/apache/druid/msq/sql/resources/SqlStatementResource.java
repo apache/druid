@@ -85,6 +85,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.ResultFormat;
@@ -174,17 +175,29 @@ public class SqlStatementResource
   }
 
   @VisibleForTesting
-  Response doPost(final SqlQuery sqlQuery,
-                  final HttpServletRequest req)
+  Response doPost(
+      SqlQuery sqlQuery, // Not final: reassigned using createModifiedSqlQuery
+      final HttpServletRequest req
+  )
   {
-    SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
+    final SqlQueryPlus sqlQueryPlus;
+    final HttpStatement stmt;
+    final QueryContext queryContext;
 
-    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(modifiedQuery, req);
+    try {
+      sqlQuery = createModifiedSqlQuery(sqlQuery);
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
+      queryContext = QueryContext.of(sqlQueryPlus.context());
+      stmt = msqSqlStatementFactory.httpStatement(SqlResource.makeSqlQueryPlus(sqlQuery, req), req);
+    }
+    catch (Exception e) {
+      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+    }
+
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
     boolean isDebug = false;
     try {
-      QueryContext queryContext = QueryContext.of(modifiedQuery.getContext());
       isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
@@ -202,7 +215,7 @@ public class SqlStatementResource
         return buildTaskResponse(sequence, stmt.query().authResult());
       } else {
         // Used for EXPLAIN
-        return buildStandardResponse(sequence, modifiedQuery, sqlQueryId, rowTransformer);
+        return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
       }
     }
     catch (DruidException e) {

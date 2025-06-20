@@ -102,7 +102,7 @@ public @interface NotYetSupported
     SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
-    SUPPORT_SORT(Scope.DECOUPLED, DruidException.class, "Unable to process relNode.*DruidSort"),
+    SUPPORT_SORT(Scope.DECOUPLED, DruidException.class, "Sort with limit"),
     SUPPORT_AGGREGATE(Scope.DECOUPLED, DruidException.class, "Unable to process relNode.*DruidAggregate"),
     RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED, DruidException.class, "ForbiddenException: Unauthorized");
     // @formatter:on

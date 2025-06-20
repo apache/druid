@@ -55,14 +55,14 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Kafka indexing task runner supporting incremental segments publishing
+ * Kafka indexing task runner that supports incremental segment publishing.
  */
-public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity>
+public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
-  private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(KafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
 
-  IncrementalPublishingKafkaIndexTaskRunner(
+  KafkaIndexTaskRunner(
       KafkaIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       LockGranularity lockGranularityToUse

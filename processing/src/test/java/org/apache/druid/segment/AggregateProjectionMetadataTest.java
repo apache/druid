@@ -83,9 +83,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             "theTime",
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("theTime", "a", "b", "c"),
-            new AggregatorFactory[] {
-                new CountAggregatorFactory("chocula")
-            },
+            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
             Arrays.asList(
                 OrderBy.ascending("theTime"),
                 OrderBy.ascending("a"),
@@ -95,14 +93,30 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         123
     );
-    // same row count, but more aggs more better
-    AggregateProjectionMetadata better = new AggregateProjectionMetadata(
+    // same row count, but less grouping columns aggs more better
+    AggregateProjectionMetadata betterLessGroupingColumns = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
-            "better",
+            "betterLessGroupingColumns",
             "theTime",
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
-            new AggregatorFactory[] {
+            new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
+            Arrays.asList(
+                OrderBy.ascending("c"),
+                OrderBy.ascending("d"),
+                OrderBy.ascending("theTime")
+            )
+        ),
+        123
+    );
+    // same grouping columns, but more aggregators
+    AggregateProjectionMetadata evenBetterMoreAggs = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "evenBetterMoreAggs",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("c", "d", "theTime"),
+            new AggregatorFactory[]{
                 new CountAggregatorFactory("chocula"),
                 new LongSumAggregatorFactory("e", "e")
             },
@@ -114,11 +128,10 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         123
     );
-
     // small rows is best
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
-            "better",
+            "best",
             null,
             VirtualColumns.EMPTY,
             Arrays.asList("f", "g"),
@@ -128,10 +141,14 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         10
     );
     metadataBest.add(good);
-    metadataBest.add(better);
+    metadataBest.add(betterLessGroupingColumns);
+    metadataBest.add(evenBetterMoreAggs);
     metadataBest.add(best);
     Assert.assertEquals(best, metadataBest.first());
-    Assert.assertEquals(good, metadataBest.last());
+    Assert.assertArrayEquals(
+        new AggregateProjectionMetadata[]{best, evenBetterMoreAggs, betterLessGroupingColumns, good},
+        metadataBest.toArray()
+    );
   }
 
   @Test
@@ -141,12 +158,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
-            "other_projection",
-            null,
-            null,
-            null,
-            null,
-            null
+                "other_projection",
+                null,
+                null,
+                null,
+                null,
+                null
             ),
             0
         )
@@ -157,12 +174,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
-            "other_projection",
-            null,
-            null,
-            Collections.emptyList(),
-            null,
-            null
+                "other_projection",
+                null,
+                null,
+                Collections.emptyList(),
+                null,
+                null
             ),
             0
         )

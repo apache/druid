@@ -22,12 +22,16 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryResource;
@@ -46,6 +50,7 @@ import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
@@ -178,17 +183,25 @@ public class SqlResource
       final HttpServletRequest req
   )
   {
-    final String engineName = sqlQuery.queryContext().getEngine();
-    final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
-    final HttpStatement stmt = engine.getSqlStatementFactory().httpStatement(sqlQuery, req);
-    final String sqlQueryId = stmt.sqlQueryId();
-    final String currThreadName = Thread.currentThread().getName();
+    final HttpStatement stmt;
+    final QueryContext queryContext;
 
     try {
-      Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
+      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req);
+      queryContext = new QueryContext(sqlQueryPlus.context()); // Redefine queryContext to include SET parameters
+      final String engineName = queryContext.getEngine();
+      final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
+      stmt = engine.getSqlStatementFactory().httpStatement(sqlQueryPlus, req);
+    }
+    catch (Exception e) {
+      // Can't use the queryContext with SETs since it might not have been created yet. Use the original one.
+      return handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+    }
 
-      QueryResultPusher pusher = makePusher(req, stmt, sqlQuery);
-      return pusher.push();
+    final String currThreadName = Thread.currentThread().getName();
+    try {
+      Thread.currentThread().setName(StringUtils.format("sql[%s]", stmt.sqlQueryId()));
+      return makePusher(req, stmt, sqlQuery, queryContext).push();
     }
     finally {
       Thread.currentThread().setName(currThreadName);
@@ -249,7 +262,12 @@ public class SqlResource
     }
   }
 
-  private SqlResourceQueryResultPusher makePusher(HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
+  private SqlResourceQueryResultPusher makePusher(
+      HttpServletRequest req,
+      HttpStatement stmt,
+      SqlQuery sqlQuery,
+      QueryContext queryContext
+  )
   {
     final String sqlQueryId = stmt.sqlQueryId();
     Map<String, String> headers = new LinkedHashMap<>();
@@ -259,7 +277,7 @@ public class SqlResource
       headers.put(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
     }
 
-    return new SqlResourceQueryResultPusher(req, sqlQueryId, stmt, sqlQuery, headers);
+    return new SqlResourceQueryResultPusher(req, sqlQueryId, stmt, sqlQuery, queryContext, headers);
   }
 
   private class SqlResourceQueryResultPusher extends QueryResultPusher
@@ -268,11 +286,17 @@ public class SqlResource
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
 
+    /**
+     * Context to use for pushing results. May be different from the context in SqlQuery due to SET statements.
+     */
+    private final QueryContext queryContext;
+
     public SqlResourceQueryResultPusher(
         HttpServletRequest req,
         String sqlQueryId,
         HttpStatement stmt,
         SqlQuery sqlQuery,
+        QueryContext queryContext,
         Map<String, String> headers
     )
     {
@@ -288,6 +312,7 @@ public class SqlResource
       );
       this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;
+      this.queryContext = queryContext;
       this.sqlQuery = sqlQuery;
     }
 
@@ -374,7 +399,7 @@ public class SqlResource
         @Override
         public void recordFailure(Exception e)
         {
-          if (QueryLifecycle.shouldLogStackTrace(e, sqlQuery.queryContext())) {
+          if (QueryLifecycle.shouldLogStackTrace(e, queryContext)) {
             log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
           } else {
             log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
@@ -417,5 +442,47 @@ public class SqlResource
         resources,
         authorizerMapper
     );
+  }
+
+  /**
+   * Create a {@link SqlQueryPlus}, which involves parsing the query from {@link SqlQuery#getQuery()} and
+   * extracing any SET parameters into the query context.
+   */
+  public static SqlQueryPlus makeSqlQueryPlus(final SqlQuery sqlQuery, final HttpServletRequest req)
+  {
+    return SqlQueryPlus.builder()
+                       .sql(sqlQuery.getQuery())
+                       .context(sqlQuery.getContext())
+                       .parameters(sqlQuery.getParameterList())
+                       .auth(AuthorizationUtils.authenticationResultFromRequest(req))
+                       .build();
+  }
+
+  /**
+   * Generates a response for a {@link DruidException} that occurs prior to the {@link HttpStatement} being created.
+   */
+  public static Response handleExceptionBeforeStatementCreated(final Exception e, final QueryContext queryContext)
+  {
+    if (e instanceof DruidException) {
+      final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
+      return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
+          (DruidException) e,
+          MediaType.APPLICATION_JSON_TYPE,
+          sqlQueryId != null
+          ? ImmutableMap.<String, String>builder()
+                        .put(QueryResource.QUERY_ID_RESPONSE_HEADER, sqlQueryId)
+                        .put(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
+                        .build()
+          : Collections.emptyMap()
+      );
+    } else {
+      return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
+          DruidException.forPersona(DruidException.Persona.OPERATOR)
+                        .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                        .build(e, "Cannot handle query"),
+          MediaType.APPLICATION_JSON_TYPE,
+          Collections.emptyMap()
+      );
+    }
   }
 }

@@ -25,8 +25,8 @@ import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskMetrics;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.Intervals;
@@ -421,7 +421,7 @@ public class UnusedSegmentsKillerTest
     );
 
     final Task ingestionTask = new NoopTask(null, null, TestDataSource.WIKI, 0L, 0L, null);
-    final TaskLockbox taskLockbox = taskActionTestKit.getTaskLockbox();
+    final GlobalTaskLockbox taskLockbox = taskActionTestKit.getTaskLockbox();
 
     try {
       taskLockbox.add(ingestionTask);
