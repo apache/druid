@@ -29,7 +29,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MSQMetricUtils;
@@ -54,6 +53,7 @@ import org.apache.druid.server.DruidNode;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -79,7 +79,6 @@ public class DartWorkerContext implements WorkerContext
   private final File tempDir;
   private final QueryContext queryContext;
   private final ServiceEmitter emitter;
-  private final ServiceMetricEvent.Builder metricBuilder;
 
   /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
@@ -128,11 +127,6 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
-
-    // Set up metric dimensions
-    this.metricBuilder = new ServiceMetricEvent.Builder();
-    MSQMetricUtils.setDartQueryIdDimensions(this.metricBuilder, queryContext);
-    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 
   @Override
@@ -191,8 +185,11 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, queryContext);
+    dimensions.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

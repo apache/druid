@@ -33,6 +33,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
@@ -57,9 +58,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}.
+   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are added to the metrics
+   * emitted, in addition to any context specific dimensions.
    */
-  void emitMetric(String metric, Number value);
+  void emitMetric(String metric, Map<String, Object> dimensions, Number value);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection

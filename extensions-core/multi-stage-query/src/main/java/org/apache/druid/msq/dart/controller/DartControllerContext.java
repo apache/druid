@@ -29,7 +29,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
@@ -92,7 +91,6 @@ public class DartControllerContext implements ControllerContext
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final QueryContext context;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
   public DartControllerContext(
@@ -114,11 +112,6 @@ public class DartControllerContext implements ControllerContext
     this.memoryIntrospector = memoryIntrospector;
     this.context = context;
     this.emitter = emitter;
-
-    // Set up metric dimensions
-    this.metricBuilder = new ServiceMetricEvent.Builder();
-    MSQMetricUtils.setDartQueryIdDimensions(this.metricBuilder, context);
-    this.metricBuilder.setDimension("engine", DartSqlEngine.NAME);
   }
 
   @Override
@@ -190,8 +183,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, final Number value)
+  public void emitMetric(final String metric, Map<String, Object> dimensions, final Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, context);
+    dimensions.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

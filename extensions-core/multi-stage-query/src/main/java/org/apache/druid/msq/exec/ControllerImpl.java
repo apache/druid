@@ -81,7 +81,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -186,6 +185,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -377,7 +377,6 @@ public class ControllerImpl implements Controller
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
-    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
@@ -555,15 +554,26 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-    emitQueryMetrics(stopwatch);
-    // Emit summary metrics
+    // Emit metrics
+    emitQueryMetrics(queryDef, taskStateForReport.isSuccess());
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
   }
 
-  private void emitQueryMetrics(Stopwatch stopwatch)
+  private void emitQueryMetrics(final QueryDefinition queryDef, final boolean success)
   {
-    context.emitMetric("query/time", stopwatch.millisElapsed());
+    final Set<String> datasources = new HashSet<>();
+    final Set<Interval> intervals = new HashSet<>();
+    for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
+      MSQMetricUtils.populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+    }
+
+    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(queryDef.getContext()));
+    context.emitMetric(
+        "query/time",
+        MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success),
+        startTime - System.currentTimeMillis()
+    );
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -601,7 +611,7 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
-    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
+    context.emitMetric("ingest/input/bytes", Map.of(), totalProcessedBytes);
   }
 
   /**
@@ -1521,9 +1531,9 @@ public class ControllerImpl implements Controller
       );
     }
 
-    context.emitMetric("ingest/tombstones/count", numTombstones);
+    context.emitMetric("ingest/tombstones/count", Map.of(), numTombstones);
     // Include tombstones in the reported segments count
-    context.emitMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric("ingest/segments/count", Map.of(), segmentsWithTombstones.size());
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(

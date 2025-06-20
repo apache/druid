@@ -70,6 +70,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -91,7 +92,6 @@ public class IndexerWorkerContext implements WorkerContext
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final int maxConcurrentStages;
   private final boolean includeAllCounters;
-  private final ServiceMetricEvent.Builder metricBuilder;
 
   @GuardedBy("this")
   private ServiceLocator controllerLocator;
@@ -133,10 +133,6 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                         .toInstance(storageConnector));
-
-    this.metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(this.metricBuilder, task);
-    MSQMetricUtils.setTaskQueryIdDimensions(this.metricBuilder, queryContext);
   }
 
   public static IndexerWorkerContext createProductionInstance(
@@ -213,8 +209,15 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+    // Attach task specific dimensions
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, QueryContext.of(task.getContext()));
+
+    dimensions.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 

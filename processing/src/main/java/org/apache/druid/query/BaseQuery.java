@@ -37,6 +37,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -119,16 +120,20 @@ public abstract class BaseQuery<T> implements Query<T>
   public Duration getDuration()
   {
     if (duration == null) {
-      Duration totalDuration = new Duration(0);
-      for (Interval interval : querySegmentSpec.getIntervals()) {
-        if (interval != null) {
-          totalDuration = totalDuration.plus(interval.toDuration());
-        }
-      }
-      duration = totalDuration;
+      duration = calculateDuration(querySegmentSpec.getIntervals());
     }
-
     return duration;
+  }
+
+  public static Duration calculateDuration(Collection<Interval> intervals)
+  {
+    Duration totalDuration = new Duration(0);
+    for (Interval interval : intervals) {
+      if (interval != null) {
+        totalDuration = totalDuration.plus(interval.toDuration());
+      }
+    }
+    return totalDuration;
   }
 
   @Override

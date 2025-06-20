@@ -32,6 +32,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * Context used by multi-stage query workers.
@@ -59,9 +60,10 @@ public interface WorkerContext
   Injector injector();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}.
+   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as anargument are added as to the metrics
+   * emitted, in addition to any context specific dimensions.
    */
-  void emitMetric(String metric, Number value);
+  void emitMetric(String metric, Map<String, Object> dimensions, Number value);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

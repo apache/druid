@@ -21,11 +21,21 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.joda.time.Interval;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility methods for setting up dimensions on metrics.
@@ -39,6 +49,7 @@ public class MSQMetricUtils
   {
     metricBuilder.setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
     metricBuilder.setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
+    metricBuilder.setDimension(DruidMetrics.TYPE, "msq");
   }
 
   public static void setDartQueryIdDimensions(
@@ -46,8 +57,8 @@ public class MSQMetricUtils
       final QueryContext queryContext
   )
   {
-    metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
     setQueryIdDimensions(metricBuilder, queryContext);
+    metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryContext.get(QueryContexts.CTX_DART_QUERY_ID));
   }
 
@@ -56,7 +67,49 @@ public class MSQMetricUtils
       final QueryContext queryContext
   )
   {
-    metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
     setQueryIdDimensions(metricBuilder, queryContext);
+    metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
+  }
+
+  /**
+   * Populates the datasources and intervals parameters with their corresponding values for all {@link TableInputSpec}
+   * in the stageDefinition.
+   */
+  public static void populateDatasourcesAndInterval(
+      final StageDefinition stageDefinition,
+      final Set<String> datasources,
+      final Set<Interval> intervals
+  )
+  {
+    for (InputSpec inputSpec : stageDefinition.getInputSpecs()) {
+      if (inputSpec instanceof TableInputSpec) {
+        TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
+        datasources.add(tableInputSpec.getDataSource());
+        intervals.addAll(tableInputSpec.getIntervals());
+      }
+    }
+  }
+
+  /**
+   * Creates dimensions for reporting metrics. Creates the following dimensions:
+   * <ul>
+   * <li>dataSource</li>
+   * <li>interval</li>
+   * <li>duration</li>
+   * <li>success</li>
+   * </ul>
+   */
+  public static Map<String, Object> createQueryMetricDimensions(
+      final Set<String> datasources,
+      final Collection<Interval> intervals,
+      final boolean success
+  )
+  {
+    Map<String, Object> dims = new HashMap<>();
+    dims.put(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
+    dims.put(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
+    dims.put("duration", BaseQuery.calculateDuration(intervals));
+    dims.put("success", success);
+    return dims;
   }
 }

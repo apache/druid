@@ -285,7 +285,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
   {
   }
 

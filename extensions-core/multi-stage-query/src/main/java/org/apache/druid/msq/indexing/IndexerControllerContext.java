@@ -27,6 +27,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -79,6 +80,7 @@ public class IndexerControllerContext implements ControllerContext
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
 
+  private final MSQControllerTask task;
   private final TaskLockType taskLockType;
   private final String taskDataSource;
   private final QueryContext taskQuerySpecContext;
@@ -87,30 +89,24 @@ public class IndexerControllerContext implements ControllerContext
   private final Injector injector;
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final MemoryIntrospector memoryIntrospector;
 
   public IndexerControllerContext(
-      final TaskLockType taskLockType,
-      final String taskDataSource,
-      final QueryContext taskQuerySpecContext,
-      final Map<String, Object> taskContext,
-      final ServiceMetricEvent.Builder metricBuilder,
+      final MSQControllerTask task,
       final TaskToolbox toolbox,
       final Injector injector,
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient
   )
   {
-    this.taskLockType = taskLockType;
-    this.taskDataSource = taskDataSource;
-    this.taskQuerySpecContext = taskQuerySpecContext;
-    this.taskContext = taskContext;
+    this.task = task;
+    this.taskLockType = task.getTaskLockType();
+    this.taskDataSource = task.getDataSource();
+    this.taskQuerySpecContext = task.getQuerySpec().getContext();
+    this.taskContext = task.getContext();
     this.toolbox = toolbox;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
-    this.metricBuilder = metricBuilder;
-    MSQMetricUtils.setTaskQueryIdDimensions(this.metricBuilder, taskQuerySpecContext);
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
@@ -148,8 +144,15 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+
+    // Attach task specific dimensions
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, taskQuerySpecContext);
+
+    dimensions.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 
