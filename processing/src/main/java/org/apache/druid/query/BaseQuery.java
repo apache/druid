@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -127,13 +128,19 @@ public abstract class BaseQuery<T> implements Query<T>
 
   public static Duration calculateDuration(Collection<Interval> intervals)
   {
-    Duration totalDuration = new Duration(0);
-    for (Interval interval : intervals) {
-      if (interval != null) {
-        totalDuration = totalDuration.plus(interval.toDuration());
+    try {
+      Duration totalDuration = new Duration(0);
+      for (Interval interval : intervals) {
+        if (interval != null) {
+          totalDuration = totalDuration.plus(interval.toDuration());
+        }
       }
+      return totalDuration;
     }
-    return totalDuration;
+    catch (ArithmeticException e) {
+      // Overflow due to addition. Return the largest duration possible.
+      return Intervals.ETERNITY.toDuration();
+    }
   }
 
   @Override
