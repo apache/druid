@@ -205,7 +205,7 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal
    * @return the entry
    */
   @Override
-  protected int getArrayEntry(int idx)
+  public int getArrayEntry(int idx)
   {
     return array[idx];
   }
@@ -223,7 +223,7 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal
   }
 
   @Override
-  protected void setValue(CompressedBigDecimal rhs)
+  public void setValue(CompressedBigDecimal rhs)
   {
     Preconditions.checkArgument(
         rhs.getArraySize() <= array.length,

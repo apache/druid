@@ -19,6 +19,11 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.compressedbigdecimal.aggregator.max.CompressedBigDecimalMaxAggregatorFactory;
+import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumAggregateCombiner;
+import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumAggregator;
+import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumAggregatorFactory;
+import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumBufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.easymock.EasyMock;
 import org.junit.Assert;
