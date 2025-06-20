@@ -162,7 +162,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-  private static final int DEFAULT_CORE_POOL_SIZE = 1;
+  private static final int MIN_CORE_POOL_SIZE = 2;
+  private static final int TASKS_PER_THREAD_FACTOR = 4;
+  private static final int KEEPALIVE_TIME_SECONDS = 2;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -941,8 +943,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
+    int workerThreads;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+                       ? this.tuningConfig.getWorkerThreads() / TASKS_PER_THREAD_FACTOR
+                       : autoScalerConfig.getTaskCountMax() / TASKS_PER_THREAD_FACTOR);
+    } else {
+      workerThreads = (this.tuningConfig.getWorkerThreads() != null
+                       ? this.tuningConfig.getWorkerThreads() / TASKS_PER_THREAD_FACTOR
+                       : this.ioConfig.getTaskCount() / TASKS_PER_THREAD_FACTOR);
+    }
+    if (workerThreads < MIN_CORE_POOL_SIZE) {
+      workerThreads = MIN_CORE_POOL_SIZE;
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -962,14 +975,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       );
     }
 
-    this.workerExec = MoreExecutors.listeningDecorator(
-        new ScheduledThreadPoolExecutor(
-            DEFAULT_CORE_POOL_SIZE,
-            Execs.makeThreadFactory(StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d")
-        )
+    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(
+        workerThreads,
+        Execs.makeThreadFactory(StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d")
     );
+    executor.setKeepAliveTime(KEEPALIVE_TIME_SECONDS, TimeUnit.SECONDS);
 
-    log.info("Created worker pool for supervisor[%s] for dataSource[%s]", this.supervisorId, this.dataSource);
+    this.workerExec = MoreExecutors.listeningDecorator(executor);
+    log.info(
+        "Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]",
+        workerThreads, this.supervisorId, this.dataSource);
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
