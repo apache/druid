@@ -58,10 +58,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are added to the metrics
-   * emitted, in addition to any context specific dimensions.
+   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
+   * metrics. These are can override any already existing context specific dimensions.
    */
-  void emitMetric(String metric, Map<String, Object> dimensions, Number value);
+  void emitMetric(String metric, Map<String, Object> overrideDimension, Number value);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection

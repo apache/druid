@@ -60,10 +60,10 @@ public interface WorkerContext
   Injector injector();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as anargument are added as to the metrics
-   * emitted, in addition to any context specific dimensions.
+   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
+   * metrics. These are can override any already existing context specific dimensions.
    */
-  void emitMetric(String metric, Map<String, Object> dimensions, Number value);
+  void emitMetric(String metric, Map<String, Object> overrideDimension, Number value);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

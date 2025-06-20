@@ -183,11 +183,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, Map<String, Object> dimensions, final Number value)
+  public void emitMetric(final String metric, Map<String, Object> overrideDimension, final Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, context);
-    dimensions.forEach(metricBuilder::setDimension);
+    overrideDimension.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

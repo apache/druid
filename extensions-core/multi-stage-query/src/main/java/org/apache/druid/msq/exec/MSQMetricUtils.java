@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.exec;
 
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.input.InputSpec;
@@ -64,10 +66,12 @@ public class MSQMetricUtils
 
   public static void setTaskQueryIdDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
+      final Task task,
       final QueryContext queryContext
   )
   {
     setQueryIdDimensions(metricBuilder, queryContext);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task); // Setup common non-MSQ task dimensions
     metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
   }
 

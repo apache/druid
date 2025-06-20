@@ -29,7 +29,6 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -209,15 +208,14 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
     // Attach task specific dimensions
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, QueryContext.of(task.getContext()));
+    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, QueryContext.of(task.getContext()));
 
-    dimensions.forEach(metricBuilder::setDimension);
+    overrideDimension.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 

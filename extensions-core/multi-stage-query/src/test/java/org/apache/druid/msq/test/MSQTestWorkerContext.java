@@ -110,7 +110,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> dimensions, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
   {
 
   }
