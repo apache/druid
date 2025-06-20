@@ -17,14 +17,10 @@
  */
 
 import type { JsonCompletionRule } from '../../utils';
+import { oneOf } from '../../utils';
 
-/**
- * Determines if a type is a supervisor type based on the documentation:
- * "The supervisor type. For streaming ingestion, this can be either kafka, kinesis, or rabbit.
- * For automatic compaction, set the type to autocompact."
- */
 function isSupervisorType(type: string): boolean {
-  return type === 'kafka' || type === 'kinesis' || type === 'rabbit' || type === 'autocompact';
+  return oneOf(type, 'kafka', 'kinesis', 'rabbit', 'autocompact', 'scheduled_batch');
 }
 
 export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
@@ -377,7 +373,6 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
     isObject: true,
     condition: obj => obj.type === 'index_parallel' || obj.type === 'index',
     completions: [
-      { value: 'firehose', documentation: 'Legacy data input (deprecated)' },
       { value: 'appendToExisting', documentation: 'Whether to append to existing segments' },
       { value: 'dropExisting', documentation: 'Whether to drop existing segments' },
     ],

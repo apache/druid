@@ -236,6 +236,10 @@ export const NATIVE_JSON_QUERY_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'queryGranularity', documentation: 'Query granularity of data in segments' },
       { value: 'aggregators', documentation: 'List of aggregators usable for metric columns' },
       { value: 'rollup', documentation: 'Whether the segments are rolled up' },
+      {
+        value: 'projections',
+        documentation: 'The list of projections in segments',
+      },
     ],
   },
 
