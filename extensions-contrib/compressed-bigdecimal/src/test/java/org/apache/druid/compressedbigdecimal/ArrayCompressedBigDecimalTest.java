@@ -19,6 +19,7 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorFactoryBase;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Test;
