@@ -560,15 +560,17 @@ public class ControllerImpl implements Controller
     return msqTaskReportPayload;
   }
 
-  private void emitQueryMetrics(final QueryDefinition queryDef, final boolean success)
+  private void emitQueryMetrics(@Nullable final QueryDefinition queryDef, final boolean success)
   {
     final Set<String> datasources = new HashSet<>();
     final Set<Interval> intervals = new HashSet<>();
-    for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
-      MSQMetricUtils.populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+    if (queryDef != null) {
+      for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
+        MSQMetricUtils.populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+      }
     }
 
-    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(queryDef.getContext()));
+    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
     context.emitMetric(
         "query/time",
         MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success),
