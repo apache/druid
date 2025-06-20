@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  druid-mcp:
+    build: .
+    container_name: apache-druid-mcp
+    ports:
+      - "3000:3000"
+    environment:
+      - DRUID_URL=${DRUID_URL:-http://localhost:8888}
+      - DRUID_USERNAME=${DRUID_USERNAME:-}
+      - DRUID_PASSWORD=${DRUID_PASSWORD:-}
+      - DRUID_TIMEOUT=${DRUID_TIMEOUT:-30000}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge 
