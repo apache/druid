@@ -87,7 +87,6 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -126,6 +125,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -162,6 +162,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
+  private static final int DEFAULT_CORE_POOL_SIZE = 1;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -940,17 +941,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    int workerThreads;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
-
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : Math.min(10, autoScalerConfig.getTaskCountMax()));
-    } else {
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : Math.min(10, this.ioConfig.getTaskCount()));
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -971,12 +963,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
-        ScheduledExecutors.fixed(
-            workerThreads,
-            StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d"
+        new ScheduledThreadPoolExecutor(
+            DEFAULT_CORE_POOL_SIZE,
+            Execs.makeThreadFactory(StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d")
         )
     );
-    log.info("Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]", workerThreads, this.supervisorId, this.dataSource);
+
+    log.info("Created worker pool for supervisor[%s] for dataSource[%s]", this.supervisorId, this.dataSource);
 
     this.taskInfoProvider = new TaskInfoProvider()
     {

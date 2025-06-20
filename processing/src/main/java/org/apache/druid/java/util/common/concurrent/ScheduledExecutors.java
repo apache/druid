@@ -172,6 +172,13 @@ public class ScheduledExecutors
     return (corePoolSize, nameFormat) -> ExecutorServices.manageLifecycle(lifecycle, fixed(corePoolSize, nameFormat));
   }
 
+  /**
+   * Creates a new {@link ScheduledExecutorService} with a minimum number of threads.
+   *
+   * @param corePoolSize the minimum number of threads in the pool
+   * @param nameFormat   the naming format for threads created by the pool
+   * @return a new {@link ScheduledExecutorService} with the specified configuration
+   */
   public static ScheduledExecutorService fixed(int corePoolSize, String nameFormat)
   {
     return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
