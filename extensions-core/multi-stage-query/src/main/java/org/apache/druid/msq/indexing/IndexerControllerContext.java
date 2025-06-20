@@ -34,6 +34,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -51,8 +52,10 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -76,6 +79,7 @@ public class IndexerControllerContext implements ControllerContext
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
 
+  private final MSQControllerTask task;
   private final TaskLockType taskLockType;
   private final String taskDataSource;
   private final QueryContext taskQuerySpecContext;
@@ -84,31 +88,24 @@ public class IndexerControllerContext implements ControllerContext
   private final Injector injector;
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final MemoryIntrospector memoryIntrospector;
 
-
-
   public IndexerControllerContext(
-      final TaskLockType taskLockType,
-      final String taskDataSource,
-      final QueryContext taskQuerySpecContext,
-      final Map<String, Object> taskContext,
-      final ServiceMetricEvent.Builder metricBuilder,
+      final MSQControllerTask task,
       final TaskToolbox toolbox,
       final Injector injector,
       final ServiceClientFactory clientFactory,
       final OverlordClient overlordClient
   )
   {
-    this.taskLockType = taskLockType;
-    this.taskDataSource = taskDataSource;
-    this.taskQuerySpecContext = taskQuerySpecContext;
-    this.taskContext = taskContext;
+    this.task = task;
+    this.taskLockType = task.getTaskLockType();
+    this.taskDataSource = task.getDataSource();
+    this.taskQuerySpecContext = task.getQuerySpec().getContext();
+    this.taskContext = task.getContext();
     this.toolbox = toolbox;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
-    this.metricBuilder = metricBuilder;
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
@@ -146,8 +143,14 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+
+    // Attach task specific dimensions
+    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, taskQuerySpecContext);
+
+    overrideDimension.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 
@@ -313,6 +316,14 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+
+    if (querySpec.getId() != null) {
+      builder.put(BaseQuery.QUERY_ID, querySpec.getId());
+    }
+
+    if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
+      builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+    }
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {

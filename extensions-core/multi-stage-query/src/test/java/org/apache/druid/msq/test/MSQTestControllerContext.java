@@ -89,7 +89,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
-  private final Map<String, Worker> inMemoryWorkers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Worker> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
@@ -285,7 +285,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
   {
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
@@ -31,6 +32,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * Context used by multi-stage query workers.
@@ -56,6 +58,12 @@ public interface WorkerContext
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   Injector injector();
+
+  /**
+   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
+   * metrics. These are can override any already existing context specific dimensions.
+   */
+  void emitMetric(String metric, Map<String, Object> overrideDimension, Number value);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in
