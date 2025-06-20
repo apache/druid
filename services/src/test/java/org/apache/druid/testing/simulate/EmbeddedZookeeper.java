@@ -32,20 +32,20 @@ public class EmbeddedZookeeper implements EmbeddedResource
   private final CuratorTestBase zk = new CuratorTestBase();
 
   @Override
-  public void before() throws Exception
+  public void start() throws Exception
   {
     zk.setupServerAndCurator();
   }
 
   @Override
-  public void after()
+  public void stop()
   {
     zk.tearDownServerAndCurator();
   }
 
   /**
    * Connection string for this embedded Zookeeper.
-   * @return A valid Zookeeper string only after {@link #before()} has been called.
+   * @return A valid Zookeeper string only after {@link #start()} has been called.
    */
   public String getConnectString()
   {

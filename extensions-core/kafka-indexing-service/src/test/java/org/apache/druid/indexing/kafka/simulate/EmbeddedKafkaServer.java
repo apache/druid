@@ -44,6 +44,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Embedded Kafka server used in Druid simulation tests.
+ * Contains some logic common with {@link org.apache.druid.indexing.kafka.test.TestBroker}.
  */
 public class EmbeddedKafkaServer implements EmbeddedResource
 {
@@ -68,7 +69,7 @@ public class EmbeddedKafkaServer implements EmbeddedResource
   }
 
   @Override
-  public void before() throws IOException
+  public void start() throws IOException
   {
     final Properties props = new Properties();
     props.setProperty("zookeeper.connect", zk.getConnectString());
@@ -97,7 +98,7 @@ public class EmbeddedKafkaServer implements EmbeddedResource
   }
 
   @Override
-  public void after()
+  public void stop()
   {
     if (server != null) {
       server.shutdown();

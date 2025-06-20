@@ -48,14 +48,14 @@ public class EmbeddedDruidClusterExtension implements BeforeAllCallback, AfterAl
     }
 
     cluster = ((DruidSimulationTestBase) testInstance).createCluster();
-    cluster.before();
+    cluster.start();
   }
 
   @Override
   public void afterAll(ExtensionContext extensionContext)
   {
     if (cluster != null) {
-      cluster.after();
+      cluster.stop();
     }
   }
 }

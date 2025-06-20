@@ -28,8 +28,8 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
@@ -91,7 +91,7 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
   }
 
   @Override
-  public StubServiceEmitter serviceEmitter()
+  public LatchableEmitter emitter()
   {
     return clientHolder.serviceEmitter;
   }
@@ -195,6 +195,6 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
     BrokerClient broker;
 
     @Inject
-    StubServiceEmitter serviceEmitter;
+    LatchableEmitter serviceEmitter;
   }
 }

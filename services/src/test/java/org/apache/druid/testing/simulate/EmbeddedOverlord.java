@@ -116,7 +116,7 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
 
   public void waitUntilTaskFinishes(String taskId)
   {
-    serviceEmitter().waitForEvent(
+    emitter().waitForEvent(
         event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );

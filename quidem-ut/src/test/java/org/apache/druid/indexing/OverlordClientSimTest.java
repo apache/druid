@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
-import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -42,7 +41,7 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
-import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
+import org.apache.druid.testing.simulate.junit5.IndexingSimulationTestBase;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -60,7 +59,7 @@ import java.util.stream.Collectors;
  * Tests all the REST APIs exposed by the Overlord using the
  * {@link org.apache.druid.rpc.indexing.OverlordClient}.
  */
-public class OverlordClientSimTest extends DruidSimulationTestBase
+public class OverlordClientSimTest extends IndexingSimulationTestBase
 {
   private static final String UNKNOWN_TASK_ID
       = IdUtils.newTaskId("sim_test_noop", "dummy", null);
@@ -91,8 +90,7 @@ public class OverlordClientSimTest extends DruidSimulationTestBase
     getResult(
         overlord.client().runTask(taskId, new NoopTask(taskId, null, null, 1L, 0L, null))
     );
-
-    verifyTaskHasSucceeded(taskId);
+    waitForTaskToSucceed(taskId, overlord);
   }
 
   @Test
@@ -101,7 +99,7 @@ public class OverlordClientSimTest extends DruidSimulationTestBase
     final String taskId = getResult(
         overlord.client().runKillTask("sim_test", TestDataSource.WIKI, Intervals.ETERNITY, null, null, null)
     );
-    verifyTaskHasSucceeded(taskId);
+    waitForTaskToSucceed(taskId, overlord);
   }
 
   @Test
@@ -123,18 +121,15 @@ public class OverlordClientSimTest extends DruidSimulationTestBase
     getResult(
         overlord.client().runTask(taskId, new NoopTask(taskId, null, null, taskRunDuration, 0L, null))
     );
+    verifyTaskHasStatus(taskId, TaskStatus.running(taskId), overlord);
 
-    Assertions.assertEquals(
-        TaskState.RUNNING,
-        getResult(overlord.client().taskStatus(taskId)).getStatus().getStatusCode()
-    );
-
+    // Cancel and verify status
     getResult(overlord.client().cancelTask(taskId));
-
-    final TaskStatusPlus status = getResult(overlord.client().taskStatus(taskId)).getStatus();
-    Assertions.assertNotNull(status);
-    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assertions.assertEquals("Shutdown request from user", status.getErrorMsg());
+    verifyTaskHasStatus(
+        taskId,
+        TaskStatus.failure(taskId, "Shutdown request from user"),
+        overlord
+    );
   }
 
   @Test
@@ -155,13 +150,13 @@ public class OverlordClientSimTest extends DruidSimulationTestBase
     getResult(
         overlord.client().runTask(task1, new NoopTask(task1, null, null, 1L, 0L, null))
     );
-    verifyTaskHasSucceeded(task1);
+    waitForTaskToSucceed(task1, overlord);
 
     final String task2 = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     getResult(
         overlord.client().runTask(task2, new NoopTask(task2, null, null, 1L, 0L, null))
     );
-    verifyTaskHasSucceeded(task2);
+    waitForTaskToSucceed(task2, overlord);
 
     CloseableIterator<TaskStatusPlus> result = getResult(
         overlord.client().taskStatuses("complete", null, null)
@@ -347,19 +342,5 @@ public class OverlordClientSimTest extends DruidSimulationTestBase
 
     Assertions.assertNotNull(capturedError.get());
     Assertions.assertTrue(capturedError.get().getMessage().contains(message));
-  }
-
-  private void verifyTaskHasSucceeded(String taskId)
-  {
-    overlord.waitUntilTaskFinishes(taskId);
-    final TaskStatusResponse currentStatus = getResult(
-        overlord.client().taskStatus(taskId)
-    );
-    Assertions.assertNotNull(currentStatus.getStatus());
-    Assertions.assertEquals(
-        TaskState.SUCCESS,
-        currentStatus.getStatus().getStatusCode(),
-        StringUtils.format("Task[%s] has failed", taskId)
-    );
   }
 }

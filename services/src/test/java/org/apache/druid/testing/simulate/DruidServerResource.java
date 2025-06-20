@@ -69,7 +69,7 @@ class DruidServerResource implements EmbeddedResource
   }
 
   @Override
-  public void before() throws Exception
+  public void start() throws Exception
   {
     log.info("Starting server[%s] with common properties[%s]...", server.getName(), commonProperties);
 
@@ -105,7 +105,7 @@ class DruidServerResource implements EmbeddedResource
   }
 
   @Override
-  public void after()
+  public void stop()
   {
     log.info("Stopping server[%s] ...", server.getName());
 
@@ -116,7 +116,7 @@ class DruidServerResource implements EmbeddedResource
   }
 
   /**
-   * Waits for the server lifecycle created in {@link #before()} to start.
+   * Waits for the server lifecycle created in {@link #start()} to start.
    */
   private void awaitLifecycleStart()
   {

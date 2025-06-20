@@ -26,11 +26,11 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.simulate.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.simulate.derby.InMemoryDerbyResource;
+import org.apache.druid.testing.simulate.emitter.LatchableEmitterModule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,31 +42,29 @@ import java.util.stream.Collectors;
  * <p>
  * A cluster is initialized with the following:
  * <ul>
- * <li>One or more {@link EmbeddedDruidServer}</li>
+ * <li>One or more {@link EmbeddedDruidServer}.</li>
  * <li>{@link TestFolder} to write segments, task logs, reports, etc.</li>
- * <li>A single {@link EmbeddedZookeeper} server used by all the Druid services</li>
- * <li>An optional in-memory Derby metadata store</li>
+ * <li>A single {@link EmbeddedZookeeper} server used by all the Druid services.</li>
+ * <li>An optional in-memory Derby metadata store.</li>
  * <li>Other {@link EmbeddedResource} to be used in the cluster. For example,
- * an {@code EmbeddedKafkaServer}</li>
- * <li>List of {@link DruidModule} to load specific extensions</li>
+ * an {@link InMemoryDerbyResource}.</li>
+ * <li>List of {@link DruidModule} to load specific extensions, e.g. {@link InMemoryDerbyModule}.</li>
+ * <li>{@link #addCommonProperty Common properties} that are applied to all Druid
+ * services in the cluster.</li>
  * </ul>
  * <p>
- * Example usage:
+ * Usage:
  * <pre>
- * private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
- * private final EmbeddedIndexer indexer = EmbeddedIndexer.create();
- *
- * &#64;Rule
- * public RuleChain cluster = EmbeddedDruidCluster.builder()
- *                                                .withDb()
- *                                                .with(overlord)
- *                                                .with(indexer)
- *                                                .build();
+ * final EmbeddedDruidCluster cluster =
+ *        EmbeddedDruidCluster.create()
+ *                            .addServer(EmbeddedOverlord.create())
+ *                            .addServer(EmbeddedIndexer.create())
+ *                            .addCommonProperty("druid.emitter", "logging");
+ * cluster.start();
+ * cluster.leaderOverlord.runTask(...);
+ * cluster.leaderOverlord().taskStatus(...);
+ * cluster.stop();
  * </pre>
- *
- * @see EmbeddedZookeeper
- * @see TestDerbyConnector
- * @see EmbeddedDruidServer
  */
 public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, EmbeddedResource
 {
@@ -87,8 +85,8 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     resources.add(testFolder);
     resources.add(zookeeper);
 
-    addCommonProperty("druid.emitter", StubServiceEmitter.TYPE);
-    extensionModules.add(StubServiceEmitterModule.class);
+    addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
+    extensionModules.add(LatchableEmitterModule.class);
 
     if (hasMetadataStore) {
       resources.add(new InMemoryDerbyResource(this));
@@ -141,7 +139,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
 
   /**
    * Adds a property to be applied to all the Druid servers in this cluster.
-   * These properties can be overridden by service-specific properties.
+   * These properties can be overridden by each service.
    */
   public EmbeddedDruidCluster addCommonProperty(String key, String value)
   {
@@ -150,11 +148,18 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     return this;
   }
 
+  /**
+   * The test directory used by this cluster. Each Druid service creates a
+   * sub-folder inside this directory to write out task logs or segments.
+   */
   public TestFolder getTestFolder()
   {
     return testFolder;
   }
 
+  /**
+   * The Zookeeper server used by this cluster.
+   */
   public EmbeddedZookeeper getZookeeper()
   {
     return zookeeper;
@@ -165,7 +170,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
    * JUnit setup methods annotated with {@code Before} or {@code BeforeClass}.
    */
   @Override
-  public void before() throws Exception
+  public void start() throws Exception
   {
     Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
 
@@ -175,11 +180,11 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     // Start the resources in order
     for (EmbeddedResource resource : resources) {
       try {
-        resource.before();
+        resource.start();
       }
       catch (Exception e) {
         // Clean up the resources that have already been started
-        after();
+        stop();
         throw e;
       }
     }
@@ -193,12 +198,12 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
    * JUnit tear down methods annotated with {@code After} or {@code AfterClass}.
    */
   @Override
-  public void after()
+  public void stop()
   {
     // Stop the resources in reverse order
     for (EmbeddedResource resource : Lists.reverse(resources)) {
       try {
-        resource.after();
+        resource.stop();
       }
       catch (Exception e) {
         log.error(e, "Could not clean up resource[%s]. Continuing cleanup of other resources.", resource);
@@ -225,7 +230,7 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   }
 
   @Override
-  public StubServiceEmitter serviceEmitter()
+  public LatchableEmitter emitter()
   {
     throw new ISE("There is no cluster-level service emitter. Use service specific emitters instead.");
   }

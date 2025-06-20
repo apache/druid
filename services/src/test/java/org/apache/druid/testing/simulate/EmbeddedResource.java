@@ -19,9 +19,23 @@
 
 package org.apache.druid.testing.simulate;
 
+/**
+ * Represents a resource with a lifecycle used in an {@link EmbeddedDruidCluster}.
+ * {@link #start()} and {@link #stop()} are called on cluster start and stop
+ * respectively. Resources are started in the same order in which they are added
+ * to a cluster and stopped in the reverse order.
+ */
 public interface EmbeddedResource
 {
-  void before() throws Exception;
+  /**
+   * Starts this resource. Implementations of this method should clean up any
+   * previous state as it may be called multiple times on a single instance of
+   * {@link EmbeddedResource}.
+   */
+  void start() throws Exception;
 
-  void after() throws Exception;
+  /**
+   * Cleans up this resource.
+   */
+  void stop() throws Exception;
 }

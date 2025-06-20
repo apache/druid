@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.simulate;
+package org.apache.druid.testing.simulate.emitter;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
@@ -27,28 +27,28 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.server.metrics.LatchableEmitter;
 
 /**
- * Guice module to use {@link StubServiceEmitter}. This module is added to the file
+ * Guice module to use {@link LatchableEmitter}. This module is added to the file
  * {@code services/src/test/resources/META-INF/services/org.apache.druid.initialization.DruidModule}
  * so that it is registered as an extension.
  */
-public class StubServiceEmitterModule implements DruidModule
+public class LatchableEmitterModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(Key.get(Emitter.class, Names.named(StubServiceEmitter.TYPE)))
-          .to(StubServiceEmitter.class);
+    binder.bind(Key.get(Emitter.class, Names.named(LatchableEmitter.TYPE)))
+          .to(LatchableEmitter.class);
   }
 
   @Provides
   @ManageLifecycle
-  public StubServiceEmitter makeEmitter(
+  public LatchableEmitter makeEmitter(
       ScheduledExecutorFactory executorFactory
   )
   {
-    return new StubServiceEmitter(executorFactory);
+    return new LatchableEmitter(executorFactory);
   }
 }

@@ -21,12 +21,9 @@ package org.apache.druid.testing.simulate.junit5;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 
 /**
@@ -65,6 +62,8 @@ import org.junit.jupiter.api.TestInstance;
  *    }
  * }
  * </pre>
+ *
+ * @see EmbeddedDruidCluster for information on how to build a cluster
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DruidSimulationTestBase
@@ -77,39 +76,23 @@ public abstract class DruidSimulationTestBase
    */
   protected abstract EmbeddedDruidCluster createCluster();
 
-  /**
-   * Random test datasource name that is freshly generated for each test method.
-   */
-  protected String dataSource;
-
   @BeforeAll
   protected void setup() throws Exception
   {
     cluster = createCluster();
-    cluster.before();
+    cluster.start();
   }
 
   @AfterAll
   protected void tearDown()
   {
     if (cluster != null) {
-      cluster.after();
+      cluster.stop();
     }
-  }
-
-  @BeforeEach
-  protected void beforeEachTest()
-  {
-    dataSource = createTestDataourceName();
   }
 
   protected <T> T getResult(ListenableFuture<T> future)
   {
     return FutureUtils.getUnchecked(future, true);
-  }
-
-  protected static String createTestDataourceName()
-  {
-    return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
   }
 }

@@ -33,13 +33,13 @@ public class TestFolder implements EmbeddedResource
   private File rootFolder;
 
   @Override
-  public void before()
+  public void start()
   {
     rootFolder = FileUtils.createTempDir("druid-simulation");
   }
 
   @Override
-  public void after() throws Exception
+  public void stop() throws Exception
   {
     if (rootFolder != null) {
       FileUtils.deleteDirectory(rootFolder);

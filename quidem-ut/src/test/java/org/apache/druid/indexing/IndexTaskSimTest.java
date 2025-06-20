@@ -19,32 +19,26 @@
 
 package org.apache.druid.indexing;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.simulate.EmbeddedBroker;
 import org.apache.druid.testing.simulate.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.EmbeddedHistorical;
 import org.apache.druid.testing.simulate.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
-import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
+import org.apache.druid.testing.simulate.junit5.IndexingSimulationTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -62,7 +56,7 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class IndexTaskSimTest extends DruidSimulationTestBase
+public class IndexTaskSimTest extends IndexingSimulationTestBase
 {
   private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
   private final EmbeddedBroker broker = new EmbeddedBroker();
@@ -101,7 +95,7 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
     final String taskId = task.getId();
 
     getResult(overlord.client().runTask(taskId, task));
-    verifyTaskHasSucceeded(taskId);
+    waitForTaskToSucceed(taskId, overlord);
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
@@ -120,29 +114,11 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
       start = start.plusDays(1);
     }
 
-    // Wait for Broker to discover these segments
-    broker.serviceEmitter().waitForEvent(
+    // Verify the row count in the datasource
+    broker.emitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-
-    final String queryResult = getResult(
-        cluster.anyBroker().submitSqlQuery(
-            new ClientSqlQuery(
-                "SELECT COUNT(*) AS c FROM " + dataSource,
-                ResultFormat.OBJECTLINES.name(),
-                false,
-                false,
-                false,
-                null,
-                null
-            )
-        )
-    );
-    Map<String, Object> queryResultMap = TestHelper.JSON_MAPPER.readValue(
-        queryResult,
-        new TypeReference<>() {}
-    );
-    Assertions.assertEquals(Map.of("c", 10), queryResultMap);
+    Assertions.assertEquals(10, getRowCountInDatasource());
   }
 
   @Test
@@ -150,6 +126,8 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
   public void test_run10Tasks_concurrently()
   {
     runTasksConcurrently(10);
+
+    // Wait for 10 segments to be visible on the broker
   }
 
   @Test
@@ -199,12 +177,16 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
     );
   }
 
+  /**
+   * Runs the given number of concurrent batch {@link IndexTask} for {@link #dataSource}.
+   * Each task ingests a single segment containing 1 row of data.
+   */
   private void runTasksConcurrently(int count)
   {
     final DateTime jan1 = DateTimes.of("2025-01-01");
     final List<Task> tasks = IntStream.range(0, count).mapToObj(
         i -> createIndexTaskForInlineData(
-            TestDataSource.KOALA,
+            dataSource,
             StringUtils.format(
                 "time,item,value\n%s,%s,%d",
                 jan1.plusDays(i), "item " + i, i
@@ -218,21 +200,7 @@ public class IndexTaskSimTest extends DruidSimulationTestBase
       );
     }
     for (Task task : tasks) {
-      verifyTaskHasSucceeded(task.getId());
+      waitForTaskToSucceed(task.getId(), overlord);
     }
-  }
-
-  private void verifyTaskHasSucceeded(String taskId)
-  {
-    overlord.waitUntilTaskFinishes(taskId);
-    final TaskStatusResponse currentStatus = getResult(
-        overlord.client().taskStatus(taskId)
-    );
-    Assertions.assertNotNull(currentStatus.getStatus());
-    Assertions.assertEquals(
-        TaskState.SUCCESS,
-        currentStatus.getStatus().getStatusCode(),
-        StringUtils.format("Task[%s] has failed", taskId)
-    );
   }
 }

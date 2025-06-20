@@ -38,7 +38,7 @@ public class InMemoryDerbyResource implements EmbeddedResource
   }
 
   @Override
-  public void before()
+  public void start()
   {
     dbRule.before();
 
@@ -49,7 +49,7 @@ public class InMemoryDerbyResource implements EmbeddedResource
   }
 
   @Override
-  public void after()
+  public void stop()
   {
     dbRule.after();
   }

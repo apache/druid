@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.kafka.simulate;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -29,27 +29,29 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.simulate.EmbeddedBroker;
 import org.apache.druid.testing.simulate.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
-import org.apache.druid.testing.simulate.junit5.DruidSimulationTestBase;
+import org.apache.druid.testing.simulate.junit5.IndexingSimulationTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class KafkaSupervisorSimTest extends DruidSimulationTestBase
+public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = EmbeddedIndexer.create();
@@ -59,7 +61,9 @@ public class KafkaSupervisorSimTest extends DruidSimulationTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withExtensions(List.of(KafkaIndexTaskModule.class));
+    final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withExtensions(
+        List.of(KafkaIndexTaskModule.class)
+    );
 
     kafkaServer = new EmbeddedKafkaServer(cluster.getZookeeper(), cluster.getTestFolder(), Map.of());
 
@@ -73,51 +77,18 @@ public class KafkaSupervisorSimTest extends DruidSimulationTestBase
   }
 
   @Test
-  public void test_runKafkaTask() throws Exception
+  public void test_runKafkaSupervisor()
   {
-    // Set up a topic
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
 
-    // Produce some records to the topic
-    final List<ProducerRecord<byte[], byte[]>> records = List.of(
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("2025-06-01,shirt,105")),
-        new ProducerRecord<>(topic, 1, null, StringUtils.toUtf8("2025-06-02,trousers,210")),
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("2025-06-03,jeans,150")),
-        new ProducerRecord<>(topic, 1, null, StringUtils.toUtf8("2025-06-04,t-shirt,53")),
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("2025-06-05,microwave,1099")),
-        new ProducerRecord<>(topic, 1, null, StringUtils.toUtf8("2025-06-06,spoon,11")),
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("2025-06-07,television,1100")),
-        new ProducerRecord<>(topic, 1, null, StringUtils.toUtf8("2025-06-08,plant pots,75")),
-        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8("2025-06-09,shirt,99")),
-        new ProducerRecord<>(topic, 1, null, StringUtils.toUtf8("2025-06-10,toys,101"))
+    kafkaServer.produceRecordsToTopic(
+        generateRecordsForTopic(topic, 10, DateTimes.of("2025-06-01"))
     );
-    kafkaServer.produceRecordsToTopic(records);
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = new KafkaSupervisorSpec(
-        supervisorId,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .build(),
-        null,
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false),
-            null, null,
-            null,
-            kafkaServer.consumerProperties(),
-            null, null, null, null, null,
-            true,
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null
-    );
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
 
     final Map<String, String> startSupervisorResult = getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
@@ -125,7 +96,7 @@ public class KafkaSupervisorSimTest extends DruidSimulationTestBase
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
     // Wait for the broker to discover the realtime segments
-    broker.serviceEmitter().waitForEvent(
+    broker.emitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
@@ -143,25 +114,8 @@ public class KafkaSupervisorSimTest extends DruidSimulationTestBase
     Assertions.assertEquals(1, taskStatuses.size());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
 
-    // Verify the count of rows in the datasource so far
-    final String queryResult = getResult(
-        cluster.anyBroker().submitSqlQuery(
-            new ClientSqlQuery(
-                "SELECT COUNT(*) AS c FROM " + dataSource,
-                ResultFormat.OBJECTLINES.name(),
-                false,
-                false,
-                false,
-                null,
-                null
-            )
-        )
-    );
-    Map<String, Object> queryResultMap = TestHelper.JSON_MAPPER.readValue(
-        queryResult,
-        new TypeReference<>() {}
-    );
-    Assertions.assertEquals(Map.of("c", 10), queryResultMap);
+    // Verify the count of rows ingested into the datasource so far
+    Assertions.assertEquals(10, getRowCountInDatasource());
 
     // Suspend the supervisor and verify the state
     getResult(
@@ -184,5 +138,63 @@ public class KafkaSupervisorSimTest extends DruidSimulationTestBase
 
     Assertions.fail("Could not find supervisor for id " + supervisorId);
     return null;
+  }
+
+  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
+  {
+    return new KafkaSupervisorSpec(
+        supervisorId,
+        null,
+        DataSchema.builder()
+                  .withDataSource(dataSource)
+                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withDimensions(DimensionsSpec.EMPTY)
+                  .build(),
+        createTuningConfig(),
+        new KafkaSupervisorIOConfig(
+            topic,
+            null,
+            new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false),
+            null, null,
+            null,
+            kafkaServer.consumerProperties(),
+            null, null, null, null, null,
+            true,
+            null, null, null, null, null, null, null, null
+        ),
+        null, null, null, null, null, null, null, null, null, null, null
+    );
+  }
+
+  private KafkaSupervisorTuningConfig createTuningConfig()
+  {
+    return new KafkaSupervisorTuningConfig(
+        null,
+        null, null, null,
+        1,
+        null, null, null, null, null, null, null, null, null, null,
+        null, null, null, null, null, null, null, null, null, null
+    );
+  }
+
+  private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
+      String topic,
+      int count,
+      DateTime startTime
+  )
+  {
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    for (int i = 0; i < count; ++i) {
+      String valueCsv = StringUtils.format(
+          "%s,%s,%d",
+          startTime.plusDays(i),
+          IdUtils.getRandomId(),
+          ThreadLocalRandom.current().nextInt(1000)
+      );
+      records.add(
+          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(valueCsv))
+      );
+    }
+    return records;
   }
 }

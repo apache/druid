@@ -21,9 +21,8 @@ package org.apache.druid.testing.simulate;
 
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.metrics.LatchableEmitter;
 
 /**
  * Provides a handle to the various service clients being used by an
@@ -37,5 +36,5 @@ public interface EmbeddedServiceClientProvider
 
   BrokerClient anyBroker();
 
-  StubServiceEmitter serviceEmitter();
+  LatchableEmitter emitter();
 }
