@@ -482,6 +482,10 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'baseDir', documentation: 'Base directory path' },
       { value: 'filter', documentation: 'File filter pattern' },
       { value: 'files', documentation: 'List of specific file paths' },
+      {
+        value: 'systemFields',
+        documentation: 'System fields to include (__file_uri, __file_path)',
+      },
     ],
   },
   // HTTP input source properties
@@ -505,6 +509,53 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'prefixes', documentation: 'List of S3 prefixes' },
       { value: 'objects', documentation: 'List of S3 objects with bucket and key' },
       { value: 'properties', documentation: 'S3 connection properties' },
+      {
+        value: 'systemFields',
+        documentation: 'System fields to include (__file_uri, __file_bucket, __file_path)',
+      },
+    ],
+  },
+  // Google Cloud Storage input source properties
+  {
+    path: '$.spec.ioConfig.inputSource',
+    isObject: true,
+    condition: obj => obj.type === 'gs',
+    completions: [
+      { value: 'uris', documentation: 'List of Google Cloud Storage URIs' },
+      { value: 'prefixes', documentation: 'List of GCS prefixes' },
+      { value: 'objects', documentation: 'List of GCS objects' },
+      {
+        value: 'systemFields',
+        documentation: 'System fields to include (__file_uri, __file_bucket, __file_path)',
+      },
+    ],
+  },
+  // Azure Storage input source properties
+  {
+    path: '$.spec.ioConfig.inputSource',
+    isObject: true,
+    condition: obj => obj.type === 'azure',
+    completions: [
+      { value: 'uris', documentation: 'List of Azure Blob Storage URIs' },
+      { value: 'prefixes', documentation: 'List of Azure blob prefixes' },
+      { value: 'objects', documentation: 'List of Azure blob objects' },
+      {
+        value: 'systemFields',
+        documentation: 'System fields to include (__file_uri, __file_bucket, __file_path)',
+      },
+    ],
+  },
+  // HDFS input source properties
+  {
+    path: '$.spec.ioConfig.inputSource',
+    isObject: true,
+    condition: obj => obj.type === 'hdfs',
+    completions: [
+      { value: 'paths', documentation: 'List of HDFS paths' },
+      {
+        value: 'systemFields',
+        documentation: 'System fields to include (__file_uri, __file_path)',
+      },
     ],
   },
   // inputFormat object properties
@@ -822,5 +873,32 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.spec.ioConfig.autoScalerConfig.autoScalerStrategy',
     completions: [{ value: 'lagBased', documentation: 'Scale based on consumer lag' }],
+  },
+  // systemFields array values for S3, Google Cloud Storage, and Azure Storage
+  {
+    path: '$.spec.ioConfig.inputSource.systemFields.[]',
+    condition: obj => {
+      const inputSource = obj?.spec?.ioConfig?.inputSource;
+      return (
+        inputSource?.type === 's3' || inputSource?.type === 'gs' || inputSource?.type === 'azure'
+      );
+    },
+    completions: [
+      { value: '__file_uri', documentation: 'URI of the input file' },
+      { value: '__file_bucket', documentation: 'Bucket containing the input file' },
+      { value: '__file_path', documentation: 'Path of the input file within the bucket' },
+    ],
+  },
+  // systemFields array values for HDFS and Local
+  {
+    path: '$.spec.ioConfig.inputSource.systemFields.[]',
+    condition: obj => {
+      const inputSource = obj?.spec?.ioConfig?.inputSource;
+      return inputSource?.type === 'hdfs' || inputSource?.type === 'local';
+    },
+    completions: [
+      { value: '__file_uri', documentation: 'URI of the input file' },
+      { value: '__file_path', documentation: 'Path of the input file' },
+    ],
   },
 ];
