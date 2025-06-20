@@ -33,7 +33,8 @@ public class SegmentReplicaCount
 
   private int loading;
   private int dropping;
-  private int moving;
+  private int movingTo;
+  private int movingFrom;
 
   /**
    * Increments number of replicas loaded on historical servers.
@@ -63,7 +64,10 @@ public class SegmentReplicaCount
         ++loading;
         break;
       case MOVE_TO:
-        ++moving;
+        ++movingTo;
+        break;
+      case MOVE_FROM:
+        ++movingFrom;
         break;
       case DROP:
         ++dropping;
@@ -110,7 +114,12 @@ public class SegmentReplicaCount
 
   int moving()
   {
-    return moving;
+    return movingTo;
+  }
+
+  int moveCompletedPendingDrop()
+  {
+    return movingFrom - movingTo;
   }
 
   /**
@@ -162,6 +171,6 @@ public class SegmentReplicaCount
 
     this.loading += other.loading;
     this.dropping += other.dropping;
-    this.moving += other.moving;
+    this.movingTo += other.movingTo;
   }
 }
