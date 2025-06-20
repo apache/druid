@@ -16,49 +16,18 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-@import '../../blueprint-overrides/common/colors';
+import { render } from '@testing-library/react';
 
-.header-bar {
-  overflow: hidden;
+import { DruidLogo } from './druid-logo';
 
-  * {
-    white-space: nowrap;
-  }
+describe('DruidLogo', () => {
+  it('matches snapshot', () => {
+    const { container } = render(<DruidLogo />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 
-  .#{$bp-ns}-navbar-divider {
-    margin: 0 11px;
-  }
-
-  .header-entry {
-    .#{$bp-ns}-icon {
-      svg {
-        fill: $blue3;
-
-        .#{$bp-ns}-dark & {
-          fill: $druid-brand;
-        }
-      }
-    }
-  }
-
-  .#{$bp-ns}-button.#{$bp-ns}-minimal {
-    border-radius: 20px;
-    margin: 0 1px;
-
-    .#{$bp-ns}-dark & {
-      &:hover {
-        background: rgba($dark-gray5, 0.5);
-      }
-
-      &.#{$bp-ns}-active {
-        background: rgba($dark-gray5, 0.9);
-      }
-    }
-  }
-
-  .#{$bp-ns}-navbar-group.#{$bp-ns}-align-right {
-    position: absolute;
-    right: 15px;
-  }
-}
+  it('matches snapshot with compact mode', () => {
+    const { container } = render(<DruidLogo compact />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

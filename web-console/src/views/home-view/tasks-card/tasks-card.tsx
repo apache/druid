@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
 import type { CapacityInfo } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { getClusterCapacity } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
@@ -96,7 +96,7 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
     <HomeViewCard
       className="tasks-card"
       href="#tasks"
-      icon={IconNames.GANTT_CHART}
+      icon={getConsoleViewIcon('tasks')}
       title="Tasks"
       loading={cardState.loading}
       error={cardState.error}

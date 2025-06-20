@@ -57,6 +57,7 @@ import type {
 import {
   END_OF_TIME_DATE,
   formatCompactionInfo,
+  getConsoleViewIcon,
   getDatasourceColor,
   RuleUtil,
   START_OF_TIME_DATE,
@@ -861,7 +862,7 @@ GROUP BY 1, 2`;
       >
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             disabled={typeof lastDatasourcesQuery !== 'string'}
             onClick={() => {
@@ -1037,14 +1038,14 @@ GROUP BY 1, 2`;
       return compact([
         capabilities.hasSql()
           ? {
-              icon: IconNames.APPLICATION,
+              icon: getConsoleViewIcon('workbench'),
               title: 'Query with SQL',
               onAction: () =>
                 goToQuery({ queryString: SqlQuery.selectStarFrom(T(datasource)).toString() }),
             }
           : undefined,
         {
-          icon: IconNames.STACKED_CHART,
+          icon: getConsoleViewIcon('segments'),
           title: 'Go to segments',
           onAction: () => {
             goToSegments({ datasource });

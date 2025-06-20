@@ -26,6 +26,7 @@ export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
 export * from './click-to-copy/click-to-copy';
 export * from './deferred/deferred';
+export * from './druid-logo/druid-logo';
 export * from './external-link/external-link';
 export * from './fancy-numeric-input/fancy-numeric-input';
 export * from './fancy-tab-pane/fancy-tab-pane';
