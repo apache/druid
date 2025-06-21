@@ -162,9 +162,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-  private static final int MIN_CORE_POOL_SIZE = 2;
-  private static final int TASKS_PER_THREAD_FACTOR = 4;
-  private static final int KEEPALIVE_TIME_SECONDS = 2;
+  private static final int MIN_WORKER_CORE_THREADS = 2;
+  private static final int DEFAULT_TASKS_PER_WORKER_THREAD = 4;
+  private static final int WORKER_THREAD_KEEPALIVE_TIME_SECONDS = 2;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -947,15 +947,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads() / TASKS_PER_THREAD_FACTOR
-                       : autoScalerConfig.getTaskCountMax() / TASKS_PER_THREAD_FACTOR);
+                       ? this.tuningConfig.getWorkerThreads()
+                       : autoScalerConfig.getTaskCountMax() / DEFAULT_TASKS_PER_WORKER_THREAD);
     } else {
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads() / TASKS_PER_THREAD_FACTOR
-                       : this.ioConfig.getTaskCount() / TASKS_PER_THREAD_FACTOR);
+                       ? this.tuningConfig.getWorkerThreads()
+                       : this.ioConfig.getTaskCount() / DEFAULT_TASKS_PER_WORKER_THREAD);
     }
-    if (workerThreads < MIN_CORE_POOL_SIZE) {
-      workerThreads = MIN_CORE_POOL_SIZE;
+    if (workerThreads < MIN_WORKER_CORE_THREADS) {
+      workerThreads = MIN_WORKER_CORE_THREADS;
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -979,12 +979,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         workerThreads,
         Execs.makeThreadFactory(StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d")
     );
-    executor.setKeepAliveTime(KEEPALIVE_TIME_SECONDS, TimeUnit.SECONDS);
+    executor.setKeepAliveTime(WORKER_THREAD_KEEPALIVE_TIME_SECONDS, TimeUnit.SECONDS);
 
     this.workerExec = MoreExecutors.listeningDecorator(executor);
     log.info(
         "Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]",
-        workerThreads, this.supervisorId, this.dataSource);
+        workerThreads, this.supervisorId, this.dataSource
+    );
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
