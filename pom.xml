@@ -87,7 +87,7 @@
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
         <calcite.version>1.37.0</calcite.version>
-        <confluent.version>6.2.12</confluent.version>
+        <confluent.version>6.2.15</confluent.version>
         <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
@@ -95,7 +95,7 @@
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>32.0.1-jre</guava.version>
+        <guava.version>32.1.3-jre</guava.version>
         <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.57.v20241219</jetty.version>
@@ -107,11 +107,11 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.118.Final</netty4.version>
+        <netty4.version>4.1.122.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.5</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.16</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
@@ -323,7 +323,7 @@
             <dependency>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
-                <version>1.1.1</version>
+                <version>1.3.5</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
@@ -343,12 +343,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.12.0</version>
+                <version>3.17.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.10.0</version>
+                <version>1.13.1</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -383,7 +383,7 @@
             <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
-                <version>2.4.11</version>
+                <version>2.5.2</version>
             </dependency>
 
             <!-- transitive dependency of testng
@@ -407,7 +407,7 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.6.10</version>
+                <version>1.9.25</version>
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
@@ -796,12 +796,12 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.12.5</version>
+                <version>2.14.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
-                <version>2.0.1</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
@@ -815,7 +815,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
@@ -880,7 +880,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.4</version>
+                <version>1.1.10.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -916,7 +916,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.11</version>
+                <version>4.4.16</version>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -987,17 +987,17 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <version>3.0.1</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1047,7 +1047,7 @@
             <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
-                <version>3.0.24</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
@@ -1278,6 +1278,11 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>com.google.j2objc</groupId>
+                <artifactId>j2objc-annotations</artifactId>
+                <version>2.8</version>
+            </dependency>
+            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
@@ -1341,7 +1346,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.15.1</version>
+                <version>3.15.8</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1376,7 +1381,7 @@
           <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value-annotations</artifactId>
-            <version>2.8.8</version>
+            <version>2.10.1</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1702,6 +1707,8 @@
                                     <excludes>
                                         <!--LGPL licenced library-->
                                         <exclude>com.google.code.findbugs:annotations</exclude>
+                                        <!-- shouldn't be loaded alongside with log4j-slf4j2-impl -->
+                                        <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
                                         <!-- See https://github.com/apache/druid/pull/17370 -->
                                         <exclude>javax.xml.bind:jaxb-api</exclude>
                                     </excludes>

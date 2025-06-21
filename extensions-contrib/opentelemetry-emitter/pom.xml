@@ -38,7 +38,7 @@
     <opentelemetry.instrumentation.version>1.14.0-alpha</opentelemetry.instrumentation.version>
     <!-- These guava and grpc versions are used only in the opentelemetry-extension.
       Look at build section for more details about shading. -->
-    <shade.guava.version>32.0.1-jre</shade.guava.version>
+    <shade.guava.version>32.1.3-jre</shade.guava.version>
     <shade.grpc.version>1.65.1</shade.grpc.version>
   </properties>
   <dependencyManagement>
@@ -123,7 +123,7 @@
     <dependency>
       <groupId>io.perfmark</groupId>
       <artifactId>perfmark-api</artifactId>
-      <version>0.23.0</version>
+      <version>0.26.0</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
