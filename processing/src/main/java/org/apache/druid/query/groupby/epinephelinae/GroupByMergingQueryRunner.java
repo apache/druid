@@ -176,6 +176,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     // query processing together.
     final long queryTimeout = queryContext.getTimeout();
     final boolean hasTimeout = queryContext.hasTimeout();
+    final boolean hasPerSegmentTimeout = queryContext.usePerSegmentTimeout();
+    final long perSegmentTimeout = queryContext.getPerSegmentTimeout();
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
     return new BaseSequence<>(
@@ -247,34 +249,43 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                                 throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                               }
 
-                              ListenableFuture<AggregateResult> future = queryProcessingPool.submitRunnerTask(
-                                  new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
-                                  {
-                                    @Override
-                                    public AggregateResult call()
-                                    {
-                                      try (
-                                          // These variables are used to close releasers automatically.
-                                          @SuppressWarnings("unused")
-                                          Closeable bufferReleaser = mergeBufferHolder.increment();
-                                          @SuppressWarnings("unused")
-                                          Closeable grouperReleaser = grouperHolder.increment()
-                                      ) {
-                                        // Return true if OK, false if resources were exhausted.
-                                        return input.run(queryPlusForRunners, responseContext)
-                                            .accumulate(AggregateResult.ok(), accumulator);
-                                      }
-                                      catch (QueryInterruptedException | QueryTimeoutException e) {
-                                        throw e;
-                                      }
-                                      catch (Exception e) {
-                                        log.error(e, "Exception with one of the sequences!");
-                                        Throwables.propagateIfPossible(e);
-                                        throw new RuntimeException(e);
-                                      }
-                                    }
+                              final AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow> callable = new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
+                              {
+                                @Override
+                                public AggregateResult call()
+                                {
+                                  try (
+                                      // These variables are used to close releasers automatically.
+                                      @SuppressWarnings("unused")
+                                      Closeable bufferReleaser = mergeBufferHolder.increment();
+                                      @SuppressWarnings("unused")
+                                      Closeable grouperReleaser = grouperHolder.increment()
+                                  ) {
+                                    // Return true if OK, false if resources were exhausted.
+                                    return input.run(queryPlusForRunners, responseContext)
+                                                .accumulate(AggregateResult.ok(), accumulator);
                                   }
-                              );
+                                  catch (QueryInterruptedException | QueryTimeoutException e) {
+                                    throw e;
+                                  }
+                                  catch (Exception e) {
+                                    log.error(e, "Exception with one of the sequences!");
+                                    Throwables.propagateIfPossible(e);
+                                    throw new RuntimeException(e);
+                                  }
+                                }
+                              };
+
+                              final ListenableFuture<AggregateResult> future;
+                              if (hasPerSegmentTimeout) {
+                                future = queryProcessingPool.submitRunnerTask(
+                                    callable,
+                                    perSegmentTimeout,
+                                    TimeUnit.MILLISECONDS
+                                );
+                              } else {
+                                future = queryProcessingPool.submitRunnerTask(callable);
+                              }
 
                               if (isSingleThreaded) {
                                 waitForFutureCompletion(
@@ -392,6 +403,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);
+      Throwable cause = e.getCause();
+      if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
+        throw new QueryTimeoutException();
+      }
       throw new RuntimeException(e);
     }
   }
