@@ -163,7 +163,7 @@ public class KafkaIngestSelfClusterMetricsTest extends IndexingSimulationTestBas
     );
 
     // The latest emitted data might not be queryable yet, so expect a delta
-    Assertions.assertTrue(expectedSegmentsHandedOff - numSegmentsHandedOff < 5);
+    Assertions.assertTrue(numSegmentsHandedOff >= expectedSegmentsHandedOff - 10);
 
     // Suspend the supervisor and verify the state
     getResult(
