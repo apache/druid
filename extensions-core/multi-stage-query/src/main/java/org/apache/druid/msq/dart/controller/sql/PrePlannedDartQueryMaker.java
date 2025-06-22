@@ -25,6 +25,8 @@ import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.logical.DruidLogicalToQueryDefinitionTranslator;
+import org.apache.druid.msq.logical.StageMaker;
+import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -65,9 +67,14 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
       throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
     }
     DruidLogicalToQueryDefinitionTranslator qdt = new DruidLogicalToQueryDefinitionTranslator(plannerContext);
-    QueryDefinition queryDef = qdt.translate(rootRel);
+    LogicalStage logicalStage = qdt.translate(rootRel);
+
+    StageMaker maker = new StageMaker(plannerContext);
+    maker.buildStage(logicalStage);
+    QueryDefinition queryDef = maker.buildQueryDefinition();
+
     QueryContext context = plannerContext.queryContext();
-    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, queryDef.getOutputRowSignature());
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, logicalStage.getLogicalRowSignature());
     QueryDefMSQSpec querySpec = MSQTaskQueryMaker.makeQueryDefMSQSpec(
         null,
         context,
