@@ -58,17 +58,33 @@ import java.util.stream.IntStream;
  */
 public class IndexTaskSimTest extends IndexingSimulationTestBase
 {
-  private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
+  private static final String HEADERS = "time,item,value";
+  private static final String CSV_DATA_10_DAYS =
+      "2025-06-01T00:00:00.000Z,shirt,105"
+      + "\n2025-06-02T00:00:00.000Z,trousers,210"
+      + "\n2025-06-03T00:00:00.000Z,jeans,150"
+      + "\n2025-06-04T00:00:00.000Z,t-shirt,53"
+      + "\n2025-06-05T00:00:00.000Z,microwave,1099"
+      + "\n2025-06-06T00:00:00.000Z,spoon,11"
+      + "\n2025-06-07T00:00:00.000Z,television,1100"
+      + "\n2025-06-08T00:00:00.000Z,plant pots,75"
+      + "\n2025-06-09T00:00:00.000Z,shirt,99"
+      + "\n2025-06-10T00:00:00.000Z,toys,101";
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    return EmbeddedDruidCluster.create()
+    indexer.addProperty("druid.worker.capacity", "25");
+    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+                               .useLatchableEmitter()
                                .addServer(coordinator)
-                               .addServer(EmbeddedIndexer.withProps(Map.of("druid.worker.capacity", "25")))
+                               .addServer(indexer)
                                .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker);
@@ -76,22 +92,9 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
 
   @Test
   @Timeout(60)
-  public void test_runIndexTask_forInlineDatasource() throws Exception
+  public void test_runIndexTask_forInlineDatasource()
   {
-    final String txnData10Days
-        = "time,item,value"
-          + "\n2025-06-01,shirt,105"
-          + "\n2025-06-02,trousers,210"
-          + "\n2025-06-03,jeans,150"
-          + "\n2025-06-04,t-shirt,53"
-          + "\n2025-06-05,microwave,1099"
-          + "\n2025-06-06,spoon,11"
-          + "\n2025-06-07,television,1100"
-          + "\n2025-06-08,plant pots,75"
-          + "\n2025-06-09,shirt,99"
-          + "\n2025-06-10,toys,101";
-
-    final Task task = createIndexTaskForInlineData(dataSource, txnData10Days);
+    final Task task = createIndexTaskForInlineData(dataSource, HEADERS + "\n" + CSV_DATA_10_DAYS);
     final String taskId = task.getId();
 
     getResult(overlord.client().runTask(taskId, task));
@@ -114,11 +117,12 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
       start = start.plusDays(1);
     }
 
-    // Verify the row count in the datasource
+    // Wait for segments to be queryable
     broker.emitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    Assertions.assertEquals(10, getRowCountInDatasource());
+    Assertions.assertEquals(CSV_DATA_10_DAYS, runSql("SELECT * FROM %s", dataSource));
+    Assertions.assertEquals("10", runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
   @Test
@@ -126,13 +130,11 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
   public void test_run10Tasks_concurrently()
   {
     runTasksConcurrently(10);
-
-    // Wait for 10 segments to be visible on the broker
   }
 
   @Test
   @Timeout(60)
-  public void test_run50Tasks_oneByOne()
+  public void test_run25Tasks_oneByOne()
   {
     for (int i = 0; i < 25; ++i) {
       runTasksConcurrently(1);

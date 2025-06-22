@@ -21,7 +21,7 @@ package org.apache.druid.testing.simulate;
 
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.cli.CliBroker;
+import org.apache.druid.cli.CliRouter;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
@@ -29,28 +29,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Embedded mode of {@link CliBroker} used in simulation tests.
- * Add this to your {@link EmbeddedDruidCluster} if you want to run queries
- * against it.
+ * Embedded mode of {@link CliRouter} used in simulation tests.
+ * Add this to your {@link EmbeddedDruidCluster} if you want to use the Druid
+ * web-console to debug the former.
  */
-public class EmbeddedBroker extends EmbeddedDruidServer
+public class EmbeddedRouter extends EmbeddedDruidServer
 {
-  public EmbeddedBroker()
+  public EmbeddedRouter()
   {
-    addProperty("druid.broker.segment.awaitInitializationOnStart", "false");
+    addProperty("druid.router.managementProxy.enabled", "true");
   }
 
   @Override
   ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
-    return new Broker(handler);
+    return new Router(handler);
   }
 
-  private class Broker extends CliBroker
+  private class Router extends CliRouter
   {
     private final LifecycleInitHandler handler;
 
-    private Broker(LifecycleInitHandler handler)
+    private Router(LifecycleInitHandler handler)
     {
       this.handler = handler;
     }
@@ -67,7 +67,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer
     protected List<? extends Module> getModules()
     {
       final List<Module> modules = new ArrayList<>(super.getModules());
-      modules.add(EmbeddedBroker.this::bindReferenceHolder);
+      modules.add(EmbeddedRouter.this::bindReferenceHolder);
       return modules;
     }
   }

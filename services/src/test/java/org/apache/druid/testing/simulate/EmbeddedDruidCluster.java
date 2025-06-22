@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -34,6 +35,7 @@ import org.apache.druid.testing.simulate.emitter.LatchableEmitterModule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -56,9 +58,9 @@ import java.util.stream.Collectors;
  * Usage:
  * <pre>
  * final EmbeddedDruidCluster cluster =
- *        EmbeddedDruidCluster.create()
- *                            .addServer(EmbeddedOverlord.create())
- *                            .addServer(EmbeddedIndexer.create())
+ *        EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+ *                            .addServer(new EmbeddedOverlord())
+ *                            .addServer(new EmbeddedIndexer())
  *                            .addCommonProperty("druid.emitter", "logging");
  * cluster.start();
  * cluster.leaderOverlord.runTask(...);
@@ -66,12 +68,11 @@ import java.util.stream.Collectors;
  * cluster.stop();
  * </pre>
  */
-public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, EmbeddedResource
+public class EmbeddedDruidCluster implements ReferenceProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
 
   private final TestFolder testFolder = new TestFolder();
-  private final EmbeddedZookeeper zookeeper = new EmbeddedZookeeper();
 
   private final List<EmbeddedDruidServer> servers = new ArrayList<>();
   private final List<EmbeddedResource> resources = new ArrayList<>();
@@ -79,35 +80,71 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   private final Properties commonProperties = new Properties();
 
   private boolean started = false;
+  private EmbeddedZookeeper zookeeper;
 
-  private EmbeddedDruidCluster(boolean hasMetadataStore)
+  private EmbeddedDruidCluster()
   {
     resources.add(testFolder);
-    resources.add(zookeeper);
-
-    addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
-    extensionModules.add(LatchableEmitterModule.class);
-
-    if (hasMetadataStore) {
-      resources.add(new InMemoryDerbyResource(this));
-      extensionModules.add(InMemoryDerbyModule.class);
-    }
-  }
-
-  public static EmbeddedDruidCluster create()
-  {
-    return new EmbeddedDruidCluster(true);
   }
 
   /**
-   * Creates a cluster with the given extensions. The list of extensions is
-   * populated in the property {@code druid.extensions.modulesForSimulation}.
+   * Creates a cluster with an in-memory Derby metadata store and an embedded
+   * Zookeeper server.
+   *
+   * @see EmbeddedZookeeper
+   * @see InMemoryDerbyModule
    */
-  public static EmbeddedDruidCluster withExtensions(List<Class<? extends DruidModule>> moduleClasses)
+  public static EmbeddedDruidCluster withEmbeddedDerbyAndZookeeper()
   {
-    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster(true);
-    cluster.extensionModules.addAll(moduleClasses);
+    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
+    cluster.resources.add(new InMemoryDerbyResource(cluster));
+    cluster.extensionModules.add(InMemoryDerbyModule.class);
+    cluster.addEmbeddedZookeeper();
+
     return cluster;
+  }
+
+  /**
+   * Creates a new empty {@link EmbeddedDruidCluster} with no preloaded extensions
+   * or resources. This method should be used when using non-embedded metadata
+   * store and zookeeper, otherwise use {@link #withEmbeddedDerbyAndZookeeper()}.
+   */
+  public static EmbeddedDruidCluster empty()
+  {
+    return new EmbeddedDruidCluster();
+  }
+
+  private void addEmbeddedZookeeper()
+  {
+    this.zookeeper = new EmbeddedZookeeper();
+    resources.add(zookeeper);
+  }
+
+  /**
+   * Configures this cluster to use a {@link LatchableEmitter} by setting common
+   * runtime property {@code druid.emitter=latching} and adding the extension
+   * {@link LatchableEmitterModule}.
+   */
+  public EmbeddedDruidCluster useLatchableEmitter()
+  {
+    addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
+    extensionModules.add(LatchableEmitterModule.class);
+    return this;
+  }
+
+  /**
+   * Adds an extension to this cluster. The list of extensions is populated in
+   * the common property {@code druid.extensions.modulesForSimulation}.
+   * All extensions must be added before any server has been added to the cluster.
+   */
+  public EmbeddedDruidCluster addExtension(Class<? extends DruidModule> moduleClass)
+  {
+    validateNotStarted();
+    if (!servers.isEmpty()) {
+      throw new ISE("All extensions must be added to the cluster before adding any Druid server");
+    }
+    extensionModules.add(moduleClass);
+    return this;
   }
 
   /**
@@ -116,10 +153,8 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
     validateNotStarted();
-
     servers.add(server);
     resources.add(new DruidServerResource(server, testFolder, zookeeper, commonProperties));
-
     return this;
   }
 
@@ -133,13 +168,14 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   {
     validateNotStarted();
     resources.add(resource);
-
     return this;
   }
 
   /**
    * Adds a property to be applied to all the Druid servers in this cluster.
-   * These properties can be overridden by each service.
+   * These properties correspond to the {@code common.runtime.properties} file
+   * used in a real Druid cluster. Each server can override these properties via
+   * {@link EmbeddedDruidServer#addProperty}.
    */
   public EmbeddedDruidCluster addCommonProperty(String key, String value)
   {
@@ -158,11 +194,13 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
   }
 
   /**
-   * The Zookeeper server used by this cluster.
+   * The embedded Zookeeper server used by this cluster, if any.
+   *
+   * @throws NullPointerException if this cluster has no embedded zookeeper.
    */
   public EmbeddedZookeeper getZookeeper()
   {
-    return zookeeper;
+    return Objects.requireNonNull(zookeeper, "No embedded zookeeper configured for this cluster");
   }
 
   /**
@@ -235,6 +273,12 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
     throw new ISE("There is no cluster-level service emitter. Use service specific emitters instead.");
   }
 
+  @Override
+  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
+  {
+    throw new ISE("Use service specific instance instead.");
+  }
+
   private void validateNotStarted()
   {
     if (started) {
@@ -244,11 +288,15 @@ public class EmbeddedDruidCluster implements EmbeddedServiceClientProvider, Embe
 
   private String getExtensionModuleProperty()
   {
-    final String moduleNamesCsv = extensionModules.stream()
-                                                  .map(Class::getName)
-                                                  .map(name -> "\"" + name + "\"")
-                                                  .collect(Collectors.joining(","));
-    return "[" + moduleNamesCsv + "]";
+    return getPropertyValue(
+        extensionModules.stream().map(Class::getName).collect(Collectors.toList())
+    );
+  }
+
+  private static String getPropertyValue(List<String> items)
+  {
+    final String csv = items.stream().map(name -> "\"" + name + "\"").collect(Collectors.joining(","));
+    return "[" + csv + "]";
   }
 
 }

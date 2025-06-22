@@ -24,41 +24,22 @@ import com.google.inject.Module;
 import org.apache.druid.cli.CliIndexer;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  * Embeddded mode of {@link CliIndexer} used in simulation tests.
+ * Add this to your {@link EmbeddedDruidCluster} if you want to run ingestion
+ * tasks. Middle managers are currently not supported as they launch tasks as
+ * child processes which is not desirable in unit tests.
  */
 public class EmbeddedIndexer extends EmbeddedDruidServer
 {
-  private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
-      // Don't sync lookups as cluster might not have a Coordinator
-      "druid.lookup.enableLookupSyncOnStartup", "false"
-  );
-
-  private final Map<String, String> overrideProperties;
-
-  public static EmbeddedIndexer create()
+  public EmbeddedIndexer()
   {
-    return new EmbeddedIndexer(Map.of());
-  }
-
-  public static EmbeddedIndexer withProps(
-      Map<String, String> overrideProps
-  )
-  {
-    return new EmbeddedIndexer(overrideProps);
-  }
-
-  private EmbeddedIndexer(Map<String, String> overrideProperties)
-  {
-    this.overrideProperties = overrideProperties;
+    // Don't sync lookups as cluster might not have a Coordinator
+    addProperty("druid.lookup.enableLookupSyncOnStartup", "false");
   }
 
   @Override
@@ -67,29 +48,7 @@ public class EmbeddedIndexer extends EmbeddedDruidServer
     return new Indexer(handler);
   }
 
-  @Override
-  RuntimeInfo getRuntimeInfo()
-  {
-    final long mem100Mb = 100_000_000;
-    return new DruidProcessingConfigTest.MockRuntimeInfo(4, mem100Mb, mem100Mb);
-  }
-
-  @Override
-  Properties buildStartupProperties(
-      TestFolder testFolder,
-      EmbeddedZookeeper zk
-  )
-  {
-    final Properties properties = super.buildStartupProperties(testFolder, zk);
-    properties.putAll(DEFAULT_PROPERTIES);
-    properties.putAll(overrideProperties);
-    return properties;
-  }
-
-  /**
-   * Extends {@link CliIndexer} to allow handling the lifecycle.
-   */
-  private static class Indexer extends CliIndexer
+  private class Indexer extends CliIndexer
   {
     private final LifecycleInitHandler handler;
 
@@ -101,8 +60,8 @@ public class EmbeddedIndexer extends EmbeddedDruidServer
     @Override
     protected List<? extends Module> getModules()
     {
-      final List<Module> modules = new ArrayList<>(handler.getInitModules());
-      modules.addAll(super.getModules());
+      final List<Module> modules = new ArrayList<>(super.getModules());
+      modules.add(EmbeddedIndexer.this::bindReferenceHolder);
       return modules;
     }
 

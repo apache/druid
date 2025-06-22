@@ -21,7 +21,6 @@ package org.apache.druid.testing.simulate;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
@@ -31,7 +30,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -49,7 +47,7 @@ class DruidServerResource implements EmbeddedResource
   private final EmbeddedDruidServer server;
 
   private final TestFolder testFolder;
-  private final EmbeddedZookeeper zk;
+  private final EmbeddedZookeeper zookeeper;
   private final Properties commonProperties;
 
   private ExecutorService executorService;
@@ -58,12 +56,12 @@ class DruidServerResource implements EmbeddedResource
   DruidServerResource(
       EmbeddedDruidServer server,
       TestFolder testFolder,
-      EmbeddedZookeeper zk,
+      EmbeddedZookeeper zookeeper,
       Properties commonProperties
   )
   {
     this.server = server;
-    this.zk = zk;
+    this.zookeeper = zookeeper;
     this.testFolder = testFolder;
     this.commonProperties = commonProperties;
   }
@@ -76,20 +74,9 @@ class DruidServerResource implements EmbeddedResource
     // Create and start the ServerRunnable
     final CountDownLatch lifecycleCreated = new CountDownLatch(1);
     final ServerRunnable serverRunnable = server.createRunnable(
-        new EmbeddedDruidServer.LifecycleInitHandler()
-        {
-          @Override
-          public List<? extends Module> getInitModules()
-          {
-            return server.getInitModules();
-          }
-
-          @Override
-          public void onLifecycleInit(Lifecycle lifecycle)
-          {
-            lifecycleCreated.countDown();
-            DruidServerResource.this.lifecycle.set(lifecycle);
-          }
+        lifecycle -> {
+          lifecycleCreated.countDown();
+          DruidServerResource.this.lifecycle.set(lifecycle);
         }
     );
 
@@ -97,7 +84,7 @@ class DruidServerResource implements EmbeddedResource
     executorService.submit(() -> runServer(serverRunnable));
 
     // Wait for lifecycle to be created and started
-    if (lifecycleCreated.await(1, TimeUnit.MINUTES)) {
+    if (lifecycleCreated.await(10, TimeUnit.SECONDS)) {
       awaitLifecycleStart();
     } else {
       throw new ISE("Timed out waiting for lifecycle of server[%s] to be created", server.getName());
@@ -140,7 +127,7 @@ class DruidServerResource implements EmbeddedResource
           }
       );
 
-      if (started.await(1, TimeUnit.MINUTES)) {
+      if (started.await(10, TimeUnit.SECONDS)) {
         log.info("Server[%s] is now running.", server.getName());
       } else {
         throw new ISE("Timed out waiting for lifecycle of server[%s] to be started", server.getName());
@@ -160,7 +147,7 @@ class DruidServerResource implements EmbeddedResource
     try {
       final Properties serverProperties = new Properties();
       serverProperties.putAll(commonProperties);
-      serverProperties.putAll(server.buildStartupProperties(testFolder, zk));
+      serverProperties.putAll(server.getStartupProperties(testFolder, zookeeper));
 
       final Injector injector = new StartupInjectorBuilder()
           .withProperties(serverProperties)

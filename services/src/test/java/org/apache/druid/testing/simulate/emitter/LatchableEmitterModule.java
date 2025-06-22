@@ -24,9 +24,11 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
 /**
@@ -46,9 +48,10 @@ public class LatchableEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   public LatchableEmitter makeEmitter(
+      @Self DruidNode selfNode,
       ScheduledExecutorFactory executorFactory
   )
   {
-    return new LatchableEmitter(executorFactory);
+    return new LatchableEmitter(selfNode.getServiceName(), selfNode.getHost(), executorFactory);
   }
 }

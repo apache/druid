@@ -19,20 +19,16 @@
 
 package org.apache.druid.testing.simulate.junit5;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-
-import java.util.Map;
 
 /**
  * Base class for simulation tests related to ingestion and indexing.
@@ -53,17 +49,18 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
   }
 
   /**
-   * @return Row count in the {@link #dataSource}.
-   * @throws RuntimeException if the datasource could not be found.
+   * Runs the given SQL query using the broker client used by the {@link #cluster}.
+   *
+   * @return The result of the SQL as a single CSV string
    */
-  protected int getRowCountInDatasource()
+  protected String runSql(String sql, Object... args)
   {
     try {
-      final String queryResult = getResult(
+      return getResult(
           cluster.anyBroker().submitSqlQuery(
               new ClientSqlQuery(
-                  "SELECT COUNT(*) AS c FROM " + dataSource,
-                  ResultFormat.OBJECTLINES.name(),
+                  StringUtils.format(sql, args),
+                  ResultFormat.CSV.name(),
                   false,
                   false,
                   false,
@@ -71,12 +68,7 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
                   null
               )
           )
-      );
-      Map<String, Object> queryResultMap
-          = TestHelper.JSON_MAPPER.readValue(queryResult, new TypeReference<>() {});
-      Object rowCount = queryResultMap.get("c");
-      Assertions.assertInstanceOf(Integer.class, rowCount);
-      return (int) rowCount;
+      ).trim();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

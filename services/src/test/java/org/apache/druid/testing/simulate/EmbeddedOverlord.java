@@ -19,13 +19,11 @@
 
 package org.apache.druid.testing.simulate;
 
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.cli.CliOverlord;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.indexing.common.task.TaskMetrics;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -34,41 +32,20 @@ import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  * Embedded mode of {@link CliOverlord} used in simulation tests.
  */
 public class EmbeddedOverlord extends EmbeddedDruidServer
 {
-  private static final Map<String, String> DEFAULT_PROPERTIES = Map.of(
-      "druid.indexer.queue.startDelay", "PT0S",
-      "druid.indexer.queue.restartDelay", "PT0S",
-      // Keep a small sync timeout so that Peons and Indexers are not stuck
-      // handling a change request when Overlord has already shutdown
-      "druid.indexer.runner.syncRequestTimeout", "PT1S"
-  );
-
-  private final Map<String, String> overrideProperties;
-  private final ReferenceHolder referenceHolder;
-
-  public static EmbeddedOverlord create()
+  public EmbeddedOverlord()
   {
-    return withProps(Map.of());
-  }
+    addProperty("druid.indexer.queue.startDelay", "PT0S");
+    addProperty("druid.indexer.queue.restartDelay", "PT0S");
 
-  public static EmbeddedOverlord withProps(
-      Map<String, String> properties
-  )
-  {
-    return new EmbeddedOverlord(properties);
-  }
-
-  private EmbeddedOverlord(Map<String, String> overrideProperties)
-  {
-    this.overrideProperties = overrideProperties;
-    this.referenceHolder = new ReferenceHolder();
+    // Keep a small sync timeout so that Peons and Indexers are not stuck
+    // handling a change request when Overlord has already shutdown
+    addProperty("druid.indexer.runner.syncRequestTimeout", "PT1S");
   }
 
   @Override
@@ -84,18 +61,6 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
     return new DruidProcessingConfigTest.MockRuntimeInfo(4, mem1gb, mem1gb);
   }
 
-  @Override
-  Properties buildStartupProperties(
-      TestFolder testFolder,
-      EmbeddedZookeeper zk
-  )
-  {
-    final Properties properties = super.buildStartupProperties(testFolder, zk);
-    properties.putAll(DEFAULT_PROPERTIES);
-    properties.putAll(overrideProperties);
-    return properties;
-  }
-
   /**
    * Client to communicate with the leader Overlord, which may not be the same
    * as this one.
@@ -103,15 +68,6 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
   public OverlordClient client()
   {
     return leaderOverlord();
-  }
-
-  /**
-   * Metadata storage coordinator to query and update segment metadata directly
-   * in the metadata store.
-   */
-  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
-  {
-    return referenceHolder.indexerMetadataStorageCoordinator;
   }
 
   public void waitUntilTaskFinishes(String taskId)
@@ -145,22 +101,9 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
     @Override
     protected List<? extends Module> getModules()
     {
-      final List<Module> modules = new ArrayList<>(handler.getInitModules());
-      modules.addAll(super.getModules());
-      modules.add(
-          binder -> binder.bind(ReferenceHolder.class).toInstance(referenceHolder)
-      );
-
+      final List<Module> modules = new ArrayList<>(super.getModules());
+      modules.add(EmbeddedOverlord.this::bindReferenceHolder);
       return modules;
     }
-  }
-
-  /**
-   * Holder for references to various objects being used by this embedded Overlord.
-   */
-  private static class ReferenceHolder
-  {
-    @Inject
-    IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   }
 }

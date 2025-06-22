@@ -20,10 +20,10 @@
 package org.apache.druid.testing.simulate;
 
 /**
- * Represents a resource with a lifecycle used in an {@link EmbeddedDruidCluster}.
- * {@link #start()} and {@link #stop()} are called on cluster start and stop
- * respectively. Resources are started in the same order in which they are added
- * to a cluster and stopped in the reverse order.
+ * Represents any resource outside Druid used by an {@link EmbeddedDruidCluster}.
+ * Cluster start and stop triggers {@link #start()} and {@link #stop()} on the
+ * resource respectively. Resources are started in the same order in which they
+ * are added to a cluster and stopped in the reverse order.
  */
 public interface EmbeddedResource
 {

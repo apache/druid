@@ -443,6 +443,31 @@
             <version>${project.parent.version}</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-kafka-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions.contrib</groupId>
+            <artifactId>kafka-emitter</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.13</artifactId>
+            <version>${apache.kafka.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency><!-- Required by dependency check, used by kafka_2.13 -->
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.library.version}</version>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -535,6 +560,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- This is needed to bundle the web console for simulation tests -->
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>web-console</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -45,6 +45,7 @@ public class EmbeddedZookeeper implements EmbeddedResource
 
   /**
    * Connection string for this embedded Zookeeper.
+   *
    * @return A valid Zookeeper string only after {@link #start()} has been called.
    */
   public String getConnectString()

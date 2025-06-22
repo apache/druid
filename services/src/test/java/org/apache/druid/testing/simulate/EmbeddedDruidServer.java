@@ -19,31 +19,34 @@
 
 package org.apache.druid.testing.simulate;
 
-import com.google.inject.Inject;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An embedded Druid server used in simulation tests.
- * This class and its methods (except a couple) are kept package protected as
- * they are used only by the specific server implementations.
+ * This class and most of its methods are kept package protected as they are used
+ * only by the specific server implementations in the same package.
  */
-abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
+public abstract class EmbeddedDruidServer implements ReferenceProvider
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
+  protected static final long MEM_100_MB = 100_000_000;
 
   /**
    * A static incremental ID is used instead of a random number to ensure that
@@ -53,7 +56,8 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
   private final String name;
 
-  private final ServiceClientHolder clientHolder = new ServiceClientHolder();
+  private final Map<String, String> serverProperties = new HashMap<>();
+  private final ReferenceHolder clientHolder = new ReferenceHolder();
 
   EmbeddedDruidServer()
   {
@@ -67,42 +71,33 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
   /**
    * @return Name of this server = type + 2-digit ID.
    */
-  public String getName()
+  public final String getName()
   {
     return name;
   }
 
-  @Override
-  public CoordinatorClient leaderCoordinator()
+  /**
+   * Adds a property to this server. These properties correspond to the
+   * {@code runtime.properties} file in a real Druid cluster, and override the
+   * common properties specified via {@link EmbeddedDruidCluster#addCommonProperty}.
+   */
+  public final EmbeddedDruidServer addProperty(String key, String value)
   {
-    return clientHolder.coordinator;
-  }
-
-  @Override
-  public OverlordClient leaderOverlord()
-  {
-    return clientHolder.overlord;
-  }
-
-  @Override
-  public BrokerClient anyBroker()
-  {
-    return clientHolder.broker;
-  }
-
-  @Override
-  public LatchableEmitter emitter()
-  {
-    return clientHolder.serviceEmitter;
+    serverProperties.put(key, value);
+    return this;
   }
 
   /**
    * Creates a {@link ServerRunnable} corresponding to a specific Druid service.
-   * Implementations of this class must avoid overriding any default Druid module
-   * so that the embedded clsuter closely replicates a real cluster.
-   * If an override is needed, it must be done using extensions and Druid
-   * properties, which are visible to the unit test so that there is no hidden
-   * config.
+   * Implementations of this class MUST NOT return a {@link ServerRunnable} that
+   * overrides any default Druid behaviour so that the embedded cluster closely
+   * replicates a real cluster. If an override is needed, it must be done using
+   * extensions and Druid properties, which are visible to the unit test so that
+   * there is no hidden config.
+   *
+   * @see EmbeddedDruidCluster#addExtension
+   * @see EmbeddedDruidCluster#addCommonProperty
+   * @see EmbeddedDruidServer#addProperty
    */
   abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
@@ -110,15 +105,20 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
   /**
    * {@link RuntimeInfo} to use for this server.
+   *
+   * @return {@link RuntimeInfo} with 2 processors and 100MB memory by default.
    */
-  abstract RuntimeInfo getRuntimeInfo();
+  RuntimeInfo getRuntimeInfo()
+  {
+    return new DruidProcessingConfigTest.MockRuntimeInfo(2, MEM_100_MB, MEM_100_MB);
+  }
 
   /**
-   * Builds properties to be used in the {@code StartupInjectorBuilder} while
-   * launching this server. This must be called only after the required resources,
-   * test folder, zookeeper and metadata store have been initialized.
+   * Properties to be used in the {@code StartupInjectorBuilder} while launching
+   * this server. This must be called only after all the resources required by
+   * the Druid server have been initialized.
    */
-  Properties buildStartupProperties(
+  final Properties getStartupProperties(
       TestFolder testFolder,
       EmbeddedZookeeper zk
   )
@@ -139,62 +139,72 @@ abstract class EmbeddedDruidServer implements EmbeddedServiceClientProvider
 
     // Add properties for Zookeeper
     serverProperties.setProperty("druid.zk.service.host", zk.getConnectString());
+
+    if (this instanceof EmbeddedHistorical) {
+      serverProperties.setProperty(
+          "druid.segmentCache.locations",
+          StringUtils.format(
+              "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
+              testFolder.newFolder().getAbsolutePath(),
+              MEM_100_MB
+          )
+      );
+    }
+
+    serverProperties.putAll(this.serverProperties);
     return serverProperties;
   }
 
   /**
-   * This method return "read-only" modules that read the dependencies injected
-   * into Druid. It should not return any module that overrides any behaviour of
-   * the default Druid modules. This ensures that the embedded cluster remains
-   * true to a real-life Druid cluster.
-   *
-   * @see LifecycleInitHandler#getInitModules()
-   * @see #createRunnable(LifecycleInitHandler)
+   * Binds the {@link ReferenceHolder} for this server.
+   * All implementations of {@link EmbeddedDruidServer} must use this binding in
+   * {@link ServerRunnable#getModules()}.
    */
-  List<? extends Module> getInitModules()
+  final void bindReferenceHolder(Binder binder)
   {
-    final Module referenceHolderModule
-        = binder -> binder.bind(ServiceClientHolder.class).toInstance(clientHolder);
+    binder.bind(ReferenceHolder.class).toInstance(clientHolder);
+  }
 
-    return List.of(referenceHolderModule);
+  @Override
+  public CoordinatorClient leaderCoordinator()
+  {
+    return clientHolder.leaderCoordinator();
+  }
+
+  @Override
+  public OverlordClient leaderOverlord()
+  {
+    return clientHolder.leaderOverlord();
+  }
+
+  @Override
+  public BrokerClient anyBroker()
+  {
+    return clientHolder.anyBroker();
+  }
+
+  @Override
+  public LatchableEmitter emitter()
+  {
+    return clientHolder.emitter();
+  }
+
+  @Override
+  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
+  {
+    return clientHolder.segmentsMetadataStorage();
   }
 
   /**
-   * Handler used during initialization of the lifecycle of an embedded server.
+   * Handler used to register the lifecycle of an embedded server.
    */
   interface LifecycleInitHandler
   {
     /**
-     * @return Modules that should be used in {@link ServerRunnable#getModules()}.
-     * This list contains modules that cannot be injected into the
-     * {@code StartupInjectorBuilder} as they need dependencies that are only
-     * bound later either in {@link ServerRunnable#getModules()} itself or via
-     * the {@code CoreInjectorBuilder}.
-     */
-    List<? extends Module> getInitModules();
-
-    /**
+     * Registers the lifecycle of this server so that it can be stopped later.
      * All implementations of {@link EmbeddedDruidServer} must call this method
      * from {@link ServerRunnable#initLifecycle(Injector)}.
      */
     void onLifecycleInit(Lifecycle lifecycle);
-  }
-
-  /**
-   * Holder for the service client instances that are being used by this server.
-   */
-  private static class ServiceClientHolder
-  {
-    @Inject
-    CoordinatorClient coordinator;
-
-    @Inject
-    OverlordClient overlord;
-
-    @Inject
-    BrokerClient broker;
-
-    @Inject
-    LatchableEmitter serviceEmitter;
   }
 }

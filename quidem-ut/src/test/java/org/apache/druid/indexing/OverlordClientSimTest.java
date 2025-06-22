@@ -66,13 +66,14 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   private static final String UNKNOWN_TASK_ERROR
       = StringUtils.format("Cannot find any task with id: [%s]", UNKNOWN_TASK_ID);
 
-  private final EmbeddedOverlord overlord = EmbeddedOverlord.create();
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    return EmbeddedDruidCluster.create()
-                               .addServer(EmbeddedIndexer.create())
+    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+                               .useLatchableEmitter()
+                               .addServer(new EmbeddedIndexer().addProperty("druid.worker.capacity", "3"))
                                .addServer(overlord);
   }
 

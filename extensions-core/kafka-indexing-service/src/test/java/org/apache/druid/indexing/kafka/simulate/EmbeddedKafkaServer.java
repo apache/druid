@@ -106,6 +106,11 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     }
   }
 
+  public String getBootstrapServerUrl()
+  {
+    return bootstrapServerUrl;
+  }
+
   public Map<String, Object> consumerProperties()
   {
     final Map<String, Object> props = new HashMap<>(KafkaConsumerConfigs.getConsumerProperties());
@@ -166,7 +171,7 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     return Admin.create(commonClientProperties());
   }
 
-  private Map<String, Object> producerProperties()
+  public Map<String, Object> producerProperties()
   {
     final Map<String, Object> props = new HashMap<>(commonClientProperties());
 

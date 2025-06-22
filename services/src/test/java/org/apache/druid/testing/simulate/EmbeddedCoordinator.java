@@ -24,47 +24,31 @@ import com.google.inject.Module;
 import org.apache.druid.cli.CliCoordinator;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Embedded mode of {@link CliCoordinator} used in simulation tests.
+ * Add this to your {@link EmbeddedDruidCluster} if you want to assign segments
+ * to historicals.
  */
 public class EmbeddedCoordinator extends EmbeddedDruidServer
 {
+  public EmbeddedCoordinator()
+  {
+    addProperty("druid.coordinator.startDelay", "PT0.1S");
+    addProperty("druid.coordinator.period", "PT0.5S");
+    addProperty("druid.manager.segments.pollDuration", "PT0.1S");
+  }
+
   @Override
   ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Coordinator(handler);
   }
 
-  @Override
-  RuntimeInfo getRuntimeInfo()
-  {
-    final long mem100Mb = 100_000_000;
-    return new DruidProcessingConfigTest.MockRuntimeInfo(2, mem100Mb, mem100Mb);
-  }
-
-  @Override
-  Properties buildStartupProperties(
-      TestFolder testFolder,
-      EmbeddedZookeeper zk
-  )
-  {
-    final Properties properties = super.buildStartupProperties(testFolder, zk);
-
-    properties.setProperty("druid.coordinator.startDelay", "PT0.1S");
-    properties.setProperty("druid.coordinator.period", "PT0.5S");
-    properties.setProperty("druid.manager.segments.pollDuration", "PT0.1S");
-
-    return properties;
-  }
-
-  private static class Coordinator extends CliCoordinator
+  private class Coordinator extends CliCoordinator
   {
     private final LifecycleInitHandler handler;
 
@@ -84,8 +68,8 @@ public class EmbeddedCoordinator extends EmbeddedDruidServer
     @Override
     protected List<? extends Module> getModules()
     {
-      final List<Module> modules = new ArrayList<>(handler.getInitModules());
-      modules.addAll(super.getModules());
+      final List<Module> modules = new ArrayList<>(super.getModules());
+      modules.add(EmbeddedCoordinator.this::bindReferenceHolder);
       return modules;
     }
   }

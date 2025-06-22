@@ -21,6 +21,7 @@ package org.apache.druid.testing.simulate;
 
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
@@ -28,7 +29,7 @@ import org.apache.druid.server.metrics.LatchableEmitter;
  * Provides a handle to the various service clients being used by an
  * {@link EmbeddedDruidServer}.
  */
-public interface EmbeddedServiceClientProvider
+public interface ReferenceProvider
 {
   CoordinatorClient leaderCoordinator();
 
@@ -37,4 +38,10 @@ public interface EmbeddedServiceClientProvider
   BrokerClient anyBroker();
 
   LatchableEmitter emitter();
+
+  /**
+   * Metadata storage coordinator to query and update segment metadata directly
+   * in the metadata store.
+   */
+  IndexerMetadataStorageCoordinator segmentsMetadataStorage();
 }
