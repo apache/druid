@@ -23,16 +23,19 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.concurrent.ScheduledExecutorService;
+
 public class MetricsEmittingQueryProcessingPool extends ForwardingQueryProcessingPool
     implements ExecutorServiceMonitor.MetricEmitter
 {
 
   public MetricsEmittingQueryProcessingPool(
       ListeningExecutorService delegate,
+      ScheduledExecutorService timeoutService,
       ExecutorServiceMonitor executorServiceMonitor
   )
   {
-    super(delegate);
+    super(delegate, timeoutService);
     executorServiceMonitor.add(this);
   }
 

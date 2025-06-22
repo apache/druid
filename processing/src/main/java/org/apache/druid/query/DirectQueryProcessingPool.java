@@ -24,6 +24,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.java.util.common.concurrent.Execs;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * {@link QueryProcessingPool} wrapper over {@link Execs#directExecutor()}
  */
@@ -40,6 +42,16 @@ public class DirectQueryProcessingPool extends ForwardingListeningExecutorServic
   public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
     return delegate().submit(task);
+  }
+
+  @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(
+      PrioritizedQueryRunnerCallable<T, V> task,
+      long timeout,
+      TimeUnit unit
+  )
+  {
+    return submitRunnerTask(task);
   }
 
   @Override

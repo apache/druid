@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -56,10 +57,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
 {
+  private ExecutorService processingPool;
   private static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
 
@@ -140,6 +143,7 @@ public class GroupByQueryRunnerFailureTest
         MERGE_BUFFER_POOL.maxSize(),
         MERGE_BUFFER_POOL.getPoolSize()
     );
+    processingPool = Execs.multiThreaded(2, "GroupByQueryRunnerFailureTestExecutor-%d");
   }
 
   @After
@@ -150,6 +154,7 @@ public class GroupByQueryRunnerFailureTest
         MERGE_BUFFER_POOL.maxSize(),
         MERGE_BUFFER_POOL.getPoolSize()
     );
+    processingPool.shutdown();
   }
 
   @AfterClass
@@ -312,6 +317,57 @@ public class GroupByQueryRunnerFailureTest
     };
 
     QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
+
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void testPerSegmentTimeoutCausesQueryTimeout()
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .overrideContext(ImmutableMap.of(
+            QueryContexts.TIMEOUT_KEY,
+            300_000,
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            100
+        ))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
+        new ForwardingQueryProcessingPool(processingPool),
+        ImmutableList.of(runner, mockRunner)
+    );
 
     Assert.assertThrows(
         QueryTimeoutException.class,
