@@ -405,7 +405,11 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       GuavaUtils.cancelAll(true, future, futures);
       Throwable cause = e.getCause();
       if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
-        throw new QueryTimeoutException();
+        log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
+            "Query [%s] timed out",
+            query.getId()
+        ));
       }
       throw new RuntimeException(e);
     }

@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * ExecutorService which is terminated and shutdown from the moment of creation and not able to accept any tasks.
  */
-final class DummyExecutorService implements ScheduledExecutorService
+final class DummyExecutorService implements ExecutorService, ScheduledExecutorService
 {
   static final DummyExecutorService INSTANCE = new DummyExecutorService();
 
