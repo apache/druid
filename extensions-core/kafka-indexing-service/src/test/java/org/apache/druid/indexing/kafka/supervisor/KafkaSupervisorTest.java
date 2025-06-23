@@ -155,7 +155,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
-  private static final int DEFAULT_WORKER_THREADS = 2;
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
