@@ -59,7 +59,6 @@ public class ColumnSerializerUtils
     final ObjectMapper mapper = new DefaultObjectMapper(smileFactory, null);
     mapper.getFactory().setCodec(mapper);
     mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
-    mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     SMILE_MAPPER = mapper;
   }
 
