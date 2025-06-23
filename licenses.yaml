@@ -1162,7 +1162,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.10
+version: 1.9.25
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -1322,7 +1322,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.118.Final
+version: 4.1.122.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -4478,7 +4478,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.70.Final
+version: 2.0.72.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
