@@ -37,7 +37,7 @@ The following table outlines the high-level configuration options for a supervis
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`id`|String|The supervisor id. This should be a unique ID that will identify the supervisor.|Yes|
+|`id`|String|The supervisor id. This should be a unique ID that will identify the supervisor. If unspecified, defaults to `spec.dataSchema.dataSource`.|No|
 |`type`|String|The supervisor type. For streaming ingestion, this can be either `kafka`, `kinesis`, or `rabbit`. For automatic compaction, set the type to `autocompact`. |Yes|
 |`spec`|Object|The container object for the supervisor configuration. For automatic compaction, this is the same as the compaction configuration. |Yes|
 |`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
@@ -413,9 +413,9 @@ This value is for the ideal situation in which there is at most one set of tasks
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-## Multi-Supervisor Support
-Druid supports multiple stream supervisors ingesting into the same datasource. This means you can have any number of the configured stream supervisors (Kafka, Kinesis, etc.) ingesting into the same datasource at the same time.
-In order to ensure proper synchronization between ingestion tasks with multiple supervisors, it's important to set `useConcurrentLocks=true` in the `context` field of the supervisor spec.
+## Multi-Supervisor Support (Experimental)
+Druid supports multiple stream supervisors ingesting into the same datasource. This means you can have any number of stream supervisors (Kafka, Kinesis, etc.) ingesting into the same datasource at the same time.
+In order to ensure proper synchronization between ingestion tasks with multiple supervisors, it's important to set `useConcurrentLocks=true` in the `context` field of the supervisor spec. Read more [here](concurrent-append-replace.md).
 
 ## Learn more
 

@@ -94,4 +94,9 @@ public class DruidSort extends Sort implements DruidLogicalNode
   {
     return super.explainTerms(pw).item("druid", "logical");
   }
+
+  public boolean hasLimitOrOffset()
+  {
+    return fetch != null || offset != null;
+  }
 }

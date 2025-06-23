@@ -56,6 +56,20 @@ public class DefaultObjectMapperTest
     final DateTime time = DateTimes.nowUtc();
 
     Assert.assertEquals(StringUtils.format("\"%s\"", time), mapper.writeValueAsString(time));
+
+    // string token
+    Assert.assertEquals(time, mapper.readValue(StringUtils.format("\"%s\"", time), DateTime.class));
+
+    // int token
+    DateTime result = mapper.readValue("1717267200000", DateTime.class);
+    Assert.assertEquals(DateTimes.utc(1717267200000L), result);
+
+    // unexpected token
+    String badString = "{\"dateTime\": true}";
+    Exception ex = Assert.assertThrows(Exception.class, () -> {
+      mapper.readValue(badString, DateTime.class);
+    });
+    Assert.assertTrue(ex.getMessage().contains("expected int or string token"));
   }
 
   @Test
