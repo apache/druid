@@ -1905,13 +1905,16 @@ You can configure Druid services to emit [metrics](../operations/metrics.md) reg
 
 ### Metrics monitors for each service
 
+Metric monitoring is an essential part of Druid operations. Druid includes 
+
 :::caution
 
-Because each monitor is meant for a specific service or services, make sure you configure them for the correct service unless it is meant for any service. For example, if a monitor is meant for the Historical service, configure it in `historical/runtime.properties` rather than `_common/common.runtime.properties`.
+The `runtime.properties` file for each service overrides the common configuration file (`common.runtime.properties`). They are not additive. This means that if you add any monitors to a specific service, that service only has the monitors specified in its `runtime.properties` file even if there are additional ones listed in the common file. 
 
 :::
 
-Metric monitoring is an essential part of Druid operations. The following table lists the monitors that are available and which service you should configure the monitor for:
+
+The following table lists the monitors that are available and the services you could configure the monitor for:
 
 |Name|Description|Service|
 |----|-----------|-------|
@@ -1939,17 +1942,23 @@ Metric monitoring is an essential part of Druid operations. The following table 
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
 
-For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
+For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
 
 ```properties
 druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
-On the other hand, some monitors should only be configured for certain services. For these, update the `runtime.properties` of individual services. For example, to `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` to the Overlord, add the following line to the `coordinator-overlord/runtime.properties` file:
+All the services in your Druid deployment would have these two monitors.
+
+If you want any service specific monitors though, you need to add all the monitors you want to run for that service to the service's `runtime.properties` file even if they are listed in the common file. The service specific properties take precedence.
+
+The following example adds the `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
 
 ```
-druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor"]
+druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
+
+If you don't include `OshiSysMonitor` and `JvmMonitor` in the Overlord's `runtime.properties` file, the monitors don't get loaded onto the Overlord despite being specified in the common file.
 
 ### Metrics emitters
 
