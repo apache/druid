@@ -943,19 +943,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    int workerThreads;
+    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig, autoScalerConfig);
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : autoScalerConfig.getTaskCountMax() / DEFAULT_TASKS_PER_WORKER_THREAD);
-    } else {
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : this.ioConfig.getTaskCount() / DEFAULT_TASKS_PER_WORKER_THREAD);
-    }
-    if (workerThreads < MIN_WORKER_CORE_THREADS) {
-      workerThreads = MIN_WORKER_CORE_THREADS;
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -1016,6 +1006,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     };
 
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, this.tuningConfig, workerExec);
+  }
+
+  public static int calculateWorkerThreads(
+      SeekableStreamSupervisorTuningConfig tuningConfig,
+      SeekableStreamSupervisorIOConfig ioConfig,
+      @Nullable AutoScalerConfig autoScalerConfig
+  )
+  {
+    if (tuningConfig.getWorkerThreads() != null) {
+      return tuningConfig.getWorkerThreads();
+    }
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+      return Math.max(MIN_WORKER_CORE_THREADS, autoScalerConfig.getTaskCountMax() / DEFAULT_TASKS_PER_WORKER_THREAD);
+    } else {
+      return Math.max(MIN_WORKER_CORE_THREADS, ioConfig.getTaskCount() / DEFAULT_TASKS_PER_WORKER_THREAD);
+    }
   }
 
   @Override
