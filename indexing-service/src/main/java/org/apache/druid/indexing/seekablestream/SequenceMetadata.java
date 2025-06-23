@@ -402,6 +402,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
               startPartitions, finalPartitions
           );
           action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
+              runner.getSupervisorId(),
               runner.getAppenderator().getDataSource(),
               runner.createDataSourceMetadata(startPartitions),
               runner.createDataSourceMetadata(finalPartitions)
@@ -418,13 +419,13 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction
-                     .forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping)
+                     .forSegmentsAndMetadata(segmentsToPush, runner.getSupervisorId(), startMetadata, endMetadata, segmentSchemaMapping)
                  : SegmentTransactionalInsertAction
-                     .appendAction(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
+                     .appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), startMetadata, endMetadata, segmentSchemaMapping);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null, segmentSchemaMapping);
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), null, null, segmentSchemaMapping);
       }
 
       return toolbox.getTaskActionClient().submit(action);

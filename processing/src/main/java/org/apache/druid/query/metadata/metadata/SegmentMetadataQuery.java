@@ -59,7 +59,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     MINMAX,
     TIMESTAMPSPEC,
     QUERYGRANULARITY,
-    ROLLUP;
+    ROLLUP,
+    PROJECTIONS;
 
     @JsonValue
     @Override
@@ -190,6 +191,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasAggregators()
   {
     return analysisTypes.contains(AnalysisType.AGGREGATORS);
+  }
+
+  public boolean hasProjections()
+  {
+    return analysisTypes.contains(AnalysisType.PROJECTIONS);
   }
 
   public boolean hasTimestampSpec()

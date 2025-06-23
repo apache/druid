@@ -118,7 +118,7 @@ public class StageDefinitionBuilder
     return this;
   }
 
-  int getStageNumber()
+  public int getStageNumber()
   {
     return stageNumber;
   }

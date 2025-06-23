@@ -35,6 +35,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
 import java.io.IOException;
 import java.util.Collections;
 
@@ -63,7 +64,7 @@ public class ControllerImplTest
   public void test_performSegmentPublish_ok() throws IOException
   {
     final SegmentTransactionalInsertAction action =
-        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null);
+        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null, null, null);
 
     final TaskActionClient taskActionClient = EasyMock.mock(TaskActionClient.class);
     EasyMock.expect(taskActionClient.submit(action)).andReturn(SegmentPublishResult.ok(Collections.emptySet()));
@@ -78,7 +79,7 @@ public class ControllerImplTest
   public void test_performSegmentPublish_publishFail() throws IOException
   {
     final SegmentTransactionalInsertAction action =
-        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null);
+        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null, null, null);
 
     final TaskActionClient taskActionClient = EasyMock.mock(TaskActionClient.class);
     EasyMock.expect(taskActionClient.submit(action)).andReturn(SegmentPublishResult.fail("oops"));
@@ -97,7 +98,7 @@ public class ControllerImplTest
   public void test_performSegmentPublish_publishException() throws IOException
   {
     final SegmentTransactionalInsertAction action =
-        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null);
+        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null, null, null);
 
     final TaskActionClient taskActionClient = EasyMock.mock(TaskActionClient.class);
     EasyMock.expect(taskActionClient.submit(action)).andThrow(new ISE("oops"));
@@ -116,7 +117,7 @@ public class ControllerImplTest
   public void test_performSegmentPublish_publishLockPreemptedException() throws IOException
   {
     final SegmentTransactionalInsertAction action =
-        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null);
+        SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null, null, null, null);
 
     final TaskActionClient taskActionClient = EasyMock.mock(TaskActionClient.class);
     EasyMock.expect(taskActionClient.submit(action)).andThrow(new ISE("are not covered by locks"));

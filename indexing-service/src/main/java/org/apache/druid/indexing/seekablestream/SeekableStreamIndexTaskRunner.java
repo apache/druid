@@ -312,6 +312,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
   }
 
+  /**
+   * Returns the supervisorId for the task this runner is executing.
+   * Backwards compatibility: if task spec from metadata has a null supervisorId field, falls back to dataSource
+  */
+  public String getSupervisorId()
+  {
+    return task.getSupervisorId();
+  }
+
   @VisibleForTesting
   public void setToolbox(TaskToolbox toolbox)
   {
@@ -781,7 +790,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             requestPause();
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
-                task.getDataSource(),
+                getSupervisorId(),
                 ioConfig.getTaskGroupId(),
                 null,
                 createDataSourceMetadata(
@@ -1418,6 +1427,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         .getTaskActionClient()
         .submit(
             new ResetDataSourceMetadataAction(
+                getSupervisorId(),
                 task.getDataSource(),
                 createDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(

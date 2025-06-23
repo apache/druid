@@ -32,14 +32,16 @@ import javax.annotation.Nullable;
 /**
  * Encapsulates the computation logic for a {@link StageDefinition}.
  *
- * Each stage has "outputs", which are output channels created by {@link ExecutionContext#outputChannelFactory()}.
+ * Each stage has a "result", the future returned from {@link #execute(ExecutionContext)}. This is a small object
+ * produced when all work is complete. Most stages have a very simple "result", such as a {@link Long} indicating the
+ * number of rows processed, but some have more complex results. For example, the result of
+ * {@link SegmentGeneratorStageProcessor} is the set of {@link DataSegment} that have been published.
+ *
+ * Each stage also has "outputs", which are output channels created by {@link ExecutionContext#outputChannelFactory()}.
  * For stages that shuffle, i.e. where {@link StageDefinition#doesShuffle()}, the outputs must be partitioned according
  * to the {@link StageDefinition#getShuffleSpec()}. For stages that do not shuffle, the output partitioning must
- * align with the input partitioning.
- *
- * Each stage also has a "result", which is an optional, small object produced when all work is complete. Most stages
- * do not have a "result", but some do. For example, the result of {@link SegmentGeneratorStageProcessor} is the set of
- * {@link DataSegment} that have been published.
+ * align with the input partitioning. Output channels may be ready for reading prior to stage work being complete, i.e.,
+ * prior to the future from {@link #execute(ExecutionContext)} resolving.
  *
  * @see StandardStageProcessor for an implementation that handles the shuffle partionining generically
  */

@@ -678,6 +678,7 @@ public class KafkaSupervisorSpecTest
     // Test valid spec update. This spec changes context vs the sourceSpec
     KafkaSupervisorSpec validDestSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
         null,
         new KafkaSupervisorIOConfig(
@@ -726,6 +727,7 @@ public class KafkaSupervisorSpecTest
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)
   {
     return new KafkaSupervisorSpec(
+      null,
       null,
       DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
       null,

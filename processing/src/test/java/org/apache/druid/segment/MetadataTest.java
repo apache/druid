@@ -66,8 +66,18 @@ public class MetadataTest extends InitializedNullHandlingTest
         null
     );
 
+    // Empty projection is not included in the json object
+    Metadata metadataWithEmptyProjection = new Metadata(
+        Collections.singletonMap("k", "v"),
+        aggregators,
+        null,
+        Granularities.ALL,
+        Boolean.FALSE,
+        null,
+        ImmutableList.of()
+    );
     Metadata other = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(metadata),
+        jsonMapper.writeValueAsString(metadataWithEmptyProjection),
         Metadata.class
     );
 

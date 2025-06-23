@@ -62,6 +62,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -102,6 +103,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   );
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String DATASOURCE = "testDatasource";
+  private static final AggregateProjectionMetadata.Schema PROJECTION_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
+  private static final int PROJECTION_ROWS = 279;
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
@@ -205,7 +208,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                           SegmentMetadataQuery.AnalysisType.SIZE,
                           SegmentMetadataQuery.AnalysisType.INTERVAL,
                           SegmentMetadataQuery.AnalysisType.MINMAX,
-                          SegmentMetadataQuery.AnalysisType.AGGREGATORS
+                          SegmentMetadataQuery.AnalysisType.AGGREGATORS,
+                          SegmentMetadataQuery.AnalysisType.PROJECTIONS
                       )
                       .merge(true)
                       .build();
@@ -221,6 +225,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
+    final Map<String, AggregateProjectionMetadata> expectedProjections = ImmutableMap.of(
+        PROJECTION_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS)
+    );
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
@@ -268,6 +276,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         overallSize,
         1209,
         expectedAggregators,
+        expectedProjections,
         null,
         null,
         null
@@ -318,6 +327,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         overallSize,
         1209,
         expectedAggregators,
+        expectedProjections,
         null,
         null,
         null
@@ -399,6 +409,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         rollup1 != rollup2 ? null : rollup1
     );
 
@@ -473,6 +484,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -544,6 +556,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -691,6 +704,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
+        ImmutableMap.of(
+            PROJECTION_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION_SCHEMA, PROJECTION_ROWS * 2)
+        ),
         null,
         null,
         null
@@ -746,6 +763,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -815,6 +833,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedAggregators,
         null,
         null,
+        null,
         null
     );
 
@@ -881,6 +900,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedAggregators,
         null,
         null,
+        null,
         null
     );
 
@@ -941,6 +961,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         new TimestampSpec("ts", "iso", null),
         null,
@@ -1003,6 +1024,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         Granularities.NONE,

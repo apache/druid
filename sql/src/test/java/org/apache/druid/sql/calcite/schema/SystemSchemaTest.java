@@ -1391,7 +1391,8 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(supervisorTable);
 
     String json = "[{\n"
-                  + "\t\"id\": \"wikipedia\",\n"
+                  + "\t\"id\": \"wikipedia_supervisor\",\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
                   + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
                   + "\t\"healthy\": false,\n"
@@ -1415,16 +1416,17 @@ public class SystemSchemaTest extends CalciteTestBase
     final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
-    Assert.assertEquals("wikipedia", row0[0].toString());
-    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[1].toString());
-    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[2].toString());
-    Assert.assertEquals(0L, row0[3]);
-    Assert.assertEquals("kafka", row0[4].toString());
-    Assert.assertEquals("wikipedia", row0[5].toString());
-    Assert.assertEquals(0L, row0[6]);
+    Assert.assertEquals("wikipedia_supervisor", row0[0].toString());
+    Assert.assertEquals("wikipedia", row0[1].toString());
+    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[2].toString());
+    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[3].toString());
+    Assert.assertEquals(0L, row0[4]);
+    Assert.assertEquals("kafka", row0[5].toString());
+    Assert.assertEquals("wikipedia", row0[6].toString());
+    Assert.assertEquals(0L, row0[7]);
     Assert.assertEquals(
         "{\"type\":\"kafka\",\"dataSchema\":{\"dataSource\":\"wikipedia\"},\"context\":null,\"suspended\":false}",
-        row0[7].toString()
+        row0[8].toString()
     );
 
     // Verify value types.
