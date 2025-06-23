@@ -1914,7 +1914,7 @@ Because each monitor is meant for a specific service or services, make sure you 
 Metric monitoring is an essential part of Druid operations. The following table lists the monitors that are available and which service you should configure the monitor for:
 
 |Name|Description|Service|
-|----|-----------|-|
+|----|-----------|-------|
 |`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|Broker, Historical, Indexer, Peon|
 |`org.apache.druid.java.util.metrics.OshiSysMonitor`||`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|Any|
@@ -1928,8 +1928,8 @@ Metric monitoring is an essential part of Druid operations. The following table 
 |`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| **EXPERIMENTAL** Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|Any|
 |`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| **EXPERIMENTAL** Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|Any|
 |`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| **EXPERIMENTAL** Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|Any|
-|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services. Available only on Historical services.|Historical|
-|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Available only on Historical services. Not to be used when lazy loading is configured.|Historical|
+|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services.|Historical|
+|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Not to be used when lazy loading is configured.|Historical|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|Broker, Historical, Router, Indexer, Peon|
 |`org.apache.druid.server.metrics.SubqueryCountStatsMonitor`|Reports how many subqueries have been materialized as rows or bytes and various other statistics related to the subquery execution|Broker|
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|Any|
