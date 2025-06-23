@@ -943,7 +943,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig, autoScalerConfig);
+    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig);
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
     }
@@ -1010,13 +1010,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public static int calculateWorkerThreads(
       SeekableStreamSupervisorTuningConfig tuningConfig,
-      SeekableStreamSupervisorIOConfig ioConfig,
-      @Nullable AutoScalerConfig autoScalerConfig
+      SeekableStreamSupervisorIOConfig ioConfig
   )
   {
     if (tuningConfig.getWorkerThreads() != null) {
       return tuningConfig.getWorkerThreads();
     }
+    final AutoScalerConfig autoScalerConfig = ioConfig.getAutoScalerConfig();
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       return Math.max(MIN_WORKER_CORE_THREADS, autoScalerConfig.getTaskCountMax() / DEFAULT_TASKS_PER_WORKER_THREAD);
     } else {
