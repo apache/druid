@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -51,7 +50,6 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
@@ -97,8 +95,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
   private final Set<DataSegment> segmentsMarkedToDrop = ConcurrentHashMap.newKeySet();
   private final LoadingRateTracker loadingRateTracker = new LoadingRateTracker();
-
-  private final ConcurrentHashMap<SegmentId, Stopwatch> segmentLoadingTime = new ConcurrentHashMap<>();
 
   /**
    * Segments currently in queue ordered by priority and interval. This includes
@@ -225,7 +221,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           newRequests.add(holder.getChangeRequest());
           holder.markRequestSentToServer();
           activeRequestSegments.add(segment);
-          segmentLoadingTime.computeIfAbsent(segment.getId(), s -> Stopwatch.createStarted());
         }
       }
 
@@ -636,15 +631,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     RowKey rowKey = RowKey.with(Dimension.DATASOURCE, holder.getSegment().getDataSource())
                           .and(Dimension.DESCRIPTION, description);
     stats.get().add(status.datasourceStat, rowKey, 1);
-
-    if (status == RequestStatus.SUCCESS) {
-      final Stopwatch loadingTime = segmentLoadingTime.remove(holder.getSegment().getId());
-      stats.get().add(
-          Stats.SegmentQueue.LOADING_TIME,
-          RowKey.of(Dimension.DESCRIPTION, holder.getSegmentIdentifier()),
-          loadingTime.millisElapsed()
-      );
-    }
   }
 
   private void executeCallbacks(SegmentHolder holder, boolean success)

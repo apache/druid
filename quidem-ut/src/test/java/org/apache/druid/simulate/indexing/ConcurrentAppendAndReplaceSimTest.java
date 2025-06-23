@@ -20,6 +20,7 @@
 package org.apache.druid.simulate.indexing;
 
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.apache.druid.testing.simulate.junit5.IndexingSimulationTestBase;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +29,7 @@ public class ConcurrentAppendAndReplaceSimTest extends IndexingSimulationTestBas
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    return null;
+    return EmbeddedDruidCluster.empty().addServer(new EmbeddedOverlord());
   }
 
   @Test
