@@ -22,8 +22,10 @@ package org.apache.druid.testing.simulate;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
 import java.util.Objects;
@@ -32,7 +34,7 @@ import java.util.Objects;
  * Holds references to various objects used by an {@link EmbeddedDruidServer} in
  * cluster simulations.
  */
-public final class ReferenceHolder implements ReferenceProvider
+public final class ServerReferenceHolder implements ServerReferencesProvider
 {
   @Inject
   private CoordinatorClient coordinator;
@@ -48,6 +50,16 @@ public final class ReferenceHolder implements ReferenceProvider
 
   @Inject(optional = true)
   private IndexerMetadataStorageCoordinator segmentsMetadataStorage;
+
+  @Self
+  @Inject
+  private DruidNode selfNode;
+
+  @Override
+  public DruidNode selfNode()
+  {
+    return selfNode;
+  }
 
   @Override
   public CoordinatorClient leaderCoordinator()
@@ -68,7 +80,7 @@ public final class ReferenceHolder implements ReferenceProvider
   }
 
   @Override
-  public LatchableEmitter emitter()
+  public LatchableEmitter latchableEmitter()
   {
     return Objects.requireNonNull(serviceEmitter, "LatchableEmitter is not bound");
   }

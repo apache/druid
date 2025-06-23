@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * Embedded mode of {@link CliRouter} used in simulation tests.
  * Add this to your {@link EmbeddedDruidCluster} if you want to use the Druid
- * web-console to debug the former.
+ * web-console for debugging.
  */
 public class EmbeddedRouter extends EmbeddedDruidServer
 {

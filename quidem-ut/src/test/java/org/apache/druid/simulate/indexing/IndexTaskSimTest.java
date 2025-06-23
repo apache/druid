@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing;
+package org.apache.druid.simulate.indexing;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -118,7 +118,7 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
     }
 
     // Wait for segments to be queryable
-    broker.emitter().waitForEvent(
+    broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
     Assertions.assertEquals(CSV_DATA_10_DAYS, runSql("SELECT * FROM %s", dataSource));

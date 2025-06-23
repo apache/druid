@@ -96,7 +96,7 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
     // Wait for the broker to discover the realtime segments
-    broker.emitter().waitForEvent(
+    broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
@@ -123,21 +123,6 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
     );
     supervisorStatus = getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
-  }
-
-  private SupervisorStatus getSupervisorStatus(String supervisorId)
-  {
-    final List<SupervisorStatus> supervisors = ImmutableList.copyOf(
-        getResult(cluster.leaderOverlord().supervisorStatuses())
-    );
-    for (SupervisorStatus supervisor : supervisors) {
-      if (supervisor.getId().equals(supervisorId)) {
-        return supervisor;
-      }
-    }
-
-    Assertions.fail("Could not find supervisor for id " + supervisorId);
-    return null;
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)

@@ -41,6 +41,9 @@ import java.util.function.UnaryOperator;
 
 /**
  * Service emitter that can be used to wait for specific events to occur.
+ *
+ * @see #waitForEvent
+ * @see #waitForEventAggregate
  */
 public class LatchableEmitter extends StubServiceEmitter
 {

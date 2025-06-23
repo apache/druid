@@ -275,7 +275,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
     rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
 
-    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
+    // Schedule refresh of min and max message time only if the period is valid
+    // The refreshRejectionPeriodsInMinutes is zero when `taskDuration` < 1 minute,
+    // but this can happen only in simulation tests, never in production
+    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null
+        && ioConfig.getRefreshRejectionPeriodsInMinutes() > 0) {
       rejectionPeriodUpdaterExec.scheduleWithFixedDelay(this::refreshMinMaxMessageTime,
                                                         ioConfig.getRefreshRejectionPeriodsInMinutes(),
                                                         ioConfig.getRefreshRejectionPeriodsInMinutes(),
@@ -2122,11 +2126,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
     maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
 
-    log.info(StringUtils.format(
-        "Updated min and max messsage times to %s and %s respectively.",
+    log.info(
+        "Updated min and max messsage times to [%s] and [%s] respectively.",
         minMessageTime,
         maxMessageTime
-    ));
+    );
   }
 
   public boolean withinMinMaxRecordTime(final InputRow row)

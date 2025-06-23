@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This class and most of its methods are kept package protected as they are used
  * only by the specific server implementations in the same package.
  */
-public abstract class EmbeddedDruidServer implements ReferenceProvider
+public abstract class EmbeddedDruidServer implements ServerReferencesProvider
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = 100_000_000;
@@ -57,7 +58,7 @@ public abstract class EmbeddedDruidServer implements ReferenceProvider
   private final String name;
 
   private final Map<String, String> serverProperties = new HashMap<>();
-  private final ReferenceHolder clientHolder = new ReferenceHolder();
+  private final ServerReferenceHolder clientHolder = new ServerReferenceHolder();
 
   EmbeddedDruidServer()
   {
@@ -156,13 +157,19 @@ public abstract class EmbeddedDruidServer implements ReferenceProvider
   }
 
   /**
-   * Binds the {@link ReferenceHolder} for this server.
+   * Binds the {@link ServerReferenceHolder} for this server.
    * All implementations of {@link EmbeddedDruidServer} must use this binding in
    * {@link ServerRunnable#getModules()}.
    */
   final void bindReferenceHolder(Binder binder)
   {
-    binder.bind(ReferenceHolder.class).toInstance(clientHolder);
+    binder.bind(ServerReferenceHolder.class).toInstance(clientHolder);
+  }
+
+  @Override
+  public DruidNode selfNode()
+  {
+    return clientHolder.selfNode();
   }
 
   @Override
@@ -184,9 +191,9 @@ public abstract class EmbeddedDruidServer implements ReferenceProvider
   }
 
   @Override
-  public LatchableEmitter emitter()
+  public LatchableEmitter latchableEmitter()
   {
-    return clientHolder.emitter();
+    return clientHolder.latchableEmitter();
   }
 
   @Override

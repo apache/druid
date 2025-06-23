@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.indexing;
+package org.apache.druid.simulate.indexing;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -31,13 +30,13 @@ import org.apache.druid.indexing.kafka.simulate.EmbeddedKafkaServer;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.simulate.EmbeddedBroker;
 import org.apache.druid.testing.simulate.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
+import org.apache.druid.testing.simulate.EmbeddedDruidServer;
 import org.apache.druid.testing.simulate.EmbeddedHistorical;
 import org.apache.druid.testing.simulate.EmbeddedIndexer;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
@@ -56,13 +55,14 @@ import java.util.Map;
  * Simulation test to emit cluster metrics using a {@link KafkaEmitter} and then
  * ingest them back into the cluster with a Kafka supervisor.
  */
-public class KafkaIngestSelfClusterMetricsTest extends IndexingSimulationTestBase
+public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
 {
   private static final String TOPIC = IndexingSimulationTestBase.createTestDataourceName();
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private EmbeddedKafkaServer kafkaServer;
 
@@ -91,27 +91,31 @@ public class KafkaIngestSelfClusterMetricsTest extends IndexingSimulationTestBas
       }
     };
 
+    coordinator.addProperty("druid.coordinator.loadqueuepeon.http.batchSize", "100");
+    historical.addProperty("druid.segmentCache.numLoadingThreads", "10");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
+           .addCommonProperty("druid.monitoring.monitors", "[\"org.apache.druid.java.util.metrics.JvmMonitor\"]")
            .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
-           .addServer(new EmbeddedHistorical())
+           .addServer(historical)
            .addServer(new EmbeddedRouter());
 
     return cluster;
   }
 
   @Test
-  public void test_ingest40Segments_with100RowsEach_andVerifyMetricValues()
+  public void test_ingest50kRows_ofSelfClusterMetrics_andVerifyValues()
   {
-    final int maxRowsPerSegment = 100;
+    final int maxRowsPerSegment = 1000;
+    final int expectedSegmentsHandedOff = 50;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
@@ -122,23 +126,9 @@ public class KafkaIngestSelfClusterMetricsTest extends IndexingSimulationTestBas
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
-    // Wait for the broker to discover the realtime segments
-    broker.emitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
-
-    SupervisorStatus supervisorStatus = getSupervisorStatus(supervisorId);
-    Assertions.assertFalse(supervisorStatus.isSuspended());
-    Assertions.assertTrue(supervisorStatus.isHealthy());
-    Assertions.assertEquals(dataSource, supervisorStatus.getDataSource());
-    Assertions.assertEquals("RUNNING", supervisorStatus.getState());
-    Assertions.assertEquals(TOPIC, supervisorStatus.getSource());
-
-    // Wait for some segments to be handed off
-    final int expectedSegmentsHandedOff = 40;
-    final String handoffMetric = "ingest/handoff/count";
-    indexer.emitter().waitForEventAggregate(
-        event -> event.hasMetricName(handoffMetric)
+    // Wait for segments to be handed off
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count")
                       .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
         agg -> agg.hasSum(expectedSegmentsHandedOff)
     );
@@ -154,43 +144,42 @@ public class KafkaIngestSelfClusterMetricsTest extends IndexingSimulationTestBas
     );
     Assertions.assertTrue(numRows >= expectedSegmentsHandedOff * maxRowsPerSegment);
 
-    // Get the value of the handoff metric for this datasource from the datasource itself
-    final double numSegmentsHandedOff = Double.parseDouble(
-        runSql(
-            "SELECT SUM(\"value\") FROM %s WHERE metric = '%s' AND dataSource = '%s'",
-            dataSource, handoffMetric, dataSource
-        )
-    );
-
-    // The latest emitted data might not be queryable yet, so expect a delta
-    Assertions.assertTrue(numSegmentsHandedOff >= expectedSegmentsHandedOff - 10);
+    verifyMetricReportedByServer("segment/assigned/count", coordinator);
+    verifyMetricReportedByServer("jvm/mem/used", broker);
+    verifyMetricReportedByServer("jvm/pool/committed", indexer);
+    verifyMetricReportedByServer("jvm/mem/used", overlord);
 
     // Suspend the supervisor and verify the state
     getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
-    supervisorStatus = getSupervisorStatus(supervisorId);
-    Assertions.assertTrue(supervisorStatus.isSuspended());
+    Assertions.assertTrue(getSupervisorStatus(supervisorId).isSuspended());
   }
 
-  private SupervisorStatus getSupervisorStatus(String supervisorId)
+  /**
+   * SELECTs the total count of the given metric in the {@link #dataSource} and
+   * verifies it against the metrics actually emitted by the server.
+   */
+  private void verifyMetricReportedByServer(String metricName, EmbeddedDruidServer server)
   {
-    final List<SupervisorStatus> supervisors = ImmutableList.copyOf(
-        getResult(cluster.leaderOverlord().supervisorStatuses())
+    // Get the value of the metric from the datasource
+    final int expectedValueForSegmentsAssigned = (int) Double.parseDouble(
+        runSql(
+            "SELECT COUNT(*) FROM %s WHERE metric = '%s' AND host = '%s' AND service = '%s'",
+            dataSource, metricName, server.selfNode().getHostAndPort(), server.selfNode().getServiceName()
+        )
     );
-    for (SupervisorStatus supervisor : supervisors) {
-      if (supervisor.getId().equals(supervisorId)) {
-        return supervisor;
-      }
-    }
 
-    Assertions.fail("Could not find supervisor for id " + supervisorId);
-    return null;
+    // Verify the number of metrics actually emitted from this server
+    server.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName(metricName),
+        agg -> agg.hasCount(expectedValueForSegmentsAssigned)
+    );
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, int maxRowsPerSegment)
   {
-    final Period taskDuration = Period.minutes(1);
+    final Period taskDuration = Period.seconds(5);
     final Period completionTimeout = Period.minutes(2);
     final Period startDelay = Period.millis(10);
     final boolean useEarliestOffset = true;

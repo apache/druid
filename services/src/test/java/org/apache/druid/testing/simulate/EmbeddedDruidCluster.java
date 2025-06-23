@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,7 +45,7 @@ import java.util.stream.Collectors;
  * <ul>
  * <li>One or more {@link EmbeddedDruidServer}.</li>
  * <li>{@link TestFolder} to write segments, task logs, reports, etc.</li>
- * <li>A single {@link EmbeddedZookeeper} server used by all the Druid services.</li>
+ * <li>An optional {@link EmbeddedZookeeper} server used by all the Druid services.</li>
  * <li>An optional in-memory Derby metadata store.</li>
  * <li>Other {@link EmbeddedResource} to be used in the cluster. For example,
  * an {@link InMemoryDerbyResource}.</li>
@@ -68,7 +67,7 @@ import java.util.stream.Collectors;
  * cluster.stop();
  * </pre>
  */
-public class EmbeddedDruidCluster implements ReferenceProvider, EmbeddedResource
+public class EmbeddedDruidCluster implements ClusterReferencesProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
 
@@ -265,18 +264,6 @@ public class EmbeddedDruidCluster implements ReferenceProvider, EmbeddedResource
   public BrokerClient anyBroker()
   {
     return servers.get(0).anyBroker();
-  }
-
-  @Override
-  public LatchableEmitter emitter()
-  {
-    throw new ISE("There is no cluster-level service emitter. Use service specific emitters instead.");
-  }
-
-  @Override
-  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
-  {
-    throw new ISE("Use service specific instance instead.");
   }
 
   private void validateNotStarted()

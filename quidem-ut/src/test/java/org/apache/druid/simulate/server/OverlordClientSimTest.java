@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing;
+package org.apache.druid.simulate.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;

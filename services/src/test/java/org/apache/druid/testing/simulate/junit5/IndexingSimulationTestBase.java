@@ -19,9 +19,12 @@
 
 package org.apache.druid.testing.simulate.junit5;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
@@ -29,6 +32,8 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+
+import java.util.List;
 
 /**
  * Base class for simulation tests related to ingestion and indexing.
@@ -100,6 +105,20 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
         currentStatus.getStatus().getErrorMsg(),
         StringUtils.format("Task[%s] has unexpected error message", taskId)
     );
+  }
+
+  protected SupervisorStatus getSupervisorStatus(String supervisorId)
+  {
+    final List<SupervisorStatus> supervisors = ImmutableList.copyOf(
+        getResult(cluster.leaderOverlord().supervisorStatuses())
+    );
+    for (SupervisorStatus supervisor : supervisors) {
+      if (supervisor.getId().equals(supervisorId)) {
+        return supervisor;
+      }
+    }
+
+    throw new ISE("Could not find supervisor[%s]", supervisorId);
   }
 
   protected static String createTestDataourceName()
