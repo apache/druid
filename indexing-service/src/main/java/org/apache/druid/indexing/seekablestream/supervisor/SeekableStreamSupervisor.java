@@ -973,7 +973,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     this.workerExec = MoreExecutors.listeningDecorator(executor);
     log.info(
-        "Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]",
+        "Created worker pool with [%d] threads for supervisor[%s], dataSource[%s]",
         workerThreads, this.supervisorId, this.dataSource
     );
 

@@ -71,12 +71,10 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -5156,77 +5154,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(differentTaskType);
   }
 
-  @Test
-  public void test_calculateWorkerThreads_shouldHonourWorkerConfig()
-  {
-    final int totalThreads = 5;
-    KafkaSupervisorTuningConfig tuningConfig = getTuningConfig(totalThreads);
-    KafkaSupervisorIOConfig ioConfig = getIOConfig();
-    Assert.assertEquals(totalThreads, SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig));
-  }
-
-  @Test
-  public void test_calculateWorkerThreads_shouldUseDefaultWorkerThreads()
-  {
-    KafkaSupervisorTuningConfig tuningConfig = getTuningConfig();
-    KafkaSupervisorIOConfig ioConfig = getIOConfig();
-    Assert.assertEquals(
-        DEFAULT_WORKER_THREADS,
-        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
-    );
-  }
-
-  @Test
-  public void test_calculateWorkerThreads_shouldUseMinimumWorkerThreadstWithTasks()
-  {
-    KafkaSupervisorTuningConfig tuningConfig = getTuningConfig();
-    KafkaSupervisorIOConfig ioConfig = getIOConfig(7);
-    Assert.assertEquals(
-        DEFAULT_WORKER_THREADS,
-        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
-    );
-  }
-
-  @Test
-  public void test_calculateWorkerThreads_shouldUseFactorOfTaskCount()
-  {
-    KafkaSupervisorTuningConfig tuningConfig = getTuningConfig();
-    KafkaSupervisorIOConfig ioConfig = getIOConfig(18);
-    Assert.assertEquals(
-        4,
-        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
-    );
-  }
-
-  @Test
-  public void test_calculateWorkerThreads_shouldUseAutoScalerConfig()
-  {
-    KafkaSupervisorTuningConfig tuningConfig = getTuningConfig();
-    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        21,
-        null,
-        5,
-        null,
-        null,
-        true,
-        null,
-        null
-    );
-    KafkaSupervisorIOConfig ioConfig = getIOConfig(autoScalerConfig);
-    Assert.assertEquals(
-        5,
-        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
-    );
-  }
-
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     // create topic manually
@@ -5283,97 +5210,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private KafkaSupervisorTuningConfig getTuningConfig()
-  {
-    return getTuningConfig(null);
-  }
-
-  /**
-   * Use this method to create a {@link KafkaSupervisorTuningConfig} with custom thread count.
-   *
-   * @param threadCount the number of threads to use, or null to imitate default settings.
-   */
-  private KafkaSupervisorTuningConfig getTuningConfig(@Nullable Integer threadCount)
-  {
-    return new KafkaSupervisorTuningConfig(
-        null,
-        1000,
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        false,
-        null,
-        threadCount,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        null
-    );
-  }
-
-  private KafkaSupervisorIOConfig getIOConfig()
-  {
-    return getIOConfig(1, null);
-  }
-
-  private KafkaSupervisorIOConfig getIOConfig(int taskCount)
-  {
-    return getIOConfig(taskCount, null);
-  }
-
-  private KafkaSupervisorIOConfig getIOConfig(AutoScalerConfig autoScalerConfig)
-  {
-    return getIOConfig(1, autoScalerConfig);
-  }
-
-  /**
-   * Use this method to create a {@link KafkaSupervisorIOConfig} with custom properties.
-   */
-  private KafkaSupervisorIOConfig getIOConfig(
-      int taskCount,
-      AutoScalerConfig autoScalerConfig
-  )
-  {
-    final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
-    consumerProperties.put("myCustomKey", "myCustomValue");
-    consumerProperties.put("bootstrap.servers", kafkaHost);
-    return new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        1,
-        taskCount,
-        new Period("PT1H"),
-        consumerProperties,
-        autoScalerConfig,
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        false
-    );
-  }
 
   private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,

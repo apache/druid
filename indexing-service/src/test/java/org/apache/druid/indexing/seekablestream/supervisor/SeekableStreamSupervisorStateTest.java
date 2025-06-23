@@ -72,6 +72,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamExceptionEvent;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamState;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -135,6 +136,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID);
   private static final String EXCEPTION_MSG = "I had an exception";
   private static final Map<String, Object> METRIC_TAGS = ImmutableMap.of("k1", "v1", "k2", 20);
+  private static final int DEFAULT_WORKER_THREADS = 2;
 
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
@@ -177,7 +179,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getSupervisorIOConfig()).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
@@ -2563,6 +2565,77 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.verify(executorService, spec);
   }
 
+  @Test
+  public void test_calculateWorkerThreads_shouldHonourWorkerConfig()
+  {
+    final int totalThreads = 5;
+    SeekableStreamSupervisorTuningConfig tuningConfig = getTuningConfigWithWorkerThreads(totalThreads);
+    SeekableStreamSupervisorIOConfig ioConfig = getSupervisorIOConfig(1, null);
+    Assert.assertEquals(totalThreads, SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig));
+  }
+
+  @Test
+  public void test_calculateWorkerThreads_shouldUseDefaultWorkerThreads()
+  {
+    SeekableStreamSupervisorTuningConfig tuningConfig = getTuningConfigWithWorkerThreads();
+    SeekableStreamSupervisorIOConfig ioConfig = getSupervisorIOConfig(1, null);
+    Assert.assertEquals(
+        DEFAULT_WORKER_THREADS,
+        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
+    );
+  }
+
+  @Test
+  public void test_calculateWorkerThreads_shouldUseMinimumWorkerThreadstWithTasks()
+  {
+    SeekableStreamSupervisorTuningConfig tuningConfig = getTuningConfigWithWorkerThreads();
+    SeekableStreamSupervisorIOConfig ioConfig = getSupervisorIOConfig(7, null);
+    Assert.assertEquals(
+        DEFAULT_WORKER_THREADS,
+        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
+    );
+  }
+
+  @Test
+  public void test_calculateWorkerThreads_shouldUseFactorOfTaskCount()
+  {
+    SeekableStreamSupervisorTuningConfig tuningConfig = getTuningConfigWithWorkerThreads();
+    SeekableStreamSupervisorIOConfig ioConfig = getSupervisorIOConfig(18, null);
+    Assert.assertEquals(
+        4,
+        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
+    );
+  }
+
+  @Test
+  public void test_calculateWorkerThreads_shouldUseAutoScalerConfig()
+  {
+    SeekableStreamSupervisorTuningConfig tuningConfig = getTuningConfigWithWorkerThreads();
+    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        21,
+        null,
+        5,
+        null,
+        null,
+        true,
+        null,
+        null
+    );
+    SeekableStreamSupervisorIOConfig ioConfig = getSupervisorIOConfig(1, autoScalerConfig);
+    Assert.assertEquals(
+        5,
+        SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
+    );
+  }
+
   private void expectEmitterSupervisor(boolean suspended)
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
@@ -2630,13 +2703,24 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
                      .build();
   }
 
-  private static SeekableStreamSupervisorIOConfig getIOConfig()
+  private static SeekableStreamSupervisorIOConfig getSupervisorIOConfig()
+  {
+    return getSupervisorIOConfig(1, OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class));
+  }
+
+  /**
+   * Use this method to create a {@link SeekableStreamSupervisorIOConfig} with custom properties.
+   */
+  private static SeekableStreamSupervisorIOConfig getSupervisorIOConfig(
+      int taskCount,
+      @Nullable AutoScalerConfig autoScalerConfig
+  )
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
         new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
         1,
-        1,
+        taskCount,
         new Period("PT1H"),
         new Period("P1D"),
         new Period("PT30S"),
@@ -2644,7 +2728,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         new Period("PT30M"),
         null,
         null,
-        OBJECT_MAPPER.convertValue(getProperties(), AutoScalerConfig.class),
+        autoScalerConfig,
         LagAggregator.DEFAULT,
         null,
         null,
@@ -2676,12 +2760,27 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private static SeekableStreamSupervisorTuningConfig getTuningConfig()
   {
+    return getTuningConfigWithWorkerThreads(1);
+  }
+
+  private static SeekableStreamSupervisorTuningConfig getTuningConfigWithWorkerThreads()
+  {
+    return getTuningConfigWithWorkerThreads(null);
+  }
+
+  /**
+   * Creates a {@link SeekableStreamSupervisorTuningConfig} with the given number of worker threads.
+   *
+   * @param workerThreads the number of threads to use, or null to imitate default settings.
+   */
+  private static SeekableStreamSupervisorTuningConfig getTuningConfigWithWorkerThreads(@Nullable Integer workerThreads)
+  {
     return new SeekableStreamSupervisorTuningConfig()
     {
       @Override
       public Integer getWorkerThreads()
       {
-        return 1;
+        return workerThreads;
       }
 
       @Override
