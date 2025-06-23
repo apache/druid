@@ -356,7 +356,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 
   /**
-   * Emits whether a given query polled the result-level cache and the success of that operation.
+   * Emits if a given query polled the result-level cache and the success of that operation.
    * Sets the dimension iff CacheConfig.isUseResultLevelCache() is true
    */
   QueryMetrics<QueryType> reportResultCachePoll(boolean hit);

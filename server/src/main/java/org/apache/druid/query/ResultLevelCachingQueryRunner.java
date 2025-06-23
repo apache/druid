@@ -108,83 +108,82 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       );
       String newResultSetId = responseContext.getEntityTag();
 
-      final boolean cacheHit = newResultSetId != null && newResultSetId.equals(existingResultSetId);
       if (useResultCache) {
+        final boolean cacheHit = newResultSetId != null && newResultSetId.equals(existingResultSetId);
         final QueryMetrics<?> queryMetrics = queryPlus.withQueryMetrics(queryToolChest).getQueryMetrics();
         queryMetrics.reportResultCachePoll(cacheHit);
         queryMetrics.emit(emitter);
+
+        if (cacheHit) {
+          log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
+          // Call accumulate on the sequence to ensure that all Wrapper/Closer/Baggage/etc. get called
+          resultFromClient.accumulate(null, (accumulated, in) -> accumulated);
+          return deserializeResults(cachedResultSet, strategy, existingResultSetId);
+        }
       }
 
-      if (useResultCache && cacheHit) {
-        log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
-        // Call accumulate on the sequence to ensure that all Wrapper/Closer/Baggage/etc. get called
-        resultFromClient.accumulate(null, (accumulated, in) -> accumulated);
-        return deserializeResults(cachedResultSet, strategy, existingResultSetId);
-      } else {
-        @Nullable
-        ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
-            cacheKey,
-            newResultSetId
-        );
-        if (resultLevelCachePopulator == null) {
-          return resultFromClient;
-        }
-        final Function<T, Object> cacheFn = strategy.prepareForCache(true);
-
-        return Sequences.wrap(
-            Sequences.map(
-                resultFromClient,
-                new Function<>()
-                {
-                  @Override
-                  public T apply(T input)
-                  {
-                    if (resultLevelCachePopulator.isShouldPopulate()) {
-                      resultLevelCachePopulator.cacheResultEntry(input, cacheFn);
-                    }
-                    return input;
-                  }
-                }
-            ),
-            new SequenceWrapper()
-            {
-              @Override
-              public void after(boolean isDone, Throwable thrown)
+      @Nullable
+      ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
+          cacheKey,
+          newResultSetId
+      );
+      if (resultLevelCachePopulator == null) {
+        return resultFromClient;
+      }
+      final Function<T, Object> cacheFn = strategy.prepareForCache(true);
+      return Sequences.wrap(
+          Sequences.map(
+              resultFromClient,
+              new Function<>()
               {
-                Preconditions.checkNotNull(
-                    resultLevelCachePopulator,
-                    "ResultLevelCachePopulator cannot be null during cache population"
-                );
-                try {
-                  if (thrown != null) {
-                    log.error(
-                        thrown,
-                        "Error while preparing for result level caching for query %s with error %s ",
-                        query.getId(),
-                        thrown.getMessage()
-                    );
-                  } else if (resultLevelCachePopulator.isShouldPopulate()) {
-                    // The resultset identifier and its length is cached along with the resultset
-                    resultLevelCachePopulator.populateResults();
-                    log.debug("Cache population complete for query %s", query.getId());
-                  } else { // thrown == null && !resultLevelCachePopulator.isShouldPopulate()
-                    log.error("Failed (gracefully) to prepare result level cache entry for query %s", query.getId());
+                @Override
+                public T apply(T input)
+                {
+                  if (resultLevelCachePopulator.isShouldPopulate()) {
+                    resultLevelCachePopulator.cacheResultEntry(input, cacheFn);
                   }
-                }
-                catch (Exception e) {
-                  log.error(
-                      "Failed to populate result level cache for query %s with error %s",
-                      query.getId(),
-                      e.getMessage()
-                  );
-                }
-                finally {
-                  resultLevelCachePopulator.stopPopulating();
+                  return input;
                 }
               }
+          ),
+          new SequenceWrapper()
+          {
+            @Override
+            public void after(boolean isDone, Throwable thrown)
+            {
+              Preconditions.checkNotNull(
+                  resultLevelCachePopulator,
+                  "ResultLevelCachePopulator cannot be null during cache population"
+              );
+              try {
+                if (thrown != null) {
+                  log.error(
+                      thrown,
+                      "Error while preparing for result level caching for query %s with error %s ",
+                      query.getId(),
+                      thrown.getMessage()
+                  );
+                } else if (resultLevelCachePopulator.isShouldPopulate()) {
+                  // The resultset identifier and its length is cached along with the resultset
+                  resultLevelCachePopulator.populateResults();
+                  log.debug("Cache population complete for query %s", query.getId());
+                } else { // thrown == null && !resultLevelCachePopulator.isShouldPopulate()
+                  log.error("Failed (gracefully) to prepare result level cache entry for query %s", query.getId());
+                }
+              }
+              catch (Exception e) {
+                log.error(
+                    "Failed to populate result level cache for query %s with error %s",
+                    query.getId(),
+                    e.getMessage()
+                );
+              }
+              finally {
+                resultLevelCachePopulator.stopPopulating();
+              }
             }
-        );
-      }
+          }
+      );
     } else {
       return baseRunner.run(
           queryPlus,
