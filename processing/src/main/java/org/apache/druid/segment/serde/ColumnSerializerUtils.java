@@ -20,7 +20,6 @@
 package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import org.apache.druid.guice.BuiltInTypesModule;
