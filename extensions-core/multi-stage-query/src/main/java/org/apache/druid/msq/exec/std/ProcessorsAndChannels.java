@@ -24,8 +24,8 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 
 /**
- * Returned from {@link StandardStageProcessor#makeProcessors}. Includes a processor sequence and a list of
- * output channels.
+ * Accepted by {@link StandardStageRunner#run(ProcessorsAndChannels)}. Includes a processor manager (which generates
+ * processors) and a list of output channels.
  *
  * @param <T> return type of {@link FrameProcessor} from {@link #getProcessorManager()}
  * @param <R> result type of {@link ProcessorManager#result()}

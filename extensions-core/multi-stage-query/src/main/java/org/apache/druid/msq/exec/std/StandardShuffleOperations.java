@@ -81,51 +81,69 @@ public class StandardShuffleOperations
   }
 
   /**
-   * Mixes all output from "arg" into a single channel from the provided output channel factory.
+   * Mixes all output from "inFuture" into a single channel from the provided output channel factory.
+   *
+   * @param inFuture             future that resolves when {@link ResultAndChannels#outputChannels()} are ready to read
+   * @param outputChannelFactory factory for the single mixed output channel
+   *
+   * @return future that resolves when output channels are readable. The inner future
+   * {@link ResultAndChannels#resultFuture()} resolves when mixing is complete. This may be after initial readability
+   * in the case of unbuffered output channels.
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> mix(
-      final ListenableFuture<ResultAndChannels<T>> arg,
+      final ListenableFuture<ResultAndChannels<T>> inFuture,
       final OutputChannelFactory outputChannelFactory
   )
   {
-    return transform(
-        arg,
-        resultAndChannels -> {
+    return transformAsync(
+        inFuture,
+        in -> {
           final OutputChannel outputChannel = outputChannelFactory.openChannel(0);
 
           final FrameChannelMixer mixer =
               new FrameChannelMixer(
-                  resultAndChannels.outputChannels().getAllReadableChannels(),
+                  in.outputChannels().getAllReadableChannels(),
                   outputChannel.getWritableChannel()
               );
 
-          return new ResultAndChannels<>(
+          final ResultAndChannels<Long> retVal = new ResultAndChannels<>(
               executionContext.executor().runFully(
                   executionContext.counters().trackCpu(mixer, CpuCounters.LABEL_MIX),
                   executionContext.cancellationId()
               ),
               OutputChannels.wrap(Collections.singletonList(outputChannel.readOnly()))
           );
+
+          if (outputChannelFactory.isBuffered()) {
+            return FutureUtils.transform(retVal.resultFuture(), ignored -> retVal);
+          } else {
+            return Futures.immediateFuture(retVal);
+          }
         }
     );
   }
 
   /**
-   * If {@link StageDefinition#mustGatherResultKeyStatistics()}, runs {@link KeyStatisticsCollectionProcessor} on "arg",
-   * then calls {@link RunWorkOrderListener#onDoneReadingInput(ClusterByStatisticsSnapshot)} when done.
+   * If {@link StageDefinition#mustGatherResultKeyStatistics()}, runs {@link KeyStatisticsCollectionProcessor} on
+   * the outputs of "inFuture", then calls {@link RunWorkOrderListener#onDoneReadingInput(ClusterByStatisticsSnapshot)}
+   * when done. Otherwise, calls the listener as soon as the {@link ResultAndChannels#resultFuture()} from "inFuture"
+   * is available.
    *
-   * Otherwise, calls the listener as soon as the {@link ResultAndChannels#resultFuture()} from "arg" is available.
+   * @param inFuture future that resolves when {@link ResultAndChannels#outputChannels()} are ready to read
+   *
+   * @return future that resolves when "inFuture" does. The inner future {@link ResultAndChannels#resultFuture()}
+   * resolves when input processing and statistics gathering are both complete.
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> gatherResultKeyStatisticsIfNeeded(
-      final ListenableFuture<ResultAndChannels<T>> arg
+      final ListenableFuture<ResultAndChannels<T>> inFuture
   )
   {
     //noinspection unchecked
     return transform(
-        arg,
-        resultAndChannels -> {
+        inFuture,
+        in -> {
           final StageDefinition stageDefinition = workOrder.getStageDefinition();
-          final OutputChannels channels = resultAndChannels.outputChannels();
+          final OutputChannels channels = in.outputChannels();
 
           if (channels.getAllChannels().isEmpty()) {
             // No data coming out of this stage. Report empty statistics, if the kernel is expecting statistics.
@@ -154,12 +172,12 @@ public class StandardShuffleOperations
           } else {
             // Report "done reading input" when the input future resolves.
             // No need to run any more processors.
-            resultAndChannels.resultFuture().addListener(
+            in.resultFuture().addListener(
                 () -> executionContext.onDoneReadingInput(null),
                 Execs.directExecutor()
             );
             //noinspection unchecked
-            return (ResultAndChannels<Object>) resultAndChannels;
+            return (ResultAndChannels<Object>) in;
           }
         }
     );
@@ -167,19 +185,25 @@ public class StandardShuffleOperations
 
   /**
    * Runs a {@link SuperSorter} using {@link StageDefinition#getSortKey()}.
+   *
+   * @param inFuture             future that resolves when {@link ResultAndChannels#outputChannels()} are ready to read
+   * @param outputChannelFactory factory for partitioned output channels.
+   *
+   * @return future that resolves when sorting is complete. After this future resolves, the inner future
+   * {@link ResultAndChannels#resultFuture()} is immediately resolved.
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> globalSort(
-      final ListenableFuture<ResultAndChannels<T>> arg,
+      final ListenableFuture<ResultAndChannels<T>> inFuture,
       final OutputChannelFactory outputChannelFactory
   )
   {
     return transformAsync(
-        arg,
-        resultAndChannels -> {
+        inFuture,
+        in -> {
           final StageDefinition stageDefinition = workOrder.getStageDefinition();
           final WorkerMemoryParameters memoryParameters = executionContext.frameContext().memoryParameters();
           final SuperSorter sorter = new SuperSorter(
-              resultAndChannels.outputChannels().getAllReadableChannels(),
+              in.outputChannels().getAllReadableChannels(),
               stageDefinition.getFrameReader(),
               stageDefinition.getSortKey(),
               executionContext.globalClusterByPartitions(),
@@ -211,17 +235,23 @@ public class StandardShuffleOperations
   }
 
   /**
-   * Runs a {@link FrameChannelHashPartitioner} using {@link StageDefinition#getSortKey()}. The returned future
-   * resolves when the output channels are ready for reading.
+   * Runs a {@link FrameChannelHashPartitioner} using {@link StageDefinition#getSortKey()}.
+   *
+   * @param inFuture             future that resolves when {@link ResultAndChannels#outputChannels()} are ready to read
+   * @param outputChannelFactory factory for partitioned output channels
+   *
+   * @return future that resolves when partitioned output channels are readable. The inner future
+   * {@link ResultAndChannels#resultFuture()} resolves when partitioning is complete. This may be after initial
+   * readability in the case of unbuffered output channels.
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> hashPartition(
-      final ListenableFuture<ResultAndChannels<T>> arg,
+      final ListenableFuture<ResultAndChannels<T>> inFuture,
       final OutputChannelFactory outputChannelFactory
   )
   {
     return transformAsync(
-        arg,
-        resultAndChannels -> {
+        inFuture,
+        in -> {
           final ShuffleSpec shuffleSpec = workOrder.getStageDefinition().getShuffleSpec();
           final int partitions = shuffleSpec.partitionCount();
 
@@ -232,7 +262,7 @@ public class StandardShuffleOperations
           }
 
           final FrameChannelHashPartitioner partitioner = new FrameChannelHashPartitioner(
-              resultAndChannels.outputChannels().getAllReadableChannels(),
+              in.outputChannels().getAllReadableChannels(),
               outputChannels.stream().map(OutputChannel::getWritableChannel).collect(Collectors.toList()),
               workOrder.getStageDefinition().getFrameReader(),
               workOrder.getStageDefinition().getClusterBy().getColumns().size(),
@@ -263,18 +293,24 @@ public class StandardShuffleOperations
   }
 
   /**
-   * Runs a sequence of {@link SuperSorter}, operating on each output channel from "arg" in order, one at a time.
+   * Runs a sequence of {@link SuperSorter}, operating on each output channel from "inFuture" in order, one at a time.
+   *
+   * @param inFuture             future that resolves when {@link ResultAndChannels#outputChannels()} are ready to read
+   * @param outputChannelFactory factory for partitioned output channels. Must be buffered.
+   *
+   * @return future that resolves when sorting is complete. After this future resolves, the inner future
+   * {@link ResultAndChannels#resultFuture()} is immediately resolved.
    */
   public <T> ListenableFuture<ResultAndChannels<Object>> localSort(
-      final ListenableFuture<ResultAndChannels<T>> arg,
+      final ListenableFuture<ResultAndChannels<T>> inFuture,
       final OutputChannelFactory outputChannelFactory
   )
   {
     return transformAsync(
-        arg,
-        resultAndChannels -> {
+        inFuture,
+        in -> {
           final StageDefinition stageDefinition = workOrder.getStageDefinition();
-          final OutputChannels channels = resultAndChannels.outputChannels();
+          final OutputChannels channels = in.outputChannels();
           final List<ListenableFuture<OutputChannel>> sortedChannelFutures = new ArrayList<>();
 
           ListenableFuture<OutputChannel> nextFuture = Futures.immediateFuture(null);
@@ -375,7 +411,12 @@ public class StandardShuffleOperations
   }
 
   /**
-   * Runs {@link KeyStatisticsCollectionProcessor} on the provided channels.
+   * Runs {@link KeyStatisticsCollectionProcessor} on the provided channels
+   *
+   * @param channels channels to read
+   *
+   * @return result whose {@link ResultAndChannels#resultFuture()} resolves when statistics are gathered, and whose.
+   * {@link ResultAndChannels#outputChannels()} are all unbuffered {@link BlockingQueueFrameChannel}.
    */
   private ResultAndChannels<ClusterByStatisticsCollector> gatherResultKeyStatistics(final OutputChannels channels)
   {

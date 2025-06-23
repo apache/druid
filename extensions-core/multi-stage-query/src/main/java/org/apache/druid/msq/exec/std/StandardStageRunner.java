@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec.std;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
@@ -37,8 +38,8 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
- * Runner for {@link StageProcessor} that want to build a {@link ProcessorsAndChannels} for some shuffle-agnostic
- * work, then have the shuffle work taken care of generically by {@link StandardStageRunner}.
+ * Runner for {@link StageProcessor} that build a {@link ProcessorsAndChannels} for some shuffle-agnostic work.
+ * The shuffle-related work is then taken care of generically in a "standard" way, hence the name.
  *
  * Using this class allows the {@link StageProcessor} implementation to be simpler, since it doesn't need to worry
  * about how to generate channels "properly" for the shuffle. However, it comes at the cost of not being able
@@ -66,6 +67,9 @@ public class StandardStageRunner<T, R>
 
   /**
    * Start execution.
+   *
+   * @param processors processor manager (which generates processors) and output channels. The output channels must be
+   *                   unbuffered, e.g. {@link BlockingQueueFrameChannel}.
    */
   public ListenableFuture<R> run(final ProcessorsAndChannels<T, R> processors)
   {

@@ -20,11 +20,16 @@
 package org.apache.druid.msq.exec.std;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.msq.exec.StageProcessor;
 
 /**
  * Represents the completion of some processing ({@link #resultFuture()}) and the output channels associated
  * with that processing ({@link #outputChannels()}).
+ *
+ * @see StageProcessor class-level javadoc for future discussion of the meaning of "result" and "output channels"
  */
 public class ResultAndChannels<T>
 {
@@ -32,19 +37,30 @@ public class ResultAndChannels<T>
   private final OutputChannels outputChannels;
 
   public ResultAndChannels(
-      ListenableFuture<T> result,
-      OutputChannels outputChannels
+      final ListenableFuture<T> result,
+      final OutputChannels outputChannels
   )
   {
     this.result = result;
     this.outputChannels = outputChannels;
   }
 
+  /**
+   * Future that represents the completion of processing. When this future resolves, the output has been fully
+   * generated and all processing has stopped.
+   */
   public ListenableFuture<T> resultFuture()
   {
     return result;
   }
 
+  /**
+   * Processed outputs. If unbuffered (e.g. {@link BlockingQueueFrameChannel} these are readable prior to
+   * {@link #resultFuture()} resolving. If buffered, these are readable after {@link #resultFuture()} resolves.
+   *
+   * This class does not itself tell you if the output channels are buffered. This can be known by checking
+   * {@link OutputChannelFactory#isBuffered()} on the factory that created them.
+   */
   public OutputChannels outputChannels()
   {
     return outputChannels;

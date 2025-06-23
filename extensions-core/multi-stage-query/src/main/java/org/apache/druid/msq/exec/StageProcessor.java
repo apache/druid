@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.exec.std.StandardStageProcessor;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -40,17 +41,18 @@ import javax.annotation.Nullable;
  * Each stage also has "outputs", which are output channels created by {@link ExecutionContext#outputChannelFactory()}.
  * For stages that shuffle, i.e. where {@link StageDefinition#doesShuffle()}, the outputs must be partitioned according
  * to the {@link StageDefinition#getShuffleSpec()}. For stages that do not shuffle, the output partitioning must
- * align with the input partitioning. Output channels may be ready for reading prior to stage work being complete, i.e.,
- * prior to the future from {@link #execute(ExecutionContext)} resolving.
+ * align with the input partitioning. If output channels are unbuffered (see {@link OutputChannelFactory#isBuffered()}),
+ * they are ready for reading prior to stage work being complete, i.e., prior to the future from
+ * {@link #execute(ExecutionContext)} resolving.
  *
- * @see StandardStageProcessor for an implementation that handles the shuffle partionining generically
+ * @see StandardStageProcessor for an implementation that handles shuffle partitioning generically
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface StageProcessor<R, ExtraInfoType>
 {
   /**
    * Executes work in the executor provided by {@link ExecutionContext#executor()}. Returns immediately. The returned
-   * future should resolve when all work is done and all output has been generated.
+   * future resolves when all work is done and all output has been generated.
    *
    * @return stage result future
    */
