@@ -546,13 +546,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   private getSegmentActions(id: string, datasource: string): BasicAction[] {
+    const { capabilities } = this.props;
     const actions: BasicAction[] = [];
-    actions.push({
-      icon: IconNames.IMPORT,
-      title: 'Drop segment (disable)',
-      intent: Intent.DANGER,
-      onAction: () => this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
-    });
+
+    if (capabilities.hasOverlordAccess()) {
+      actions.push({
+        icon: IconNames.IMPORT,
+        title: 'Drop segment (disable)',
+        intent: Intent.DANGER,
+        onAction: () =>
+          this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
+      });
+    }
+
     return actions;
   }
 
@@ -1017,7 +1023,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               terminateDatasourceId,
             )}/segments/${Api.encodePath(terminateSegmentId)}`,
             {},
@@ -1025,7 +1031,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           return resp.data;
         }}
         confirmButtonText="Drop segment"
-        successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+        successText="Segment drop request acknowledged, next time the overlord runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
         onClose={() => {
