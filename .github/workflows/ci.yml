@@ -82,7 +82,6 @@ jobs:
 
   # this will be running other ITs later; but until that migration happens - run QTest in parallel to other tests
   run-its:
-    needs: test-report
     strategy:
       fail-fast: false
       matrix:
