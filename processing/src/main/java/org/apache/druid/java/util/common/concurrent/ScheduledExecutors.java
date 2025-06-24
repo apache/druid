@@ -26,6 +26,7 @@ import org.joda.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class ScheduledExecutors
@@ -182,5 +183,20 @@ public class ScheduledExecutors
   public static ScheduledExecutorService fixed(int corePoolSize, String nameFormat)
   {
     return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
+  }
+
+  public static ScheduledThreadPoolExecutor fixedWithKeepAliveTime(
+      int corePoolSize,
+      String nameFormat,
+      long keepAliveTime,
+      TimeUnit timeUnit
+  )
+  {
+    ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(
+        corePoolSize,
+        Execs.makeThreadFactory(nameFormat)
+    );
+    scheduledExecutor.setKeepAliveTime(keepAliveTime, timeUnit);
+    return scheduledExecutor;
   }
 }

@@ -87,6 +87,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -965,11 +966,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       );
     }
 
-    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(
+    ScheduledThreadPoolExecutor executor = ScheduledExecutors.fixedWithKeepAliveTime(
         workerThreads,
-        Execs.makeThreadFactory(StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d")
+        StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d",
+        WORKER_THREAD_KEEPALIVE_TIME_SECONDS,
+        TimeUnit.SECONDS
     );
-    executor.setKeepAliveTime(WORKER_THREAD_KEEPALIVE_TIME_SECONDS, TimeUnit.SECONDS);
 
     this.workerExec = MoreExecutors.listeningDecorator(executor);
     log.info(
@@ -1008,6 +1010,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, this.tuningConfig, workerExec);
   }
 
+  /**
+   * Calculates the number of worker threads to use for the supervisor tasks.
+   * <p>
+   * If the tuning config explicitly sets the worker thread count, that value is used.
+   * Otherwise, the value is derived from either the auto-scaler config (if enabled) or the ioConfig task count,
+   * divided by the default number of tasks per worker thread, with a minimum of {@code MIN_WORKER_CORE_THREADS}.
+   *
+   * @param tuningConfig the tuning configuration
+   * @param ioConfig the IO configuration
+   * @return the number of worker threads for executor
+   */
   public static int calculateWorkerThreads(
       SeekableStreamSupervisorTuningConfig tuningConfig,
       SeekableStreamSupervisorIOConfig ioConfig
