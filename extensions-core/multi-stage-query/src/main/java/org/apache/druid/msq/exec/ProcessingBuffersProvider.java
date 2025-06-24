@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.QueryDefinition;
 
 /**
@@ -37,7 +36,7 @@ public interface ProcessingBuffersProvider
   /**
    * Acquire buffers for a {@link Worker}, using a pool size equal to the minimum of
    * {@link WorkerContext#maxConcurrentStages()} and the number of stages in the query where
-   * {@link FrameProcessorFactory#usesProcessingBuffers()}. (These are both caps on the number of concurrent
+   * {@link StageProcessor#usesProcessingBuffers()}. (These are both caps on the number of concurrent
    * stages that will need processing buffers at once.)
    */
   default ResourceHolder<ProcessingBuffersSet> acquire(
@@ -49,7 +48,7 @@ public interface ProcessingBuffersProvider
         maxConcurrentStages,
         (int) queryDef.getStageDefinitions()
                       .stream()
-                      .filter(stageDef -> stageDef.getProcessorFactory().usesProcessingBuffers())
+                      .filter(stageDef -> stageDef.getProcessor().usesProcessingBuffers())
                       .count()
     );
 

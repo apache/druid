@@ -29,9 +29,9 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -192,7 +192,7 @@ public class MockQueryDefinitionBuilder
         StageDefinition.builder(stageNumber)
                        .inputs(inputSpecs)
                        .broadcastInputs(broadcastInputNumbers)
-                       .processorFactory(Mockito.mock(FrameProcessorFactory.class))
+                       .processor(Mockito.mock(StageProcessor.class))
                        .shuffleSpec(shuffleSpec)
                        .signature(RowSignature.builder().add(SHUFFLE_KEY_COLUMN, ColumnType.STRING).build())
                        .maxWorkerCount(maxWorkers)

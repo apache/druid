@@ -42,15 +42,15 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -66,7 +66,7 @@ import java.util.function.Consumer;
  * Factory for {@link SortMergeJoinFrameProcessor}, which does a sort-merge join of two inputs.
  */
 @JsonTypeName("sortMergeJoin")
-public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactory
+public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
 {
   private static final int LEFT = 0;
   private static final int RIGHT = 1;
@@ -75,7 +75,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
   private final JoinConditionAnalysis condition;
   private final JoinType joinType;
 
-  public SortMergeJoinFrameProcessorFactory(
+  public SortMergeJoinStageProcessor(
       final String rightPrefix,
       final JoinConditionAnalysis condition,
       final JoinType joinType
@@ -87,14 +87,14 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
   }
 
   @JsonCreator
-  public static SortMergeJoinFrameProcessorFactory create(
+  public static SortMergeJoinStageProcessor create(
       @JsonProperty("rightPrefix") String rightPrefix,
       @JsonProperty("condition") String condition,
       @JsonProperty("joinType") JoinType joinType,
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    return new SortMergeJoinFrameProcessorFactory(
+    return new SortMergeJoinStageProcessor(
         StringUtils.nullToEmptyNonDruidDataString(rightPrefix),
         JoinConditionAnalysis.forExpression(
             Preconditions.checkNotNull(condition, "condition"),

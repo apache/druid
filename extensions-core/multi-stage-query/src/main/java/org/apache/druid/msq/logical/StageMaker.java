@@ -20,6 +20,7 @@
 package org.apache.druid.msq.logical;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -28,8 +29,7 @@ import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.logical.stages.AbstractFrameProcessorStage;
 import org.apache.druid.msq.logical.stages.AbstractShuffleStage;
 import org.apache.druid.msq.logical.stages.LogicalStage;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
-import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
+import org.apache.druid.msq.querykit.scan.ScanQueryStageProcessor;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
@@ -59,12 +59,12 @@ public class StageMaker
     this.plannerContext = plannerContext;
   }
 
-  public static ScanQueryFrameProcessorFactory makeScanFrameProcessor(
+  public static ScanQueryStageProcessor makeScanStageProcessor(
       VirtualColumns virtualColumns,
       RowSignature signature,
       DimFilter dimFilter)
   {
-    return ScanQueryFrameProcessorFactory.makeScanFrameProcessorFactory(virtualColumns, signature, dimFilter);
+    return ScanQueryStageProcessor.makeScanStageProcessor(virtualColumns, signature, dimFilter);
   }
 
   public StageDefinitionBuilder buildStage(LogicalStage stage)
@@ -95,11 +95,11 @@ public class StageMaker
     for (LogicalInputSpec dagInputSpec : inputs) {
       inputSpecs.add(dagInputSpec.toInputSpec(this));
     }
-    BaseFrameProcessorFactory frameProcessor = frameProcessorStage.buildFrameProcessor(this);
+    StageProcessor<?, ?> stageProcessor = frameProcessorStage.buildStageProcessor(this);
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
     sdb.inputs(inputSpecs);
     sdb.signature(frameProcessorStage.getLogicalRowSignature());
-    sdb.processorFactory(frameProcessor);
+    sdb.processor(stageProcessor);
     sdb.shuffleSpec(MixShuffleSpec.instance());
     return sdb;
   }
@@ -114,7 +114,7 @@ public class StageMaker
     StageDefinitionBuilder sdb = newStageDefinitionBuilder();
     sdb.inputs(inputSpecs);
     sdb.signature(stage.getRowSignature());
-    sdb.processorFactory(makeScanFrameProcessor(VirtualColumns.EMPTY, stage.getRowSignature(), null));
+    sdb.processor(makeScanStageProcessor(VirtualColumns.EMPTY, stage.getRowSignature(), null));
     sdb.shuffleSpec(stage.buildShuffleSpec());
     return sdb;
   }
