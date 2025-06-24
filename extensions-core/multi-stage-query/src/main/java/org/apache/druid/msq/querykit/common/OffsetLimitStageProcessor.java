@@ -34,14 +34,14 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -52,7 +52,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @JsonTypeName("limit")
-public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
+public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
 {
   private final long offset;
 
@@ -60,7 +60,7 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
   private final Long limit;
 
   @JsonCreator
-  public OffsetLimitFrameProcessorFactory(
+  public OffsetLimitStageProcessor(
       @JsonProperty("offset") final long offset,
       @Nullable @JsonProperty("limit") final Long limit
   )
@@ -155,7 +155,7 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    OffsetLimitFrameProcessorFactory that = (OffsetLimitFrameProcessorFactory) o;
+    OffsetLimitStageProcessor that = (OffsetLimitStageProcessor) o;
     return offset == that.offset && Objects.equals(limit, that.limit);
   }
 

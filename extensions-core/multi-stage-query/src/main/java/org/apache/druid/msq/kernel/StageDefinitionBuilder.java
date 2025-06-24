@@ -21,6 +21,7 @@ package org.apache.druid.msq.kernel;
 
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -37,7 +38,7 @@ public class StageDefinitionBuilder
   private final List<InputSpec> inputSpecs = new ArrayList<>();
   private final IntSet broadcastInputNumbers = new IntRBTreeSet();
   @SuppressWarnings("rawtypes")
-  private FrameProcessorFactory processorFactory;
+  private StageProcessor processor;
   private RowSignature signature = RowSignature.empty();
   private int maxWorkerCount = 1;
   private ShuffleSpec shuffleSpec = null;
@@ -56,7 +57,7 @@ public class StageDefinitionBuilder
     this.stageNumber = other.stageNumber;
     inputs(other.inputSpecs);
     broadcastInputs(other.broadcastInputNumbers);
-    processorFactory(other.processorFactory);
+    processor(other.processor);
     signature(other.signature);
     maxWorkerCount(other.maxWorkerCount);
     shuffleSpec(other.shuffleSpec);
@@ -87,9 +88,9 @@ public class StageDefinitionBuilder
   }
 
   @SuppressWarnings("rawtypes")
-  public StageDefinitionBuilder processorFactory(final FrameProcessorFactory processorFactory)
+  public StageDefinitionBuilder processor(final StageProcessor processor)
   {
-    this.processorFactory = processorFactory;
+    this.processor = processor;
     return this;
   }
 
@@ -133,7 +134,7 @@ public class StageDefinitionBuilder
         new StageId(queryId, stageNumber),
         inputSpecs,
         broadcastInputNumbers,
-        processorFactory,
+        processor,
         signature,
         shuffleSpec,
         maxWorkerCount,

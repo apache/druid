@@ -17,17 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.msq.kernel;
+package org.apache.druid.msq.exec.std;
 
+import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 
 /**
- * Returned from {@link FrameProcessorFactory#makeProcessors}.
+ * Accepted by {@link StandardStageRunner#run(ProcessorsAndChannels)}. Includes a processor manager (which generates
+ * processors) and a list of output channels.
  *
- * Includes a processor sequence and a list of output channels.
- *
- * @param <T> return type of {@link org.apache.druid.frame.processor.FrameProcessor} from {@link #getProcessorManager()}
+ * @param <T> return type of {@link FrameProcessor} from {@link #getProcessorManager()}
  * @param <R> result type of {@link ProcessorManager#result()}
  */
 public class ProcessorsAndChannels<T, R>

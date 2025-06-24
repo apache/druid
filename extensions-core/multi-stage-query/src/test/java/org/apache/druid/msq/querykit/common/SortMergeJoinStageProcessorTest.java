@@ -27,37 +27,37 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SortMergeJoinFrameProcessorFactoryTest
+public class SortMergeJoinStageProcessorTest
 {
   @Test
   public void test_validateCondition()
   {
     Assert.assertNotNull(
-        SortMergeJoinFrameProcessorFactory.validateCondition(
+        SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("1", "j.", ExprMacroTable.nil())
         )
     );
 
     Assert.assertNotNull(
-        SortMergeJoinFrameProcessorFactory.validateCondition(
+        SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("x == \"j.y\"", "j.", ExprMacroTable.nil())
         )
     );
 
     Assert.assertNotNull(
-        SortMergeJoinFrameProcessorFactory.validateCondition(
+        SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("1", "j.", ExprMacroTable.nil())
         )
     );
 
     Assert.assertNotNull(
-        SortMergeJoinFrameProcessorFactory.validateCondition(
+        SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("x == \"j.y\" && a == \"j.b\"", "j.", ExprMacroTable.nil())
         )
     );
 
     Assert.assertNotNull(
-        SortMergeJoinFrameProcessorFactory.validateCondition(
+        SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression(
                 "notdistinctfrom(x, \"j.y\") && a == \"j.b\"",
                 "j.",
@@ -68,14 +68,14 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> SortMergeJoinFrameProcessorFactory.validateCondition(
+        () -> SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("x == y", "j.", ExprMacroTable.nil())
         )
     );
 
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> SortMergeJoinFrameProcessorFactory.validateCondition(
+        () -> SortMergeJoinStageProcessor.validateCondition(
             JoinConditionAnalysis.forExpression("x + 1 == \"j.y\"", "j.", ExprMacroTable.nil())
         )
     );
@@ -89,7 +89,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("y", KeyOrder.ASCENDING))
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\"",
                 "j.",
@@ -103,7 +103,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(),
             ImmutableList.of()
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "1",
                 "j.",
@@ -117,7 +117,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("a", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("y", KeyOrder.ASCENDING), new KeyColumn("b", KeyOrder.ASCENDING))
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\" && a == \"j.b\"",
                 "j.",
@@ -131,7 +131,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("a", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("y", KeyOrder.ASCENDING), new KeyColumn("b", KeyOrder.ASCENDING))
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\" && notdistinctfrom(a, \"j.b\")",
                 "j.",
@@ -145,7 +145,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("a", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("y", KeyOrder.ASCENDING), new KeyColumn("b", KeyOrder.ASCENDING))
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "notdistinctfrom(x, \"j.y\") && a == \"j.b\"",
                 "j.",
@@ -159,7 +159,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
             ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING), new KeyColumn("a", KeyOrder.ASCENDING)),
             ImmutableList.of(new KeyColumn("y", KeyOrder.ASCENDING), new KeyColumn("b", KeyOrder.ASCENDING))
         ),
-        SortMergeJoinFrameProcessorFactory.toKeyColumns(
+        SortMergeJoinStageProcessor.toKeyColumns(
             JoinConditionAnalysis.forExpression(
                 "notdistinctfrom(x, \"j.y\") && notdistinctfrom(a, \"j.b\")",
                 "j.",
@@ -174,7 +174,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
   {
     Assert.assertArrayEquals(
         new int[0],
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "1",
                 "j.",
@@ -185,7 +185,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertArrayEquals(
         new int[]{0},
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\"",
                 "j.",
@@ -196,7 +196,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertArrayEquals(
         new int[]{0, 1},
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\" && a == \"j.b\"",
                 "j.",
@@ -207,7 +207,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertArrayEquals(
         new int[]{0},
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "x == \"j.y\" && notdistinctfrom(a, \"j.b\")",
                 "j.",
@@ -218,7 +218,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertArrayEquals(
         new int[]{1},
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "notdistinctfrom(x, \"j.y\") && a == \"j.b\"",
                 "j.",
@@ -229,7 +229,7 @@ public class SortMergeJoinFrameProcessorFactoryTest
 
     Assert.assertArrayEquals(
         new int[0],
-        SortMergeJoinFrameProcessorFactory.toRequiredNonNullKeyParts(
+        SortMergeJoinStageProcessor.toRequiredNonNullKeyParts(
             JoinConditionAnalysis.forExpression(
                 "notdistinctfrom(x, \"j.y\") && notdistinctfrom(a, \"j.b\")",
                 "j.",

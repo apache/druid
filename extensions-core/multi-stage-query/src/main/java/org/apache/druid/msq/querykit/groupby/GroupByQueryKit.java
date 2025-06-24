@@ -38,7 +38,7 @@ import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
-import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -164,7 +164,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
                        .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
-                       .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
+                       .processor(new GroupByPreShuffleStageProcessor(queryToRun))
     );
 
     ClusterBy resultClusterBy = computeResultClusterBy(
@@ -189,7 +189,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
                            : null
                        )
-                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+                       .processor(new GroupByPostShuffleStageProcessor(queryToRun))
     );
 
     if (doLimitOrOffset) {
@@ -201,8 +201,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          .signature(resultSignature)
                          .maxWorkerCount(1)
                          .shuffleSpec(finalShuffleSpec)
-                         .processorFactory(
-                             new OffsetLimitFrameProcessorFactory(
+                         .processor(
+                             new OffsetLimitStageProcessor(
                                  limitSpec.getOffset(),
                                  limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
                              )
