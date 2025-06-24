@@ -395,7 +395,7 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
-    MSQMetricUtils.populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+    MSQMetricUtils.populateDatasourcesAndInterval(workOrder.getQueryDefinition(), datasources, intervals);
     final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(

@@ -565,9 +565,7 @@ public class ControllerImpl implements Controller
     final Set<String> datasources = new HashSet<>();
     final Set<Interval> intervals = new HashSet<>();
     if (queryDef != null) {
-      for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
-        MSQMetricUtils.populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
-      }
+      MSQMetricUtils.populateDatasourcesAndInterval(queryDef, datasources, intervals);
     }
 
     long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));

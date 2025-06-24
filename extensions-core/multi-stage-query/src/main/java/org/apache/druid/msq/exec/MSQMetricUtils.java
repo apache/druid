@@ -25,6 +25,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
@@ -73,6 +74,17 @@ public class MSQMetricUtils
     setQueryIdDimensions(metricBuilder, queryContext);
     IndexTaskUtils.setTaskDimensions(metricBuilder, task); // Setup common non-MSQ task dimensions
     metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
+  }
+
+  public static void populateDatasourcesAndInterval(
+      final QueryDefinition queryDefinition,
+      final Set<String> datasources,
+      final Set<Interval> intervals
+  )
+  {
+    for (StageDefinition stageDefinition : queryDefinition.getStageDefinitions()) {
+      populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+    }
   }
 
   /**
