@@ -23,10 +23,25 @@
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
     </Console>
+
+    <Routing name="IndexerTaskLogAppender">
+      <Routes pattern="$${ctx:task.log.id}">
+        <!-- Task logs on CliIndexer should go to dedicated file -->
+        <Route>
+          <File name="task-${ctx:task.log.id}" fileName="${ctx:task.log.file}">
+            <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
+          </File>
+        </Route>
+
+        <!-- By default, logs are routed to the Console appender -->
+        <Route key="$${ctx:task.log.id}" ref="Console"/>
+      </Routes>
+    </Routing>
+
   </Appenders>
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="Console"/>
+      <AppenderRef ref="IndexerTaskLogAppender"/>
     </Root>
     <Logger level="info" name="org.apache.druid.frame" additivity="false">
       <AppenderRef ref="Console"/>
