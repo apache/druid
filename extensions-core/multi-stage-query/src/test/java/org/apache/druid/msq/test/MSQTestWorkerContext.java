@@ -28,13 +28,13 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -55,6 +55,8 @@ import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
+
   private final String workerId;
   private final Controller controller;
   private final ObjectMapper mapper;
@@ -263,7 +265,7 @@ public class MSQTestWorkerContext implements WorkerContext
     public ProcessingBuffers processingBuffers()
     {
       return new ProcessingBuffers(
-          new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000)),
+          BUFFER_POOL,
           new Bouncer(1)
       );
     }

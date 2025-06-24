@@ -23,11 +23,12 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.QueueNonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
@@ -52,17 +53,15 @@ public class DartProcessingBuffersProvider implements ProcessingBuffersProvider
   }
 
   @Override
-  public ResourceHolder<ProcessingBuffersSet> acquire(final int poolSize)
+  public ResourceHolder<ProcessingBuffersSet> acquire(final int poolSize, final long timeoutMillis)
   {
     if (poolSize == 0) {
       return new ReferenceCountingResourceHolder<>(ProcessingBuffersSet.EMPTY, () -> {});
     }
 
-    final List<ReferenceCountingResourceHolder<ByteBuffer>> batch = mergeBufferPool.takeBatch(1, 0);
+    final List<ReferenceCountingResourceHolder<ByteBuffer>> batch = mergeBufferPool.takeBatch(1, timeoutMillis);
     if (batch.isEmpty()) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build("No merge buffers available, cannot execute query");
+      throw new MSQException(CanceledFault.timeout());
     }
 
     final ReferenceCountingResourceHolder<ByteBuffer> bufferHolder = batch.get(0);

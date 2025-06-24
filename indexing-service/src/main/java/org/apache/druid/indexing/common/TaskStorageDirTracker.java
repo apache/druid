@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
@@ -45,6 +46,9 @@ import java.util.stream.Collectors;
 public class TaskStorageDirTracker
 {
   private static final Logger log = new Logger(TaskStorageDirTracker.class);
+
+  @GuardedBy("this")
+  private long numUsedSlots = 0;
 
   public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
   {
@@ -144,6 +148,7 @@ public class TaskStorageDirTracker
       final int currIncrement = Math.abs(iterationCounter.getAndIncrement() % slots.length);
       final StorageSlot candidateSlot = slots[currIncrement % slots.length];
       if (candidateSlot.runningTaskId == null) {
+        ++numUsedSlots;
         candidateSlot.runningTaskId = taskId;
         return candidateSlot;
       }
@@ -155,6 +160,7 @@ public class TaskStorageDirTracker
   {
     if (slot.getParentRef() == this) {
       slot.runningTaskId = null;
+      --numUsedSlots;
     } else {
       throw new IAE("Cannot return storage slot for task [%s] that I don't own.", slot.runningTaskId);
     }
@@ -178,6 +184,7 @@ public class TaskStorageDirTracker
     // correct in-memory accounting for anything that is currently running in a known slot.  After that, for
     // compatibility with an old implementation, we need to check the base directories to see if any of
     // the tasks are running in the legacy locations and assign them to one of the free task slots.
+    numUsedSlots = 0;
     for (String taskId : taskIds) {
       StorageSlot candidateSlot = Arrays.stream(slots)
                                         .filter(slot -> slot.runningTaskId == null)
@@ -188,6 +195,7 @@ public class TaskStorageDirTracker
       if (candidateSlot == null) {
         missingIds.add(taskId);
       } else {
+        ++numUsedSlots;
         candidateSlot.runningTaskId = taskId;
         retVal.put(taskId, candidateSlot);
       }
@@ -258,5 +266,14 @@ public class TaskStorageDirTracker
              ", runningTaskId='" + runningTaskId + '\'' +
              '}';
     }
+  }
+
+  /**
+   * Retrieves the number of currently used storage slots.
+   * @return the number of storage slots currently in use.
+   */
+  public synchronized long getNumUsedSlots()
+  {
+    return numUsedSlots;
   }
 }

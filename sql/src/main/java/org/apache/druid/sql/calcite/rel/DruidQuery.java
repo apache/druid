@@ -631,7 +631,30 @@ public class DruidQuery
     final OffsetLimit offsetLimit = OffsetLimit.fromSort(sort);
 
     // Extract orderBy column specs.
-    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getSortExps().size());
+    final List<OrderByColumnSpec> orderBys = buildOrderByColumnSpecs(rowSignature, sort);
+
+    // Extract any post-sort Projection.
+    final Projection projection;
+
+    if (sortProject == null) {
+      projection = null;
+    } else if (partialQuery.getAggregate() == null) {
+      if (virtualColumnRegistry == null) {
+        throw new ISE("Must provide 'virtualColumnRegistry' for pre-aggregation Projection!");
+      }
+
+      projection = Projection.preAggregation(sortProject, plannerContext, rowSignature, virtualColumnRegistry);
+    } else {
+      projection = Projection.postAggregation(sortProject, plannerContext, rowSignature, "s");
+    }
+
+    return Sorting.create(orderBys, offsetLimit, projection);
+  }
+
+  public static List<OrderByColumnSpec> buildOrderByColumnSpecs(final RowSignature rowSignature, final Sort sort)
+  {
+    final List<OrderByColumnSpec> orderBys;
+    orderBys = new ArrayList<>(sort.getSortExps().size());
     for (int sortKey = 0; sortKey < sort.getSortExps().size(); sortKey++) {
       final RexNode sortExpression = sort.getSortExps().get(sortKey);
       final RelFieldCollation collation = sort.getCollation().getFieldCollations().get(sortKey);
@@ -657,23 +680,7 @@ public class DruidQuery
         throw new CannotBuildQueryException(sort, sortExpression);
       }
     }
-
-    // Extract any post-sort Projection.
-    final Projection projection;
-
-    if (sortProject == null) {
-      projection = null;
-    } else if (partialQuery.getAggregate() == null) {
-      if (virtualColumnRegistry == null) {
-        throw new ISE("Must provide 'virtualColumnRegistry' for pre-aggregation Projection!");
-      }
-
-      projection = Projection.preAggregation(sortProject, plannerContext, rowSignature, virtualColumnRegistry);
-    } else {
-      projection = Projection.postAggregation(sortProject, plannerContext, rowSignature, "s");
-    }
-
-    return Sorting.create(orderBys, offsetLimit, projection);
+    return orderBys;
   }
 
   /**
@@ -1288,7 +1295,11 @@ public class DruidQuery
     final TopNMetricSpec topNMetricSpec;
 
     if (limitColumn.getDimension().equals(dimensionSpec.getOutputName())) {
-      // DimensionTopNMetricSpec is exact; always return it even if allowApproximate is false.
+      // ORDER BY dimension. Gives exact results, so no need to check useApproximateTopN.
+      // However, we only go down this path if useLexicographicTopN is true.
+      if (!plannerContext.getPlannerConfig().isUseLexicographicTopN()) {
+        return null;
+      }
       final DimensionTopNMetricSpec baseMetricSpec = new DimensionTopNMetricSpec(
           null,
           limitColumn.getDimensionComparator()

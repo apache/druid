@@ -77,12 +77,12 @@ import java.util.List;
  *
  * 1) Two inputs, both of which are stages; i.e. {@link ReadableInput#hasChannel()}.
  *
- * 2) Conditions are all simple equalities. Validated by {@link SortMergeJoinFrameProcessorFactory#validateCondition}
- * and then transformed to lists of key columns by {@link SortMergeJoinFrameProcessorFactory#toKeyColumns}.
+ * 2) Conditions are all simple equalities. Validated by {@link SortMergeJoinStageProcessor#validateCondition}
+ * and then transformed to lists of key columns by {@link SortMergeJoinStageProcessor#toKeyColumns}.
  *
  * 3) Both inputs are comprised of {@link org.apache.druid.frame.FrameType#ROW_BASED} frames, are sorted by the same
  * key, and that key can be used to check the provided condition. Validated by
- * {@link SortMergeJoinFrameProcessorFactory#validateInputFrameSignatures}.
+ * {@link SortMergeJoinStageProcessor#validateInputFrameSignatures}.
  *
  * Algorithm:
  *

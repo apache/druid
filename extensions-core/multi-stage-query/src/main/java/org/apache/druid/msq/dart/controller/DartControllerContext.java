@@ -34,6 +34,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
@@ -77,12 +78,15 @@ public class DartControllerContext implements ControllerContext
    */
   public static final int DEFAULT_MAX_NON_LEAF_WORKER_COUNT = 1;
 
+  public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.REALTIME;
+
   private final Injector injector;
   private final ObjectMapper jsonMapper;
   private final DruidNode selfNode;
   private final DartWorkerClient workerClient;
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
+  private final QueryContext context;
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
@@ -93,7 +97,8 @@ public class DartControllerContext implements ControllerContext
       final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final QueryContext context
   )
   {
     this.injector = injector;
@@ -102,6 +107,7 @@ public class DartControllerContext implements ControllerContext
     this.workerClient = workerClient;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
+    this.context = context;
     this.metricBuilder = new ServiceMetricEvent.Builder();
     this.emitter = emitter;
   }
@@ -180,7 +186,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
   {
-    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView);
+    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView, context);
   }
 
   @Override

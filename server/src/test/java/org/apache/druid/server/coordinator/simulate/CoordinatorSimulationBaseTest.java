@@ -127,6 +127,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   }
 
   @Override
+  public void loadQueuedSegmentsSkipCallbacks()
+  {
+    sim.cluster().loadQueuedSegmentsSkipCallbacks();
+  }
+
+  @Override
   public void removeServer(DruidServer server)
   {
     sim.cluster().removeServer(server);

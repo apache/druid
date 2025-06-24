@@ -713,29 +713,22 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
-  }
-
-  public long getTotalTaskSlotCountLong()
-  {
-    return workerConfig.getCapacity();
+    return Map.of(workerConfig.getCategory(), getWorkerTotalTaskSlotCount());
   }
 
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
+    return Map.of(
+        workerConfig.getCategory(),
+        Math.max(getWorkerTotalTaskSlotCount() - getWorkerUsedTaskSlotCount(), 0)
+    );
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
-  }
-
-  public long getUsedTaskSlotCountLong()
-  {
-    return portFinder.findUsedPortCount();
+    return Map.of(workerConfig.getCategory(), getWorkerUsedTaskSlotCount());
   }
 
   @Override
@@ -762,19 +755,19 @@ public class ForkingTaskRunner
   @Override
   public Long getWorkerIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+    return Math.max(getWorkerTotalTaskSlotCount() - getWorkerUsedTaskSlotCount(), 0);
   }
 
   @Override
   public Long getWorkerUsedTaskSlotCount()
   {
-    return (long) portFinder.findUsedPortCount();
+    return getTracker().getNumUsedSlots();
   }
 
   @Override
   public Long getWorkerTotalTaskSlotCount()
   {
-    return getTotalTaskSlotCountLong();
+    return (long) workerConfig.getCapacity();
   }
 
   @Override

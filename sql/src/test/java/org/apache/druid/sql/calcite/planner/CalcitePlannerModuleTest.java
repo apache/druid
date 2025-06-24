@@ -41,8 +41,10 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -183,10 +185,12 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     ObjectMapper mapper = new DefaultObjectMapper();
     PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
 
+    final String sql = "SELECT 1";
     PlannerContext context = PlannerContext.create(
         toolbox,
-        "SELECT 1",
-        new NativeSqlEngine(queryLifecycleFactory, mapper),
+        sql,
+        DruidSqlParser.parse(sql, false).getMainStatement(),
+        new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
         Collections.emptyMap(),
         null
     );
@@ -203,18 +207,21 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     ObjectMapper mapper = new DefaultObjectMapper();
     PlannerToolbox toolbox = injector.getInstance(PlannerFactory.class);
 
+    final String sql = "SELECT 1";
     PlannerContext contextWithBloat = PlannerContext.create(
             toolbox,
-            "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper),
+            sql,
+            DruidSqlParser.parse(sql, false).getMainStatement(),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
     );
 
     PlannerContext contextWithoutBloat = PlannerContext.create(
             toolbox,
-            "SELECT 1",
-            new NativeSqlEngine(queryLifecycleFactory, mapper),
+            sql,
+            DruidSqlParser.parse(sql, false).getMainStatement(),
+            new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             Collections.emptyMap(),
             null
     );

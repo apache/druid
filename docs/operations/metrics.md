@@ -225,11 +225,11 @@ These metrics apply to the [Kafka indexing service](../ingestion/kafka-ingestion
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
-|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
-|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
-|`ingest/kafka/partitionLag`|Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `partition`, `tags`|Greater than 0, should not be a very high number. |
-|`ingest/kafka/updateOffsets/time`|Total time (in milliseconds) taken to fetch the latest offsets from Kafka stream and the ingestion tasks.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Generally a few seconds at most.|
+|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
+|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
+|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, should not be a very high number. |
+|`ingest/kafka/partitionLag`|Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `partition`, `tags`|Greater than 0, should not be a very high number. |
+|`ingest/kafka/fetchOffsets/time`|Total time (in milliseconds) taken to fetch and update the latest offsets from Kafka stream and the ingestion tasks.|`supervisorId`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Generally a few seconds at most.|
 |`ingest/kafka/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
 |`ingest/kafka/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
 |`ingest/kafka/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
@@ -240,11 +240,11 @@ These metrics apply to the [Kinesis indexing service](../ingestion/kinesis-inges
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
-|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
-|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
-|`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis. Minimum emission period for this metric is a minute.|`dataSource`, `stream`, `partition`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
-|`ingest/kinesis/updateOffsets/time`|Total time (in milliseconds) taken to fetch the latest offsets from Kafka stream and the ingestion tasks.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Generally a few seconds at most.|
+|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
+|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
+|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
+|`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis. Minimum emission period for this metric is a minute.|`supervisorId`, `dataSource`, `stream`, `partition`, `tags`|Greater than 0, up to max Kinesis retention period in milliseconds. |
+|`ingest/kinesis/fetchOffsets/time`|Total time (in milliseconds) taken to fetch and update the latest offsets from Kafka stream and the ingestion tasks.|`supervisorId`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Generally a few seconds at most.|
 
 ### Compaction metrics
 
@@ -282,12 +282,12 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/events/maxMessageGap`|Maximum seen time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
 |`ingest/events/minMessageGap`|Minimum seen time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
 |`ingest/events/avgMessageGap`|Average time gap in milliseconds between each ingested event timestamp and the current system timestamp of metrics emission. This metric is reset every emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Greater than 0, depends on the time carried in event.|
-|`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.|`dataSource`, `tags`|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
-|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
+|`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.|`supervisorId`, `dataSource`, `tags`|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
+|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`supervisorId`, `dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
-|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
+|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -295,7 +295,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags`|Varies|
+|`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `description`, `tags`|Varies|
 |`task/pending/time`|Milliseconds taken for a task to wait for running.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
 |`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|< 1000 (subsecond)|
 |`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies from subsecond to a few seconds, based on action type.|
@@ -309,26 +309,26 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
-|`task/success/count`|Number of successful tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`|Varies|
-|`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/pending/count`|Number of current pending tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/waiting/count`|Number of current waiting tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
-|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
-|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
-|`taskSlot/lazy/count`|Number of total task slots in lazy marked Middle Managers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
-|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted Middle Managers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
-|`worker/task/failed/count`|Number of failed tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for Middle Manager nodes.| `category`, `workerVersion`|Varies|
-|`worker/task/success/count`|Number of successful tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for Middle Manager nodes.| `category`,`workerVersion`|Varies|
-|`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for Middle Manager nodes.| `category`, `workerVersion`|Varies|
-|`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
-|`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
-|`worker/task/assigned/count`|Number of tasks assigned to an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`worker/task/completed/count`|Number of tasks completed by an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`worker/task/failed/count`|Number of tasks that failed on an indexer during the emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`worker/task/success/count`|Number of tasks that succeeded on an indexer during the emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
-|`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`|Varies|
+|`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/pending/count`|Number of current pending tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`task/waiting/count`|Number of current waiting tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`taskSlot/total/count`|Number of total task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/lazy/count`|Number of total task slots in lazy marked Middle Managers and Indexers per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted Middle Managers and Indexers per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`worker/task/failed/count`|Number of failed tasks run on a Middle Manager-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/task/success/count`|Number of successful tasks run on a Middle Manager-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.| `category`,`workerVersion`|Varies|
+|`worker/taskSlot/idle/count`|Number of idle task slots on a Middle Manager-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/taskSlot/total/count`|Number of total task slots on a Middle Manager-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/taskSlot/used/count`|Number of busy task slots on a Middle Manager-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/task/assigned/count`|Number of tasks assigned to an Indexer-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/completed/count`|Number of tasks completed by an Indexer-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/failed/count`|Number of tasks that failed on an Indexer-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/success/count`|Number of tasks that succeeded on an Indexer-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`worker/task/running/count`|Number of tasks running on an Indexer-based worker per emission period. This metric is available only if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 
 ### Segment metadata cache
 
@@ -353,6 +353,20 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+
+### Auto-kill unused segments
+
+These metrics are emitted only if [auto-kill of unused segments](../data-management/delete.md#auto-kill-data-on-the-overlord-experimental) is enabled on the Overlord.
+
+|Metric|Description|Dimensions|
+|------|-----------|----------|
+|`segment/killed/metadataStore/count`|Number of segments permanently deleted from the metadata store.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/killed/deepStorage/count`|Number of segments permanently deleted from the deep storage.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/unusedIntervals/count`|Number of intervals containing unused segments for a given datasource.|`dataSource`|
+|`segment/kill/skippedIntervals/count`|Number of intervals that were skipped for kill due to being already locked by another task.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
+|`segment/kill/queueReset/time`|Time taken in milliseconds to reset the kill queue.||
+|`segment/kill/queueProcess/time`|Time taken in milliseconds to fully process the kill queue.||
+|`segment/kill/jobsProcessed/count`|Number of jobs processed from the kill queue for a given datasource.|`dataSource`|
 
 ## Shuffle metrics (Native parallel task)
 

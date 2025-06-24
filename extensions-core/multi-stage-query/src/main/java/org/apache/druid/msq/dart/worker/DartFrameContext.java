@@ -22,13 +22,12 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -40,7 +39,6 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
-import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -53,10 +51,10 @@ public class DartFrameContext implements FrameContext
   private final GroupingEngine groupingEngine;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerContext workerContext;
-  @Nullable
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public DartFrameContext(
       final StageId stageId,
@@ -64,9 +62,10 @@ public class DartFrameContext implements FrameContext
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
       final DataSegmentProvider dataSegmentProvider,
-      @Nullable ResourceHolder<ProcessingBuffers> processingBuffers,
+      ResourceHolder<ProcessingBuffers> processingBuffers,
       final WorkerMemoryParameters memoryParameters,
-      final WorkerStorageParameters storageParameters
+      final WorkerStorageParameters storageParameters,
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
     this.stageId = stageId;
@@ -77,6 +76,7 @@ public class DartFrameContext implements FrameContext
     this.processingBuffers = processingBuffers;
     this.memoryParameters = memoryParameters;
     this.storageParameters = storageParameters;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
   }
 
   @Override
@@ -148,11 +148,7 @@ public class DartFrameContext implements FrameContext
   @Override
   public ProcessingBuffers processingBuffers()
   {
-    if (processingBuffers != null) {
-      return processingBuffers.get();
-    } else {
-      throw new ISE("No processing buffers");
-    }
+    return processingBuffers.get();
   }
 
   @Override
@@ -170,16 +166,12 @@ public class DartFrameContext implements FrameContext
   @Override
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    // We don't query data servers. This factory won't actually be used, because Dart doesn't allow segmentSource to be
-    // overridden; it always uses SegmentSource.NONE. (If it is called, some wires got crossed somewhere.)
-    return null;
+    return dataServerQueryHandlerFactory;
   }
 
   @Override
   public void close()
   {
-    if (processingBuffers != null) {
-      processingBuffers.close();
-    }
+    processingBuffers.close();
   }
 }

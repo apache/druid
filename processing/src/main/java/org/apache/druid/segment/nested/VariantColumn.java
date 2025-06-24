@@ -126,10 +126,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     // use the variant type bytes if set, in current code the logical type should have been computed via this same means
     // however older versions of the code had a bug which could incorrectly classify mixed types as nested data
     if (variantTypeSetByte != null) {
-      ColumnType theType = null;
-      for (ColumnType type : FieldTypeInfo.convertToSet(variantTypeSetByte)) {
-        theType = ColumnType.leastRestrictiveType(theType, type);
-      }
+      ColumnType theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(variantTypeSetByte));
       if (theType != null) {
         // sign bit is used to indicate empty arrays, this
         if (variantTypeSetByte < 0 && !theType.isArray()) {

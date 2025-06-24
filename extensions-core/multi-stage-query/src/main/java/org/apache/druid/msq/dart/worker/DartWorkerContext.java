@@ -29,6 +29,7 @@ import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -37,7 +38,6 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -80,6 +80,7 @@ public class DartWorkerContext implements WorkerContext
    */
   @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   DartWorkerContext(
       final String queryId,
@@ -97,11 +98,13 @@ public class DartWorkerContext implements WorkerContext
       final ProcessingBuffersProvider processingBuffersProvider,
       final Outbox<ControllerMessage> outbox,
       final File tempDir,
-      final QueryContext queryContext
+      final QueryContext queryContext,
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
     this.queryId = queryId;
     this.controllerHost = controllerHost;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.workerId = WorkerId.fromDruidNode(selfNode, queryId);
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
@@ -223,7 +226,8 @@ public class DartWorkerContext implements WorkerContext
         dataSegmentProvider,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         memoryParameters,
-        storageParameters
+        storageParameters,
+        dataServerQueryHandlerFactory
     );
   }
 
@@ -236,9 +240,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
-    // We don't query data servers. Return null so this factory is ignored when the main worker code tries
-    // to close it.
-    return null;
+    return dataServerQueryHandlerFactory;
   }
 
   @Override

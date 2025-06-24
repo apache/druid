@@ -199,6 +199,7 @@ public class DataSourcesResource
   @POST
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
@@ -658,6 +659,7 @@ public class DataSourcesResource
   @Deprecated
   @DELETE
   @Path("/{dataSourceName}/segments/{segmentId}")
+  @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
@@ -687,6 +689,7 @@ public class DataSourcesResource
   @POST
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUsed(
       @PathParam("dataSourceName") String dataSourceName,

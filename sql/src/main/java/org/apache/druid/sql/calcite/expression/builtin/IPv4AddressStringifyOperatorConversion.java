@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -46,12 +45,5 @@ public class IPv4AddressStringifyOperatorConversion extends DirectOperatorConver
   public IPv4AddressStringifyOperatorConversion()
   {
     super(SQL_FUNCTION, IPv4AddressStringifyExprMacro.FN_NAME);
-  }
-
-
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return SQL_FUNCTION;
   }
 }

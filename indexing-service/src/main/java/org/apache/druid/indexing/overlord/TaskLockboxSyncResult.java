@@ -27,12 +27,14 @@ import java.util.Set;
  * Result of TaskLockbox#syncFromStorage()
  * Contains tasks which need to be forcefully failed to let the overlord become the leader
  */
-class TaskLockboxSyncResult
+public class TaskLockboxSyncResult
 {
+  private final int taskLockCount;
   private final Set<Task> tasksToFail;
 
-  TaskLockboxSyncResult(Set<Task> tasksToFail)
+  TaskLockboxSyncResult(Set<Task> tasksToFail, int taskLockCount)
   {
+    this.taskLockCount = taskLockCount;
     this.tasksToFail = tasksToFail;
   }
 
@@ -42,5 +44,10 @@ class TaskLockboxSyncResult
   Set<Task> getTasksToFail()
   {
     return tasksToFail;
+  }
+
+  int getTaskLockCount()
+  {
+    return taskLockCount;
   }
 }

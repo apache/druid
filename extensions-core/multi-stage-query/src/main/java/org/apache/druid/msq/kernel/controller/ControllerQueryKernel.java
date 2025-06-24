@@ -33,6 +33,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.exec.QueryValidator;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -44,7 +45,6 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
-import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -294,7 +294,7 @@ public class ControllerQueryKernel
 
       //noinspection unchecked
       final ExtraInfoHolder<?> extraInfoHolder =
-          stageKernel.getStageDefinition().getProcessorFactory().makeExtraInfoHolder(extraInfo);
+          stageKernel.getStageDefinition().getProcessor().makeExtraInfoHolder(extraInfo);
 
       final WorkOrder workOrder = new WorkOrder(
           queryDef,

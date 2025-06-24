@@ -878,6 +878,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     final String field = getField(path);
     final Set<ColumnType> fieldTypes;
     int index = fields.indexOf(field);
+    ColumnType leastRestrictiveType = null;
     if (index < 0) {
       if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
         final String arrayField = getField(path.subList(0, path.size() - 1));
@@ -887,12 +888,19 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         return null;
       }
       fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+      for (ColumnType type : fieldTypes) {
+        if (type.isArray()) {
+          leastRestrictiveType = ColumnType.leastRestrictiveType(
+              leastRestrictiveType,
+              (ColumnType) type.getElementType()
+          );
+        } else {
+          leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
+        }
+      }
     } else {
       fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
-    }
-    ColumnType leastRestrictiveType = null;
-    for (ColumnType type : fieldTypes) {
-      leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
+      leastRestrictiveType = ColumnType.leastRestrictiveType(fieldTypes);
     }
     return leastRestrictiveType;
   }
@@ -1013,7 +1021,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
       ColumnType theType = types.getSingleType();
-      columnBuilder.setType(theType == null ? ColumnType.STRING : theType);
+      if (theType == null) {
+        theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()));
+      }
+      columnBuilder.setType(theType);
 
       GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,

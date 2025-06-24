@@ -154,6 +154,12 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     }
   }
 
+  @Override
+  public boolean isBuffered()
+  {
+    return true;
+  }
+
   /**
    * Get fileName with path for partition
    */

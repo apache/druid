@@ -1,4 +1,4 @@
-# testExactTopNOnInnerJoinWithLimit case-crc:1b8b1878
+# testExactTopNOnInnerJoinWithLimit case-crc:2128ebbe
 # quidem testcase reason: EQUIV_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -7,6 +7,7 @@
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set sqlQueryId dummy
 !set useApproximateTopN false
+!set useLexicographicTopN true
 !set outputformat mysql
 !use druidtest:///?minTopNThreshold=1
 select f1."dim4", sum("m1") from numfoo f1 inner join (
