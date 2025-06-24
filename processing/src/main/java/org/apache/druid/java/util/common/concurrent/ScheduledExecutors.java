@@ -185,18 +185,22 @@ public class ScheduledExecutors
     return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
   }
 
+  /**
+   * Creates a new {@link ScheduledExecutorService} with a minimum number of threads along with a
+   * keep-alive time for idle non-core threads.
+   * <p>
+   */
   public static ScheduledThreadPoolExecutor fixedWithKeepAliveTime(
       int corePoolSize,
       String nameFormat,
-      long keepAliveTime,
-      TimeUnit timeUnit
+      long keepAliveTimeInMillis
   )
   {
     ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(
         corePoolSize,
         Execs.makeThreadFactory(nameFormat)
     );
-    scheduledExecutor.setKeepAliveTime(keepAliveTime, timeUnit);
+    scheduledExecutor.setKeepAliveTime(keepAliveTimeInMillis, TimeUnit.MILLISECONDS);
     return scheduledExecutor;
   }
 }

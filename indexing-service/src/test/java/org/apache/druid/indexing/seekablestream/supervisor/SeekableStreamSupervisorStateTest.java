@@ -2772,11 +2772,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return createSupervisorTuningConfigWithWorkerThreads(null);
   }
 
-  /**
-   * Creates a {@link SeekableStreamSupervisorTuningConfig} with the given number of worker threads.
-   *
-   * @param workerThreads the number of threads to use, or null to imitate default settings.
-   */
   private static SeekableStreamSupervisorTuningConfig createSupervisorTuningConfigWithWorkerThreads(@Nullable Integer workerThreads)
   {
     return new SeekableStreamSupervisorTuningConfig()

@@ -165,7 +165,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final int MAX_INITIALIZATION_RETRIES = 20;
   private static final int MIN_WORKER_CORE_THREADS = 2;
   private static final int DEFAULT_TASKS_PER_WORKER_THREAD = 4;
-  private static final int WORKER_THREAD_KEEPALIVE_TIME_SECONDS = 2;
+  private static final int WORKER_THREAD_KEEPALIVE_TIME_MILLIS = 2000;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -944,7 +944,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig);
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
     }
@@ -966,11 +965,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       );
     }
 
+    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig);
     ScheduledThreadPoolExecutor executor = ScheduledExecutors.fixedWithKeepAliveTime(
         workerThreads,
         StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d",
-        WORKER_THREAD_KEEPALIVE_TIME_SECONDS,
-        TimeUnit.SECONDS
+        WORKER_THREAD_KEEPALIVE_TIME_MILLIS
     );
 
     this.workerExec = MoreExecutors.listeningDecorator(executor);
@@ -1011,15 +1010,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Calculates the number of worker threads to use for the supervisor tasks.
+   * Calculates the number of worker threads to use in a {@link SeekableStreamSupervisor}.
+   * These threads are used to interact with tasks in {@link SeekableStreamIndexTaskClient}
+   * and handle task interactions (discovery, updates etc.) in {@link SeekableStreamSupervisor}
    * <p>
-   * If the tuning config explicitly sets the worker thread count, that value is used.
+   * If the tuning config explicitly specifies the field {@code workerThreads}, that value is used.
    * Otherwise, the value is derived from either the auto-scaler config (if enabled) or the ioConfig task count,
-   * divided by the default number of tasks per worker thread, with a minimum of {@code MIN_WORKER_CORE_THREADS}.
-   *
-   * @param tuningConfig the tuning configuration
-   * @param ioConfig the IO configuration
-   * @return the number of worker threads for executor
+   * divided by the {@link DEFAULT_TASKS_PER_WORKER_THREAD}, with a minimum of {@link MIN_WORKER_CORE_THREADS}.
    */
   public static int calculateWorkerThreads(
       SeekableStreamSupervisorTuningConfig tuningConfig,
