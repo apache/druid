@@ -1919,7 +1919,7 @@ The following table lists the monitors that are available and the services you c
 |Name|Description|Service|
 |----|-----------|-------|
 |`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|Broker, Historical, Indexer, Peon|
-|`org.apache.druid.java.util.metrics.OshiSysMonitor`||`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
+|`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|Any|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|Any|
 |`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|Any|
