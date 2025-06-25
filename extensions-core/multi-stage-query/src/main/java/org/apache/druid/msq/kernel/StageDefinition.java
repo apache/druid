@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -64,14 +65,13 @@ import java.util.function.Supplier;
  * {@link WorkerAssignmentStrategy} in play and depending on the number of distinct inputs available. (For example:
  * if there is only one input file, then there can be only one worker.)
  * <p>
- * Each stage has a {@link FrameProcessorFactory} describing the work it does. Output frames written by these
+ * Each stage has a {@link StageProcessor} describing the work it does. Output frames written by these
  * processors have the signature given by {@link #getSignature()}.
  * <p>
  * Each stage has a {@link ShuffleSpec} describing the shuffle that occurs as part of the stage. The shuffle spec is
- * optional: if none is provided, then the {@link FrameProcessorFactory} directly writes to output partitions. If a
- * shuffle spec is provided, then the {@link FrameProcessorFactory} is expected to sort each output frame individually
- * according to {@link ShuffleSpec#clusterBy()}. The execution system handles the rest, including sorting data across
- * frames and producing the appropriate output partitions.
+ * optional: if none is provided, then the {@link StageProcessor} writes to output partitions that are aligned with
+ * input partitions. If a shuffle spec is provided, then the {@link StageProcessor} is expected to write its output
+ * to output channels in accordance with the {@link ShuffleSpec}.
  * <p>
  * The rarely-used parameter {@link #getShuffleCheckHasMultipleValues()} controls whether the execution system
  * checks, while shuffling, if the key used for shuffling has any multi-value fields. When this is true, the method
@@ -88,7 +88,7 @@ public class StageDefinition
   private final List<InputSpec> inputSpecs;
   private final IntSet broadcastInputNumbers;
   @SuppressWarnings("rawtypes")
-  private final FrameProcessorFactory processorFactory;
+  private final StageProcessor processor;
   private final RowSignature signature;
   private final int maxWorkerCount;
   private final boolean shuffleCheckHasMultipleValues;
@@ -104,7 +104,7 @@ public class StageDefinition
       @JsonProperty("id") final StageId id,
       @JsonProperty("input") final List<InputSpec> inputSpecs,
       @JsonProperty("broadcast") final Set<Integer> broadcastInputNumbers,
-      @SuppressWarnings("rawtypes") @JsonProperty("processor") final FrameProcessorFactory processorFactory,
+      @SuppressWarnings("rawtypes") @JsonProperty("processor") final StageProcessor processor,
       @JsonProperty("signature") final RowSignature signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
@@ -122,7 +122,7 @@ public class StageDefinition
       this.broadcastInputNumbers = new IntAVLTreeSet(broadcastInputNumbers);
     }
 
-    this.processorFactory = Preconditions.checkNotNull(processorFactory, "processorFactory");
+    this.processor = Preconditions.checkNotNull(processor, "processor");
     this.signature = Preconditions.checkNotNull(signature, "signature");
     this.shuffleSpec = shuffleSpec;
     this.maxWorkerCount = maxWorkerCount;
@@ -163,7 +163,7 @@ public class StageDefinition
     return new StageDefinitionBuilder(stageDef.getStageNumber())
         .inputs(stageDef.getInputSpecs())
         .broadcastInputs(stageDef.getBroadcastInputNumbers())
-        .processorFactory(stageDef.getProcessorFactory())
+        .processor(stageDef.getProcessor())
         .signature(stageDef.getSignature())
         .shuffleSpec(stageDef.doesShuffle() ? stageDef.getShuffleSpec() : null)
         .maxWorkerCount(stageDef.getMaxWorkerCount())
@@ -202,9 +202,9 @@ public class StageDefinition
 
   @JsonProperty("processor")
   @SuppressWarnings("rawtypes")
-  public FrameProcessorFactory getProcessorFactory()
+  public StageProcessor getProcessor()
   {
-    return processorFactory;
+    return processor;
   }
 
   @JsonProperty
@@ -353,7 +353,7 @@ public class StageDefinition
   }
 
   /**
-   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessorFactory()}.
+   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessor()}.
    *
    * Calls {@link MemoryAllocatorFactory#newAllocator()} for each frame.
    */
@@ -372,7 +372,7 @@ public class StageDefinition
   }
 
   /**
-   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessorFactory()}.
+   * Create the {@link FrameWriterFactory} that must be used by {@link #getProcessor()}.
    *
    * Re-uses the same {@link MemoryAllocator} for each frame.
    */
@@ -401,7 +401,7 @@ public class StageDefinition
            && Objects.equals(id, that.id)
            && Objects.equals(inputSpecs, that.inputSpecs)
            && Objects.equals(broadcastInputNumbers, that.broadcastInputNumbers)
-           && Objects.equals(processorFactory, that.processorFactory)
+           && Objects.equals(processor, that.processor)
            && Objects.equals(signature, that.signature)
            && Objects.equals(shuffleSpec, that.shuffleSpec);
   }
@@ -413,7 +413,7 @@ public class StageDefinition
         id,
         inputSpecs,
         broadcastInputNumbers,
-        processorFactory,
+        processor,
         signature,
         maxWorkerCount,
         shuffleCheckHasMultipleValues,
@@ -428,7 +428,7 @@ public class StageDefinition
            "id=" + id +
            ", inputSpecs=" + inputSpecs +
            (!broadcastInputNumbers.isEmpty() ? ", broadcastInputStages=" + broadcastInputNumbers : "") +
-           ", processorFactory=" + processorFactory +
+           ", processor=" + processor +
            ", signature=" + signature +
            ", maxWorkerCount=" + maxWorkerCount +
            ", shuffleSpec=" + shuffleSpec +

@@ -883,6 +883,12 @@ public class SuperSorterTest
       {
         return baseFactory.openNilChannel(partitionNumber);
       }
+
+      @Override
+      public boolean isBuffered()
+      {
+        return baseFactory.isBuffered();
+      }
     };
   }
 }

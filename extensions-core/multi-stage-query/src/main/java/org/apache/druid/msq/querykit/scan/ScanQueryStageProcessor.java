@@ -27,9 +27,9 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
+import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.scan.ScanQuery;
@@ -42,7 +42,7 @@ import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")
-public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
+public class ScanQueryStageProcessor extends BaseLeafStageProcessor
 {
   private static final String IRRELEVANT = "irrelevant";
 
@@ -58,14 +58,14 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   private final AtomicLong runningCountForLimit;
 
   @JsonCreator
-  public ScanQueryFrameProcessorFactory(@JsonProperty("query") ScanQuery query)
+  public ScanQueryStageProcessor(@JsonProperty("query") ScanQuery query)
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
     this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
   }
 
-  public static ScanQueryFrameProcessorFactory makeScanFrameProcessorFactory(
+  public static ScanQueryStageProcessor makeScanStageProcessor(
       VirtualColumns virtualColumns,
       RowSignature signature,
       DimFilter dimFilter)
@@ -78,7 +78,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         .columns(signature.getColumnNames())
         .columnTypes(signature.getColumnTypes())
         .build();
-    return new ScanQueryFrameProcessorFactory(scanQuery);
+    return new ScanQueryStageProcessor(scanQuery);
   }
 
   @JsonProperty

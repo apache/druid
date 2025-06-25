@@ -167,4 +167,10 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   {
     return OutputChannel.nil(partitionNumber);
   }
+
+  @Override
+  public boolean isBuffered()
+  {
+    return true;
+  }
 }

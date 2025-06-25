@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.CoreMatchers;
@@ -105,13 +104,13 @@ public class ProcessingBuffersSetTest
   @Test
   public void test_acquireForStage_usesProcessingBuffersFalse()
   {
-    // Create a mock StageDefinition and FrameProcessorFactory
+    // Create a mock StageDefinition and StageProcessor
     final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
-    final FrameProcessorFactory<?, ?, ?> processorFactory = Mockito.mock(FrameProcessorFactory.class);
+    final StageProcessor<?, ?> stageProcessor = Mockito.mock(StageProcessor.class);
 
     // Configure mocks: processor factory does not use processing buffers
-    Mockito.when(stageDef.getProcessorFactory()).thenReturn(processorFactory);
-    Mockito.when(processorFactory.usesProcessingBuffers()).thenReturn(false);
+    Mockito.when(stageDef.getProcessor()).thenReturn(stageProcessor);
+    Mockito.when(stageProcessor.usesProcessingBuffers()).thenReturn(false);
 
     // Create a ProcessingBuffersSet
     final ProcessingBuffersSet buffersSet =
@@ -127,13 +126,13 @@ public class ProcessingBuffersSetTest
   @Test
   public void test_acquireForStage_usesProcessingBuffersTrue()
   {
-    // Create a mock StageDefinition and FrameProcessorFactory
+    // Create a mock StageDefinition and StageProcessor
     final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
-    final FrameProcessorFactory<?, ?, ?> processorFactory = Mockito.mock(FrameProcessorFactory.class);
+    final StageProcessor<?, ?> stageProcessor = Mockito.mock(StageProcessor.class);
 
-    // Configure mocks: processor factory does not use processing buffers
-    Mockito.when(stageDef.getProcessorFactory()).thenReturn(processorFactory);
-    Mockito.when(processorFactory.usesProcessingBuffers()).thenReturn(true);
+    // Configure mocks: processor factory does use processing buffers
+    Mockito.when(stageDef.getProcessor()).thenReturn(stageProcessor);
+    Mockito.when(stageProcessor.usesProcessingBuffers()).thenReturn(true);
 
     // Create a ProcessingBuffersSet
     final ProcessingBuffersSet buffersSet =

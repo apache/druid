@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.logical.stages;
 
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.logical.StageMaker;
-import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
@@ -70,9 +70,9 @@ class FilterStage extends ReadStage
   }
 
   @Override
-  public BaseFrameProcessorFactory buildFrameProcessor(StageMaker stageMaker)
+  public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
   {
     VirtualColumns virtualColumns = virtualColumnRegistry.build(Collections.emptySet());
-    return StageMaker.makeScanFrameProcessor(virtualColumns, signature, dimFilter);
+    return StageMaker.makeScanStageProcessor(virtualColumns, signature, dimFilter);
   }
 }

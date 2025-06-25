@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class ExportResultsFrameProcessorFactoryTest
+public class ExportResultsStageProcessorTest
 {
   @Test
   public void testSerde() throws IOException
@@ -43,11 +43,11 @@ public class ExportResultsFrameProcessorFactoryTest
             .addValue(StorageConfig.class, new StorageConfig("/"))
     );
 
-    ExportResultsFrameProcessorFactory exportResultsFrameProcessorFactory = objectMapper.readValue(
+    ExportResultsStageProcessor exportResultsFrameProcessor = objectMapper.readValue(
         exportFactoryString,
-        ExportResultsFrameProcessorFactory.class
+        ExportResultsStageProcessor.class
     );
-    Assert.assertNull(exportResultsFrameProcessorFactory.getColumnMappings());
-    Assert.assertNull(exportResultsFrameProcessorFactory.getResultsContext());
+    Assert.assertNull(exportResultsFrameProcessor.getColumnMappings());
+    Assert.assertNull(exportResultsFrameProcessor.getResultsContext());
   }
 }

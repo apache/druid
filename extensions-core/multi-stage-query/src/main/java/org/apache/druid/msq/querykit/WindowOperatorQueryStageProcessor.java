@@ -36,13 +36,14 @@ import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -55,7 +56,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 @JsonTypeName("window")
-public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessorFactory
+public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcessor
 {
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
@@ -64,7 +65,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final List<String> partitionColumnNames;
 
   @JsonCreator
-  public WindowOperatorQueryFrameProcessorFactory(
+  public WindowOperatorQueryStageProcessor(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
@@ -188,7 +189,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
+    WindowOperatorQueryStageProcessor that = (WindowOperatorQueryStageProcessor) o;
     return maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)

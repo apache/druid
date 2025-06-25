@@ -22,12 +22,12 @@ package org.apache.druid.msq.querykit;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
-public class WindowOperatorQueryFrameProcessorFactoryTest
+public class WindowOperatorQueryStageProcessorTest
 {
   @Test
   public void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(WindowOperatorQueryFrameProcessorFactory.class)
+    EqualsVerifier.forClass(WindowOperatorQueryStageProcessor.class)
                   .withNonnullFields(
                       "query",
                       "operatorList",
