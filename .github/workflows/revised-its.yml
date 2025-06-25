@@ -66,10 +66,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # jdk: [11, 17]
         jdk: [17]
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Security, Query]
-        #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
