@@ -29,6 +29,7 @@ import net.hydromatic.quidem.Quidem.ConfigBuilder;
 import org.apache.calcite.test.DiffTestCase;
 import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
@@ -44,7 +45,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -113,29 +113,34 @@ public abstract class DruidQuidemTestBase
   public DruidQuidemTestBase(DruidQuidemRunner druidQuidemRunner)
   {
     this.filterStr = System.getProperty(PROPERTY_FILTER, null);
-    this.filterMatcher = buildFilterMatcher(filterStr);
+    this.filterMatcher = filterStr == null ? TrueFileFilter.INSTANCE : new MyPathMatcher(filterStr);
     this.druidQuidemRunner = druidQuidemRunner;
   }
 
-  private static PathMatcher buildFilterMatcher(@Nullable String filterStr)
+  static class MyPathMatcher implements PathMatcher
   {
-    if (null == filterStr) {
-      return f -> true;
-    }
+    private final List<PathMatcher> filterMatchers = new ArrayList<>();
 
-    final FileSystem fileSystem = FileSystems.getDefault();
-    final List<PathMatcher> filterMatchers = new ArrayList<>();
-    for (String filterGlob : filterStr.split(",")) {
-      if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
-        filterGlob = filterStr + IQ_SUFFIX;
+    public MyPathMatcher(String filterStr)
+    {
+      final FileSystem fileSystem = FileSystems.getDefault();
+      for (String filterGlob : filterStr.split(",")) {
+        if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
+          filterGlob = filterStr + IQ_SUFFIX;
+        }
+        filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
       }
-      filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
     }
 
-    if (filterMatchers.isEmpty()) {
-      return f -> true;
-    } else {
-      return f -> filterMatchers.stream().anyMatch(m -> m.matches(f));
+    @Override
+    public boolean matches(Path path)
+    {
+      for (PathMatcher m : filterMatchers) {
+        if (m.matches(path)) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 
