@@ -21,7 +21,7 @@ package org.apache.druid.testing.simulate;
 
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.cli.CliIndexer;
+import org.apache.druid.cli.CliMiddleManager;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
@@ -29,29 +29,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Embeddded mode of {@link CliIndexer} used in simulation tests.
- * Add this to your {@link EmbeddedDruidCluster} if you want to run ingestion
- * tasks.
+ * Embeddded mode of {@link CliMiddleManager} used in simulation tests.
+ * Add this to your {@link EmbeddedDruidCluster} if you want to launch ingestion
+ * tasks as child processes.
+ *
+ * @deprecated Use {@link EmbeddedIndexer} instead. {@link EmbeddedMiddleManager}
+ * should be used only for local testing and never in committed simulation tests,
+ * as it launches tasks as child processes which is undesirable in unit tests.
  */
-public class EmbeddedIndexer extends EmbeddedDruidServer
+@Deprecated
+public class EmbeddedMiddleManager extends EmbeddedDruidServer
 {
-  public EmbeddedIndexer()
+  /**
+   * Creates an {@link EmbeddedMiddleManager}.
+   *
+   * @see EmbeddedMiddleManager
+   * @deprecated Use {@link EmbeddedIndexer} instead.
+   */
+  @Deprecated
+  public EmbeddedMiddleManager()
   {
     // Don't sync lookups as cluster might not have a Coordinator
-    addProperty("druid.lookup.enableLookupSyncOnStartup", "false");
+    // addProperty("druid.lookup.enableLookupSyncOnStartup", "false");
   }
 
   @Override
   ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
-    return new Indexer(handler);
+    return new MiddleManager(handler);
   }
 
-  private class Indexer extends CliIndexer
+  private class MiddleManager extends CliMiddleManager
   {
     private final LifecycleInitHandler handler;
 
-    private Indexer(LifecycleInitHandler handler)
+    private MiddleManager(LifecycleInitHandler handler)
     {
       this.handler = handler;
     }
@@ -60,7 +72,7 @@ public class EmbeddedIndexer extends EmbeddedDruidServer
     protected List<? extends Module> getModules()
     {
       final List<Module> modules = new ArrayList<>(super.getModules());
-      modules.add(EmbeddedIndexer.this::bindReferenceHolder);
+      modules.add(EmbeddedMiddleManager.this::bindReferenceHolder);
       return modules;
     }
 

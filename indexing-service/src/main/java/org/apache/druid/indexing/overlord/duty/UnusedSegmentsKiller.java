@@ -191,8 +191,14 @@ public class UnusedSegmentsKiller implements OverlordDuty
   {
     if (isEnabled()) {
       // Check every hour that the kill queue is being processed normally
-      log.info("Scheduling is enabled to launch embedded kill tasks.");
-      return new DutySchedule(Duration.standardHours(1).getMillis(), Duration.standardMinutes(1).getMillis());
+      log.info(
+          "Unused segment killer is enabled. Kill queue will be rebuilt every [%s] if empty.",
+          killConfig.getDutyPeriod()
+      );
+      return new DutySchedule(
+          killConfig.getDutyPeriod().toStandardDuration().getMillis(),
+          Duration.standardSeconds(10).getMillis()
+      );
     } else {
       return new DutySchedule(0, 0);
     }

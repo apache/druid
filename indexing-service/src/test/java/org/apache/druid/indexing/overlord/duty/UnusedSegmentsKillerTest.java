@@ -79,7 +79,7 @@ public class UnusedSegmentsKillerTest
     emitter = taskActionTestKit.getServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO);
+    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null);
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
@@ -119,7 +119,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_getSchedule_returnsZeroPeriod_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
     initKiller();
 
     final DutySchedule schedule = killer.getSchedule();
@@ -140,7 +140,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_run_isNoop_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
     initKiller();
 
     Assert.assertFalse(killer.isEnabled());
@@ -370,7 +370,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_run_doesNotKillSegment_ifUpdatedWithinBufferPeriod()
   {
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1));
+    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1), null);
     initKiller();
 
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);

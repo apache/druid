@@ -140,7 +140,9 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     }
   }
 
-  // TODO: are headers needed in the records?
+  /**
+   * Produces records to a topic of this embedded Kafka server.
+   */
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer()) {

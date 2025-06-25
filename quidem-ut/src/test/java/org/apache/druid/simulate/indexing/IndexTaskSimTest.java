@@ -91,7 +91,7 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
   }
 
   @Test
-  @Timeout(60)
+  @Timeout(20)
   public void test_runIndexTask_forInlineDatasource()
   {
     final Task task = createIndexTaskForInlineData(dataSource, HEADERS + "\n" + CSV_DATA_10_DAYS);
@@ -126,14 +126,14 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
   }
 
   @Test
-  @Timeout(60)
+  @Timeout(20)
   public void test_run10Tasks_concurrently()
   {
     runTasksConcurrently(10);
   }
 
   @Test
-  @Timeout(60)
+  @Timeout(20)
   public void test_run25Tasks_oneByOne()
   {
     for (int i = 0; i < 25; ++i) {
@@ -142,14 +142,14 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
   }
 
   @Test
-  @Timeout(60)
+  @Timeout(20)
   public void test_run25Tasks_concurrently()
   {
     runTasksConcurrently(25);
   }
 
   @Test
-  @Timeout(60)
+  @Timeout(20)
   public void test_run100Tasks_concurrently()
   {
     runTasksConcurrently(100);

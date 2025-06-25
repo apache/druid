@@ -100,15 +100,17 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
       }
     };
 
-    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-    indexer.addProperty("druid.worker.capacity", "10");
-    overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}");
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+           .addProperty("druid.worker.capacity", "10");
+    overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}")
+            .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
+            .addProperty("druid.manager.segments.pollDuration", "PT0.1s")
+            .addProperty("druid.manager.segments.killUnused.enabled", "true")
+            .addProperty("druid.manager.segments.killUnused.bufferPeriod", "PT0.1s")
+            .addProperty("druid.manager.segments.killUnused.dutyPeriod", "PT1s");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
-           .addExtension(QuickUnusedSegmentKillerModule.class)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
