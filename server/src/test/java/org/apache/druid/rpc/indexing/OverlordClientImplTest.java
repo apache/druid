@@ -31,6 +31,7 @@ import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -49,7 +50,10 @@ import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
@@ -489,6 +493,48 @@ public class OverlordClientImplTest
     );
 
     Assert.assertFalse(overlordClient.isCompactionSupervisorEnabled().get());
+  }
+
+  @Test
+  public void test_getClusterCompactionConfig()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(
+        0.2,
+        101,
+        new NewestSegmentFirstPolicy(null),
+        true,
+        CompactionEngine.MSQ
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        overlordClient.getClusterCompactionConfig().get()
+    );
+  }
+
+  @Test
+  public void test_updateClusterCompactionConfig()
+      throws ExecutionException, InterruptedException, JsonProcessingException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null);
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new UpdateResponse(true))
+    );
+
+    Assert.assertTrue(
+        overlordClient.updateClusterCompactionConfig(config).get().isSuccess()
+    );
   }
 
   @Test
