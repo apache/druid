@@ -131,10 +131,20 @@ The response for submitting a query includes the query ID along with basic infor
 "durationMs": DURATION_IN_MS,
 }
 ```
-:::info
-You can't use `SET` command to set up the value `executionMode`.This context parameter must be specified using the `context` field in the Druid SQL API or Druid Web Console.
-:::
 
+Additionally, instead of specifying the `context` object within the JSON payload, you can set context parameters inline using SET statements.
+
+While submitting queries through the API, you can include SET statements as part of the SQL query string in the request payload:
+
+```bash
+curl --location 'http://localhost:8888/druid/v2/sql/statements' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "SET executionMode = '\''ASYNC'\''; SET selectDestination = '\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP '\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP '\''2017-09-02'\''"
+}'
+```
+
+Both methods, using SET statements or specifying context parameters in the JSON `context` object, return the same response above.
 
 ### Get query status
 

@@ -191,6 +191,20 @@ curl --location 'http://localhost:8888/druid/v2/sql/' \
 
 The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
+Additionally, instead of specifying the `context` object within the JSON payload, you can also set context parameters inline using SET statements. 
+
+For example, to query pages from the `wikipedia` datasource with timestamps before `2016-06-27 00:10:00`, you can use the following API curl request:
+
+```bash
+curl --location 'http://localhost:8888/druid/v2/sql/statements' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "SET executionMode = '\''ASYNC'\''; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '\''2016-06-27 00:10:00'\'' LIMIT 10"
+}'
+```
+
+Both methods,using SET statements orspecifying context parameters in the JSON `context` object, return the same response format.
+
 ## Get query status
 
 Replace `:queryId` with the ID for your query and run the following curl command to get your query status:
