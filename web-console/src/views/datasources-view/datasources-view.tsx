@@ -708,7 +708,7 @@ GROUP BY 1, 2`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               datasourceToMarkAsUnusedAllSegmentsIn,
             )}`,
             {},
@@ -749,7 +749,7 @@ GROUP BY 1, 2`;
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.post(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn,
             )}`,
             {},
@@ -792,7 +792,7 @@ GROUP BY 1, 2`;
           if (!useUnuseInterval) return;
           const param = isUse ? 'markUsed' : 'markUnused';
           const resp = await Api.instance.post(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               datasourceToMarkSegmentsByIntervalIn,
             )}/${Api.encodePath(param)}`,
             {
@@ -1006,29 +1006,8 @@ GROUP BY 1, 2`;
   ): BasicAction[] {
     const { goToQuery, goToSegments, capabilities } = this.props;
 
-    const goToActions: BasicAction[] = [];
-
-    if (capabilities.hasSql()) {
-      goToActions.push({
-        icon: IconNames.APPLICATION,
-        title: 'Query with SQL',
-        onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
-      });
-    }
-
-    goToActions.push({
-      icon: IconNames.STACKED_CHART,
-      title: 'Go to segments',
-      onAction: () => {
-        goToSegments({ datasource });
-      },
-    });
-
-    if (!capabilities.hasCoordinatorAccess()) {
-      return goToActions;
-    }
-
     if (unused) {
+      if (!capabilities.hasOverlordAccess()) return [];
       return [
         {
           icon: IconNames.EXPORT,
@@ -1055,77 +1034,101 @@ GROUP BY 1, 2`;
         },
       ];
     } else {
-      return goToActions.concat(
-        compact([
-          {
-            icon: IconNames.AUTOMATIC_UPDATES,
-            title: 'Edit retention rules',
-            onAction: () => {
-              const defaultRules = this.state.datasourcesAndDefaultRulesState.data?.defaultRules;
-              if (!defaultRules) return;
-              this.setState({
-                retentionDialogOpenOn: {
-                  datasource,
-                  rules: rules || [],
-                  defaultRules,
-                },
-              });
-            },
+      return compact([
+        capabilities.hasSql()
+          ? {
+              icon: IconNames.APPLICATION,
+              title: 'Query with SQL',
+              onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
+            }
+          : undefined,
+        {
+          icon: IconNames.STACKED_CHART,
+          title: 'Go to segments',
+          onAction: () => {
+            goToSegments({ datasource });
           },
-          {
-            icon: IconNames.REFRESH,
-            title: 'Mark as used all segments (will lead to reapplying retention rules)',
-            onAction: () =>
-              this.setState({
-                datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
-              }),
-          },
-          compactionInfo
-            ? {
-                icon: IconNames.COMPRESSED,
-                title: 'Edit compaction configuration',
-                onAction: () => {
-                  this.setState({
-                    compactionDialogOpenOn: {
-                      datasource,
-                      compactionConfig: compactionInfo.config,
-                    },
-                  });
-                },
-              }
-            : undefined,
-          {
-            icon: IconNames.EXPORT,
-            title: 'Mark as used segments by interval',
-            onAction: () =>
-              this.setState({
-                datasourceToMarkSegmentsByIntervalIn: datasource,
-                useUnuseAction: 'use',
-              }),
-          },
-          {
-            icon: IconNames.IMPORT,
-            title: 'Mark as unused segments by interval',
-            onAction: () =>
-              this.setState({
-                datasourceToMarkSegmentsByIntervalIn: datasource,
-                useUnuseAction: 'unuse',
-              }),
-          },
-          {
-            icon: IconNames.IMPORT,
-            title: 'Mark as unused all segments',
-            intent: Intent.DANGER,
-            onAction: () => this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: datasource }),
-          },
-          {
-            icon: IconNames.TRASH,
-            title: 'Delete unused segments (issue kill task)',
-            intent: Intent.DANGER,
-            onAction: () => this.setState({ killDatasource: datasource }),
-          },
-        ]),
-      );
+        },
+        capabilities.hasCoordinatorAccess()
+          ? {
+              icon: IconNames.AUTOMATIC_UPDATES,
+              title: 'Edit retention rules',
+              onAction: () => {
+                const defaultRules = this.state.datasourcesAndDefaultRulesState.data?.defaultRules;
+                if (!defaultRules) return;
+                this.setState({
+                  retentionDialogOpenOn: {
+                    datasource,
+                    rules: rules || [],
+                    defaultRules,
+                  },
+                });
+              },
+            }
+          : undefined,
+        capabilities.hasOverlordAccess()
+          ? {
+              icon: IconNames.REFRESH,
+              title: 'Mark as used all segments (will lead to reapplying retention rules)',
+              onAction: () =>
+                this.setState({
+                  datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+                }),
+            }
+          : undefined,
+        capabilities.hasCoordinatorAccess() && compactionInfo
+          ? {
+              icon: IconNames.COMPRESSED,
+              title: 'Edit compaction configuration',
+              onAction: () => {
+                this.setState({
+                  compactionDialogOpenOn: {
+                    datasource,
+                    compactionConfig: compactionInfo.config,
+                  },
+                });
+              },
+            }
+          : undefined,
+        capabilities.hasOverlordAccess()
+          ? {
+              icon: IconNames.EXPORT,
+              title: 'Mark as used segments by interval',
+              onAction: () =>
+                this.setState({
+                  datasourceToMarkSegmentsByIntervalIn: datasource,
+                  useUnuseAction: 'use',
+                }),
+            }
+          : undefined,
+        capabilities.hasOverlordAccess()
+          ? {
+              icon: IconNames.IMPORT,
+              title: 'Mark as unused segments by interval',
+              onAction: () =>
+                this.setState({
+                  datasourceToMarkSegmentsByIntervalIn: datasource,
+                  useUnuseAction: 'unuse',
+                }),
+            }
+          : undefined,
+        capabilities.hasOverlordAccess()
+          ? {
+              icon: IconNames.IMPORT,
+              title: 'Mark as unused all segments',
+              intent: Intent.DANGER,
+              onAction: () => this.setState({ datasourceToMarkAsUnusedAllSegmentsIn: datasource }),
+            }
+          : undefined,
+        capabilities.hasOverlordAccess()
+          ? {
+              icon: IconNames.TRASH,
+              title: 'Delete unused segments (issue kill task)',
+              intent: Intent.DANGER,
+              onAction: () => this.setState({ killDatasource: datasource }),
+            }
+          : undefined,
+      ]);
     }
   }
 
