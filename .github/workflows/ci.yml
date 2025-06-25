@@ -85,5 +85,5 @@ jobs:
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests -Dtest=QTest -fae
-      key: quidem-${{ matrix.pattern }}
+      key: quidem-QTest
       jdk: 17
