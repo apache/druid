@@ -81,16 +81,14 @@ jobs:
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
 
   # this will be running other ITs later; but until that migration happens - run QTest in parallel to other tests
-  run-its:
+  run-qtest:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - key: QTest
-            script: .github/scripts/run_unit-tests -Dtest=QTest
-    name: IT ${{ matrix.key }}
+        pattern: [ QTest ]
+    name: quidem-${{ matrix.pattern }}
     uses: ./.github/workflows/worker.yml
     with:
-      script: ${{ matrix.script }}
-      key: ${{ matrix.key }}
+      script: .github/scripts/run_unit-tests -Dtest='${{ matrix.pattern }}' -fae
+      key: quidem-${{ matrix.pattern }}
       jdk: 17
