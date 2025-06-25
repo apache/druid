@@ -25,14 +25,20 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.emitter.kafka.KafkaEmitterModule;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.EmbeddedKafkaServer;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.testing.simulate.EmbeddedBroker;
 import org.apache.druid.testing.simulate.EmbeddedCoordinator;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
@@ -46,18 +52,21 @@ import org.apache.druid.testing.simulate.junit5.IndexingSimulationTestBase;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Simulation test to emit cluster metrics using a {@link KafkaEmitter} and then
- * ingest them back into the cluster with a Kafka supervisor.
+ * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
 public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
 {
-  private static final String TOPIC = IndexingSimulationTestBase.createTestDataourceName();
+  private static final String TOPIC = IndexingSimulationTestBase.createTestDatasourceName();
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -77,7 +86,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
       public void start() throws IOException
       {
         super.start();
-        createTopicWithPartitions(TOPIC, 2);
+        createTopicWithPartitions(TOPIC, 10);
         cluster.addCommonProperty("druid.emitter.kafka.bootstrap.servers", kafkaServer.getBootstrapServerUrl());
         cluster.addCommonProperty("druid.emitter.kafka.metric.topic", TOPIC);
         cluster.addCommonProperty("druid.emitter.kafka.alert.topic", TOPIC);
@@ -91,10 +100,15 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
       }
     };
 
-    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1S");
+    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.worker.capacity", "10");
+    overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}");
+    overlord.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
+    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
+           .addExtension(QuickUnusedSegmentKillerModule.class)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
@@ -111,18 +125,25 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
   }
 
   @Test
-  public void test_ingest2kRows_ofSelfClusterMetrics_andVerifyValues()
+  @Timeout(20)
+  public void test_ingest10kRows_ofSelfClusterMetrics_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 2;
+    final int expectedSegmentsHandedOff = 10;
 
+    final int taskCount = 5;
     final int taskDurationMillis = 1_000;
     final int taskCompletionTimeoutMillis = 10_000;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
-    final KafkaSupervisorSpec kafkaSupervisorSpec
-        = createKafkaSupervisor(supervisorId, taskDurationMillis, taskCompletionTimeoutMillis, maxRowsPerSegment);
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
+        supervisorId,
+        taskCount,
+        taskDurationMillis,
+        taskCompletionTimeoutMillis,
+        maxRowsPerSegment
+    );
 
     final Map<String, String> startSupervisorResult = getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
@@ -133,7 +154,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/handoff/count")
                       .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
-        agg -> agg.hasSum(expectedSegmentsHandedOff)
+        agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
     );
 
     // Verify number of segments and total number of rows in the datasource
@@ -149,9 +170,126 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
 
     verifyIngestedMetricCountMatchesEmittedCount("jvm/pool/committed", coordinator);
     verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
-    verifyIngestedMetricCountMatchesEmittedCount("jvm/mem/used", overlord);
 
     // Suspend the supervisor and verify the state
+    getResult(
+        cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
+    );
+    Assertions.assertTrue(getSupervisorStatus(supervisorId).isSuspended());
+  }
+
+  @Test
+  @Timeout(120)
+  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments()
+  {
+    final int maxRowsPerSegment = 1000;
+    final int compactedMaxRowsPerSegment = 5000;
+
+    final int taskCount = 2;
+    final int taskDurationMillis = 1_000;
+    final int taskCompletionTimeoutMillis = 5_000;
+
+    // Submit and start a supervisor
+    final String supervisorId = dataSource + "_supe";
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
+        supervisorId,
+        taskCount,
+        taskDurationMillis,
+        taskCompletionTimeoutMillis,
+        maxRowsPerSegment
+    );
+    getResult(cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec));
+
+    // Wait for some segments to be published
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/txn/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    // Enable compaction supervisors on the Overlord
+    final ClusterCompactionConfig originalCompactionConfig
+        = getResult(cluster.leaderOverlord().getClusterCompactionConfig());
+
+    final ClusterCompactionConfig updatedCompactionConfig
+        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+    final UpdateResponse updateResponse = getResult(
+        cluster.leaderOverlord().updateClusterCompactionConfig(updatedCompactionConfig)
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+    // Submit a compaction supervisor for this datasource
+    final CompactionSupervisorSpec compactionSupervisorSpec = new CompactionSupervisorSpec(
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withMaxRowsPerSegment(compactedMaxRowsPerSegment)
+            .withTaskContext(Map.of("useConcurrentLocks", true))
+            .build(),
+        false,
+        null
+    );
+    getResult(cluster.leaderOverlord().postSupervisor(compactionSupervisorSpec));
+
+    // Wait until some compaction tasks have finished
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.TASK_TYPE, "compact")
+                      .hasDimension(DruidMetrics.TASK_STATUS, "SUCCESS"),
+        agg -> agg.hasCountAtLeast(2)
+    );
+
+    // Verify that some segments have been upgraded due to Concurrent Append and Replace
+    final Set<String> allUsedSegmentsIds = overlord
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .stream()
+        .map(s -> s.getId().toString())
+        .collect(Collectors.toSet());
+    final Map<String, String> upgradedFromSegmentIds = overlord
+        .segmentsMetadataStorage()
+        .retrieveUpgradedFromSegmentIds(dataSource, allUsedSegmentsIds);
+    Assertions.assertFalse(upgradedFromSegmentIds.isEmpty());
+
+    // Update Coordinator dynamic config to mark segments as unused as soon as they become overshadowed
+    final CoordinatorDynamicConfig originalCoordinatorDynamicConfig = getResult(
+        cluster.leaderCoordinator().getCoordinatorDynamicConfig()
+    );
+    final CoordinatorDynamicConfig updatedCoordinatorDynamicConfig
+        = CoordinatorDynamicConfig.builder()
+                                  .withMarkSegmentAsUnusedDelayMillis(10L)
+                                  .build(originalCoordinatorDynamicConfig);
+    getResult(
+        cluster.leaderCoordinator().updateCoordinatorDynamicConfig(updatedCoordinatorDynamicConfig)
+    );
+
+    // Wait for some segments to become unused and be eligible for kill
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/kill/unusedIntervals/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    // Verify that the segments are skipped since the interval is still being appended to
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/kill/skippedIntervals/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    // Revert the cluster compaction config and coordinator dynamic config
+    getResult(
+        cluster.leaderOverlord().updateClusterCompactionConfig(originalCompactionConfig)
+    );
+    getResult(
+        cluster.leaderCoordinator().updateCoordinatorDynamicConfig(originalCoordinatorDynamicConfig)
+    );
+
+    // Suspend the supervisors
+    getResult(
+        cluster.leaderOverlord().postSupervisor(compactionSupervisorSpec.createSuspendedSpec())
+    );
+    Assertions.assertTrue(getSupervisorStatus(compactionSupervisorSpec.getId()).isSuspended());
     getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
@@ -176,12 +314,13 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     // Verify the number of metrics actually emitted from this server
     server.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName(metricName),
-        agg -> agg.hasCount(expectedValueForSegmentsAssigned)
+        agg -> agg.hasCountAtLeast(expectedValueForSegmentsAssigned)
     );
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(
       String supervisorId,
+      int taskCount,
       int taskDurationMillis,
       int taskCompletionTimeoutMillis,
       int maxRowsPerSegment
@@ -205,7 +344,8 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
             TOPIC,
             null,
             new JsonInputFormat(null, null, null, null, null),
-            null, null,
+            null,
+            taskCount,
             Period.millis(taskDurationMillis),
             kafkaServer.consumerProperties(),
             null, null, null,

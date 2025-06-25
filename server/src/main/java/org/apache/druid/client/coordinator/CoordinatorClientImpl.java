@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -237,6 +238,16 @@ public class CoordinatorClientImpl implements CoordinatorClient
             holder.getContent(),
             CoordinatorDynamicConfig.class
         )
+    );
+  }
+
+  @Override
+  public ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+  {
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/config")
+            .jsonContent(jsonMapper, dynamicConfig),
+        IgnoreHttpResponseHandler.INSTANCE
     );
   }
 }

@@ -50,7 +50,7 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
   @BeforeEach
   protected void beforeEachTest()
   {
-    dataSource = createTestDataourceName();
+    dataSource = createTestDatasourceName();
   }
 
   /**
@@ -121,7 +121,7 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
     throw new ISE("Could not find supervisor[%s]", supervisorId);
   }
 
-  protected static String createTestDataourceName()
+  protected static String createTestDatasourceName()
   {
     return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
   }

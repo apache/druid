@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -123,7 +124,7 @@ public class LatchableEmitter extends StubServiceEmitter
    *
    * @throws ISE if a timeout of 30 seconds elapses waiting for the event.
    */
-  public void waitForEvent(UnaryOperator<EventMatcher> condition)
+  public ServiceMetricEvent waitForEvent(UnaryOperator<EventMatcher> condition)
   {
     final EventMatcher matcher = condition.apply(new EventMatcher());
     waitForEvent(
@@ -131,6 +132,7 @@ public class LatchableEmitter extends StubServiceEmitter
                  && matcher.test((ServiceMetricEvent) event),
         30_000
     );
+    return matcher.matchingEvent.get();
   }
 
   /**
@@ -222,6 +224,8 @@ public class LatchableEmitter extends StubServiceEmitter
     private Long metricValue;
     private final Map<String, Object> dimensions = new HashMap<>();
 
+    private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
+
     /**
      * Matches an event only if it has the given metric name.
      */
@@ -258,11 +262,18 @@ public class LatchableEmitter extends StubServiceEmitter
         return false;
       }
 
-      return dimensions.entrySet().stream().allMatch(
+      final boolean matches = dimensions.entrySet().stream().allMatch(
           dimValue -> event.getUserDims()
                            .getOrDefault(dimValue.getKey(), "")
                            .equals(dimValue.getValue())
       );
+
+      if (matches) {
+        matchingEvent.set(event);
+        return true;
+      } else {
+        return false;
+      }
     }
   }
 
@@ -278,13 +289,13 @@ public class LatchableEmitter extends StubServiceEmitter
     private Long targetSum;
     private Long targetCount;
 
-    public AggregateMatcher hasSum(long sum)
+    public AggregateMatcher hasSumAtLeast(long sum)
     {
       targetSum = sum;
       return this;
     }
 
-    public AggregateMatcher hasCount(long count)
+    public AggregateMatcher hasCountAtLeast(long count)
     {
       targetCount = count;
       return this;

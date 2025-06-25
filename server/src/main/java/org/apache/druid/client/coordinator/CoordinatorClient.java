@@ -94,4 +94,11 @@ public interface CoordinatorClient
    * API: {@code GET /druid/coordinator/v1/config}
    */
   ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig();
+
+  /**
+   * Updates the Coordinator dynamic config.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/config}
+   */
+  ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
 }

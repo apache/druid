@@ -164,12 +164,12 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
       String topic,
-      int count,
+      int numRecords,
       DateTime startTime
   )
   {
     final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < numRecords; ++i) {
       String valueCsv = StringUtils.format(
           "%s,%s,%d",
           startTime.plusDays(i),
