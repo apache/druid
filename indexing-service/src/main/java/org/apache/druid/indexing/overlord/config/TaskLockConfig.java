@@ -39,6 +39,9 @@ public class TaskLockConfig
   @JsonProperty
   private boolean batchAllocationReduceMetadataIO = true;
 
+  @JsonProperty
+  private int batchAllocationNumThreads = 5;
+
   public boolean isForceTimeChunkLock()
   {
     return forceTimeChunkLock;
@@ -59,4 +62,8 @@ public class TaskLockConfig
     return batchAllocationReduceMetadataIO;
   }
 
+  public int getBatchAllocationNumThreads()
+  {
+    return Math.max(1, batchAllocationNumThreads);
+  }
 }

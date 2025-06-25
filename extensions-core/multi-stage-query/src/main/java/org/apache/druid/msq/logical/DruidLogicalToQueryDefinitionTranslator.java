@@ -19,20 +19,25 @@
 
 package org.apache.druid.msq.logical;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.logical.LogicalStageBuilder.ReadStage;
+import org.apache.druid.msq.logical.stages.LogicalStage;
+import org.apache.druid.msq.logical.stages.ReadStage;
+import org.apache.druid.msq.logical.stages.SortStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
+import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 
@@ -43,7 +48,7 @@ import java.util.Optional;
 
 /**
  * Translates the logical plan defined by the {@link DruidLogicalNode} into a
- * {@link QueryDefinition}.
+ * {@link LogicalStage} nodes.
  *
  * The translation should be executed as a single pass over the logical plan.
  *
@@ -53,23 +58,21 @@ import java.util.Optional;
 public class DruidLogicalToQueryDefinitionTranslator
 {
   private PlannerContext plannerContext;
-  private LogicalStageBuilder stageBuilder;
 
   public DruidLogicalToQueryDefinitionTranslator(PlannerContext plannerContext)
   {
     this.plannerContext = plannerContext;
-    this.stageBuilder = new LogicalStageBuilder(plannerContext);
   }
 
   /**
    * Executes the translation of the logical plan into a query definition.
    */
-  public QueryDefinition translate(DruidLogicalNode relRoot)
+  public LogicalStage translate(DruidLogicalNode relRoot)
   {
-    DruidNodeStack stack = new DruidNodeStack();
+    DruidNodeStack stack = new DruidNodeStack(plannerContext);
     stack.push(relRoot);
     LogicalStage logicalStage = buildStageFor(stack);
-    return logicalStage.build();
+    return logicalStage;
   }
 
   /**
@@ -83,11 +86,12 @@ public class DruidLogicalToQueryDefinitionTranslator
   private LogicalStage buildStageFor(DruidNodeStack stack)
   {
     List<LogicalStage> inputStages = buildInputStages(stack);
-
     DruidLogicalNode node = stack.getNode();
-    Optional<ReadStage> stage = buildReadStage(node);
-    if (stage.isPresent()) {
-      return stage.get();
+    if (inputStages.size() == 0) {
+      Optional<ReadStage> stage = buildReadStage(node);
+      if (stage.isPresent()) {
+        return stage.get();
+      }
     }
     if (inputStages.size() == 1) {
       LogicalStage inputStage = inputStages.get(0);
@@ -95,8 +99,37 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
+      newStage = makeSequenceStage(inputStage, stack);
+      if (newStage != null) {
+        return newStage;
+      }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
+  }
+
+  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
+  {
+    if (node instanceof DruidValues) {
+      return translateValues((DruidValues) node);
+    }
+    if (node instanceof DruidTableScan) {
+      return translateTableScan((DruidTableScan) node);
+    }
+    return Optional.empty();
+  }
+
+  private LogicalStage makeSequenceStage(LogicalStage inputStage, DruidNodeStack stack)
+  {
+    if (stack.getNode() instanceof DruidSort) {
+      DruidSort sort = (DruidSort) stack.getNode();
+      if (sort.hasLimitOrOffset()) {
+        throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
+      }
+      List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(inputStage.getLogicalRowSignature(), sort);
+      List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
+      return new SortStage(inputStage, keyColumns);
+    }
+    return new ReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
   }
 
   private List<LogicalStage> buildInputStages(DruidNodeStack stack)
@@ -111,23 +144,12 @@ public class DruidLogicalToQueryDefinitionTranslator
     return inputStages;
   }
 
-  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
-  {
-    if (node instanceof DruidValues) {
-      return translateValues((DruidValues) node);
-    }
-    if (node instanceof DruidTableScan) {
-      return translateTableScan((DruidTableScan) node);
-    }
-    return Optional.empty();
-  }
-
   private Optional<ReadStage> translateTableScan(DruidTableScan node)
   {
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     TableDataSource ids = (TableDataSource) sd.dataSource;
     TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 
@@ -136,7 +158,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
     InlineDataSource ids = (InlineDataSource) sd.dataSource;
     InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    ReadStage stage = stageBuilder.makeReadStage(sd.rowSignature, ImmutableList.of(inputSpec));
+    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
     return Optional.of(stage);
   }
 }

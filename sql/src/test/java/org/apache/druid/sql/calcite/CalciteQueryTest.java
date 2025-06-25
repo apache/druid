@@ -15918,4 +15918,52 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1]"
     );
   }
+
+  @Test
+  public void testSetUseApproximateCountDistinctFalse()
+  {
+    testBuilder().sql(
+        "SET useApproximateCountDistinct = FALSE;\n"
+        + "SELECT COUNT(DISTINCT dim2) FROM druid.foo"
+    ).expectedQueries(
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setContext(
+                                                ImmutableMap.<String, Object>builder()
+                                                            .putAll(QUERY_CONTEXT_DEFAULT)
+                                                            .put("useApproximateCountDistinct", false)
+                                                            .build()
+                                            )
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0"),
+                                notNull("d0")
+                            )
+                        ))
+                        .setContext(
+                            ImmutableMap.<String, Object>builder()
+                                        .putAll(QUERY_CONTEXT_DEFAULT)
+                                        .put("useApproximateCountDistinct", false)
+                                        .build()
+                        )
+                        .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    ).run();
+  }
 }

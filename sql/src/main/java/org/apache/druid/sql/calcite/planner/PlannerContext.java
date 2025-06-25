@@ -28,6 +28,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -128,6 +129,7 @@ public class PlannerContext
   private final PlannerToolbox plannerToolbox;
   private final ExpressionParser expressionParser;
   private final String sql;
+  private final SqlNode sqlNode;
   private final SqlEngine engine;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
@@ -163,6 +165,7 @@ public class PlannerContext
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
       final String sql,
+      final SqlNode sqlNode,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -171,6 +174,7 @@ public class PlannerContext
     this.plannerToolbox = plannerToolbox;
     this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
+    this.sqlNode = sqlNode;
     this.engine = engine;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -180,6 +184,7 @@ public class PlannerContext
   public static PlannerContext create(
       final PlannerToolbox plannerToolbox,
       final String sql,
+      final SqlNode sqlNode,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -188,6 +193,7 @@ public class PlannerContext
     return new PlannerContext(
         plannerToolbox,
         sql,
+        sqlNode,
         engine,
         queryContext,
         hook
@@ -391,6 +397,11 @@ public class PlannerContext
   public String getSql()
   {
     return sql;
+  }
+
+  public SqlNode getSqlNode()
+  {
+    return sqlNode;
   }
 
   public PlannerHook getPlannerHook()

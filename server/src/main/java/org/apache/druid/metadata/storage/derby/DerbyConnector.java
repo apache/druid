@@ -192,13 +192,14 @@ public class DerbyConnector extends SQLMetadataConnector
             try {
               if (tableExists(handle, tableName)) {
                 DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
-                ResultSet columns = dbMetaData.getColumns(
-                    null,
-                    null,
-                    tableName.toUpperCase(Locale.ENGLISH),
-                    columnName.toUpperCase(Locale.ENGLISH)
-                );
-                return columns.next();
+                try (ResultSet columns = dbMetaData.getColumns(
+                        null,
+                        null,
+                        tableName.toUpperCase(Locale.ENGLISH),
+                        columnName.toUpperCase(Locale.ENGLISH)
+                )) {
+                  return columns.next();
+                }
               } else {
                 return false;
               }
