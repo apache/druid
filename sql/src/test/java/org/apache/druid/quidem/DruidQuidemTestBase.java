@@ -100,6 +100,13 @@ public abstract class DruidQuidemTestBase
 
   private static final String PROPERTY_FILTER = "quidem.filter";
 
+  /**
+   * These properties enable the test system to split up huge cases into desired
+   * number of smaller testcases.
+   */
+  private static final String BUCKET_INDEX = "quidem.split.bucket_index";
+  private static final String BUCKET_COUNT = "quidem.split.bucket_count";
+
   private final String filterStr;
   private final PathMatcher filterMatcher;
 
