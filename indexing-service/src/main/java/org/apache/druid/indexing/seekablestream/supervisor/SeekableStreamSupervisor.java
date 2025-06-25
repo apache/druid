@@ -126,6 +126,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -162,6 +163,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
+  private static final int MIN_WORKER_CORE_THREADS = 2;
+  private static final int DEFAULT_TASKS_PER_WORKER_THREAD = 4;
+  private static final int WORKER_THREAD_KEEPALIVE_TIME_MILLIS = 2000;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -857,7 +861,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final String supervisorId;
 
   /**
-   * Type-verbose id for identifying this supervisor in thread-names, listeners, etc.
+   * Tag for identifying this supervisor in thread-names, listeners, etc. tag = (type + supervisorId).
   */
   private final String supervisorTag;
   private final TaskInfoProvider taskInfoProvider;
@@ -940,17 +944,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.isSuspended()
     );
 
-    int workerThreads;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for supervisor[%s] for datasource[%s]", supervisorId, dataSource);
-
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : Math.min(10, autoScalerConfig.getTaskCountMax()));
-    } else {
-      workerThreads = (this.tuningConfig.getWorkerThreads() != null
-                       ? this.tuningConfig.getWorkerThreads()
-                       : Math.min(10, this.ioConfig.getTaskCount()));
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -970,13 +965,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       );
     }
 
-    this.workerExec = MoreExecutors.listeningDecorator(
-        ScheduledExecutors.fixed(
-            workerThreads,
-            StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d"
-        )
+    final int workerThreads = calculateWorkerThreads(tuningConfig, ioConfig);
+    ScheduledThreadPoolExecutor executor = ScheduledExecutors.fixedWithKeepAliveTime(
+        workerThreads,
+        StringUtils.encodeForFormat(supervisorTag) + "-Worker-%d",
+        WORKER_THREAD_KEEPALIVE_TIME_MILLIS
     );
-    log.info("Created worker pool with [%d] threads for supervisor[%s] for dataSource[%s]", workerThreads, this.supervisorId, this.dataSource);
+
+    this.workerExec = MoreExecutors.listeningDecorator(executor);
+    log.info(
+        "Created worker pool with [%d] threads for supervisor[%s], dataSource[%s]",
+        workerThreads, this.supervisorId, this.dataSource
+    );
 
     this.taskInfoProvider = new TaskInfoProvider()
     {
@@ -1009,6 +1009,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, this.tuningConfig, workerExec);
   }
 
+  /**
+   * Calculates the number of worker threads to use in a {@link SeekableStreamSupervisor}.
+   * These threads are used to interact with tasks in {@link SeekableStreamIndexTaskClient}
+   * and handle task interactions (discovery, updates etc.) in {@link SeekableStreamSupervisor}
+   * <p>
+   * If the tuning config explicitly specifies the field {@code workerThreads}, that value is used.
+   * Otherwise, the value is derived from either the auto-scaler config (if enabled) or the ioConfig task count,
+   * divided by the {@link DEFAULT_TASKS_PER_WORKER_THREAD}, with a minimum of {@link MIN_WORKER_CORE_THREADS}.
+   */
+  public static int calculateWorkerThreads(
+      SeekableStreamSupervisorTuningConfig tuningConfig,
+      SeekableStreamSupervisorIOConfig ioConfig
+  )
+  {
+    if (tuningConfig.getWorkerThreads() != null) {
+      return tuningConfig.getWorkerThreads();
+    }
+    final AutoScalerConfig autoScalerConfig = ioConfig.getAutoScalerConfig();
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+      return Math.max(MIN_WORKER_CORE_THREADS, autoScalerConfig.getTaskCountMax() / DEFAULT_TASKS_PER_WORKER_THREAD);
+    } else {
+      return Math.max(MIN_WORKER_CORE_THREADS, ioConfig.getTaskCount() / DEFAULT_TASKS_PER_WORKER_THREAD);
+    }
+  }
+
   @Override
   public int getActiveTaskGroupsCount()
   {
@@ -1029,8 +1054,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       catch (Exception e) {
         if (!started) {
           log.warn(
-              "First initialization attempt failed for SeekableStreamSupervisor[%s], starting retries...",
-              supervisorId
+              "First initialization attempt failed for supervisor[%s], dataSource[%s], starting retries...",
+              supervisorId,
+              dataSource
           );
 
           exec.submit(
@@ -1264,7 +1290,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   }
                   catch (Throwable e) {
                     stateManager.recordThrowableEvent(e);
-                    log.makeAlert(e, "SeekableStreamSupervisor[%s] for datasource=[%s] failed to handle notice", supervisorId, dataSource)
+                    log.makeAlert(e, "Supervisor[%s] for datasource[%s] failed to handle notice", supervisorId, dataSource)
                        .addData("noticeClass", notice.getClass().getSimpleName())
                        .emit();
                   }

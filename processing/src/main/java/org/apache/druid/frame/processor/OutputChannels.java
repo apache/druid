@@ -141,15 +141,4 @@ public class OutputChannels
   {
     return wrapReadOnly(outputChannels);
   }
-
-  public boolean areReadableChannelsReady()
-  {
-    for (final OutputChannel outputChannel : outputChannels) {
-      if (!outputChannel.isReadableChannelReady()) {
-        return false;
-      }
-    }
-
-    return true;
-  }
 }

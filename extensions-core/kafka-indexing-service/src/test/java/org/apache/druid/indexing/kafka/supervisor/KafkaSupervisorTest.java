@@ -4071,7 +4071,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "SeekableStreamSupervisor[testDS] for datasource=[testDS] failed to handle notice",
+        "Supervisor[testDS] for datasource[testDS] failed to handle notice",
         alert.getDescription()
     );
     Assert.assertEquals(

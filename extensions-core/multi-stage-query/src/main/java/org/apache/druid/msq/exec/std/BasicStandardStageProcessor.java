@@ -17,22 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.msq.querykit;
+package org.apache.druid.msq.exec.std;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.kernel.ExtraInfoHolder;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 
 import javax.annotation.Nullable;
 
 /**
- * Basic abstract {@link FrameProcessorFactory} that yields workers that do not require extra info and that
- * ignore the return values of their processors. This base class isn't used for every worker factory, but it is used
- * for many of them.
+ * Basic abstract {@link StageProcessor} that yields workers that do not require extra info and that
+ * ignore the return values of their processors.
  */
-public abstract class BaseFrameProcessorFactory implements FrameProcessorFactory<Object, Long, Object>
+public abstract class BasicStandardStageProcessor extends StandardStageProcessor<Object, Long, Object>
 {
   @Override
   public TypeReference<Long> getResultTypeReference()

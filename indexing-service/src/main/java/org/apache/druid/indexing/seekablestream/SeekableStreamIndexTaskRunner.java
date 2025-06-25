@@ -318,12 +318,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   */
   public String getSupervisorId()
   {
-    @Nullable
-    final String supervisorId = task.getSupervisorId();
-    if (supervisorId != null) {
-      return supervisorId;
-    }
-    return task.getDataSource();
+    return task.getSupervisorId();
   }
 
   @VisibleForTesting

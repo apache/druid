@@ -130,6 +130,10 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return dataSchema;
   }
 
+  /**
+   * Returns the supervisor ID of the supervisor this task belongs to.
+   * If null/unspecified, this defaults to the datasource name.
+   */
   @JsonProperty
   public String getSupervisorId()
   {

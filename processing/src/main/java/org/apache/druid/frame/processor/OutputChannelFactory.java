@@ -43,4 +43,11 @@ public interface OutputChannelFactory
    * {@link OutputChannel#getReadableChannel()} will return an empty channel.
    */
   OutputChannel openNilChannel(int partitionNumber);
+
+  /**
+   * Whether this factory creates buffered channels. Buffered channel readers
+   * (from {@link OutputChannel#getReadableChannel()}) will not work properly until the writer is closed.
+   * Unbuffered readers work immediately, even while the writer is open.
+   */
+  boolean isBuffered();
 }

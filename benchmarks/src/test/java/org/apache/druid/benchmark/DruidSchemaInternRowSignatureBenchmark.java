@@ -143,6 +143,7 @@ public class DruidSchemaInternRowSignatureBenchmark
                   null,
                   null,
                   null,
+                  null,
                   false
               )
           )

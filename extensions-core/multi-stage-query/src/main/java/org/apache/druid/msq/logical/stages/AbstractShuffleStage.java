@@ -17,25 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.msq.querykit;
+package org.apache.druid.msq.logical.stages;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import org.apache.druid.msq.kernel.ShuffleSpec;
+import org.apache.druid.msq.logical.LogicalInputSpec;
+import org.apache.druid.segment.column.RowSignature;
 
-public class WindowOperatorQueryFrameProcessorFactoryTest
+import javax.annotation.Nonnull;
+
+/**
+ * Represents a Shuffle stage.
+ */
+public abstract class AbstractShuffleStage extends AbstractLogicalStage
 {
-  @Test
-  public void testEqualsAndHashcode()
+  public AbstractShuffleStage(RowSignature signature, LogicalInputSpec input)
   {
-    EqualsVerifier.forClass(WindowOperatorQueryFrameProcessorFactory.class)
-                  .withNonnullFields(
-                      "query",
-                      "operatorList",
-                      "stageRowSignature",
-                      "maxRowsMaterializedInWindow",
-                      "partitionColumnNames"
-                  )
-                  .usingGetClass()
-                  .verify();
+    super(signature, input);
   }
+
+  /**
+   * Builds the shuffle specification for this stage.
+   */
+  @Nonnull
+  public abstract ShuffleSpec buildShuffleSpec();
 }

@@ -328,7 +328,18 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
+    public void loadQueuedSegmentsSkipCallbacks()
+    {
+      loadSegments(false);
+    }
+
+    @Override
     public void loadQueuedSegments()
+    {
+      loadSegments(true);
+    }
+
+    private void loadSegments(boolean executeCallbacks)
     {
       verifySimulationRunning();
       Preconditions.checkState(
@@ -337,7 +348,9 @@ public class CoordinatorSimulationBuilder
       );
 
       final BlockingExecutorService loadQueueExecutor = env.executorFactory.loadQueueExecutor;
-      while (loadQueueExecutor.hasPendingTasks()) {
+      final BlockingExecutorService loadCallbackExecutor = env.executorFactory.loadCallbackExecutor;
+      while (loadQueueExecutor.hasPendingTasks()
+             || (executeCallbacks && loadCallbackExecutor.hasPendingTasks())) {
         // Drain all the items from the load queue executor
         // This sends at most 1 load/drop request to each server
         loadQueueExecutor.finishAllPendingTasks();
@@ -345,7 +358,9 @@ public class CoordinatorSimulationBuilder
         // Load all the queued segments, handle their responses and execute callbacks
         int loadedSegments = env.executorFactory.historicalLoader.finishAllPendingTasks();
         loadQueueExecutor.finishNextPendingTasks(loadedSegments);
-        env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
+        if (executeCallbacks) {
+          env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
+        }
       }
     }
 

@@ -43,7 +43,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.SortMergeJoinStageProcessor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -70,7 +70,6 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -666,11 +665,11 @@ public class DataSourcePlan
   )
   {
     checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
-    SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis());
+    SortMergeJoinStageProcessor.validateCondition(dataSource.getConditionAnalysis());
 
     // Partition by keys given by the join condition.
-    final List<List<KeyColumn>> partitionKeys = SortMergeJoinFrameProcessorFactory.toKeyColumns(
-        SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis())
+    final List<List<KeyColumn>> partitionKeys = SortMergeJoinStageProcessor.toKeyColumns(
+        SortMergeJoinStageProcessor.validateCondition(dataSource.getConditionAnalysis())
     );
 
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
@@ -743,8 +742,8 @@ public class DataSourcePlan
                        )
                        .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
                        .signature(joinSignatureBuilder.build())
-                       .processorFactory(
-                           new SortMergeJoinFrameProcessorFactory(
+                       .processor(
+                           new SortMergeJoinStageProcessor(
                                dataSource.getRightPrefix(),
                                dataSource.getConditionAnalysis(),
                                dataSource.getJoinType()

@@ -312,10 +312,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Creates the table for storing datasource metadata for supervisors.
-   * Due to backwards compatibility reasons, the `dataSource` column will always uniquely identify a supervisor.
-   * For certain types of supervisors which support N:1 supervisor:datasource relationship, the `dataSource` column will store the supervisor ID.
-   * Otherwise, it will store the legacy supervisor ID – the `dataSource` itself.
+   * The {@code dataSource} column stores the supervisor ID.
+   * It has not been renamed to retain backwards compatibility.
+   * Supervisors created without an explicit supervisor id default to using the datasource name.
    */
   public void createDataSourceTable(final String tableName)
   {

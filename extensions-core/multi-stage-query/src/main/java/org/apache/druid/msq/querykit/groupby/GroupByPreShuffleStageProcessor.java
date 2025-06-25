@@ -27,19 +27,19 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
+import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.SegmentMapFunction;
 
 @JsonTypeName("groupByPreShuffle")
-public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
+public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
 {
   private final GroupByQuery query;
 
   @JsonCreator
-  public GroupByPreShuffleFrameProcessorFactory(@JsonProperty("query") GroupByQuery query)
+  public GroupByPreShuffleStageProcessor(@JsonProperty("query") GroupByQuery query)
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
