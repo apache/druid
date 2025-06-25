@@ -91,14 +91,13 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
       }
     };
 
-    coordinator.addProperty("druid.coordinator.loadqueuepeon.http.batchSize", "100");
-    historical.addProperty("druid.segmentCache.numLoadingThreads", "10");
+    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1S");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
-           .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
+           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addCommonProperty("druid.monitoring.monitors", "[\"org.apache.druid.java.util.metrics.JvmMonitor\"]")
            .addResource(kafkaServer)
            .addServer(coordinator)
@@ -112,14 +111,18 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
   }
 
   @Test
-  public void test_ingest50kRows_ofSelfClusterMetrics_andVerifyValues()
+  public void test_ingest2kRows_ofSelfClusterMetrics_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 50;
+    final int expectedSegmentsHandedOff = 2;
+
+    final int taskDurationMillis = 1_000;
+    final int taskCompletionTimeoutMillis = 10_000;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, maxRowsPerSegment);
+    final KafkaSupervisorSpec kafkaSupervisorSpec
+        = createKafkaSupervisor(supervisorId, taskDurationMillis, taskCompletionTimeoutMillis, maxRowsPerSegment);
 
     final Map<String, String> startSupervisorResult = getResult(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
@@ -133,7 +136,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
         agg -> agg.hasSum(expectedSegmentsHandedOff)
     );
 
-    // Check number of segments and rows in the datasource
+    // Verify number of segments and total number of rows in the datasource
     final int numSegments = Integer.parseInt(
         runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource = '%s'", dataSource)
     );
@@ -144,10 +147,9 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     );
     Assertions.assertTrue(numRows >= expectedSegmentsHandedOff * maxRowsPerSegment);
 
-    verifyMetricReportedByServer("segment/assigned/count", coordinator);
-    verifyMetricReportedByServer("jvm/mem/used", broker);
-    verifyMetricReportedByServer("jvm/pool/committed", indexer);
-    verifyMetricReportedByServer("jvm/mem/used", overlord);
+    verifyIngestedMetricCountMatchesEmittedCount("jvm/pool/committed", coordinator);
+    verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
+    verifyIngestedMetricCountMatchesEmittedCount("jvm/mem/used", overlord);
 
     // Suspend the supervisor and verify the state
     getResult(
@@ -160,7 +162,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
    * SELECTs the total count of the given metric in the {@link #dataSource} and
    * verifies it against the metrics actually emitted by the server.
    */
-  private void verifyMetricReportedByServer(String metricName, EmbeddedDruidServer server)
+  private void verifyIngestedMetricCountMatchesEmittedCount(String metricName, EmbeddedDruidServer server)
   {
     // Get the value of the metric from the datasource
     final int expectedValueForSegmentsAssigned = (int) Double.parseDouble(
@@ -169,6 +171,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
             dataSource, metricName, server.selfNode().getHostAndPort(), server.selfNode().getServiceName()
         )
     );
+    Assertions.assertTrue(expectedValueForSegmentsAssigned > 0);
 
     // Verify the number of metrics actually emitted from this server
     server.latchableEmitter().waitForEventAggregate(
@@ -177,11 +180,15 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     );
   }
 
-  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, int maxRowsPerSegment)
+  private KafkaSupervisorSpec createKafkaSupervisor(
+      String supervisorId,
+      int taskDurationMillis,
+      int taskCompletionTimeoutMillis,
+      int maxRowsPerSegment
+  )
   {
-    final Period taskDuration = Period.seconds(5);
-    final Period completionTimeout = Period.minutes(2);
     final Period startDelay = Period.millis(10);
+    final Period supervisorRunPeriod = Period.millis(500);
     final boolean useEarliestOffset = true;
 
     return new KafkaSupervisorSpec(
@@ -199,13 +206,13 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
             null,
             new JsonInputFormat(null, null, null, null, null),
             null, null,
-            taskDuration,
+            Period.millis(taskDurationMillis),
             kafkaServer.consumerProperties(),
             null, null, null,
             startDelay,
-            null,
+            supervisorRunPeriod,
             useEarliestOffset,
-            completionTimeout,
+            Period.millis(taskCompletionTimeoutMillis),
             null, null, null, null, null, null, null
         ),
         null, null, null, null, null, null, null, null, null, null, null

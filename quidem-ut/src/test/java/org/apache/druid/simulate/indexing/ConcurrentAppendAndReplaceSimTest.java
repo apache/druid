@@ -29,7 +29,8 @@ public class ConcurrentAppendAndReplaceSimTest extends IndexingSimulationTestBas
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    return EmbeddedDruidCluster.empty().addServer(new EmbeddedOverlord());
+    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+                               .addServer(new EmbeddedOverlord());
   }
 
   @Test

@@ -41,6 +41,8 @@ import java.util.function.UnaryOperator;
 
 /**
  * Service emitter that can be used to wait for specific events to occur.
+ * This is in contrast to the polling model used by integration tests where the
+ * test client repeatedly polls a Druid API to verify a required condition.
  *
  * @see #waitForEvent
  * @see #waitForEventAggregate

@@ -121,7 +121,7 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
    */
   final Properties getStartupProperties(
       TestFolder testFolder,
-      EmbeddedZookeeper zk
+      EmbeddedZookeeper zookeeper
   )
   {
     final Properties serverProperties = new Properties();
@@ -139,7 +139,9 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
     serverProperties.setProperty("druid.storage.storageDirectory", storageDirectory);
 
     // Add properties for Zookeeper
-    serverProperties.setProperty("druid.zk.service.host", zk.getConnectString());
+    if (zookeeper != null) {
+      serverProperties.setProperty("druid.zk.service.host", zookeeper.getConnectString());
+    }
 
     if (this instanceof EmbeddedHistorical) {
       serverProperties.setProperty(

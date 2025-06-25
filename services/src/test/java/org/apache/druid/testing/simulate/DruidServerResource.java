@@ -96,10 +96,14 @@ class DruidServerResource implements EmbeddedResource
   {
     log.info("Stopping server[%s] ...", server.getName());
 
-    lifecycle.get().stop();
-    lifecycle.set(null);
-    executorService.shutdownNow();
-    executorService = null;
+    final Lifecycle lifecycle = this.lifecycle.getAndSet(null);
+    if (lifecycle != null) {
+      lifecycle.stop();
+    }
+    if (executorService != null) {
+      executorService.shutdownNow();
+      executorService = null;
+    }
   }
 
   /**
@@ -161,7 +165,7 @@ class DruidServerResource implements EmbeddedResource
       injector.injectMembers(runnable);
       runnable.run();
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof InterruptedException) {
         log.warn("Interrupted while running server[%s].", server.getName());
