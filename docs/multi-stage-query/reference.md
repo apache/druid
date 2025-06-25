@@ -381,44 +381,9 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it. You can use context parameters alongside your queries to customize the behavior of the query. 
+Along with the standard Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine also supports its own set of specific context parameters. These parameters can be used with your queries to tailor how they are executed. For detailed instructions on configuring query context parameters, refer to the [query context parameters](../querying/query-context.md) documentation.
 
-There are three ways to provide context parameters, depending on how you're submitting your query:
-
-When submitting a query via the HTTP API, you can include context parameters in the `context` field of the request payload:
-
-```json
-{
-  "query": "SELECT 1 + 1",
-  "context": {
-    "<key>": "<value>",
-    "maxNumTasks": 3
-  }
-}
-```
-
-You can define context parameters in the Druid Web Console using the Query context editor with these steps:
-
-1. Open the **Query** tab in the Web Console.
-1. Locate the **Query engine** menu next to the **Run** button.
-1. Click **Query engine**, then select **Edit query context**.
-1. In the **Edit query context** modal, define your key-value parameters. For example:
-
-```json
-{
-  "maxNumTasks": 3
-}
-```
-
-5. Click **Save** to apply the context to your query.
-6. Run your query as usual—these parameters will be included in the request context.
-
-Beyond that, you can also define context parameters using `SET` statements directly within your SQL query. This method works in both the **Web Console** and the **API**, and is especially useful for quick, inline parameter configuration. For example, in the Web Console, you can use a `SET` statement like this:
-
-```sql
-SET maxNumTasks = 3;
-SELECT 1 + 1;
-```
+Beyond that, you can also define context parameters using `SET` statements directly within your SQL query. This method is especially useful for quick, inline parameter configuration. 
 For how to using `SET` command, See [SET Command](../querying/sql.md#set).
 
 Note: While the examples above use the `SELECT` statement, you can also specify context parameters in Druid SQL queries that use `INSERT` or `REPLACE`.
