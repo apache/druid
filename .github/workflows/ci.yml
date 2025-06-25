@@ -82,8 +82,12 @@ jobs:
 
   # this will be running in parallel with the ITs later; but until that migration happens - run them in parallel with normal tests
   run-qtest:
+    strategy:
+      fail-fast: false
+      matrix:
+        split: [ "0/4", "1/4", "2/4", "3/4" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run_unit-tests -Dtest=QTest -fae
-      key: quidem-QTest
+      script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
+      key: QTest-${{ matrix.split }}
       jdk: 17
