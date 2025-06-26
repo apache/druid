@@ -130,7 +130,8 @@ Now that there are segments that are only available from deep storage, run the f
 SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
 ```
 
-To run this query asynchronously, you can use the SET statement to specify the execution mode. 
+To run this query asynchronously, specify the `ASYNC` execution mode using the query context.
+Apply the query context parameter before the query using a SET statement. 
 
 For example, run the following curl command:
 
