@@ -385,9 +385,6 @@ The multi-stage query task engine supports the [SQL context parameters](../query
 
 For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
 
-Beyond that, you can also define context parameters using `SET` statements directly within your SQL query. This method is especially useful for quick, inline parameter configuration. 
-For how to using `SET` command, See [SET Command](../querying/sql.md#set).
-
 Note: While the examples above use the `SELECT` statement, you can also specify context parameters in Druid SQL queries that use `INSERT` or `REPLACE`.
 
 The following table lists the context parameters for the MSQ task engine:

@@ -403,12 +403,7 @@ SET statements only apply to the query in the same request. Subsequent requests 
 
 If you use the [JSON API](../api-reference/sql-api.md), you can also include query context parameters using the `context` field. If you include both, the parameter value in SET takes precedence over the parameter value in `context`.
 
-### Current limitations
-
-- `SET` statements currently support literal values only. For example, numbers, strings, booleans.
--  You must still provide arrays or JSON objects via the `context` field.
-
-
+Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.
 ## Identifiers and literals
 
 Identifiers like datasource and column names can optionally be quoted using double quotes. To escape a double quote
