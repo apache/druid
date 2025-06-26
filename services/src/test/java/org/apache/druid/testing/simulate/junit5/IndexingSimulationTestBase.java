@@ -19,8 +19,11 @@
 
 package org.apache.druid.testing.simulate.junit5;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -28,15 +31,28 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.apache.druid.testing.simulate.EmbeddedOverlord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base class for simulation tests related to ingestion and indexing.
+ * This class should not contain any hidden configs or setup, only shorthand
+ * utility methods.
+ * <p>
+ * Steps:
+ * <ul>
+ * <li>Write a {@code *Test} class that extends this class.</li>
+ * <li>Create an {@link EmbeddedDruidCluster} containing all servers, resources,
+ * extensions and properties in {@link #createCluster()}.</li>
+ * <li>Write one or more {@code @Test} (JUnit5) methods.</li>
+ * </ul>
  *
  * @see DruidSimulationTestBase for usage instructions
  */
@@ -54,14 +70,29 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
   }
 
   /**
-   * Runs the given SQL query using the broker client used by the {@link #cluster}.
+   * Gets the result from a future obtained by invoking a Druid API. Use
+   * {@code cluster.leaderOverlord()}, {@code cluster.leaderCoordinator()} and
+   * {@code cluster.anyBroker()} to see the list of available APIs.
    *
-   * @return The result of the SQL as a single CSV string
+   * @see EmbeddedDruidCluster#leaderOverlord()
+   * @see EmbeddedDruidCluster#leaderCoordinator()
+   * @see EmbeddedDruidCluster#anyBroker()
+   */
+  protected static <T> T callApi(ListenableFuture<T> future)
+  {
+    return FutureUtils.getUnchecked(future, true);
+  }
+
+  /**
+   * Runs the given SQL query using the broker client used by the {@link #cluster}.
+   * This is a shorthand for {@code runSql(callApi(cluster.anyBroker().submitSqlQuery(...)))}.
+   *
+   * @return The result of the SQL as a single CSV string.
    */
   protected String runSql(String sql, Object... args)
   {
     try {
-      return getResult(
+      return callApi(
           cluster.anyBroker().submitSqlQuery(
               new ClientSqlQuery(
                   StringUtils.format(sql, args),
@@ -91,7 +122,7 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
 
   protected void verifyTaskHasStatus(String taskId, TaskStatus expectedStatus, EmbeddedOverlord overlord)
   {
-    final TaskStatusResponse currentStatus = getResult(
+    final TaskStatusResponse currentStatus = callApi(
         overlord.client().taskStatus(taskId)
     );
     Assertions.assertNotNull(currentStatus.getStatus());
@@ -110,7 +141,7 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
   protected SupervisorStatus getSupervisorStatus(String supervisorId)
   {
     final List<SupervisorStatus> supervisors = ImmutableList.copyOf(
-        getResult(cluster.leaderOverlord().supervisorStatuses())
+        callApi(cluster.leaderOverlord().supervisorStatuses())
     );
     for (SupervisorStatus supervisor : supervisors) {
       if (supervisor.getId().equals(supervisorId)) {
@@ -124,5 +155,25 @@ public abstract class IndexingSimulationTestBase extends DruidSimulationTestBase
   protected static String createTestDatasourceName()
   {
     return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
+  }
+
+  /**
+   * Deserializes the given String payload into a Map-based object that may be
+   * submitted directly to the Overlord using {@code cluster.leaderOverlord().runTask()}.
+   */
+  protected static Object createTaskFromPayload(String taskId, String payload)
+  {
+    try {
+      final Map<String, Object> task = TestHelper.JSON_MAPPER.readValue(
+          payload,
+          new TypeReference<>() {}
+      );
+      task.put("id", taskId);
+
+      return task;
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Could not deserialize task payload[%s]", payload);
+    }
   }
 }

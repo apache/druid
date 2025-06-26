@@ -90,7 +90,7 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
 
-    final Map<String, String> startSupervisorResult = getResult(
+    final Map<String, String> startSupervisorResult = callApi(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
@@ -109,7 +109,7 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
 
     // Get the task ID
     List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        getResult(cluster.leaderOverlord().taskStatuses(null, dataSource, 1))
+        callApi(cluster.leaderOverlord().taskStatuses(null, dataSource, 1))
     );
     Assertions.assertEquals(1, taskStatuses.size());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
@@ -118,7 +118,7 @@ public class KafkaSupervisorSimTest extends IndexingSimulationTestBase
     Assertions.assertEquals("10", runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     // Suspend the supervisor and verify the state
-    getResult(
+    callApi(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
     supervisorStatus = getSupervisorStatus(supervisorId);

@@ -19,8 +19,6 @@
 
 package org.apache.druid.testing.simulate.junit5;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.testing.simulate.EmbeddedDruidCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,8 +69,10 @@ public abstract class DruidSimulationTestBase
   protected EmbeddedDruidCluster cluster;
 
   /**
-   * Creates the cluster to be used in this test. Implementations of this method
-   * should not start the cluster as it is done in {@link #setup()}.
+   * Creates the cluster to be used in this test class. This method is invoked
+   * only once before any of the {@code @Test} methods have run.
+   * Implementations of this method should not start the cluster as it is done in
+   * {@link #setup()}.
    */
   protected abstract EmbeddedDruidCluster createCluster();
 
@@ -89,10 +89,5 @@ public abstract class DruidSimulationTestBase
     if (cluster != null) {
       cluster.stop();
     }
-  }
-
-  protected <T> T getResult(ListenableFuture<T> future)
-  {
-    return FutureUtils.getUnchecked(future, true);
   }
 }

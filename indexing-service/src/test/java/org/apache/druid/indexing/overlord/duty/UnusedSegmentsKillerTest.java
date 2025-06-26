@@ -113,7 +113,7 @@ public class UnusedSegmentsKillerTest
   {
     final DutySchedule schedule = killer.getSchedule();
     Assert.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
-    Assert.assertEquals(Duration.standardMinutes(1).getMillis(), schedule.getInitialDelayMillis());
+    Assert.assertEquals(Duration.standardSeconds(10).getMillis(), schedule.getInitialDelayMillis());
   }
 
   @Test

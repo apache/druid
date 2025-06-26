@@ -37,6 +37,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer
 {
   public EmbeddedBroker()
   {
+    addProperty("druid.sql.planner.awaitInitializationOnStart", "false");
     addProperty("druid.broker.segment.awaitInitializationOnStart", "false");
   }
 

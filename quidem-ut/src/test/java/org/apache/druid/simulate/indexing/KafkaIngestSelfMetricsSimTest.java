@@ -147,7 +147,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
         maxRowsPerSegment
     );
 
-    final Map<String, String> startSupervisorResult = getResult(
+    final Map<String, String> startSupervisorResult = callApi(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec)
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
@@ -174,7 +174,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
 
     // Suspend the supervisor and verify the state
-    getResult(
+    callApi(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
     Assertions.assertTrue(getSupervisorStatus(supervisorId).isSuspended());
@@ -200,7 +200,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
         taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
-    getResult(cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec));
+    callApi(cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for some segments to be published
     overlord.latchableEmitter().waitForEvent(
@@ -210,11 +210,11 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
 
     // Enable compaction supervisors on the Overlord
     final ClusterCompactionConfig originalCompactionConfig
-        = getResult(cluster.leaderOverlord().getClusterCompactionConfig());
+        = callApi(cluster.leaderOverlord().getClusterCompactionConfig());
 
     final ClusterCompactionConfig updatedCompactionConfig
         = new ClusterCompactionConfig(1.0, 10, null, true, null);
-    final UpdateResponse updateResponse = getResult(
+    final UpdateResponse updateResponse = callApi(
         cluster.leaderOverlord().updateClusterCompactionConfig(updatedCompactionConfig)
     );
     Assertions.assertTrue(updateResponse.isSuccess());
@@ -231,7 +231,7 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
         false,
         null
     );
-    getResult(cluster.leaderOverlord().postSupervisor(compactionSupervisorSpec));
+    callApi(cluster.leaderOverlord().postSupervisor(compactionSupervisorSpec));
 
     // Wait until some compaction tasks have finished
     overlord.latchableEmitter().waitForEventAggregate(
@@ -254,14 +254,14 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     Assertions.assertFalse(upgradedFromSegmentIds.isEmpty());
 
     // Update Coordinator dynamic config to mark segments as unused as soon as they become overshadowed
-    final CoordinatorDynamicConfig originalCoordinatorDynamicConfig = getResult(
+    final CoordinatorDynamicConfig originalCoordinatorDynamicConfig = callApi(
         cluster.leaderCoordinator().getCoordinatorDynamicConfig()
     );
     final CoordinatorDynamicConfig updatedCoordinatorDynamicConfig
         = CoordinatorDynamicConfig.builder()
                                   .withMarkSegmentAsUnusedDelayMillis(10L)
                                   .build(originalCoordinatorDynamicConfig);
-    getResult(
+    callApi(
         cluster.leaderCoordinator().updateCoordinatorDynamicConfig(updatedCoordinatorDynamicConfig)
     );
 
@@ -280,19 +280,19 @@ public class KafkaIngestSelfMetricsSimTest extends IndexingSimulationTestBase
     );
 
     // Revert the cluster compaction config and coordinator dynamic config
-    getResult(
+    callApi(
         cluster.leaderOverlord().updateClusterCompactionConfig(originalCompactionConfig)
     );
-    getResult(
+    callApi(
         cluster.leaderCoordinator().updateCoordinatorDynamicConfig(originalCoordinatorDynamicConfig)
     );
 
     // Suspend the supervisors
-    getResult(
+    callApi(
         cluster.leaderOverlord().postSupervisor(compactionSupervisorSpec.createSuspendedSpec())
     );
     Assertions.assertTrue(getSupervisorStatus(compactionSupervisorSpec.getId()).isSuspended());
-    getResult(
+    callApi(
         cluster.leaderOverlord().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
     Assertions.assertTrue(getSupervisorStatus(supervisorId).isSuspended());

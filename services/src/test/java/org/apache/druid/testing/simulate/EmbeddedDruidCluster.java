@@ -120,9 +120,15 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   }
 
   /**
-   * Configures this cluster to use a {@link LatchableEmitter} by setting common
-   * runtime property {@code druid.emitter=latching} and adding the extension
-   * {@link LatchableEmitterModule}.
+   * Configures this cluster to use a {@link LatchableEmitter}. This method is a
+   * shorthand for the following:
+   * <pre>
+   * cluster.addCommonProperty("druid.emitter", "latching");
+   * cluster.addExtension(LatchableEmitterModule.class);
+   * </pre>
+   *
+   * @see LatchableEmitter
+   * @see LatchableEmitterModule
    */
   public EmbeddedDruidCluster useLatchableEmitter()
   {

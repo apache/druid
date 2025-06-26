@@ -97,7 +97,7 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
     final Task task = createIndexTaskForInlineData(dataSource, HEADERS + "\n" + CSV_DATA_10_DAYS);
     final String taskId = task.getId();
 
-    getResult(overlord.client().runTask(taskId, task));
+    callApi(overlord.client().runTask(taskId, task));
     waitForTaskToSucceed(taskId, overlord);
 
     // Verify that the task created 10 DAY-granularity segments
@@ -197,7 +197,7 @@ public class IndexTaskSimTest extends IndexingSimulationTestBase
     ).collect(Collectors.toList());
 
     for (Task task : tasks) {
-      getResult(
+      callApi(
           overlord.client().runTask(task.getId(), task)
       );
     }

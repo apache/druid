@@ -80,7 +80,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_findCurrentLeader()
   {
-    URI currentLeader = getResult(overlord.client().findCurrentLeader());
+    URI currentLeader = callApi(overlord.client().findCurrentLeader());
     Assertions.assertEquals(8090, currentLeader.getPort());
   }
 
@@ -88,7 +88,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   public void test_runTask_ofTypeNoop()
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    getResult(
+    callApi(
         overlord.client().runTask(taskId, new NoopTask(taskId, null, null, 1L, 0L, null))
     );
     waitForTaskToSucceed(taskId, overlord);
@@ -97,7 +97,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_runKillTask()
   {
-    final String taskId = getResult(
+    final String taskId = callApi(
         overlord.client().runKillTask("sim_test", TestDataSource.WIKI, Intervals.ETERNITY, null, null, null)
     );
     waitForTaskToSucceed(taskId, overlord);
@@ -119,13 +119,13 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
     // Start a long-running task
     final long taskRunDuration = 10_000L;
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    getResult(
+    callApi(
         overlord.client().runTask(taskId, new NoopTask(taskId, null, null, taskRunDuration, 0L, null))
     );
     verifyTaskHasStatus(taskId, TaskStatus.running(taskId), overlord);
 
     // Cancel and verify status
-    getResult(overlord.client().cancelTask(taskId));
+    callApi(overlord.client().cancelTask(taskId));
     verifyTaskHasStatus(
         taskId,
         TaskStatus.failure(taskId, "Shutdown request from user"),
@@ -136,7 +136,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_taskStatuses_returnsEmpty_forRunningTasks()
   {
-    CloseableIterator<TaskStatusPlus> result = getResult(
+    CloseableIterator<TaskStatusPlus> result = callApi(
         overlord.client().taskStatuses("running", null, null)
     );
     final List<TaskStatusPlus> runningTasks = ImmutableList.copyOf(result);
@@ -148,18 +148,18 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   {
     // Run multiple tasks
     final String task1 = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    getResult(
+    callApi(
         overlord.client().runTask(task1, new NoopTask(task1, null, null, 1L, 0L, null))
     );
     waitForTaskToSucceed(task1, overlord);
 
     final String task2 = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    getResult(
+    callApi(
         overlord.client().runTask(task2, new NoopTask(task2, null, null, 1L, 0L, null))
     );
     waitForTaskToSucceed(task2, overlord);
 
-    CloseableIterator<TaskStatusPlus> result = getResult(
+    CloseableIterator<TaskStatusPlus> result = callApi(
         overlord.client().taskStatuses("complete", null, null)
     );
     final Map<String, TaskStatusPlus> completeTaskIdToStatus
@@ -175,7 +175,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_taskStatuses_byIds_returnsEmpty_forUnknownTaskIds()
   {
-    Map<String, TaskStatus> result = getResult(
+    Map<String, TaskStatus> result = callApi(
         overlord.client().taskStatuses(Set.of(UNKNOWN_TASK_ID))
     );
     Assertions.assertTrue(result.isEmpty());
@@ -202,7 +202,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_supervisorStatuses()
   {
-    CloseableIterator<SupervisorStatus> result = getResult(
+    CloseableIterator<SupervisorStatus> result = callApi(
         overlord.client().supervisorStatuses()
     );
     Assertions.assertNotNull(result);
@@ -220,7 +220,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_killPendingSegments()
   {
-    Integer numPendingSegmentsDeleted = getResult(
+    Integer numPendingSegmentsDeleted = callApi(
         overlord.client().killPendingSegments(TestDataSource.WIKI, Intervals.ETERNITY)
     );
     Assertions.assertEquals(0, numPendingSegmentsDeleted.intValue());
@@ -229,7 +229,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_getWorkers()
   {
-    List<IndexingWorkerInfo> workers = getResult(overlord.client().getWorkers());
+    List<IndexingWorkerInfo> workers = callApi(overlord.client().getWorkers());
     Assertions.assertEquals(1, workers.size());
     Assertions.assertEquals(3, workers.get(0).getWorker().getCapacity());
   }
@@ -237,7 +237,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_getTotalWorkerCapacity()
   {
-    IndexingTotalWorkerCapacityInfo result = getResult(
+    IndexingTotalWorkerCapacityInfo result = callApi(
         overlord.client().getTotalWorkerCapacity()
     );
     Assertions.assertEquals(3, result.getCurrentClusterCapacity());
@@ -246,21 +246,21 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_isCompactionSupervisorEnabled()
   {
-    Boolean result = getResult(overlord.client().isCompactionSupervisorEnabled());
+    Boolean result = callApi(overlord.client().isCompactionSupervisorEnabled());
     Assertions.assertNotNull(result);
   }
 
   @Test
   public void test_markNonOvershadowedSegmentsAsUsed_basic()
   {
-    SegmentUpdateResponse result = getResult(overlord.client().markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI));
+    SegmentUpdateResponse result = callApi(overlord.client().markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI));
     Assertions.assertNotNull(result);
   }
 
   @Test
   public void test_markNonOvershadowedSegmentsAsUsed_filtered()
   {
-    SegmentUpdateResponse result = getResult(
+    SegmentUpdateResponse result = callApi(
         overlord.client().markNonOvershadowedSegmentsAsUsed(
             TestDataSource.WIKI,
             new SegmentsToUpdateFilter(Intervals.ETERNITY, null, null)
@@ -272,7 +272,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_markSegmentAsUsed()
   {
-    SegmentUpdateResponse result = getResult(
+    SegmentUpdateResponse result = callApi(
         overlord.client().markSegmentAsUsed(SegmentId.dummy(TestDataSource.WIKI))
     );
     Assertions.assertNotNull(result);
@@ -281,7 +281,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_markSegmentsAsUnused_basic()
   {
-    final SegmentUpdateResponse result = getResult(
+    final SegmentUpdateResponse result = callApi(
         overlord.client().markSegmentsAsUnused(TestDataSource.WIKI)
     );
     Assertions.assertNotNull(result);
@@ -290,7 +290,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_markSegmentsAsUnused_filtered()
   {
-    SegmentUpdateResponse result = getResult(
+    SegmentUpdateResponse result = callApi(
         overlord.client().markSegmentsAsUnused(
             TestDataSource.WIKI,
             new SegmentsToUpdateFilter(Intervals.ETERNITY, null, null)
@@ -302,7 +302,7 @@ public class OverlordClientSimTest extends IndexingSimulationTestBase
   @Test
   public void test_markSegmentAsUnused()
   {
-    SegmentUpdateResponse result = getResult(
+    SegmentUpdateResponse result = callApi(
         overlord.client().markSegmentAsUnused(
             SegmentId.dummy(TestDataSource.WIKI)
         )
