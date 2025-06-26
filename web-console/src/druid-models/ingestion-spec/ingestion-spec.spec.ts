@@ -369,6 +369,7 @@ describe('ingestion-spec', () => {
   it('upgrades / downgrades back compat supervisor spec', () => {
     const backCompatSupervisorSpec = {
       type: 'kafka',
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -486,6 +487,7 @@ describe('ingestion-spec', () => {
     };
 
     expect(cleanSpec(upgradeSpec(backCompatSupervisorSpec))).toEqual({
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -560,6 +562,7 @@ describe('ingestion-spec', () => {
         },
       } as any),
     ).toEqual({
+      id: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
       type: 'index_parallel',
       spec: {
         dataSchema: {},
