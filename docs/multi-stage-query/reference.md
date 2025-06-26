@@ -381,9 +381,9 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-Along with the standard Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine also supports its own set of specific context parameters. These parameters can be used with your queries to tailor how they are executed. 
+The multi-stage query task engine supports the [SQL context parameters](../querying/sql-query-context.md), as well as its own set of specific context parameters. Use these parameters to tailor how Druid executes your query.
 
-For detailed instructions on configuring query context parameters, refer to the [query context parameters](../querying/query-context.md) documentation.
+For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
 
 Beyond that, you can also define context parameters using `SET` statements directly within your SQL query. This method is especially useful for quick, inline parameter configuration. 
 For how to using `SET` command, See [SET Command](../querying/sql.md#set).

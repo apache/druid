@@ -383,7 +383,6 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 `SET` statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. These statements can be included before the main SQL query and are supported in multiple query interfaces, including the The Druid SQL [JSON API](../api-reference/sql-api.md) and the Druid Web Console. 
 
-You can include 0 or more `SET` statements, each separated by a semicolon `;`, preceding a statement to execute in the `query` string of the request. 
 
 The syntax of a `SET` statement is:
 
@@ -400,9 +399,9 @@ SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
 
-If present, these `SET` statements assign [SQL query context parameter](../querying/sql-query-context.md) which only apply to the non-`SET` statement of the same request and subsequent requests are not affected.
+SET statements only apply to the query in the same request. Subsequent requests are not affected.
 
-You can mix `SET` statement and [Context Parameter](../querying/query-context.md) with `SET` overriding on key conflicts.
+If you use the [JSON API](../api-reference/sql-api.md), you can also include query context parameters using the `context` field. If you include both, the parameter value in SET takes precedence over the parameter value in `context`.
 
 ### Current limitations
 
