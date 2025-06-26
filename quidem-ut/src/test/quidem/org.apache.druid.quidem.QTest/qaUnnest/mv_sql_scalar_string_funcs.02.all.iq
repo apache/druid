@@ -1,0 +1,422 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B23_C2
+#-------------------------------------------------------------------------
+SELECT btrim(cast(c_long AS char), '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND btrim(cast(c_long AS char), '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B24_C1
+#-------------------------------------------------------------------------
+SELECT ltrim(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND ltrim(c, '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B24_C2
+#-------------------------------------------------------------------------
+SELECT ltrim(cast(c_long AS char), '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND ltrim(cast(c_long AS char), '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B25_C1
+#-------------------------------------------------------------------------
+SELECT rtrim(c, '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND rtrim(c, '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B25_C2
+#-------------------------------------------------------------------------
+SELECT rtrim(cast(c_long AS char), '1') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND rtrim(cast(c_long AS char), '1')<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B26_C1
+#-------------------------------------------------------------------------
+SELECT reverse(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND reverse(c)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B26_C2
+#-------------------------------------------------------------------------
+SELECT reverse(cast(c_long AS char)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND reverse(cast(c_long AS char)) IN ('0',
+                                        '1',
+                                        '2');
++-----+
+| col |
++-----+
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 0   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
+| 2   |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B27_C1
+#-------------------------------------------------------------------------
+SELECT repeat(c, 2) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND repeat(c, 2)<>'ABCD';
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+| 11  |
+| 11  |
+| 11  |
+| 22  |
+| 22  |
+| 22  |
+| 33  |
+| 33  |
+| 33  |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B27_C2
+#-------------------------------------------------------------------------
+SELECT repeat(cast(c_long AS char), 2) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND repeat(cast(c_long AS char), 2) IN ('00',
+                                          '11',
+                                          '22');
++-----+
+| col |
++-----+
+| 00  |
+| 00  |
+| 00  |
+| 00  |
+| 00  |
+| 11  |
+| 11  |
+| 11  |
+| 11  |
+| 11  |
+| 22  |
+| 22  |
+| 22  |
+| 22  |
+| 22  |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B28_C1
+#-------------------------------------------------------------------------
+SELECT lpad(c, 3, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND lpad(c, 3, 'Z')<>'ABCD';
++-----+
+| col |
++-----+
+| ZZ1 |
+| ZZ1 |
+| ZZ1 |
+| ZZ2 |
+| ZZ2 |
+| ZZ2 |
+| ZZ3 |
+| ZZ3 |
+| ZZ3 |
+| ZZZ |
+| ZZZ |
+| ZZZ |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B28_C2
+#-------------------------------------------------------------------------
+SELECT lpad(cast(c_long AS char), 3, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND lpad(cast(c_long AS char), 3, 'Z') IN ('ZZ0',
+                                             'ZZ1',
+                                             'ZZ2');
++-----+
+| col |
++-----+
+| ZZ0 |
+| ZZ0 |
+| ZZ0 |
+| ZZ0 |
+| ZZ0 |
+| ZZ1 |
+| ZZ1 |
+| ZZ1 |
+| ZZ1 |
+| ZZ1 |
+| ZZ2 |
+| ZZ2 |
+| ZZ2 |
+| ZZ2 |
+| ZZ2 |
++-----+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B29_C1
+#-------------------------------------------------------------------------
+SELECT rpad(c, 3, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND rpad(c, 3, 'Z')<>'ABCD';
++-----+
+| col |
++-----+
+| 1ZZ |
+| 1ZZ |
+| 1ZZ |
+| 2ZZ |
+| 2ZZ |
+| 2ZZ |
+| 3ZZ |
+| 3ZZ |
+| 3ZZ |
+| ZZZ |
+| ZZZ |
+| ZZZ |
++-----+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_string_funcs TEST_ID: A1_B29_C2
+#-------------------------------------------------------------------------
+SELECT rpad(cast(c_long AS char), 3, 'Z') AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND rpad(cast(c_long AS char), 3, 'Z') IN ('0ZZ',
+                                             '1ZZ',
+                                             '2ZZ');
++-----+
+| col |
++-----+
+| 0ZZ |
+| 0ZZ |
+| 0ZZ |
+| 0ZZ |
+| 0ZZ |
+| 1ZZ |
+| 1ZZ |
+| 1ZZ |
+| 1ZZ |
+| 1ZZ |
+| 2ZZ |
+| 2ZZ |
+| 2ZZ |
+| 2ZZ |
+| 2ZZ |
++-----+
+(15 rows)
+
+!ok
+

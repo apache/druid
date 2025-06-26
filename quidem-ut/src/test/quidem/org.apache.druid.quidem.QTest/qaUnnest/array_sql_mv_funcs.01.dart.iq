@@ -1,0 +1,1456 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| __time                  | s_int | s_null | a_bool       | a_int        | a_float          | a_str          | a_null             | a_empty | a_mixed                  | a_nested                                                                                                                                                                                                                                                                                                                      |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2022-01-01 00:00:00.000 |     1 |        | [1, 0, null] | [1, 2, null] | [0.1, 0.2, null] | [S1, S2, null] | [null, null, null] | []      | [true, 1, 0.1, S1, null] | [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| 2022-02-01 00:00:00.000 |     2 |        | [null, 1, 0] | [null, 1, 2] | [null, 0.1, 0.2] | [null, S1, S2] | [null, null, null] | []      | [null, true, 1, 0.1, S1] | [[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"],[[null,true,false],[null,1,2],[null,0.1,0.2],[null,"S1","S2"],[null,null,null],[],[null,true,1,0.1,"S1"]]]] |
+| 2022-03-01 00:00:00.000 |       |        | [0, null, 1] | [2, null, 1] | [0.2, null, 0.1] | [S2, null, S1] | [null, null, null] | []      | [S1, null, true, 1, 0.1] | [[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1],[[false,null,true],[2,null,1],[0.2,null,0.1],["S2",null,"S1"],[null,null,null],[],["S1",null,true,1,0.1]]]] |
++-------------------------+-------+--------+--------------+--------------+------------------+----------------+--------------------+---------+--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NULL);
++-----------+
+| col       |
++-----------+
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NULL);
++-----------+
+| col       |
++-----------+
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
+| ["2","3"] |
++-----------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv(cast(c AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(cast(c AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(cast(c AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv(cast(c AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(cast(c AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(cast(c AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv(cast(s_int AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(cast(s_int AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(cast(s_int AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C3_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(string_to_mv(cast(s_int AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_only(cast(s_int AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_only(cast(s_int AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(string_to_mv('1,2,3', ','), array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
+| 1   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv(cast(c AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(cast(c AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(cast(c AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv(cast(c AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(cast(c AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(cast(c AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv(cast(s_int AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(cast(s_int AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(cast(s_int AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C3_D2
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(string_to_mv(cast(s_int AS char), ','), array['2', '3', '4']) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_filter_none(cast(s_int AS char),array['2', '3', '4']) IS NOT NULL
+       OR mv_filter_none(cast(s_int AS char),array['2', '3', '4']) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_length(cast(c AS char))<99999
+       OR mv_length(cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_length(cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_length(cast(c AS char))<99999
+       OR mv_length(cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_length(cast(s_int AS char))<99999
+       OR mv_length(cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_length(cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_length(cast(s_int AS char))<99999
+       OR mv_length(cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(cast(c AS char), 0) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset(cast(c AS char), 0)<'99999'
+       OR mv_offset(cast(c AS char), 0) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset(cast(c AS char), 0) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset(cast(c AS char), 0)<'99999'
+       OR mv_offset(cast(c AS char), 0) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(cast(s_int AS char), 0) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset(cast(s_int AS char), 0)<'99999'
+       OR mv_offset(cast(s_int AS char), 0) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset(cast(s_int AS char), 0) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset(cast(s_int AS char), 0)<'99999'
+       OR mv_offset(cast(s_int AS char), 0) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_ordinal(cast(c AS char), 1)<'99999'
+       OR mv_ordinal(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(cast(c AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_ordinal(cast(c AS char), 1)<'99999'
+       OR mv_ordinal(cast(c AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_ordinal(cast(s_int AS char), 1)<'99999'
+       OR mv_ordinal(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(cast(s_int AS char), 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_ordinal(cast(s_int AS char), 1)<'99999'
+       OR mv_ordinal(cast(s_int AS char), 1) IS NULL);
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(c AS char), cast(c AS char)) IS TRUE
+       OR mv_contains(cast(c AS char), cast(c AS char)) IS FALSE
+       OR mv_contains(cast(c AS char), cast(c AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(c AS char), cast(c AS char)) IS TRUE
+       OR mv_contains(cast(c AS char), cast(c AS char)) IS FALSE
+       OR mv_contains(cast(c AS char), cast(c AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(c AS char), cast(s_int AS char)) IS TRUE
+       OR mv_contains(cast(c AS char), cast(s_int AS char)) IS FALSE
+       OR mv_contains(cast(c AS char), cast(s_int AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(c AS char), cast(s_int AS char)) IS TRUE
+       OR mv_contains(cast(c AS char), cast(s_int AS char)) IS FALSE
+       OR mv_contains(cast(c AS char), cast(s_int AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(s_int AS char), cast(c AS char)) IS TRUE
+       OR mv_contains(cast(s_int AS char), cast(c AS char)) IS FALSE
+       OR mv_contains(cast(s_int AS char), cast(c AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C3_D2
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(s_int AS char), cast(c AS char)) IS TRUE
+       OR mv_contains(cast(s_int AS char), cast(c AS char)) IS FALSE
+       OR mv_contains(cast(s_int AS char), cast(c AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(s_int AS char), cast(s_int AS char)) IS TRUE
+       OR mv_contains(cast(s_int AS char), cast(s_int AS char)) IS FALSE
+       OR mv_contains(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B6_C4_D2
+#-------------------------------------------------------------------------
+SELECT mv_contains(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_contains(cast(s_int AS char), cast(s_int AS char)) IS TRUE
+       OR mv_contains(cast(s_int AS char), cast(s_int AS char)) IS FALSE
+       OR mv_contains(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(c AS char), cast(c AS char)) IS TRUE
+       OR mv_overlap(cast(c AS char), cast(c AS char)) IS FALSE
+       OR mv_overlap(cast(c AS char), cast(c AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(c AS char), cast(c AS char)) IS TRUE
+       OR mv_overlap(cast(c AS char), cast(c AS char)) IS FALSE
+       OR mv_overlap(cast(c AS char), cast(c AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(c AS char), cast(s_int AS char)) IS TRUE
+       OR mv_overlap(cast(c AS char), cast(s_int AS char)) IS FALSE
+       OR mv_overlap(cast(c AS char), cast(s_int AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+|       |
+|       |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(c AS char), cast(s_int AS char)) IS TRUE
+       OR mv_overlap(cast(c AS char), cast(s_int AS char)) IS FALSE
+       OR mv_overlap(cast(c AS char), cast(s_int AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+|       |
+|       |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(s_int AS char), cast(c AS char)) IS TRUE
+       OR mv_overlap(cast(s_int AS char), cast(c AS char)) IS FALSE
+       OR mv_overlap(cast(s_int AS char), cast(c AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+|       |
+|       |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C3_D2
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(s_int AS char), cast(c AS char)) IS TRUE
+       OR mv_overlap(cast(s_int AS char), cast(c AS char)) IS FALSE
+       OR mv_overlap(cast(s_int AS char), cast(c AS char)) IS NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+|       |
+|       |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS TRUE
+       OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS FALSE
+       OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C4_D2
+#-------------------------------------------------------------------------
+SELECT mv_overlap(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS TRUE
+       OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS FALSE
+       OR mv_overlap(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(c AS char), cast(c AS char)) IS NOT NULL
+       OR mv_offset_of(cast(c AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C1_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(c AS char), cast(c AS char)) IS NOT NULL
+       OR mv_offset_of(cast(c AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(c AS char), cast(s_int AS char)) IS NOT NULL
+       OR mv_offset_of(cast(c AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C2_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(c AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(c AS char), cast(s_int AS char)) IS NOT NULL
+       OR mv_offset_of(cast(c AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(s_int AS char), cast(c AS char)) IS NOT NULL
+       OR mv_offset_of(cast(s_int AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C3_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(s_int AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(s_int AS char), cast(c AS char)) IS NOT NULL
+       OR mv_offset_of(cast(s_int AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(s_int AS char), cast(s_int AS char)) IS NOT NULL
+       OR mv_offset_of(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C4_D2
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(cast(s_int AS char), cast(s_int AS char)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_offset_of(cast(s_int AS char), cast(s_int AS char)) IS NOT NULL
+       OR mv_offset_of(cast(s_int AS char), cast(s_int AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(cast(c AS char), cast(c AS char)) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (mv_ordinal_of(cast(c AS char), cast(c AS char)) IS NOT NULL
+       OR mv_ordinal_of(cast(c AS char), cast(c AS char)) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+

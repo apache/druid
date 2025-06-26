@@ -157,60 +157,16 @@ jobs:
           echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
           docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
-  # check if it is a PR and if it is approved. For approved PRs, we do not want to run tests sequentially
-  check-approval:
-    runs-on: ubuntu-latest
-    outputs:
-      approved: ${{ steps.check.outputs.isApproved }}
-    steps:
-      - name: Check if Triggered by a PR
-        id: determine-trigger
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "isPR=true" >> $GITHUB_ENV
-          else
-            echo "isPR=false" >> $GITHUB_ENV
-          fi
-
-      - name: Check PR Approval (if applicable)
-        id: check
-        if: ${{ env.isPR == 'true' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const reviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-            const approved = reviews.data.some(review => review.state === 'APPROVED');
-            core.setOutput("isApproved", approved);
-
-      - name: Default to Approved for Branch
-        id: default-check
-        if: ${{ env.isPR == 'false' }}
-        run: echo "::set-output name=isApproved::true"
-
-  unit-tests-unapproved:
-    name: "unit tests - PR unapproved"
+  unit-tests:
+    name: "unit tests"
     uses: ./.github/workflows/ci.yml
-    needs: [check-approval]
-    if: ${{ needs.check-approval.outputs.approved != 'true' }}
-
-  unit-tests-approved:
-    name: "unit tests - PR approved"
-    uses: ./.github/workflows/ci.yml
-    needs: [check-approval]
-    if: ${{ needs.check-approval.outputs.approved == 'true' }}
 
   standard-its:
-    needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    needs: [build, unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
-    needs: [build, unit-tests-unapproved, check-approval]
-    if: ${{ !cancelled() && (needs.check-approval.outputs.approved == 'true' || needs.unit-tests-unapproved.result == 'success') }}
+    needs: [build, unit-tests]
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
@@ -219,7 +175,7 @@ jobs:
       DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
   actions-timeline:
-    needs: [build, unit-tests-approved, unit-tests-unapproved, revised-its, standard-its]
+    needs: [build, unit-tests, revised-its, standard-its]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
