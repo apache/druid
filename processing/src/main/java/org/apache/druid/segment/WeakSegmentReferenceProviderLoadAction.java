@@ -25,6 +25,7 @@ import org.apache.druid.query.SegmentDescriptor;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.function.Supplier;
 
 /**
  * Wrapper type representing the act of ensuring that a {@link ReferenceCountedSegmentProvider} is present in the
@@ -39,21 +40,21 @@ public class WeakSegmentReferenceProviderLoadAction implements Closeable
       final LeafSegmentReferenceProvider provider
   )
   {
-    return new WeakSegmentReferenceProviderLoadAction(descriptor, Futures.immediateFuture(provider), NOOP);
+    return new WeakSegmentReferenceProviderLoadAction(descriptor, () -> Futures.immediateFuture(provider), NOOP);
   }
 
   public static WeakSegmentReferenceProviderLoadAction missingSegment(final SegmentDescriptor descriptor)
   {
-    return new WeakSegmentReferenceProviderLoadAction(descriptor, Futures.immediateFuture(null), NOOP);
+    return new WeakSegmentReferenceProviderLoadAction(descriptor, () -> Futures.immediateFuture(null), NOOP);
   }
 
   private final SegmentDescriptor segmentDescriptor;
-  private final ListenableFuture<LeafSegmentReferenceProvider> loadFuture;
+  private final Supplier<ListenableFuture<LeafSegmentReferenceProvider>> loadFuture;
   private final Closeable loadCleanup;
 
   public WeakSegmentReferenceProviderLoadAction(
       SegmentDescriptor segmentDescriptor,
-      ListenableFuture<LeafSegmentReferenceProvider> loadFuture,
+      Supplier<ListenableFuture<LeafSegmentReferenceProvider>> loadFuture,
       Closeable loadCleanup
   )
   {
@@ -69,7 +70,7 @@ public class WeakSegmentReferenceProviderLoadAction implements Closeable
 
   public ListenableFuture<LeafSegmentReferenceProvider> getLoadFuture()
   {
-    return loadFuture;
+    return loadFuture.get();
   }
 
   @Override

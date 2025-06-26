@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -440,8 +439,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return false;
   }
 
-
-  @GuardedBy("lock")
   private SegmentCacheEntry assignLocationAndMount(
       SegmentCacheEntry cacheEntry,
       SegmentLazyLoadFailCallback segmentLoadFailCallback
@@ -699,19 +696,26 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       );
     }
 
-    @GuardedBy("lock")
     public void loadIntoPageCache()
     {
-      final File[] children = storageDir.listFiles();
-      if (children != null) {
-        for (File child : children) {
-          try (InputStream in = Files.newInputStream(child.toPath())) {
-            IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
-            log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
+      final ReferenceCountingLock lock = lock();
+      synchronized (lock) {
+        try {
+          final File[] children = storageDir.listFiles();
+          if (children != null) {
+            for (File child : children) {
+              try (InputStream in = Files.newInputStream(child.toPath())) {
+                IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
+                log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
+              }
+              catch (Exception e) {
+                log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
+              }
+            }
           }
-          catch (Exception e) {
-            log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
-          }
+        }
+        finally {
+          unlock(lock);
         }
       }
     }
@@ -912,7 +916,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           if (entry != null && entry.referenceProvider != null) {
             return new WeakSegmentReferenceProviderLoadAction(
                 descriptor,
-                Futures.immediateFuture(entry.referenceProvider),
+                () -> Futures.immediateFuture(entry.referenceProvider),
                 this::cleanupLoad
             );
           }
@@ -924,15 +928,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           if (entry != null) {
             return new WeakSegmentReferenceProviderLoadAction(
                 descriptor,
-                SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
+                () -> SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
                     () -> {
                       final ReferenceCountingLock threadLock = entry.lock();
-                      try {
-                        entry.mount(location.getPath());
-                        return entry.referenceProvider;
-                      }
-                      finally {
-                        entry.unlock(threadLock);
+                      synchronized (threadLock) {
+                        try {
+                          entry.mount(location.getPath());
+                          return entry.referenceProvider;
+                        }
+                        finally {
+                          entry.unlock(threadLock);
+                        }
                       }
                     }
                 ),
