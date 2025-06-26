@@ -381,7 +381,7 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 ## SET 
 
-`SET` statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. These statements can be included before the main SQL query and are supported in multiple query interfaces, including the The Druid SQL [JSON API](../api-reference/sql-api.md) and the Druid Web Console. 
+`SET` statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. These statements can be included before the main SQL query and are supported in multiple query interfaces, including the The Druid SQL [JSON API](../api-reference/sql-api.md) and the [Druid Web Console](../operations/web-console.md). 
 
 
 The syntax of a `SET` statement is:
