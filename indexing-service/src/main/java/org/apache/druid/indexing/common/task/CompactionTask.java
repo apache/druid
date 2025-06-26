@@ -79,7 +79,6 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
@@ -615,7 +614,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricBuilder,
             segmentProvider.dataSource,
             interval,
-            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
+            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager()),
             dimensionsSpec,
             transformSpec,
             metricsSpec,
@@ -642,8 +641,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           ),
           lazyFetchSegments(
               timelineSegments,
-              toolbox.getSegmentCacheManager(),
-              toolbox.getIndexIO()
+              toolbox.getSegmentCacheManager()
           ),
           dimensionsSpec,
           transformSpec,
@@ -768,13 +766,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   private static Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> lazyFetchSegments(
       Iterable<DataSegment> dataSegments,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager)
     );
   }
 
@@ -783,8 +780,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   // an error. Creating a function keeps everyone happy.
   private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
       DataSegment dataSegment,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Pair.of(
@@ -792,14 +788,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            final ReferenceCountedSegmentProvider segmentProvider = closer.register(segmentCacheManager.getSegment(dataSegment));
+            final ReferenceCountedSegmentProvider referenceProvider = closer.register(
+                segmentCacheManager.getSegment(dataSegment)
+            );
             closer.register(() -> segmentCacheManager.cleanup(dataSegment));
             return new ResourceHolder<>()
             {
               @Override
               public QueryableIndex get()
               {
-                return segmentProvider.getBaseSegment().as(QueryableIndex.class);
+                return referenceProvider.getBaseSegment().as(QueryableIndex.class);
               }
 
               @Override
