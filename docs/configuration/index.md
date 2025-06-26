@@ -297,7 +297,7 @@ For SQL query request, the `native_query` field is empty. For example:
 
 #### Emitter request logging
 
-The `emitter` request logger emits every request to the external location specified in the [emitter](#enabling-metrics) configuration.
+The `emitter` request logger emits every request to the external location specified in the [emitter](#metrics-monitors) configuration.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -371,144 +371,6 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, and dy
 |`druid.audit.manager.includePayloadAsDimensionInMetric`|Boolean flag on whether to add `payload` column in service metric.|false|
 |`druid.audit.manager.maxPayloadSizeBytes`|The maximum size of audit payload to store in Druid's metadata store audit table. If the size of audit payload exceeds this value, the audit log would be stored with a message indicating that the payload was omitted instead. Setting `maxPayloadSizeBytes` to -1 (default value) disables this check, meaning Druid will always store audit payload regardless of it's size. Setting to any negative number other than `-1` is invalid. Human-readable format is supported, see [here](human-readable-byte.md).  |-1|
 |`druid.audit.manager.skipNullField`|If true, the audit payload stored in metadata store will exclude any field with null value. |false|
-
-### Enabling metrics
-
-You can configure Druid services to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
-|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.<br /><br />Because individual monitors sometimes only work on specific process types, it is best to set this property for each process type individually in e.g. `historical/runtime.properties` rather than `_common/common.runtime.properties`.|none (no monitors)|
-|[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
-
-#### Metrics monitors
-
-Metric monitoring is an essential part of Druid operations. The following monitors are available:
-
-|Name|Description|
-|----|-----------|
-|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
-|`org.apache.druid.java.util.metrics.SysMonitor`|Reports on various system activities and statuses using the [SIGAR library](https://github.com/hyperic/sigar). Requires execute privileges on files in `java.io.tmpdir`. Do not set `java.io.tmpdir` to `noexec` when using `SysMonitor`.|
-|`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
-|`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
-|`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|
-|`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|
-|`org.apache.druid.java.util.metrics.CgroupCpuMonitor`|Reports CPU shares and quotas as per the `cpu` cgroup.|
-|`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|
-|`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup.|
-|`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|
-|`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| **EXPERIMENTAL** Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|
-|`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| **EXPERIMENTAL** Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|
-|`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| **EXPERIMENTAL** Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|
-|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services. Available only on Historical services.|
-|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Available only on Historical services. Not to be used when lazy loading is configured.|
-|`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
-|`org.apache.druid.server.metrics.SubqueryCountStatsMonitor`|Reports how many subqueries have been materialized as rows or bytes and various other statistics related to the subquery execution|
-|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
-|`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
-|`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|
-|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|
-|`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|
-|`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |
-
-For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
-
-```properties
-druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
-```
-
-You can override cluster-wide configuration by amending the `runtime.properties` of individual services.
-
-#### Metrics emitters
-
-There are several emitters available:
-
-* `noop` (default) disables metric emission.
-* [`logging`](#logging-emitter-module) emits logs using Log4j2.
-* [`http`](#http-emitter-module) sends `POST` requests of JSON events.
-* [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
-* [`composing`](#composing-emitter-module) initializes multiple emitter modules.
-* [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
-* [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
-
-##### Logging emitter module
-
-The use this emitter module, set `druid.emitter=logging`. The `logging` emitter uses a Log4j2 logger named
-`druid.emitter.logging.loggerClass` to emit events. Each event is logged as a single `json` object with a
-[Marker](https://logging.apache.org/log4j/2.x/manual/markers.html) as the feed of the event. Users may wish to edit the
-log4j config to route these logs to different sources based on the feed of the event.
-
-|Property|Description| Default|
-|--------|-----------|--------|
-|`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
-|`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
-
-##### HTTP emitter module
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
-|`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
-|`druid.emitter.http.basicAuthentication`|[Password Provider](../operations/password-provider.md) for providing login and password for authentication in `"login:password"` form. For example, `druid.emitter.http.basicAuthentication=admin:adminpassword` uses Default Password Provider which allows plain text passwords.|not specified = no authentication|
-|`druid.emitter.http.flushTimeOut`|The timeout after which an event should be sent to the endpoint, even if internal buffers are not filled, in milliseconds.|not specified = no timeout|
-|`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1\nevent2`, ONLY_EVENTS means `event1event2`.|ARRAY|
-|`druid.emitter.http.maxBatchSize`|The maximum batch size, in bytes.|the minimum of (10% of JVM heap size divided by 2) or (5242880 (i. e. 5 MiB))|
-|`druid.emitter.http.batchQueueSizeLimit`|The maximum number of batches in emitter queue, if there are problems with emitting.|the maximum of (2) or (10% of the JVM heap size divided by 5MiB)|
-|`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
-|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
-
-##### HTTP emitter module TLS overrides
-
-By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the service described at [Druid's internal communication over TLS](../operations/tls-support.md), that is the same SSLContext that would be used for internal communications between Druid services.
-
-In some use cases it may be desirable to have the HTTP Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
-
-The following properties allow the HTTP Emitter to use its own truststore configuration when building its SSLContext.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter.http.ssl.useDefaultJavaContext`|If set to true, the HttpEmitter will use `SSLContext.getDefault()`, the default Java SSLContext, and all other properties below are ignored.|false|
-|`druid.emitter.http.ssl.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored. If this is unspecified, the HTTP Emitter will use the same SSLContext as Druid's internal HTTP client, as described in the beginning of this section, and all other properties below are ignored.|null|
-|`druid.emitter.http.ssl.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|
-|`druid.emitter.http.ssl.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|
-|`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
-|`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
-
-##### Parametrized HTTP emitter module
-
-The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
-For example:
-
-* `druid.emitter.parametrized.httpEmitting.flushMillis`
-* `druid.emitter.parametrized.httpEmitting.flushCount`
-* `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`
-
-Do not specify `recipientBaseUrl` with the parametrized emitter.
-Instead use `recipientBaseUrlPattern` described in the table below.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. For example, `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
-
-##### Composing emitter module
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter.composing.emitters`|List of emitter modules to load, such as ["logging","http"].|[]|
-
-##### Graphite emitter
-
-To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
-
-##### Switching emitter
-
-To use switching as emitter set `druid.emitter=switching`.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.emitter.switching.emitters`|JSON map of feed to list of emitter modules that will be used for the mapped feed, such as `{"metrics":["http"], "alerts":["logging"]}`|{}|
-|`druid.emitter.switching.defaultEmitters`|JSON list of emitter modules to load that will be used if there is no emitter specifically designated for that event's feed, such as `["logging","http"]`.|[]|
 
 ### Metadata storage
 
@@ -2046,6 +1908,164 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
 |`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
+
+## Metrics monitors
+
+You can configure Druid services to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors-for-each-service) via [emitters](#metrics-emitters). The following table lists general configurations for metrics:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
+|[`druid.monitoring.monitors`](#metrics-monitors-for-each-service)|Sets list of Druid monitors used by a service.|none (no monitors)|
+|[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
+
+### Metrics monitors for each service
+
+Metric monitoring is an essential part of Druid operations. Druid includes 
+
+:::caution
+
+The `runtime.properties` file for each service overrides the common configuration file (`common.runtime.properties`). They are not additive. This means that if you add any monitors to a specific service, that service only has the monitors specified in its `runtime.properties` file even if there are additional ones listed in the common file. 
+
+:::
+
+
+The following table lists the monitors that are available and the services you could configure the monitor for:
+
+|Name|Description|Service|
+|----|-----------|-------|
+|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|Broker, Historical, Indexer, Peon|
+|`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI](https://github.com/oshi/oshi), a JNA-based (native) Operating System and Hardware Information library for Java.|Any|
+|`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|Any|
+|`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|Any|
+|`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|Any|
+|`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|Any|
+|`org.apache.druid.java.util.metrics.CgroupCpuMonitor`|Reports CPU shares and quotas as per the `cpu` cgroup.|Any|
+|`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|Any|
+|`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup.|Any|
+|`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| **EXPERIMENTAL** Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| **EXPERIMENTAL** Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| **EXPERIMENTAL** Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services.|Historical|
+|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Not to be used when lazy loading is configured.|Historical|
+|`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|Broker, Historical, Router, Indexer, Peon|
+|`org.apache.druid.server.metrics.SubqueryCountStatsMonitor`|Reports how many subqueries have been materialized as rows or bytes and various other statistics related to the subquery execution|Broker|
+|`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|Any|
+|`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|Overlord|
+|`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|Overlord|
+|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
+|`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
+|`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
+
+For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
+
+```properties
+druid.monitoring.monitors=["org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+```
+
+All the services in your Druid deployment would have these two monitors.
+
+If you want any service specific monitors though, you need to add all the monitors you want to run for that service to the service's `runtime.properties` file even if they are listed in the common file. The service specific properties take precedence.
+
+The following example adds the `TaskCountStatsMonitor` and `TaskSlotCountStatsMonitor` as well as the `OshiSysMonitor` and `JvmMonitor` from the previous example to the Overlord service (`coordinator-overlord/runtime.properties`):
+
+```properties
+druid.monitoring.monitors=["org.apache.druid.server.metrics.TaskCountStatsMonitor", "org.apache.druid.server.metrics.TaskSlotCountStatsMonitor", "org.apache.druid.java.util.metrics.OshiSysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
+```
+
+If you don't include `OshiSysMonitor` and `JvmMonitor` in the Overlord's `runtime.properties` file, the monitors don't get loaded onto the Overlord despite being specified in the common file.
+
+### Metrics emitters
+
+There are several emitters available:
+
+* `noop` (default) disables metric emission.
+* [`logging`](#logging-emitter-module) emits logs using Log4j2.
+* [`http`](#http-emitter-module) sends `POST` requests of JSON events.
+* [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
+* [`composing`](#composing-emitter-module) initializes multiple emitter modules.
+* [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
+* [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
+
+#### Logging emitter module
+
+The use this emitter module, set `druid.emitter=logging`. The `logging` emitter uses a Log4j2 logger named
+`druid.emitter.logging.loggerClass` to emit events. Each event is logged as a single `json` object with a
+[Marker](https://logging.apache.org/log4j/2.x/manual/markers.html) as the feed of the event. Users may wish to edit the
+log4j config to route these logs to different sources based on the feed of the event.
+
+|Property|Description| Default|
+|--------|-----------|--------|
+|`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
+|`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
+
+#### HTTP emitter module
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
+|`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
+|`druid.emitter.http.basicAuthentication`|[Password Provider](../operations/password-provider.md) for providing login and password for authentication in `"login:password"` form. For example, `druid.emitter.http.basicAuthentication=admin:adminpassword` uses Default Password Provider which allows plain text passwords.|not specified = no authentication|
+|`druid.emitter.http.flushTimeOut`|The timeout after which an event should be sent to the endpoint, even if internal buffers are not filled, in milliseconds.|not specified = no timeout|
+|`druid.emitter.http.batchingStrategy`|The strategy of how the batch is formatted. "ARRAY" means `[event1,event2]`, "NEWLINES" means `event1\nevent2`, ONLY_EVENTS means `event1event2`.|ARRAY|
+|`druid.emitter.http.maxBatchSize`|The maximum batch size, in bytes.|the minimum of (10% of JVM heap size divided by 2) or (5242880 (i. e. 5 MiB))|
+|`druid.emitter.http.batchQueueSizeLimit`|The maximum number of batches in emitter queue, if there are problems with emitting.|the maximum of (2) or (10% of the JVM heap size divided by 5MiB)|
+|`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
+|`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
+
+#### HTTP emitter module TLS overrides
+
+By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the service described at [Druid's internal communication over TLS](../operations/tls-support.md), that is the same SSLContext that would be used for internal communications between Druid services.
+
+In some use cases it may be desirable to have the HTTP Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
+
+The following properties allow the HTTP Emitter to use its own truststore configuration when building its SSLContext.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.http.ssl.useDefaultJavaContext`|If set to true, the HttpEmitter will use `SSLContext.getDefault()`, the default Java SSLContext, and all other properties below are ignored.|false|
+|`druid.emitter.http.ssl.trustStorePath`|The file path or URL of the TLS/SSL Key store where trusted root certificates are stored. If this is unspecified, the HTTP Emitter will use the same SSLContext as Druid's internal HTTP client, as described in the beginning of this section, and all other properties below are ignored.|null|
+|`druid.emitter.http.ssl.trustStoreType`|The type of the key store where trusted root certificates are stored.|`java.security.KeyStore.getDefaultType()`|
+|`druid.emitter.http.ssl.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|
+|`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
+|`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
+
+#### Parametrized HTTP emitter module
+
+The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
+For example:
+
+* `druid.emitter.parametrized.httpEmitting.flushMillis`
+* `druid.emitter.parametrized.httpEmitting.flushCount`
+* `druid.emitter.parametrized.httpEmitting.ssl.trustStorePath`
+
+Do not specify `recipientBaseUrl` with the parametrized emitter.
+Instead use `recipientBaseUrlPattern` described in the table below.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. For example, `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
+
+#### Composing emitter module
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.composing.emitters`|List of emitter modules to load, such as ["logging","http"].|[]|
+
+#### Graphite emitter
+
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
+
+#### Switching emitter
+
+To use switching as emitter set `druid.emitter=switching`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.switching.emitters`|JSON map of feed to list of emitter modules that will be used for the mapped feed, such as `{"metrics":["http"], "alerts":["logging"]}`|{}|
+|`druid.emitter.switching.defaultEmitters`|JSON list of emitter modules to load that will be used if there is no emitter specifically designated for that event's feed, such as `["logging","http"]`.|[]|
+
 
 ## Cache configuration
 

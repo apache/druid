@@ -171,12 +171,11 @@ jobs:
       - name: Run IT
         id: test
         run: |
-          echo "Running mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C"
+          set -x
           mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C
           # Note: The above command relies on the correct version of the JARs being installed in the local m2 repository.
           # For any changes, please rebuild it using the command from the previous step (./it.sh ci).
 
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}
 
       - name: Debug on failure

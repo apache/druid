@@ -1,0 +1,845 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv&numMergeBuffers=3
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B5
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++---+-----+
+| c | cnt |
++---+-----+
+|   |   5 |
+| 1 |   5 |
+| 2 |   5 |
+| 3 |   5 |
+|   |   5 |
++---+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B6
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B7
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   5 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   5 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B8
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B9
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B10
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B11
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B12
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY cube(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B13
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY cube(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B14
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY c
+HAVING c='1';
++---+-----+
+| c | cnt |
++---+-----+
+| 1 |   5 |
++---+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A4_B15
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+GROUP BY c_str
+HAVING c_str='str2';
++-------+-----+
+| c_str | cnt |
++-------+-----+
+| str2  |   5 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+SELECT c_mv_complex_with_null_and_empty_row,
+       count(*) cnt
+FROM test_unnest
+GROUP BY c_mv_complex_with_null_and_empty_row;
++--------------------------------------+-----+
+| c_mv_complex_with_null_and_empty_row | cnt |
++--------------------------------------+-----+
+|                                      |   3 |
+| 1                                    |   3 |
+| [2]                                  |   3 |
+| [3, [4, 5]]                          |   3 |
+|                                      |   5 |
++--------------------------------------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B2
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY c;
++-------------+-----+
+| c           | cnt |
++-------------+-----+
+|             |   3 |
+| 1           |   3 |
+| [2]         |   3 |
+| [3, [4, 5]] |   3 |
+|             |   5 |
++-------------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B3
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str,
+         c;
++-------+-------------+-----+
+| c_str | c           | cnt |
++-------+-------------+-----+
+|       |             |   1 |
+| str2  |             |   1 |
+| str2  | 1           |   1 |
+| str2  | [2]         |   1 |
+| str2  | [3, [4, 5]] |   1 |
+| str2  |             |   1 |
+| str3  |             |   1 |
+| str3  | 1           |   1 |
+| str3  | [2]         |   1 |
+| str3  | [3, [4, 5]] |   1 |
+| str3  |             |   1 |
+| str4  |             |   1 |
+| str4  | 1           |   1 |
+| str4  | [2]         |   1 |
+| str4  | [3, [4, 5]] |   1 |
+| str4  |             |   1 |
+|       |             |   1 |
++-------+-------------+-----+
+(17 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B4
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str;
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   1 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   1 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B5
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++-------------+-----+
+| c           | cnt |
++-------------+-----+
+|             |   3 |
+| 1           |   3 |
+| [2]         |   3 |
+| [3, [4, 5]] |   3 |
+|             |   5 |
++-------------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B6
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B7
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   1 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   1 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B8
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B9
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B10
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B11
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B12
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B13
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B14
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY c
+HAVING c='1';
++---+-----+
+| c | cnt |
++---+-----+
+| 1 |   3 |
++---+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A5_B15
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str
+HAVING c_str='str2';
++-------+-----+
+| c_str | cnt |
++-------+-----+
+| str2  |   5 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+SELECT c_mv_num_with_null_and_empty_row,
+       count(*) cnt
+FROM test_unnest
+GROUP BY c_mv_num_with_null_and_empty_row;
++----------------------------------+-----+
+| c_mv_num_with_null_and_empty_row | cnt |
++----------------------------------+-----+
+|                                  |   3 |
+| 1                                |   3 |
+| 2                                |   3 |
+| 3                                |   3 |
+|                                  |   5 |
++----------------------------------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B2
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY c;
++---+-----+
+| c | cnt |
++---+-----+
+|   |   3 |
+| 1 |   3 |
+| 2 |   3 |
+| 3 |   3 |
+|   |   5 |
++---+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B3
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str,
+         c;
++-------+---+-----+
+| c_str | c | cnt |
++-------+---+-----+
+|       |   |   1 |
+| str2  |   |   1 |
+| str2  | 1 |   1 |
+| str2  | 2 |   1 |
+| str2  | 3 |   1 |
+| str2  |   |   1 |
+| str3  |   |   1 |
+| str3  | 1 |   1 |
+| str3  | 2 |   1 |
+| str3  | 3 |   1 |
+| str3  |   |   1 |
+| str4  |   |   1 |
+| str4  | 1 |   1 |
+| str4  | 2 |   1 |
+| str4  | 3 |   1 |
+| str4  |   |   1 |
+|       |   |   1 |
++-------+---+-----+
+(17 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B4
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str;
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   1 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   1 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B5
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++---+-----+
+| c | cnt |
++---+-----+
+|   |   3 |
+| 1 |   3 |
+| 2 |   3 |
+| 3 |   3 |
+|   |   5 |
++---+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B6
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B7
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   1 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   1 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B8
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B9
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B10
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY rollup(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B11
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B12
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c_str, c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B13
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY cube(c_str);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B14
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY c
+HAVING c='1';
++---+-----+
+| c | cnt |
++---+-----+
+| 1 |   3 |
++---+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A6_B15
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_row)) AS u(c)
+GROUP BY c_str
+HAVING c_str='str2';
++-------+-----+
+| c_str | cnt |
++-------+-----+
+| str2  |   5 |
++-------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+SELECT c_mv_all_null_and_empty_val,
+       count(*) cnt
+FROM test_unnest
+GROUP BY c_mv_all_null_and_empty_val;
++-----------------------------+-----+
+| c_mv_all_null_and_empty_val | cnt |
++-----------------------------+-----+
+|                             |  10 |
+|                             |  15 |
++-----------------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B2
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY c;
++---+-----+
+| c | cnt |
++---+-----+
+|   |  10 |
+|   |  15 |
++---+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B3
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY c_str,
+         c;
++-------+---+-----+
+| c_str | c | cnt |
++-------+---+-----+
+|       |   |   2 |
+|       |   |   3 |
+| str2  |   |   2 |
+| str2  |   |   3 |
+| str3  |   |   2 |
+| str3  |   |   3 |
+| str4  |   |   2 |
+| str4  |   |   3 |
+|       |   |   2 |
+|       |   |   3 |
++-------+---+-----+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B4
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY c_str;
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   5 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   5 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B5
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c);
++---+-----+
+| c | cnt |
++---+-----+
+|   |  10 |
+|   |  15 |
++---+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B6
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str,
+      c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B7
+#-------------------------------------------------------------------------
+SELECT c_str,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY GROUPING
+SETS (c_str);
++-------+-----+
+| c_str | cnt |
++-------+-----+
+|       |   5 |
+| str2  |   5 |
+| str3  |   5 |
+| str4  |   5 |
+|       |   5 |
++-------+-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B8
+#-------------------------------------------------------------------------
+SELECT c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c);
+QueryNotSupported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_group_by TEST_ID: A7_B9
+#-------------------------------------------------------------------------
+SELECT c_str,
+       c,
+       count(*) cnt
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+GROUP BY rollup(c_str, c);
+QueryNotSupported
+!error
+
