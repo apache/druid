@@ -239,12 +239,12 @@ You can also specify query-level context parameters directly within the SQL quer
 The following request body is functionally equivalent to the previous example and uses SET instead of the `context` parameter:
 
 ```JSON
-[
+{
   "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
   "header": true,
   "typesHeader": true,
   "sqlTypesHeader": true
-]
+}
 ```
 
 
