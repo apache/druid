@@ -383,9 +383,9 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 The multi-stage query task engine supports the [SQL context parameters](../querying/sql-query-context.md), as well as its own set of specific context parameters. Use these parameters to tailor how Druid executes your query.
 
-For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
+You can specify the context parameters in SELECT, INSERT, or REPLACE statements.
 
-Note: While the examples above use the `SELECT` statement, you can also specify context parameters in Druid SQL queries that use `INSERT` or `REPLACE`.
+For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
 
 The following table lists the context parameters for the MSQ task engine:
 
