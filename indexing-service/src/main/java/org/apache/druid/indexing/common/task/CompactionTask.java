@@ -103,6 +103,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -788,11 +789,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            final ReferenceCountedSegmentProvider referenceProvider = closer.register(
-                segmentCacheManager.getSegment(dataSegment)
-            );
+            final ReferenceCountedSegmentProvider referenceProvider = segmentCacheManager.getSegment(dataSegment);
             closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-            return new ResourceHolder<>()
+            return new ResourceHolder<QueryableIndex>()
             {
               @Override
               public QueryableIndex get()
@@ -803,12 +802,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               @Override
               public void close()
               {
-                try {
-                  closer.close();
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                CloseableUtils.closeAndWrapExceptions(closer);
               }
             };
           }
