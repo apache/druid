@@ -88,9 +88,6 @@ In this example the user has set `populateCache` to `false` to avoid filling the
 
 You can also use the SET command to specify cache options directly within your SQL query string. For more information, see [SET statements](../querying/sql.md#set-statements). 
 
-
-
-
 ## Learn more
 See the following topics for more information:
 - [Query caching](./caching.md) for an overview of caching.
