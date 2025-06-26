@@ -810,12 +810,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
   )
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
-        new SqlQueryPlus(
-            query,
-            context,
-            parameters,
-            authenticationResult
-        )
+        SqlQueryPlus.builder()
+                    .sql(query)
+                    .context(context)
+                    .parameters(parameters)
+                    .auth(authenticationResult)
+                    .build()
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
@@ -1414,8 +1414,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         // Assert on the tombstone intervals
         // Tombstone segments are only published, but since they do not have any data, they are not pushed by the
-        // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
-        // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
+        // SegmentGeneratorStageProcessor. We can get the tombstone segment ids published by taking a set
+        // difference of all the segments published with the segments that are created by the SegmentGeneratorStageProcessor
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
           if (expectedLastCompactionState != null) {
             CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()

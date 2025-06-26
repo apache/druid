@@ -238,6 +238,57 @@ public class SqlSegmentsMetadataQueryTest
     );
   }
 
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsCondition()
+  {
+    Interval queryInterval = new Interval(JAN_1.plusDays(2), JAN_1.plusDays(4));
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+
+    Assert.assertEquals(4, result.size());
+    assertSegmentsOverlapInterval(result, queryInterval);
+  }
+
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsCondition_andUnusedSegments()
+  {
+    final Set<DataSegment> segmentsToUpdate = Set.of(WIKI_SEGMENTS_2X5D.get(2));
+    int numUpdatedSegments = update(
+        sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc())
+    );
+    Assert.assertEquals(1, numUpdatedSegments);
+
+    final Interval queryInterval = new Interval(JAN_1, JAN_1.plusDays(2));
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+
+    Assert.assertEquals(3, result.size());
+    assertSegmentsOverlapInterval(result, queryInterval);
+  }
+
+  @Test
+  public void test_retrieveUsedSegments_withOverlapsCondition_nearEndDate()
+  {
+    Interval queryInterval = new Interval(JAN_1.plusDays(4), JAN_1.plusDays(5));
+
+    Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
+    Assert.assertEquals(2, result.size());
+    assertSegmentsOverlapInterval(result, queryInterval);
+  }
+
+  private void assertSegmentsOverlapInterval(
+      Set<DataSegment> segments,
+      Interval interval
+  )
+  {
+    for (DataSegment segment : segments) {
+      Assert.assertTrue(
+          "Segment " + segment.getId() + " should be in interval " + interval,
+          segment.getInterval().overlaps(interval)
+      );
+    }
+  }
+
   /**
    * Reads segments from the metadata store using a
    * {@link SqlSegmentsMetadataQuery} object.

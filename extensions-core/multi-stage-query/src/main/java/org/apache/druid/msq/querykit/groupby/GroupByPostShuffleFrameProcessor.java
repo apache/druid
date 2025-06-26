@@ -276,7 +276,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
    * {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to determine if such an operation is needed.
    *
    * Note that in cases where {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} returns true, the
-   * preceding {@link GroupByPreShuffleFrameProcessorFactory} stage would use an empty {@link ClusterBy}. Therefore,
+   * preceding {@link GroupByPreShuffleStageProcessor} stage would use an empty {@link ClusterBy}. Therefore,
    * there would only be a single output partition of the prior stage, and therefore a single instance of
    * this processor. This ensures that only a single null-aggregations row is generated for the entire stage.
    */

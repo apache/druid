@@ -111,14 +111,16 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- Partitioning (PARTITIONED BY) and clustering (CLUSTERED BY) aren't supported with EXTERN statements.
 - You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
 When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
+The following statement shows the format of a SQL query using EXTERN to export rows:
 
 ```sql
+SET rowsPerPage=<number_of_rows>;
 INSERT INTO
   EXTERN(<destination function>)
 AS CSV
@@ -126,6 +128,9 @@ SELECT
   <column>
 FROM <table>
 ```
+
+For details on applying context parameters using SET, see [SET statements](../querying/sql.md#set-statements).
+
 
 ##### S3 - Amazon S3
 
@@ -491,10 +496,15 @@ When using the sort-merge algorithm, keep the following in mind:
 
 - All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
 
-The following example  runs using a single sort-merge join stage that receives `eventstream`
-(partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
+The following query runs a single sort-merge join stage that takes the following inputs:
+* `eventstream` partitioned on `user_id`
+* `users` partitioned on `id`
+
+There is no limit on the size of either input.
+The SET command assigns the `sqlJoinAlgorithm` context parameter so that Druid uses the sort-merge join algorithm for the query.
 
 ```sql
+SET sqlJoinAlgorithm='sortMerge';
 REPLACE INTO eventstream_enriched
 OVERWRITE ALL
 SELECT
@@ -508,8 +518,6 @@ LEFT JOIN users ON eventstream.user_id = users.id
 PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
-
-The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
 
 ## Durable storage
 

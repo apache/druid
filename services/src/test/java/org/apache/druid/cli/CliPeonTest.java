@@ -122,7 +122,7 @@ public class CliPeonTest
   }
 
   @Test
-  public void testCliPeonHeartbeatDimensions() throws IOException
+  public void testCliPeonHeartbeatDimensions()
   {
     // non-streaming task
     String taskId = "testTaskId";
@@ -140,6 +140,7 @@ public class CliPeonTest
     );
 
     // streaming task with empty ags
+    String supervisor = "testSupervisor";
     Assert.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
@@ -148,7 +149,7 @@ public class CliPeonTest
             DruidMetrics.TASK_TYPE, TestStreamingTask.TYPE,
             DruidMetrics.STATUS, TestStreamingTask.STATUS
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
     );
 
     // streaming task with non-empty ags
@@ -161,7 +162,7 @@ public class CliPeonTest
             DruidMetrics.STATUS, TestStreamingTask.STATUS,
             DruidMetrics.TAGS, tags
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
     );
   }
 
@@ -230,6 +231,7 @@ public class CliPeonTest
 
     public TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         String datasource,
         @Nullable Map context,
         @Nullable String groupId
@@ -237,6 +239,7 @@ public class CliPeonTest
     {
       this(
           id,
+          supervisorId,
           null,
           DataSchema.builder()
               .withDataSource(datasource)
@@ -253,6 +256,7 @@ public class CliPeonTest
 
     private TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         @Nullable TaskResource taskResource,
         DataSchema dataSchema,
         SeekableStreamIndexTaskTuningConfig tuningConfig,
@@ -262,7 +266,7 @@ public class CliPeonTest
     )
     {
 
-      super(id, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
     }
 
     @Override

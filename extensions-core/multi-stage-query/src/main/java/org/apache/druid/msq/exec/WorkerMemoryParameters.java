@@ -30,7 +30,7 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
-import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
@@ -59,7 +59,7 @@ import java.util.Objects;
  * (see {@link #computeProcessorMemory}).
  *
  * The remainder is called "bundle free memory", a pool of memory that can be used for {@link SuperSorter} or
- * {@link SegmentGeneratorFrameProcessorFactory}. The amounts overlap, because the same {@link WorkOrder} never
+ * {@link SegmentGeneratorStageProcessor}. The amounts overlap, because the same {@link WorkOrder} never
  * does both.
  */
 public class WorkerMemoryParameters

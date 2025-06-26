@@ -188,7 +188,12 @@ If you detect a truncated response, treat it as an error.
 
 #### Sample request
 
-The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
+In the following example, this query demonstrates the following actions:
+- Retrieves all rows from the `wikipedia` datasource.
+- Filters the results where the `user` value is `BlueMoon2662`.
+- Applies the `sqlTimeZone` context parameter to set the time zone of results to `America/Los_Angeles`.
+- Returns descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
+
 
 <Tabs>
 
@@ -200,7 +205,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 --header 'Content-Type: application/json' \
 --data '{
     "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -215,11 +220,11 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 POST /druid/v2/sql HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
-Content-Length: 192
+Content-Length: 201
 
 {
     "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -228,6 +233,20 @@ Content-Length: 192
 
 </TabItem>
 </Tabs>
+
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET statements](../querying/sql.md#set-statements).
+
+The following request body is functionally equivalent to the previous example and uses SET instead of the `context` parameter:
+
+```JSON
+{
+  "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+  "header": true,
+  "typesHeader": true,
+  "sqlTypesHeader": true
+}
+```
+
 
 #### Sample response
 
@@ -262,24 +281,24 @@ Content-Length: 192
             "sqlType": "VARCHAR"
         },
         "isAnonymous": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isMinor": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isNew": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isRobot": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isUnpatrolled": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "metroCode": {
             "type": "LONG",
@@ -319,22 +338,22 @@ Content-Length: 192
         }
     },
     {
-        "__time": "2015-09-12T00:47:53.259Z",
+        "__time": "2015-09-11T17:47:53.259-07:00",
         "channel": "#ja.wikipedia",
-        "cityName": "",
+        "cityName": null,
         "comment": "/* 対戦通算成績と得失点 */",
-        "countryIsoCode": "",
-        "countryName": "",
-        "isAnonymous": 0,
-        "isMinor": 1,
-        "isNew": 0,
-        "isRobot": 0,
-        "isUnpatrolled": 0,
-        "metroCode": 0,
+        "countryIsoCode": null,
+        "countryName": null,
+        "isAnonymous": "false",
+        "isMinor": "true",
+        "isNew": "false",
+        "isRobot": "false",
+        "isUnpatrolled": "false",
+        "metroCode": null,
         "namespace": "Main",
         "page": "アルビレックス新潟の年度別成績一覧",
-        "regionIsoCode": "",
-        "regionName": "",
+        "regionIsoCode": null,
+        "regionName": null,
         "user": "BlueMoon2662",
         "delta": 14,
         "added": 14,

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -113,15 +114,6 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
-    Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
-
-    final Expr exprNotFlattened = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE, false);
-    final Expr roundTripNotFlattened =
-        Parser.parse(exprNotFlattened.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
-    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
-
-    final Expr roundTrip = Parser.parse(expr.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
-    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
+    FunctionTest.assertExpr(expression, expectedResult, BINDINGS, LookupEnabledTestExprMacroTable.INSTANCE);
   }
 }

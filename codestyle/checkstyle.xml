@@ -31,7 +31,10 @@
 
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
-
+  <module name="RegexpOnFilename">
+    <property name="fileNamePattern" value="^([_$]).*"/>
+    <property name="fileExtensions" value="java"/>
+  </module>
   <!-- Added as per the issue #7384 - Prohibit @author tags in Javadoc -->
   <module name="RegexpSingleline">
     <property name="format" value="^\s*\*\s*@author" />

@@ -50,7 +50,8 @@ public class SupervisorStatusTest
   public void testJsonAttr() throws IOException
   {
     String json = "{"
-                  + "\"id\":\"wikipedia\","
+                  + "\"id\":\"wikipedia_supervisor\","
+                  + "\"dataSource\":\"wikipedia\","
                   + "\"state\":\"UNHEALTHY_SUPERVISOR\","
                   + "\"detailedState\":\"UNHEALTHY_SUPERVISOR\","
                   + "\"healthy\":false,"
@@ -61,7 +62,8 @@ public class SupervisorStatusTest
     final ObjectMapper mapper = new ObjectMapper();
     final SupervisorStatus deserialized = mapper.readValue(json, SupervisorStatus.class);
     Assert.assertNotNull(deserialized);
-    Assert.assertEquals("wikipedia", deserialized.getId());
+    Assert.assertEquals("wikipedia_supervisor", deserialized.getId());
+    Assert.assertEquals("wikipedia", deserialized.getDataSource());
     final String serialized = mapper.writeValueAsString(deserialized);
     Assert.assertTrue(serialized.contains("\"source\""));
     Assert.assertEquals(json, serialized);

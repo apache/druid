@@ -23,12 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -51,6 +52,13 @@ import java.util.function.Supplier;
 
 public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndColumns, WindowOperatorQuery>
 {
+  private final GenericQueryMetricsFactory queryMetricsFactory;
+
+  @Inject
+  public WindowOperatorQueryQueryToolChest(GenericQueryMetricsFactory queryMetricsFactory)
+  {
+    this.queryMetricsFactory = queryMetricsFactory;
+  }
 
   @Override
   @SuppressWarnings("unchecked")
@@ -85,7 +93,7 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   @Override
   public QueryMetrics<? super WindowOperatorQuery> makeMetrics(WindowOperatorQuery query)
   {
-    return new DefaultQueryMetrics<>();
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override

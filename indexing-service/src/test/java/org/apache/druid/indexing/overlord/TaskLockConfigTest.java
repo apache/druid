@@ -112,7 +112,7 @@ public class TaskLockConfigTest
     final TaskQueueConfig queueConfig = new TaskQueueConfig(null, null, null, null, null, null);
     final TaskRunner taskRunner = EasyMock.createNiceMock(RemoteTaskRunner.class);
     final TaskActionClientFactory actionClientFactory = EasyMock.createNiceMock(LocalTaskActionClientFactory.class);
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
+    final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
     final ServiceEmitter emitter = new NoopServiceEmitter();
     return new TaskQueue(
         lockConfig,

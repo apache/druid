@@ -23,7 +23,6 @@ import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
-import org.apache.druid.sql.http.SqlQuery;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
@@ -45,15 +44,13 @@ public class HttpStatement extends DirectStatement
 
   public HttpStatement(
       final SqlToolbox lifecycleToolbox,
-      final SqlQuery sqlQuery,
+      final SqlQueryPlus sqlQueryPlus,
       final HttpServletRequest req
   )
   {
     super(
         lifecycleToolbox,
-        SqlQueryPlus.builder(sqlQuery)
-                    .auth(AuthorizationUtils.authenticationResultFromRequest(req))
-                    .build(),
+        sqlQueryPlus,
         req.getRemoteAddr()
     );
     this.req = req;
@@ -65,9 +62,9 @@ public class HttpStatement extends DirectStatement
     return sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
+        queryPlus.sqlNode(),
         queryContext,
-        hook,
-        true
+        hook
     );
   }
 

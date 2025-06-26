@@ -46,6 +46,7 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
@@ -57,10 +58,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -132,6 +135,20 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
+        final Map<String, AggregateProjectionMetadata> projectionsMap;
+        if (updatedQuery.hasProjections()
+            && ((metadata = Objects.isNull(metadata) ? getMetadata(segment) : metadata)) != null
+            && metadata.getProjections() != null) {
+          projectionsMap = metadata.getProjections()
+                                   .stream()
+                                   .collect(Collectors.toUnmodifiableMap(
+                                       projectionMetadata -> projectionMetadata.getSchema().getName(),
+                                       p -> p
+                                   ));
+        } else {
+          projectionsMap = null;
+        }
+
         final TimestampSpec timestampSpec;
         if (updatedQuery.hasTimestampSpec()) {
           if (metadata == null) {
@@ -174,6 +191,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     totalSize,
                     numRows,
                     aggregators,
+                    projectionsMap,
                     timestampSpec,
                     queryGranularity,
                     rollup

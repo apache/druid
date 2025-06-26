@@ -322,7 +322,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_length([1,2,3])", 3L);
     assertExpr("array_length(a)", 4L);
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_length(nestedArray)", 2L, typedBindings);
+    assertExpr("array_length(nestedArray)", 2L, typedBindings, ExprMacroTable.nil());
   }
 
   @Test
@@ -333,7 +333,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_offset([1, 2, 3], -1)", null);
     assertExpr("array_offset(a, 2)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
+    assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings, ExprMacroTable.nil());
   }
 
   @Test
@@ -344,7 +344,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_ordinal([1, 2, 3], 0)", null);
     assertExpr("array_ordinal(a, 3)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
+    assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings, ExprMacroTable.nil());
   }
 
   @Test
@@ -1486,24 +1486,35 @@ public class FunctionTest extends InitializedNullHandlingTest
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     for (Expr.ObjectBinding toUse : allBindings) {
-      assertExpr(expression, expectedResult, toUse);
+      assertExpr(expression, expectedResult, toUse, ExprMacroTable.nil());
     }
   }
 
-  private void assertExpr(
+  private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
+  {
+    for (Expr.ObjectBinding toUse : allBindings) {
+      assertArrayExpr(expression, expectedResult, toUse, ExprMacroTable.nil());
+    }
+  }
+
+  /**
+   * Check a bunch of stuff to make sure an expression produces the correct result upon evaluation and is chill
+   */
+  public static void assertExpr(
       final String expression,
       @Nullable final Object expectedResult,
-      Expr.ObjectBinding bindings
+      Expr.ObjectBinding bindings,
+      ExprMacroTable macroTable
   )
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    final Expr expr = Parser.parse(expression, macroTable);
     Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
 
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    final Expr exprNoFlatten = Parser.parse(expression, macroTable, false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), macroTable);
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
 
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), macroTable);
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
 
     final Expr singleThreaded = Expr.singleThreaded(expr, bindings);
@@ -1522,28 +1533,24 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
-  private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
-  {
-
-    for (Expr.ObjectBinding toUse : allBindings) {
-      assertArrayExpr(expression, expectedResult, toUse);
-    }
-  }
-
-  private void assertArrayExpr(
+  /**
+   * Check a bunch of stuff to make sure an expression produces the correct array result upon evaluation and is chill
+   */
+  public static void assertArrayExpr(
       final String expression,
       @Nullable final Object[] expectedResult,
-      Expr.ObjectBinding bindings
+      Expr.ObjectBinding bindings,
+      ExprMacroTable macroTable
   )
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    final Expr expr = Parser.parse(expression, macroTable);
     Assert.assertArrayEquals(expression, expectedResult, expr.eval(bindings).asArray());
 
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    final Expr exprNoFlatten = Parser.parse(expression, macroTable, false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), macroTable);
     Assert.assertArrayEquals(expression, expectedResult, roundTrip.eval(bindings).asArray());
 
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), macroTable);
     Assert.assertArrayEquals(expression, expectedResult, roundTripFlatten.eval(bindings).asArray());
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());

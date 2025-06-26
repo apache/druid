@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -53,6 +54,9 @@ public class SequenceMetadataTest
 
   @Mock
   private SeekableStreamEndSequenceNumbers mockSeekableStreamEndSequenceNumbers;
+
+  @Mock
+  private Appenderator mockAppenderator;
 
   @Mock
   private TaskActionClient mockTaskActionClient;
@@ -104,6 +108,12 @@ public class SequenceMetadataTest
                    ArgumentMatchers.any()
                ))
            .thenReturn(mockSeekableStreamEndSequenceNumbers);
+    Mockito.when(
+        mockSeekableStreamIndexTaskRunner.getAppenderator()
+    ).thenReturn(mockAppenderator);
+    Mockito.when(
+        mockAppenderator.getDataSource()
+    ).thenReturn("foo");
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getStream()).thenReturn("stream");
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);

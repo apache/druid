@@ -1601,7 +1601,7 @@ Content-Length: 134
 
 Manually clean up pending segments table in metadata storage for `datasource`. It returns a JSON object response with
 `numDeleted` for the number of rows deleted from the pending segments table. This API is used by the
-`druid.coordinator.kill.pendingSegments.on` [Coordinator setting](../configuration/index.md#coordinator-operation)
+`druid.coordinator.kill.pendingSegments.on` [Coordinator setting](../configuration/index.md#data-management)
 which automates this operation to perform periodically.
 
 #### URL
