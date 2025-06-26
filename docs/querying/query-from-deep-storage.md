@@ -113,6 +113,12 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 }'
 ```
 
+Note that you can also submit context parameters using [SET](../querying/sql.md#set-statements). For example:
+
+```
+  "query": "SET executionMode = '\''ASYNC'\''; SET selectDestination = '\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP '\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP '\''2017-09-02'\''"
+```
+
 The response for submitting a query includes the query ID along with basic information, such as when you submitted the query and the schema of the results:
 
 ```json
@@ -131,20 +137,6 @@ The response for submitting a query includes the query ID along with basic infor
 "durationMs": DURATION_IN_MS,
 }
 ```
-
-Additionally, instead of specifying the `context` object within the JSON payload, you can set context parameters inline using SET statements.
-
-While submitting queries through the API, you can include SET statements as part of the SQL query string in the request payload:
-
-```bash
-curl --location 'http://localhost:8888/druid/v2/sql/statements' \
---header 'Content-Type: application/json' \
---data '{
-  "query": "SET executionMode = '\''ASYNC'\''; SET selectDestination = '\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP '\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP '\''2017-09-02'\''"
-}'
-```
-
-Both methods, using SET statements or specifying context parameters in the JSON `context` object, return the same response above.
 
 ### Get query status
 
