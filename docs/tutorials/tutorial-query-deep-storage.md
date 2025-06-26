@@ -130,11 +130,7 @@ Now that there are segments that are only available from deep storage, run the f
 SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
 ```
 
-With the context parameter:
-
-```json
-"executionMode": "ASYNC"
-```
+To run this query asynchronously, you can use the SET statement to specify the execution mode. 
 
 For example, run the following curl command:
 
@@ -142,10 +138,7 @@ For example, run the following curl command:
 curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
-    "context":{
-        "executionMode":"ASYNC"
-    }  
+  "query": "SET executionMode = '\''ASYNC'\''; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '\''2016-06-27 00:10:00'\'' LIMIT 10"
 }'
 ```
 
@@ -182,28 +175,11 @@ Compare this to if you were to submit the query to Druid SQL's regular endpoint,
 curl --location 'http://localhost:8888/druid/v2/sql/' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
-    "context":{
-        "executionMode":"ASYNC"
-    }  
-}'
-```
-
-The response you get back is an empty response cause there are no records on the Historicals that match the query.
-
-Additionally, instead of specifying the `context` object within the JSON payload, you can also set context parameters inline using SET statements. 
-
-For example, to query pages from the `wikipedia` datasource with timestamps before `2016-06-27 00:10:00`, you can use the following API curl request:
-
-```bash
-curl --location 'http://localhost:8888/druid/v2/sql/statements' \
---header 'Content-Type: application/json' \
---data '{
   "query": "SET executionMode = '\''ASYNC'\''; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '\''2016-06-27 00:10:00'\'' LIMIT 10"
 }'
 ```
 
-Both methods,using SET statements orspecifying context parameters in the JSON `context` object, return the same response format.
+The response you get back is an empty response cause there are no records on the Historicals that match the query.
 
 ## Get query status
 
