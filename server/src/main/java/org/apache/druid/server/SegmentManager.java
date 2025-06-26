@@ -51,7 +51,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -182,8 +181,9 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegmentInternal(dataSegment, segment, cacheManager::loadSegmentIntoPageCacheOnBootstrap);
+    loadSegmentInternal(dataSegment, segment);
   }
+
 
   /**
    * Load the supplied segment into page cache. If the segment is already loaded, this method does not reload the
@@ -212,13 +212,12 @@ public class SegmentManager
       cacheManager.cleanup(dataSegment);
       throw e;
     }
-    loadSegmentInternal(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
+    loadSegmentInternal(dataSegment, segment);
   }
 
   private void loadSegmentInternal(
       final DataSegment dataSegment,
-      final ReferenceCountedSegmentProvider segment,
-      final Consumer<DataSegment> pageCacheLoadFunction
+      final ReferenceCountedSegmentProvider segment
   ) throws IOException
   {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
@@ -264,8 +263,6 @@ public class SegmentManager
               numOfRows = countInspector.getNumRows();
             }
             dataSourceState.addSegment(dataSegment, numOfRows);
-
-            pageCacheLoadFunction.accept(dataSegment);
             resultSupplier.set(true);
           }
 

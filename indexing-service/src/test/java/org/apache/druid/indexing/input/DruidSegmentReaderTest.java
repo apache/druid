@@ -936,6 +936,12 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
           {
             return segmentDirectory;
           }
+
+          @Override
+          public void cleanup(DataSegment segment)
+          {
+            segmentDirectory.delete();
+          }
         },
         DataSegment.builder()
                    .dataSource("ds")

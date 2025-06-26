@@ -45,9 +45,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   private final List<DataSegment> cachedSegments;
 
   private final List<DataSegment> observedBootstrapSegments;
-  private final List<DataSegment> observedBootstrapSegmentsLoadedIntoPageCache;
   private final List<DataSegment> observedSegments;
-  private final List<DataSegment> observedSegmentsLoadedIntoPageCache;
   private final List<DataSegment> observedSegmentsRemovedFromCache;
   private final AtomicInteger observedShutdownBootstrapCount;
 
@@ -63,9 +61,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     // While inneficient, these CopyOnWriteArrayList objects greatly simplify meeting the thread
     // safety mandate from SegmentCacheManager. For testing, this should be ok.
     this.observedBootstrapSegments = new CopyOnWriteArrayList<>();
-    this.observedBootstrapSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
     this.observedSegments = new CopyOnWriteArrayList<>();
-    this.observedSegmentsLoadedIntoPageCache = new CopyOnWriteArrayList<>();
     this.observedSegmentsRemovedFromCache = new CopyOnWriteArrayList<>();
 
     this.observedShutdownBootstrapCount = new AtomicInteger(0);
@@ -114,18 +110,6 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment)
-  {
-    observedSegmentsLoadedIntoPageCache.add(segment);
-  }
-
-  @Override
-  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
-  {
-    observedBootstrapSegmentsLoadedIntoPageCache.add(segment);
-  }
-
-  @Override
   public void shutdownBootstrap()
   {
     observedShutdownBootstrapCount.incrementAndGet();
@@ -152,20 +136,11 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     return observedBootstrapSegments;
   }
 
-  public List<DataSegment> getObservedBootstrapSegmentsLoadedIntoPageCache()
-  {
-    return observedBootstrapSegmentsLoadedIntoPageCache;
-  }
-
   public List<DataSegment> getObservedSegments()
   {
     return observedSegments;
   }
 
-  public List<DataSegment> getObservedSegmentsLoadedIntoPageCache()
-  {
-    return observedSegmentsLoadedIntoPageCache;
-  }
 
   public List<DataSegment> getObservedSegmentsRemovedFromCache()
   {

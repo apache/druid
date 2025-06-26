@@ -21,6 +21,8 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -55,14 +57,18 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.LeafSegmentReferenceProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.WeakSegmentReferenceProviderLoadAction;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -74,8 +80,12 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -183,6 +193,65 @@ public class ServerManager implements QuerySegmentWalker
     return new ResourceManagingQueryRunner<>(timeline, factory, toolChest, ev, specs);
   }
 
+  protected List<WeakSegmentReferenceProviderLoadAction> maybeLoadSegments(
+      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      Iterable<SegmentDescriptor> segments,
+      Closer closer
+  ) throws SegmentLoadingException
+  {
+    List<WeakSegmentReferenceProviderLoadAction> loadActions = new ArrayList<>();
+    for (SegmentDescriptor descriptor : segments) {
+      final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
+          descriptor.getInterval(),
+          descriptor.getVersion(),
+          descriptor.getPartitionNumber()
+      );
+
+      boolean missing = true;
+      if (chunk != null) {
+        final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
+        // grab a temporary reference to ensure coordinator doesn't tell us to drop something while we are trying to
+        // lazy load
+        Optional<Segment> baseRef = referenceCounter.acquireReference();
+        if (baseRef.isPresent()) {
+          missing = false;
+          // we don't need this temporary reference for anything other than stabilizing the world during load - register
+          // it with the closer so that we release the reference when we are done loading
+          closer.register(baseRef.get());
+          loadActions.add(closer.register(referenceCounter.load(descriptor)));
+        }
+      }
+      if (missing) {
+        loadActions.add(WeakSegmentReferenceProviderLoadAction.missingSegment(descriptor));
+      }
+    }
+    return loadActions;
+  }
+
+  protected List<SegmentReference> ensureLoadedAndAcquireAllSegments(
+      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      Iterable<SegmentDescriptor> segments,
+      SegmentMapFunction segmentMapFn,
+      final long timeout,
+      Closer closer
+  )
+  {
+    final Closer loadCloser = Closer.create();
+    try {
+      final List<WeakSegmentReferenceProviderLoadAction> loaders = maybeLoadSegments(timeline, segments, loadCloser);
+      return loadSegmentReferences(loaders, segmentMapFn, timeout, closer);
+    }
+    catch (InterruptedException | ExecutionException | TimeoutException | SegmentLoadingException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      // we acquire references to stuff while bulk loading, release them after we have acquired the real references
+      // through segmentMapFn
+      CloseableUtils.closeAndWrapExceptions(loadCloser);
+    }
+  }
+
+
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link ReferenceCountedSegmentProvider} from the supplied
    * {@link VersionedIntervalTimeline} and apply {@link SegmentMapFunction} to acquire a reference and transform the
@@ -199,26 +268,26 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
     // materialize to list to acquire all of the references
-    return Lists.newArrayList(
-        FunctionalIterable
-            .create(segments)
-            .transform(
-                descriptor -> {
-                  final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
-                      descriptor.getInterval(),
-                      descriptor.getVersion(),
-                      descriptor.getPartitionNumber()
-                  );
-
-                  if (chunk == null) {
-                    return new SegmentReference(descriptor, Optional.empty());
-                  }
-
-                  final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
-                  return new SegmentReference(descriptor, segmentMapFn.apply(referenceCounter).map(closer::register));
-                }
+    List<SegmentReference> segmentReferences = new ArrayList<>();
+    for (SegmentDescriptor descriptor : segments) {
+      final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
+          descriptor.getInterval(),
+          descriptor.getVersion(),
+          descriptor.getPartitionNumber()
+      );
+      if (chunk == null) {
+        segmentReferences.add(new SegmentReference(descriptor, Optional.empty()));
+      } else {
+        final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
+        segmentReferences.add(
+            new SegmentReference(
+                descriptor,
+                segmentMapFn.apply(referenceCounter).map(closer::register)
             )
-    );
+        );
+      }
+    }
+    return segmentReferences;
   }
 
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
@@ -233,8 +302,22 @@ public class ServerManager implements QuerySegmentWalker
       final Closer closer
   )
   {
+    final List<SegmentReference> segmentReferences;
+    // todo (clint): this feels hella wack... but otherwise we're going to be loading weak assignments more or less as
+    //  soon as they are assigned instead of on demand at query time
+    if (query instanceof SegmentMetadataQuery) {
+      segmentReferences = acquireAllSegments(timeline, specs, segmentMapFn, closer);
+    } else {
+      segmentReferences = ensureLoadedAndAcquireAllSegments(
+          timeline,
+          specs,
+          segmentMapFn,
+          query.context().getTimeout(),
+          closer
+      );
+    }
     return FunctionalIterable
-        .create(acquireAllSegments(timeline, specs, segmentMapFn, closer))
+        .create(segmentReferences)
         .transform(
             ref ->
                 ref.getSegmentReference()
@@ -347,6 +430,33 @@ public class ServerManager implements QuerySegmentWalker
       throw e;
     }
     return factory;
+  }
+
+  public static List<SegmentReference> loadSegmentReferences(
+      List<WeakSegmentReferenceProviderLoadAction> loaders,
+      SegmentMapFunction segmentMapFn,
+      long timeout,
+      Closer closer
+  ) throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final Iterable<ListenableFuture<LeafSegmentReferenceProvider>> loadFutures =
+        () -> loaders.stream().map(WeakSegmentReferenceProviderLoadAction::getLoadFuture).iterator();
+    final List<LeafSegmentReferenceProvider> loadedProviders =
+        Futures.allAsList(loadFutures).get(timeout, TimeUnit.MILLISECONDS);
+
+    final List<SegmentReference> segmentReferences = new ArrayList<>();
+    for (int i = 0; i < loaders.size(); i++) {
+      final WeakSegmentReferenceProviderLoadAction loader = loaders.get(i);
+      final LeafSegmentReferenceProvider loadResult = loadedProviders.get(i);
+      if (loadResult != null) {
+        segmentReferences.add(
+            new SegmentReference(loader.getDescriptor(), segmentMapFn.apply(loadResult).map(closer::register))
+        );
+      } else {
+        segmentReferences.add(new SegmentReference(loader.getDescriptor(), Optional.empty()));
+      }
+    }
+    return segmentReferences;
   }
 
   private static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)

@@ -67,6 +67,18 @@ public class SegmentLoaderConfig
   @JsonProperty
   private int statusQueueMaxSize = 100;
 
+  @JsonProperty("isVirtualStorageFabric")
+  private boolean isVirtualStorageFabric = false;
+
+  @JsonProperty("minVirtualStorageFabricLoadThreads")
+  private int minVirtualStorageFabricLoadThreads = 10;
+
+  @JsonProperty("maxVirtualStorageFabricLoadThreads")
+  private int maxVirtualStorageFabricLoadThreads = 1000; // todo (clint): lol idk, measure this
+
+  @JsonProperty("virtualStorageFabricLoadThreadKeepaliveMillis")
+  private long virtualStorageFabricLoadThreadKeepaliveMillis = TimeUnit.MINUTES.toMillis(1);
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -134,6 +146,28 @@ public class SegmentLoaderConfig
     return combinedMaxSize;
   }
 
+  public boolean isVirtualStorageFabric()
+  {
+    return isVirtualStorageFabric;
+  }
+
+  public int getMinVirtualStorageFabricLoadThreads()
+  {
+    return minVirtualStorageFabricLoadThreads;
+  }
+
+  public int getMaxVirtualStorageFabricLoadThreads()
+  {
+    return maxVirtualStorageFabricLoadThreads;
+  }
+
+  public long getVirtualStorageFabricLoadThreadKeepaliveMillis()
+  {
+    return virtualStorageFabricLoadThreadKeepaliveMillis;
+  }
+
+  // todo (clint): this isn't mine, but it doesn't really copy everything... the people should know this,
+  //  maybe javadocs? maybe just fix it?
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();
@@ -163,9 +197,21 @@ public class SegmentLoaderConfig
   {
     return "SegmentLoaderConfig{" +
            "locations=" + locations +
+           ", lazyLoadOnStart=" + lazyLoadOnStart +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", announceIntervalMillis=" + announceIntervalMillis +
+           ", numLoadingThreads=" + numLoadingThreads +
+           ", numBootstrapThreads=" + numBootstrapThreads +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnDownload=" + numThreadsToLoadSegmentsIntoPageCacheOnDownload +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
+           ", statusQueueMaxSize=" + statusQueueMaxSize +
+           ", useVirtualStorageFabric=" + isVirtualStorageFabric +
+           ", minVirtualStorageFabricLoadThreads=" + minVirtualStorageFabricLoadThreads +
+           ", maxVirtualStorageFabricLoadThreads=" + maxVirtualStorageFabricLoadThreads +
+           ", virtualStorageFabricLoadThreadKeepaliveMillis=" + virtualStorageFabricLoadThreadKeepaliveMillis +
+           ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
 }

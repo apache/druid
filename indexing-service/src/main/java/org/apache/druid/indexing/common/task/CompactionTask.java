@@ -83,6 +83,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -108,7 +109,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -792,15 +792,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
+            final ReferenceCountedSegmentProvider segmentProvider = closer.register(segmentCacheManager.getSegment(dataSegment));
             closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
-            return new ResourceHolder<QueryableIndex>()
+            return new ResourceHolder<>()
             {
               @Override
               public QueryableIndex get()
               {
-                return queryableIndex;
+                return segmentProvider.getBaseSegment().as(QueryableIndex.class);
               }
 
               @Override

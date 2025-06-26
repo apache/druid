@@ -155,10 +155,8 @@ public class SegmentBootstrapperTest
 
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegmentsLoadedIntoPageCache());
 
     bootstrapper.stop();
 
@@ -217,10 +215,8 @@ public class SegmentBootstrapperTest
 
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegmentsLoadedIntoPageCache());
 
     bootstrapper.stop();
 
@@ -275,7 +271,6 @@ public class SegmentBootstrapperTest
 
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
@@ -337,7 +332,6 @@ public class SegmentBootstrapperTest
     Assert.assertEquals(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
 
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     bootstrapper.stop();
   }
@@ -398,7 +392,6 @@ public class SegmentBootstrapperTest
 
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
-    assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
 
     serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
@@ -437,7 +430,6 @@ public class SegmentBootstrapperTest
 
     Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
     Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
     serviceEmitter.verifyValue("segment/bootstrap/count", 0);
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 

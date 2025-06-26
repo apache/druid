@@ -39,6 +39,7 @@ import org.junit.rules.TemporaryFolder;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -70,7 +71,7 @@ public class StorageLocationSelectorStrategyTest
     StorageLocationSelectorStrategy leastBytesUsedStrategy =
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
 
-    storageLocation1.reserve("tmp_loc1", "__seg1", 1024L);
+    storageLocation1.reserve(makeCacheEntry("tmp_loc1", 1024L));
 
     Iterator<StorageLocation> locations = leastBytesUsedStrategy.getLocations();
 
@@ -256,7 +257,7 @@ public class StorageLocationSelectorStrategyTest
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder1, loc3.getPath());
 
-    storageLocation2.reserve("tmp_loc2", "__seg2", 6000000000L);
+    storageLocation2.reserve(makeCacheEntry("tmp_loc2", 6000000000L));
     locations = mostAvailableStrategy.getLocations();
 
     loc1 = locations.next();
@@ -374,4 +375,36 @@ public class StorageLocationSelectorStrategyTest
           }
       );
   }
+
+  private static CacheEntry makeCacheEntry(String label, long size)
+  {
+    final StorageLocationTest.StringCacheIdentifier identifier = new StorageLocationTest.StringCacheIdentifier(label);
+    return new CacheEntry()
+    {
+      @Override
+      public CacheEntryIdentifier getId()
+      {
+        return identifier;
+      }
+
+      @Override
+      public long getSize()
+      {
+        return size;
+      }
+
+      @Override
+      public void mount(File location) throws IOException, SegmentLoadingException
+      {
+
+      }
+
+      @Override
+      public void unmount()
+      {
+
+      }
+    };
+  }
+
 }

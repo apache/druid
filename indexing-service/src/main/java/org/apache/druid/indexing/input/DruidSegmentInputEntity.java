@@ -85,9 +85,7 @@ public class DruidSegmentInputEntity implements InputEntity
       @Override
       public void close()
       {
-        if (!segmentFile.delete()) {
-          log.warn("Could not clean temporary segment file: " + segmentFile);
-        }
+        segmentCacheManager.cleanup(segment);
       }
     };
   }

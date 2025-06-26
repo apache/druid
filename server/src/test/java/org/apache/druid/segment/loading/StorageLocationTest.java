@@ -21,61 +21,299 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.AlertBuilder;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
-public class StorageLocationTest
+class StorageLocationTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @TempDir
+  File tempDir;
 
   @Test
-  @SuppressWarnings("GuardedBy")
+  public void testWeakReserveAndReclaim() throws IOException
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 25);
+    CacheEntry entry2 = new TestCacheEntry("2", 25);
+    CacheEntry entry3 = new TestCacheEntry("3", 25);
+    CacheEntry entry4 = new TestCacheEntry("4", 25);
+    CacheEntry entry5 = new TestCacheEntry("5", 25);
+
+    location.reserveWeak(entry1);
+    location.reserveWeak(entry2);
+    location.reserveWeak(entry3);
+    location.reserveWeak(entry4);
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+    location.reserveWeak(entry5);
+    Assertions.assertFalse(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry5));
+  }
+
+  @Test
+  public void testRemoveFromHead() throws IOException
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 25);
+    CacheEntry entry2 = new TestCacheEntry("2", 25);
+    CacheEntry entry3 = new TestCacheEntry("3", 25);
+    CacheEntry entry4 = new TestCacheEntry("4", 25);
+
+    location.reserveWeak(entry1);
+    location.reserveWeak(entry2);
+    location.reserveWeak(entry3);
+    location.reserveWeak(entry4);
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+    location.release(entry1);
+    location.release(entry2);
+    location.release(entry3);
+    location.release(entry4);
+    Assertions.assertFalse(location.isWeakReserved(entry1));
+    Assertions.assertFalse(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+  }
+
+  @Test
+  public void testRemoveFromTail() throws IOException
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 25);
+    CacheEntry entry2 = new TestCacheEntry("2", 25);
+    CacheEntry entry3 = new TestCacheEntry("3", 25);
+    CacheEntry entry4 = new TestCacheEntry("4", 25);
+
+    location.reserveWeak(entry1);
+    location.reserveWeak(entry2);
+    location.reserveWeak(entry3);
+    location.reserveWeak(entry4);
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+    location.release(entry4);
+    location.release(entry3);
+    location.release(entry2);
+    location.release(entry1);
+    Assertions.assertFalse(location.isWeakReserved(entry1));
+    Assertions.assertFalse(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+  }
+
+  @Test
+  public void testRemoveRandom() throws IOException
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 25);
+    CacheEntry entry2 = new TestCacheEntry("2", 25);
+    CacheEntry entry3 = new TestCacheEntry("3", 25);
+    CacheEntry entry4 = new TestCacheEntry("4", 25);
+    List<CacheEntry> entries = new ArrayList<>();
+    entries.add(entry1);
+    entries.add(entry2);
+    entries.add(entry3);
+    entries.add(entry4);
+
+    location.reserveWeak(entry1);
+    location.reserveWeak(entry2);
+    location.reserveWeak(entry3);
+    location.reserveWeak(entry4);
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+    while (!entries.isEmpty()) {
+      int toRemove = ThreadLocalRandom.current().nextInt(entries.size());
+      CacheEntry entry = entries.get(toRemove);
+      location.release(entry);
+      entries.remove(toRemove);
+    }
+    Assertions.assertFalse(location.isWeakReserved(entry1));
+    Assertions.assertFalse(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+  }
+
+  @Test
+  public void testBulkReservation() throws IOException
+  {
+    StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    CacheEntry entry1 = new TestCacheEntry("1", 25);
+    CacheEntry entry2 = new TestCacheEntry("2", 25);
+    CacheEntry entry3 = new TestCacheEntry("3", 25);
+    CacheEntry entry4 = new TestCacheEntry("4", 25);
+    CacheEntry entry5 = new TestCacheEntry("5", 25);
+    CacheEntry entry6 = new TestCacheEntry("6", 25);
+    CacheEntry entry7 = new TestCacheEntry("7", 25);
+    CacheEntry entry8 = new TestCacheEntry("8", 25);
+
+    Assertions.assertNotNull(location.addWeakReservation(entry1));
+    Assertions.assertNotNull(location.addWeakReservation(entry2));
+    Assertions.assertTrue(location.reserveWeak(entry3));
+    Assertions.assertTrue(location.reserveWeak(entry4));
+
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertTrue(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+
+    Assertions.assertNotNull(location.addWeakReservation(entry5));
+
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry5));
+
+    Assertions.assertTrue(location.reserveWeak(entry6));
+
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry5));
+    Assertions.assertTrue(location.isWeakReserved(entry6));
+
+    Assertions.assertTrue(location.reserveWeak(entry7));
+
+    Assertions.assertTrue(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry5));
+    Assertions.assertFalse(location.isWeakReserved(entry6));
+    Assertions.assertTrue(location.isWeakReserved(entry7));
+
+    location.finishWeakReservationHold(List.of(entry1, entry2, entry5));
+    Assertions.assertTrue(location.reserveWeak(entry8));
+
+    Assertions.assertFalse(location.isWeakReserved(entry1));
+    Assertions.assertTrue(location.isWeakReserved(entry2));
+    Assertions.assertFalse(location.isWeakReserved(entry3));
+    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry5));
+    Assertions.assertFalse(location.isWeakReserved(entry6));
+    Assertions.assertTrue(location.isWeakReserved(entry7));
+    Assertions.assertTrue(location.isWeakReserved(entry8));
+  }
+
+  @Test
+  @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
   public void testStorageLocationFreePercent()
   {
     // free space ignored only maxSize matters
     StorageLocation locationPlain = fakeLocation(100_000, 5_000, 10_000, null);
-    Assert.assertTrue(locationPlain.canHandle(newSegmentId("2012/2013").toString(), 9_000));
-    Assert.assertFalse(locationPlain.canHandle(newSegmentId("2012/2013").toString(), 11_000));
+    Assertions.assertTrue(locationPlain.canHandle(makeSegmentEntry("2012/2013", 9_000)));
+    Assertions.assertFalse(locationPlain.canHandle(makeSegmentEntry("2012/2013", 11_000)));
 
     // enough space available maxSize is the limit
     StorageLocation locationFree = fakeLocation(100_000, 25_000, 10_000, 10.0);
-    Assert.assertTrue(locationFree.canHandle(newSegmentId("2012/2013").toString(), 9_000));
-    Assert.assertFalse(locationFree.canHandle(newSegmentId("2012/2013").toString(), 11_000));
+    Assertions.assertTrue(locationFree.canHandle(makeSegmentEntry("2012/2013", 9_000)));
+    Assertions.assertFalse(locationFree.canHandle(makeSegmentEntry("2012/2013", 11_000)));
 
     // disk almost full percentage is the limit
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
-    Assert.assertTrue(locationFull.canHandle(newSegmentId("2012/2013").toString(), 4_000));
-    Assert.assertFalse(locationFull.canHandle(newSegmentId("2012/2013").toString(), 6_000));
+    Assertions.assertTrue(locationFull.canHandle(makeSegmentEntry("2012/2013", 4_000)));
+    Assertions.assertFalse(locationFull.canHandle(makeSegmentEntry("2012/2013", 6_000)));
   }
 
   @Test
-  @SuppressWarnings("GuardedBy")
+  @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
   public void testStorageLocationRealFileSystem() throws IOException
   {
-    File file = temporaryFolder.newFolder();
-    StorageLocation location = new StorageLocation(file, 10_000, 100.0d);
-    Assert.assertFalse(location.canHandle(newSegmentId("2012/2013").toString(), 5_000));
+    StorageLocation location = new StorageLocation(tempDir, 10_000, 100.0d);
+    Assertions.assertFalse(location.canHandle(makeSegmentEntry("2012/2013", 5_000)));
 
-    location = new StorageLocation(file, 10_000, 0.0001d);
-    Assert.assertTrue(location.canHandle(newSegmentId("2012/2013").toString(), 1));
+    location = new StorageLocation(tempDir, 10_000, 0.0001d);
+    Assertions.assertTrue(location.canHandle(makeSegmentEntry("2012/2013", 1)));
+  }
+
+
+  @Test
+  public void testStorageLocation() throws IOException
+  {
+    long expectedAvail = 1000L;
+    StorageLocation loc = new StorageLocation(tempDir, expectedAvail, null);
+
+    verifyLoc(expectedAvail, loc);
+
+    final CacheEntry entry1 = makeSegmentEntry("2012-01-01/2012-01-02", 10);
+    final CacheEntry entry2 = makeSegmentEntry("2012-01-01/2012-01-02", 10);
+    final CacheEntry entry3 = makeSegmentEntry("2012-01-02/2012-01-03", 23);
+
+    loc.reserve(entry1);
+    expectedAvail -= 10;
+    verifyLoc(expectedAvail, loc);
+
+    loc.reserve(entry2);
+    verifyLoc(expectedAvail, loc);
+
+    loc.reserve(entry3);
+    expectedAvail -= 23;
+    verifyLoc(expectedAvail, loc);
+
+    loc.release(entry1);
+    expectedAvail += 10;
+    verifyLoc(expectedAvail, loc);
+
+    loc.release(makeSegmentEntry("2012-01-01/2012-01-02", 10));
+    verifyLoc(expectedAvail, loc);
+
+    loc.release(entry3);
+    expectedAvail += 23;
+    verifyLoc(expectedAvail, loc);
+  }
+
+  @Test
+  public void testReserveAndRelease() throws IOException
+  {
+    StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
+    CacheEntry entry1 = new TestCacheEntry("testPath", 100L);
+    CacheEntry entry2 = new TestCacheEntry("testPath", 100L);
+
+    Assertions.assertTrue(loc.reserve(entry1));
+
+    Assertions.assertEquals(900L, loc.availableSizeBytes());
+    Assertions.assertTrue(loc.isReserved(entry1));
+
+    Assertions.assertFalse(loc.reserve(entry2));
+
+    Assertions.assertTrue(loc.release(entry1));
+    Assertions.assertEquals(1000L, loc.availableSizeBytes());
+    Assertions.assertFalse(loc.isReserved(entry2));
+
+    Assertions.assertFalse(loc.release(entry2));
+  }
+
+  @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
+  private void verifyLoc(long maxSize, StorageLocation loc)
+  {
+    Assertions.assertEquals(maxSize, loc.availableSizeBytes());
+    for (int i = 0; i <= maxSize; ++i) {
+      Assertions.assertTrue(loc.canHandle(makeSegmentEntry("2013/2014", i)), String.valueOf(i));
+    }
   }
 
   private StorageLocation fakeLocation(long total, long free, long max, Double percent)
@@ -87,112 +325,7 @@ public class StorageLocationTest
     return new StorageLocation(file, max, percent);
   }
 
-  @Test
-  public void testStorageLocation() throws IOException
-  {
-    File dir = temporaryFolder.newFolder();
-    long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(dir, expectedAvail, null);
-
-    verifyLoc(expectedAvail, loc);
-
-    final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
-
-    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
-    expectedAvail -= 10;
-    verifyLoc(expectedAvail, loc);
-
-    loc.reserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
-    verifyLoc(expectedAvail, loc);
-
-    loc.reserve("test2", secondSegment);
-    expectedAvail -= 23;
-    verifyLoc(expectedAvail, loc);
-
-    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
-    expectedAvail += 10;
-    verifyLoc(expectedAvail, loc);
-
-    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
-    verifyLoc(expectedAvail, loc);
-
-    loc.removeSegmentDir(new File(dir, "test2"), secondSegment);
-    expectedAvail += 23;
-    verifyLoc(expectedAvail, loc);
-  }
-
-  @Test
-  public void testMaybeReserve() throws IOException
-  {
-    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    ArgumentCaptor<ServiceEventBuilder> argumentCaptor = ArgumentCaptor.forClass(ServiceEventBuilder.class);
-    EmittingLogger.registerEmitter(emitter);
-
-    File dir = temporaryFolder.newFolder();
-    long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(dir, expectedAvail, null);
-
-    verifyLoc(expectedAvail, loc);
-
-    final DataSegment secondSegment = makeSegment("2012-01-02/2012-01-03", 23);
-
-    loc.maybeReserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
-    expectedAvail -= 10;
-    verifyLoc(expectedAvail, loc);
-
-    loc.maybeReserve("test1", makeSegment("2012-01-01/2012-01-02", 10));
-    verifyLoc(expectedAvail, loc);
-
-    loc.maybeReserve("test2", secondSegment);
-    expectedAvail -= 23;
-    verifyLoc(expectedAvail, loc);
-
-    loc.removeSegmentDir(new File(dir, "test1"), makeSegment("2012-01-01/2012-01-02", 10));
-    expectedAvail += 10;
-    verifyLoc(expectedAvail, loc);
-
-    loc.maybeReserve("test3", makeSegment("2012-01-01/2012-01-02", 999));
-    expectedAvail -= 999;
-    verifyLoc(expectedAvail, loc);
-
-    Mockito.verify(emitter).emit(argumentCaptor.capture());
-    AlertBuilder alertBuilder = (AlertBuilder) argumentCaptor.getValue();
-    String description = alertBuilder.build(ImmutableMap.of()).getDescription();
-    Assert.assertNotNull(description);
-    Assert.assertTrue(description, description.contains("Please increase druid.segmentCache.locations maxSize param"));
-  }
-
-  @Test
-  public void testReserveAndRelease() throws IOException
-  {
-    File dir = temporaryFolder.newFolder();
-    StorageLocation loc = new StorageLocation(dir, 1000L, null);
-
-    File reserved = loc.reserve("testPath", "segmentId", 100L);
-    Assert.assertNotNull(reserved);
-    Assert.assertEquals(new File(dir, "testPath"), reserved.getAbsoluteFile());
-    Assert.assertEquals(900L, loc.availableSizeBytes());
-    Assert.assertTrue(loc.contains("testPath"));
-
-    Assert.assertNull(loc.reserve("testPath", "segmentId", 100L));
-
-    Assert.assertTrue(loc.release("testPath", 100L));
-    Assert.assertEquals(1000L, loc.availableSizeBytes());
-    Assert.assertFalse(loc.contains("testPath"));
-
-    Assert.assertFalse(loc.release("testPath", 100L));
-  }
-
-  @SuppressWarnings("GuardedBy")
-  private void verifyLoc(long maxSize, StorageLocation loc)
-  {
-    Assert.assertEquals(maxSize, loc.availableSizeBytes());
-    for (int i = 0; i <= maxSize; ++i) {
-      Assert.assertTrue(String.valueOf(i), loc.canHandle(newSegmentId("2013/2014").toString(), i));
-    }
-  }
-
-  private DataSegment makeSegment(String intervalString, long size)
+  private static DataSegment makeSegment(String intervalString, long size)
   {
     return new DataSegment(
         "test",
@@ -210,5 +343,109 @@ public class StorageLocationTest
   private SegmentId newSegmentId(String intervalString)
   {
     return SegmentId.of("test", Intervals.of(intervalString), "1", 0);
+  }
+
+  private static TestSegmentCacheEntry makeSegmentEntry(String intervalString, long size)
+  {
+    return new TestSegmentCacheEntry(intervalString, size);
+  }
+
+  public static final class TestSegmentCacheEntry implements CacheEntry
+  {
+    private final SegmentCacheEntryIdentifier identifier;
+    private final DataSegment segment;
+
+    public TestSegmentCacheEntry(String intervalString, long size)
+    {
+      this.segment = makeSegment(intervalString, size);
+      this.identifier = new SegmentCacheEntryIdentifier(segment.getId());
+    }
+
+    @Override
+    public SegmentCacheEntryIdentifier getId()
+    {
+      return identifier;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return segment.getSize();
+    }
+
+    @Override
+    public void mount(File location) throws IOException
+    {
+
+    }
+
+    @Override
+    public void unmount()
+    {
+
+    }
+
+  }
+
+  private static final class TestCacheEntry implements CacheEntry
+  {
+    private final StringCacheIdentifier id;
+    private final long size;
+
+    private TestCacheEntry(String id, long size)
+    {
+      this.id = new StringCacheIdentifier(id);
+      this.size = size;
+    }
+
+    @Override
+    public StringCacheIdentifier getId()
+    {
+      return id;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public void mount(File location)
+    {
+
+    }
+
+    @Override
+    public void unmount()
+    {
+
+    }
+  }
+
+  public static final class StringCacheIdentifier implements CacheEntryIdentifier
+  {
+    private final String string;
+
+    public StringCacheIdentifier(String string)
+    {
+      this.string = string;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      StringCacheIdentifier that = (StringCacheIdentifier) o;
+      return Objects.equals(string, that.string);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(string);
+    }
   }
 }

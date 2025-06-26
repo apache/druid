@@ -24,15 +24,14 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.CompleteSegment;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
@@ -41,8 +40,6 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -54,18 +51,15 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 {
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManager segmentCacheManager;
-  private final IndexIO indexIO;
   private final ConcurrentHashMap<SegmentId, SegmentHolder> holders;
 
   public TaskDataSegmentProvider(
       CoordinatorClient coordinatorClient,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.segmentCacheManager = segmentCacheManager;
-    this.indexIO = indexIO;
     this.holders = new ConcurrentHashMap<>();
   }
 
@@ -122,20 +116,18 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 
     final Closer closer = Closer.create();
     try {
-      if (!segmentCacheManager.reserve(dataSegment)) {
-        throw new ISE("Could not reserve location for segment [%s]", segmentId);
-      }
+      final ReferenceCountedSegmentProvider segmentProvider = closer.register(segmentCacheManager.getSegment(dataSegment));
       closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-      final File segmentDir = segmentCacheManager.getSegmentFiles(dataSegment);
 
-      final QueryableIndex index = closer.register(indexIO.loadIndex(segmentDir));
-      final QueryableIndexSegment segment = new QueryableIndexSegment(index, dataSegment.getId());
-      final int numRows = index.getNumRows();
+      // we control the closer, so no need to acquire references here
+      final Segment segment = segmentProvider.getBaseSegment();
+      final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
+      final int numRows = inspector == null ? 0 : inspector.getNumRows();
       final long size = dataSegment.getSize();
       closer.register(() -> channelCounters.addFile(numRows, size));
       return new ReferenceCountingResourceHolder<>(new CompleteSegment(dataSegment, segment), closer);
     }
-    catch (IOException | SegmentLoadingException e) {
+    catch (SegmentLoadingException e) {
       throw CloseableUtils.closeInCatch(
           new RE(e, "Failed to download segment [%s]", segmentId),
           closer
