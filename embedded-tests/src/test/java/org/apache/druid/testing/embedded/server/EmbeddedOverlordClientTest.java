@@ -107,7 +107,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
   @Test
   public void test_cancelTask_fails_forUnknownTaskId()
   {
-    verifyFailsWith(
+    verifyApiFailsWith(
         cluster.leaderOverlord().cancelTask(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
@@ -184,7 +184,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
   @Test
   public void test_taskStatus_fails_forUnknownTaskId()
   {
-    verifyFailsWith(
+    verifyApiFailsWith(
         cluster.leaderOverlord().taskStatus(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
@@ -193,7 +193,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
   @Test
   public void test_taskPayload_fails_forUnknownTaskId()
   {
-    verifyFailsWith(
+    verifyApiFailsWith(
         cluster.leaderOverlord().taskPayload(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
@@ -211,7 +211,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
   @Test
   public void test_findLockedIntervals_fails_whenNoFilter()
   {
-    verifyFailsWith(
+    verifyApiFailsWith(
         cluster.leaderOverlord().findLockedIntervals(List.of()),
         "No filter provided"
     );
@@ -310,7 +310,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
     Assertions.assertNotNull(result);
   }
 
-  private static <T> void verifyFailsWith(ListenableFuture<T> future, String message)
+  private static <T> void verifyApiFailsWith(ListenableFuture<T> future, String message)
   {
     final CountDownLatch isFutureDone = new CountDownLatch(1);
     final AtomicReference<Throwable> capturedError = new AtomicReference<>();

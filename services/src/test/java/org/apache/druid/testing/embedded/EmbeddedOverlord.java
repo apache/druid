@@ -23,9 +23,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.cli.CliOverlord;
 import org.apache.druid.cli.ServerRunnable;
-import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -58,14 +56,6 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
   {
     final long mem1gb = 1_000_000_000;
     return new DruidProcessingConfigTest.MockRuntimeInfo(4, mem1gb, mem1gb);
-  }
-
-  public void waitUntilTaskFinishes(String taskId)
-  {
-    latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
-                      .hasDimension(DruidMetrics.TASK_ID, taskId)
-    );
   }
 
   /**

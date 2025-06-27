@@ -27,9 +27,11 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestDataSource;
@@ -96,11 +98,16 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Waits for the given task to finish successfully.
+   * Waits for the given task to finish successfully. If the given
+   * {@link EmbeddedOverlord} is not the leader, this method can only return by
+   * throwing an exception upon timeout.
    */
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
-    overlord.waitUntilTaskFinishes(taskId);
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+    );
     verifyTaskHasStatus(taskId, TaskStatus.success(taskId));
   }
 

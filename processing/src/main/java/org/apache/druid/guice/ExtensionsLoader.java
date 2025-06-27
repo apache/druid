@@ -414,7 +414,7 @@ public class ExtensionsLoader
       if (isEmbeddedTest) {
         log.warn(
             "Running service in embedded testing mode with allowed modules[%s]."
-            + "This is an unsafe test-only mode and must never be used in a production cluster."
+            + " This is an unsafe test-only mode and must never be used in a production cluster."
             + " Remove property 'druid.extensions.modulesForEmbeddedTest' to disable embedded testing mode.",
             extensionsConfig.getModulesForEmbeddedTest()
         );

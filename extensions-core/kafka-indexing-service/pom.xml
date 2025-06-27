@@ -175,7 +175,7 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-services</artifactId>
       <version>${project.parent.version}</version>
-      <scope>provided</scope>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>

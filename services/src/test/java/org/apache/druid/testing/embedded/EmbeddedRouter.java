@@ -37,6 +37,7 @@ public class EmbeddedRouter extends EmbeddedDruidServer
 {
   public EmbeddedRouter()
   {
+    // This property ensures that web-console functions in full mode
     addProperty("druid.router.managementProxy.enabled", "true");
   }
 

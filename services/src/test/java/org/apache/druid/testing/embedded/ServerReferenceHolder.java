@@ -32,7 +32,8 @@ import java.util.Objects;
 
 /**
  * Holds references to various objects used by an {@link EmbeddedDruidServer} in
- * cluster embeddeds.
+ * embedded cluster tests. The references are for read-only purposes and MUST NOT
+ * be mutated in any way.
  */
 public final class ServerReferenceHolder implements ServerReferencesProvider
 {

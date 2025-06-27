@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 
@@ -36,7 +35,7 @@ public class TestDruidModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of();
+    return List.of();
   }
 
   @Override

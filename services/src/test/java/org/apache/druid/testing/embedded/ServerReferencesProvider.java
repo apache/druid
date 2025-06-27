@@ -27,8 +27,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
 /**
- * Provides a handle to the various service clients being used by an
- * {@link EmbeddedDruidServer}.
+ * Provides a handle to the various objects used by an {@link EmbeddedDruidServer}
+ * during an embedded cluster test. The returned references should be used for
+ * read-only purposes and MUST NOT be mutated in any way.
  */
 public interface ServerReferencesProvider
 {
