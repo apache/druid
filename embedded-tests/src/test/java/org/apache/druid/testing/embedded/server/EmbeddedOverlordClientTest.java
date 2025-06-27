@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
  * Tests all the REST APIs exposed by the Overlord using the
  * {@link OverlordClient}.
  */
-public class OverlordClientEmbeddedTest extends EmbeddedClusterTestBase
+public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
 {
   private static final String UNKNOWN_TASK_ID
       = IdUtils.newTaskId("sim_test_noop", "dummy", null);

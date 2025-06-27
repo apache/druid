@@ -31,7 +31,7 @@ import org.junit.jupiter.api.TestInstance;
  * <p>
  * Steps to write a test:
  * <ul>
- * <li>Write a {@code *Test} class that extends this class.</li>
+ * <li>Write an {@code Embedded*Test} class that extends this class.</li>
  * <li>Create an {@link EmbeddedDruidCluster} containing all servers, resources,
  * extensions and properties in {@link #createCluster()}.</li>
  * <li>Write one or more {@code @Test} (JUnit5) methods.</li>

@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class KafkaSupervisorEmbeddedTest extends EmbeddedClusterTestBase
+public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();

@@ -50,7 +50,7 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class IndexTaskEmbeddedTest extends EmbeddedClusterTestBase
+public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 {
   private static final String CSV_DATA_10_DAYS =
       "2025-06-01T00:00:00.000Z,shirt,105"
