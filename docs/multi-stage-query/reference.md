@@ -129,7 +129,7 @@ SELECT
 FROM <table>
 ```
 
-For details on applying context parameters using SET, see [SET statements](../querying/sql.md#set-statements).
+For details on applying context parameters using SET, see [SET statements](../querying/sql.md#set).
 
 
 ##### S3 - Amazon S3

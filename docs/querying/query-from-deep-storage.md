@@ -113,7 +113,7 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 }'
 ```
 
-Note that you can also submit context parameters using [SET](../querying/sql.md#set-statements). For example:
+Note that you can also submit context parameters using [SET](../querying/sql.md#set). For example:
 
 ```
   "query": "SET executionMode = '\''ASYNC'\''; SET selectDestination = '\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP '\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP '\''2017-09-02'\''"
