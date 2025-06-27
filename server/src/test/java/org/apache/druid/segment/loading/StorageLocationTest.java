@@ -29,23 +29,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- */
 class StorageLocationTest
 {
-
   @TempDir
   File tempDir;
 
   @Test
-  public void testWeakReserveAndReclaim() throws IOException
+  public void testWeakReserveAndReclaim()
   {
     StorageLocation location = new StorageLocation(tempDir, 100L, null);
     CacheEntry entry1 = new TestCacheEntry("1", 25);
@@ -69,7 +65,7 @@ class StorageLocationTest
   }
 
   @Test
-  public void testRemoveFromHead() throws IOException
+  public void testRemoveFromHead()
   {
     StorageLocation location = new StorageLocation(tempDir, 100L, null);
     CacheEntry entry1 = new TestCacheEntry("1", 25);
@@ -96,7 +92,7 @@ class StorageLocationTest
   }
 
   @Test
-  public void testRemoveFromTail() throws IOException
+  public void testRemoveFromTail()
   {
     StorageLocation location = new StorageLocation(tempDir, 100L, null);
     CacheEntry entry1 = new TestCacheEntry("1", 25);
@@ -123,7 +119,7 @@ class StorageLocationTest
   }
 
   @Test
-  public void testRemoveRandom() throws IOException
+  public void testRemoveRandom()
   {
     StorageLocation location = new StorageLocation(tempDir, 100L, null);
     CacheEntry entry1 = new TestCacheEntry("1", 25);
@@ -157,7 +153,7 @@ class StorageLocationTest
   }
 
   @Test
-  public void testBulkReservation() throws IOException
+  public void testBulkReservation()
   {
     StorageLocation location = new StorageLocation(tempDir, 100L, null);
     CacheEntry entry1 = new TestCacheEntry("1", 25);
@@ -241,7 +237,7 @@ class StorageLocationTest
 
   @Test
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
-  public void testStorageLocationRealFileSystem() throws IOException
+  public void testStorageLocationRealFileSystem()
   {
     StorageLocation location = new StorageLocation(tempDir, 10_000, 100.0d);
     Assertions.assertFalse(location.canHandle(makeSegmentEntry("2012/2013", 5_000)));
@@ -252,7 +248,7 @@ class StorageLocationTest
 
 
   @Test
-  public void testStorageLocation() throws IOException
+  public void testStorageLocation()
   {
     long expectedAvail = 1000L;
     StorageLocation loc = new StorageLocation(tempDir, expectedAvail, null);
@@ -287,7 +283,7 @@ class StorageLocationTest
   }
 
   @Test
-  public void testReserveAndRelease() throws IOException
+  public void testReserveAndRelease()
   {
     StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
     CacheEntry entry1 = new TestCacheEntry("testPath", 100L);
@@ -374,7 +370,7 @@ class StorageLocationTest
     }
 
     @Override
-    public void mount(File location) throws IOException
+    public void mount(File location)
     {
 
     }

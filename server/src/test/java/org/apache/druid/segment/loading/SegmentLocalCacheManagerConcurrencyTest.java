@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -136,8 +135,6 @@ public class SegmentLocalCacheManagerConcurrencyTest
       FileUtils.mkdirp(localSegmentFile);
       final File indexZip = new File(localSegmentFile, "index.zip");
       indexZip.createNewFile();
-
-      QueryableIndex index = TestIndex.getMMappedTestIndex();
 
       final DataSegment segment = newSegment(interval, partitionId).withLoadSpec(
           ImmutableMap.of(
