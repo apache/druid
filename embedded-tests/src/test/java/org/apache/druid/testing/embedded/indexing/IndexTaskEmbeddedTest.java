@@ -32,6 +32,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -118,7 +119,8 @@ public class IndexTaskEmbeddedTest extends EmbeddedClusterTestBase
                                .addServer(indexer)
                                .addServer(overlord)
                                .addServer(historical)
-                               .addServer(broker);
+                               .addServer(broker)
+                               .addServer(new EmbeddedRouter());
   }
 
   @Test

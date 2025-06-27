@@ -431,12 +431,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-services</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
             <type>test-jar</type>
@@ -448,31 +442,6 @@
             <type>test-jar</type>
             <version>${project.parent.version}</version>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>kafka-emitter</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.13</artifactId>
-            <version>${apache.kafka.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency><!-- Required by dependency check, used by kafka_2.13 -->
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.library.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -559,19 +528,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- This is needed to bundle the web console for simulation tests -->
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>web-console</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
