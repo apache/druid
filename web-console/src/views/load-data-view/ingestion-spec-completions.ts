@@ -171,6 +171,14 @@ export const INGESTION_SPEC_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'type', documentation: 'Type of the dimension' },
       { value: 'name', documentation: 'Name of the dimension' },
+    ],
+  },
+  // string dimension specific properties
+  {
+    path: '$.spec.dataSchema.dimensionsSpec.dimensions.[]',
+    isObject: true,
+    condition: obj => !obj.type || obj.type === 'string',
+    completions: [
       { value: 'createBitmapIndex', documentation: 'Whether to create bitmap index (string only)' },
       {
         value: 'multiValueHandling',
