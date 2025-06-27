@@ -30,8 +30,11 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupUtils;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -46,6 +49,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class CoordinatorClientImpl implements CoordinatorClient
@@ -237,6 +241,38 @@ public class CoordinatorClientImpl implements CoordinatorClient
             holder.getContent(),
             CoordinatorDynamicConfig.class
         )
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(
+      String tier
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/coordinator/v1/lookups/config/%s?detailed=true",
+        StringUtils.urlEncode(tier)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        this::extractLookupFactory
+    );
+  }
+
+  private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
+  {
+    Map<String, Object> lookupNameToGenericConfig = JacksonUtils.readValue(
+        jsonMapper,
+        holder.getContent(),
+        new TypeReference<>() {}
+    );
+    return LookupUtils.tryConvertObjectMapToLookupConfigMap(
+        lookupNameToGenericConfig,
+        jsonMapper
     );
   }
 }
