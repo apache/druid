@@ -45,6 +45,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
@@ -116,6 +117,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final CacheConfig cacheConfig;
   private final SubqueryGuardrailHelper subqueryGuardrailHelper;
   private final SubqueryCountStatsProvider subqueryStatsProvider;
+  private final GenericQueryMetricsFactory genericQueryMetricsFactory;
 
   public ClientQuerySegmentWalker(
       ServiceEmitter emitter,
@@ -129,7 +131,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       SubqueryGuardrailHelper subqueryGuardrailHelper,
-      SubqueryCountStatsProvider subqueryStatsProvider
+      SubqueryCountStatsProvider subqueryStatsProvider,
+      GenericQueryMetricsFactory genericQueryMetricsFactory
   )
   {
     this.emitter = emitter;
@@ -144,6 +147,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
     this.subqueryGuardrailHelper = subqueryGuardrailHelper;
     this.subqueryStatsProvider = subqueryStatsProvider;
+    this.genericQueryMetricsFactory = genericQueryMetricsFactory;
   }
 
   @Inject
@@ -159,7 +163,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       SubqueryGuardrailHelper subqueryGuardrailHelper,
-      SubqueryCountStatsProvider subqueryStatsProvider
+      SubqueryCountStatsProvider subqueryStatsProvider,
+      GenericQueryMetricsFactory genericQueryMetricsFactory
   )
   {
     this(
@@ -174,7 +179,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         cache,
         cacheConfig,
         subqueryGuardrailHelper,
-        subqueryStatsProvider
+        subqueryStatsProvider,
+        genericQueryMetricsFactory
     );
   }
 
@@ -397,7 +403,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return toInlineDataSource(
             subQuery,
             queryResults,
-            (QueryToolChest) new QueryLogicCompatToolChest(subQuery.getResultRowSignature()),
+            (QueryToolChest) new QueryLogicCompatToolChest(
+                subQuery.getResultRowSignature(),
+                genericQueryMetricsFactory
+            ),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,

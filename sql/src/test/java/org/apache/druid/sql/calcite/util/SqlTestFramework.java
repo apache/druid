@@ -57,6 +57,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -1145,7 +1146,8 @@ public class SqlTestFramework
           injector.getInstance(Cache.class),
           injector.getInstance(CacheConfig.class),
           new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
-          new SubqueryCountStatsProvider()
+          new SubqueryCountStatsProvider(),
+          new DefaultGenericQueryMetricsFactory()
       );
     }
 
