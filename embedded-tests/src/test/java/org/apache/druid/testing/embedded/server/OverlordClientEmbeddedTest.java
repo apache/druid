@@ -42,7 +42,7 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.junit5.DruidEmbeddedTestBase;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
  * Tests all the REST APIs exposed by the Overlord using the
  * {@link OverlordClient}.
  */
-public class OverlordClientEmbeddedTest extends DruidEmbeddedTestBase
+public class OverlordClientEmbeddedTest extends EmbeddedClusterTestBase
 {
   private static final String UNKNOWN_TASK_ID
       = IdUtils.newTaskId("sim_test_noop", "dummy", null);

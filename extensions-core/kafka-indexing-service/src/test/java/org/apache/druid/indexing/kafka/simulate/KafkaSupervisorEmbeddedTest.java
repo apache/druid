@@ -41,7 +41,7 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.junit5.DruidEmbeddedTestBase;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class KafkaSupervisorEmbeddedTest extends DruidEmbeddedTestBase
+public class KafkaSupervisorEmbeddedTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();

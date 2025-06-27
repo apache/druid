@@ -27,57 +27,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * Base class for embedded tests related to ingestion and indexing.
- * This class should not contain any hidden configs or setup, only shorthand
- * utility methods.
+ * Base class for Junit5 tests that use an {@link EmbeddedDruidCluster}.
  * <p>
- * Steps:
+ * Steps to write a test:
  * <ul>
  * <li>Write a {@code *Test} class that extends this class.</li>
  * <li>Create an {@link EmbeddedDruidCluster} containing all servers, resources,
  * extensions and properties in {@link #createCluster()}.</li>
  * <li>Write one or more {@code @Test} (JUnit5) methods.</li>
  * </ul>
- * Base class for JUnit 5 tests that use an {@link EmbeddedDruidCluster}.
- * This base class is responsible for setting up the cluster before <b>ANY<b/>
- * test method has run and tearing it down after <b>ALL</b> the tests have run.
+ * The cluster is created before <b>ANY<b/> test method has run and is torn down
+ * after <b>ALL</b> the tests have run.
  * <p>
- * Usage:
- * <pre>
- * public class IndexingTaskTest implements DruidSimulationTestBase
- * {
- *    private final EmbeddedOverlord overlord = new EmbeddedOverlord();
- *
- *    &#64;Override
- *    public EmbeddedDruidCluster buildCluster()
- *    {
- *      return EmbeddedDruidCluster.withExtensions(List.of())
- *                                 .addServer(overlord)
- *                                 .addServer(new EmbeddedCoordinator())
- *                                 .addServer(new EmbeddedIndexer())
- *                                 .build();
- *    }
- *
- *    &#64;Test
- *    public void test_runIndexTask()
- *    {
- *      final String taskId = IdUtils.newTaskId();
- *      getResult(cluster.leaderOverlord().runTask(taskId, task));
- *
- *      cluster.overlord().waitUntilTaskFinishes(taskId);
- *
- *      Assertions.assertEquals(
- *          TaskState.SUCCESS,
- *          getResult(cluster.leaderOverlord().taskStatus(taskId)).getState().getCode()
- *      );
- *    }
- * }
- * </pre>
- *
- * @see EmbeddedDruidCluster for information on how to build a cluster
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class DruidEmbeddedTestBase
+public abstract class EmbeddedClusterTestBase
 {
   /**
    * Cluster used in this test, created in {@link #createCluster()}.

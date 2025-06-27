@@ -32,7 +32,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.junit5.DruidEmbeddedTestBase;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -49,7 +49,7 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class IndexTaskEmbeddedTest extends DruidEmbeddedTestBase
+public class IndexTaskEmbeddedTest extends EmbeddedClusterTestBase
 {
   private static final String CSV_DATA_10_DAYS =
       "2025-06-01T00:00:00.000Z,shirt,105"
@@ -195,26 +195,6 @@ public class IndexTaskEmbeddedTest extends DruidEmbeddedTestBase
         taskId,
         StringUtils.format(INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
     );
-
-    /*return new IndexTask(
-        taskId,
-        null,
-        new IndexTask.IndexIngestionSpec(
-            DataSchema.builder()
-                      .withTimestamp(new TimestampSpec("time", null, null))
-                      .withDimensions(DimensionsSpec.EMPTY)
-                      .withDataSource(dataSource)
-                      .build(),
-            new IndexTask.IndexIOConfig(
-                new InlineInputSource(inlineData),
-                new CsvInputFormat(null, null, null, true, 0, false),
-                true,
-                false
-            ),
-            null
-        ),
-        Map.of()
-    );*/
   }
 
   /**

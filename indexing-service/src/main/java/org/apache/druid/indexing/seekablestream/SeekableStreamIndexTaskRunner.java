@@ -275,9 +275,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
     rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
 
-    // Schedule refresh of min and max message time only if the period is valid
-    // The refreshRejectionPeriodsInMinutes is zero when `taskDuration` < 1 minute,
-    // but this can happen only in embedded tests, never in production
+    // Schedule refresh of min and max message time only if the period is valid.
+    // The refreshRejectionPeriodsInMinutes is zero when taskDuration < 1 minute,
+    // but this can happen only in embedded tests, never in production.
     if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null
         && ioConfig.getRefreshRejectionPeriodsInMinutes() > 0) {
       rejectionPeriodUpdaterExec.scheduleWithFixedDelay(this::refreshMinMaxMessageTime,

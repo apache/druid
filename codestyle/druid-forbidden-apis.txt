@@ -59,7 +59,7 @@ org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.d
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 org.apache.curator.shaded.** @ Use regular classes, not shaded versions
 org.apache.datasketches.memory.Memory#wrap(byte[], int, int, java.nio.ByteOrder) @ The implementation isn't correct in datasketches-memory-2.2.0. Please refer to https://github.com/apache/datasketches-memory/issues/178. Use wrap(byte[]) and modify the offset by the callers instead
-org.apache.druid.testing.simulate.EmbeddedMiddleManager#<init>() @ Middle Managers should be used for local simulation testing only and not pushed as they are slower and launch tasks as child processes. Use EmbeddedIndexer instead.
+org.apache.druid.testing.simulate.EmbeddedMiddleManager#<init>() @ Middle Managers should be used for local embedded tests only and not pushed as they are slower and launch tasks as child processes. Use EmbeddedIndexer instead.
 java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
 java.util.concurrent.Executors#newFixedThreadPool(int) @ Executor is non-daemon and can prevent JVM shutdown, use org.apache.druid.java.util.common.concurrent.Execs#multiThreaded(int, java.lang.String) instead.
 

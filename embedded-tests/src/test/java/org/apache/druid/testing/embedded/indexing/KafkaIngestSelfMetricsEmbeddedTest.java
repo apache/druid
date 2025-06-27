@@ -51,7 +51,7 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
-import org.apache.druid.testing.embedded.junit5.DruidEmbeddedTestBase;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
  * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
 @SuppressWarnings("resource")
-public class KafkaIngestSelfMetricsEmbeddedTest extends DruidEmbeddedTestBase
+public class KafkaIngestSelfMetricsEmbeddedTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
 

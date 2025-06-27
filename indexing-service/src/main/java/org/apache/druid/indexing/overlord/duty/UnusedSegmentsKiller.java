@@ -191,7 +191,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
   {
     if (isEnabled()) {
       // Schedule the first run after some delay since the segment metadata cache
-      // might take time for the first sync to finish
+      // might take time for the sync to finish if this Overlord has just started.
       final long periodMillis = killConfig.getDutyPeriod().toStandardDuration().getMillis();
       final long initialDelayMillis = periodMillis / 4;
 
