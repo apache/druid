@@ -145,7 +145,7 @@ IngestionSpec syntax:
 }
 ```
 
-Sql based ingestion sample query:
+SQL-based ingestion sample query:
 ```sql
 
 REPLACE INTO "bigdecimal" OVERWRITE ALL
