@@ -192,4 +192,16 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
     }
     return OutputChannel.nil(partitionNumber);
   }
+
+  @Override
+  public boolean isBuffered()
+  {
+    for (final OutputChannelFactory channelFactory : channelFactories) {
+      if (channelFactory.isBuffered()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }

@@ -1,6 +1,5 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_order_by TEST_ID: A4_first_last_W9_G2_Q2

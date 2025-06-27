@@ -366,7 +366,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 32.0.1-jre
+version: 32.1.3-jre
 libraries:
   - com.google.guava: guava
 
@@ -595,7 +595,7 @@ name: Apache Commons Logging
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.1
+version: 1.3.5
 libraries:
   - commons-logging: commons-logging
 notices:
@@ -697,7 +697,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.12.0
+version: 3.17.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -751,7 +751,7 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.10.0
+version: 1.13.1
 libraries:
   - org.apache.commons: commons-text
 notices:
@@ -935,7 +935,7 @@ libraries:
 ---
 
 name: Swagger
-version: 1.6.2
+version: 1.6.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -989,7 +989,7 @@ name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.11
+version: 1.6.12
 libraries:
   - io.swagger: swagger-annotations
 
@@ -999,7 +999,7 @@ name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.11
 libraries:
   - io.swagger: swagger-annotations
 
@@ -1152,7 +1152,7 @@ name: Jetbrains Annotations
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 26.0.1
+version: 26.0.2
 libraries:
   - org.jetbrains: annotations
 
@@ -1162,7 +1162,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.10
+version: 1.9.25
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -1322,7 +1322,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.118.Final
+version: 4.1.122.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1616,7 +1616,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.5
+version: 2.14.0
 libraries:
   - joda-time: joda-time
 notices:
@@ -1659,7 +1659,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.4.11
+version: 2.5.2
 libraries:
   - net.minidev: json-smart
 
@@ -1860,7 +1860,7 @@ name: Apache HttpCore
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.4.11
+version: 4.4.16
 libraries:
   - org.apache.httpcomponents: httpcore
 notices:
@@ -2076,7 +2076,7 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.1
+version: 3.0.2
 libraries:
   - org.asynchttpclient: async-http-client
   - org.asynchttpclient: async-http-client-netty-utils
@@ -2116,7 +2116,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.24
+version: 3.1.0
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2685,7 +2685,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
 license_name: Apache License version 2.0
-version: 2.4.11
+version: 2.5.2
 libraries:
   - net.minidev: json-smart
 ---
@@ -2694,7 +2694,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
 license_name: Apache License version 2.0
-version: 2.4.11
+version: 2.5.2
 libraries:
   - net.minidev: accessors-smart
 ---
@@ -2861,7 +2861,7 @@ libraries:
 
 ---
 name: Kafka-schema-registry-client
-version: 6.2.12
+version: 6.2.15
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3005,7 +3005,7 @@ libraries:
 ---
 
 name: Kafka Schema Registry Client
-version: 6.2.12
+version: 6.2.15
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -3028,7 +3028,7 @@ libraries:
 ---
 
 name: Confluent Kafka Client
-version: 6.2.12-ccs
+version: 6.2.15-ccs
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -3406,7 +3406,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.7.36
+version: 2.0.16
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -3440,7 +3440,7 @@ name: FindBugs JSR305
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 2.0.1
+version: 3.0.2
 copyright: FindBugs
 license_file_path: licenses/bin/jsr305.BSD3
 libraries:
@@ -3494,7 +3494,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.3
+version: 9.8
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -4478,7 +4478,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.70.Final
+version: 2.0.72.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes

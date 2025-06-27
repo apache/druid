@@ -1,0 +1,95 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 'Not even a size') AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, -1) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 1) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 2147483648) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 2147483647) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+Not enough capacity for even one row
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 100000000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
+Not enough capacity for even one row
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test005 TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0, 100000) AS col
+FROM test_agg_funcs
+WHERE tab0s0 = 'AAAAAAAAAA';
++--------------------------------------------------------------------------+
+| col                                                                      |
++--------------------------------------------------------------------------+
+| [AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA, AAAAAAAAAA] |
++--------------------------------------------------------------------------+
+(1 row)
+
+!ok
+

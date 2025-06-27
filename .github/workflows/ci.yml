@@ -24,10 +24,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*,_*,$*"]
+        pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
       jdk: 17
       artifact_prefix: "unit-test-reports"
       key: "test-jdk17-[${{ matrix.pattern }}]"
@@ -73,9 +73,17 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [ "11", "21.0.4" ]
-        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
+        pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
+      script: .github/scripts/run_unit-tests -Dtest='${{ matrix.pattern }}' -fae
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+
+  # this will be running in parallel with the ITs later; but until that migration happens - run them in parallel with normal tests
+  run-qtest:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=QTest -fae
+      key: quidem-QTest
+      jdk: 17

@@ -25,6 +25,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.QueryDataSource;
@@ -51,7 +52,8 @@ import java.util.List;
 public class WindowOperatorQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
 
-  private final WindowOperatorQueryQueryToolChest toolchest = new WindowOperatorQueryQueryToolChest();
+  private final WindowOperatorQueryQueryToolChest toolchest =
+      new WindowOperatorQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance());
 
   @Test
   public void mergeResultsWithRowResultSerializationMode()

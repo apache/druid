@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.guava.Accumulators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BrokerParallelMergeConfig;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -379,7 +380,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         null,
         new CacheConfig(),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
-        new SubqueryCountStatsProvider()
+        new SubqueryCountStatsProvider(),
+        new DefaultGenericQueryMetricsFactory()
     );
 
     defineMocks();
