@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.error.DruidException;
@@ -33,6 +34,7 @@ import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
@@ -44,6 +46,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -51,6 +54,7 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Dart implementation of {@link ControllerContext}.
@@ -87,7 +91,6 @@ public class DartControllerContext implements ControllerContext
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final QueryContext context;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
   public DartControllerContext(
@@ -108,7 +111,6 @@ public class DartControllerContext implements ControllerContext
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
     this.context = context;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
     this.emitter = emitter;
   }
 
@@ -147,6 +149,15 @@ public class DartControllerContext implements ControllerContext
         DEFAULT_MAX_CONCURRENT_STAGES
     );
 
+    Map<String, Object> indexerContext = IndexerControllerContext.makeWorkerContextMap(
+        querySpec,
+        false,
+        maxConcurrentStages
+    );
+    final ImmutableMap.Builder<String, Object> dartContextBuilder = ImmutableMap.builder();
+    dartContextBuilder.putAll(indexerContext);
+    dartContextBuilder.put(QueryContexts.CTX_DART_QUERY_ID, querySpec.getContext().get(QueryContexts.CTX_DART_QUERY_ID));
+
     return ControllerQueryKernelConfig
         .builder()
         .controllerHost(selfNode.getHostAndPortToUse())
@@ -155,7 +166,7 @@ public class DartControllerContext implements ControllerContext
         .destination(TaskReportMSQDestination.instance())
         .maxConcurrentStages(maxConcurrentStages)
         .maxRetainedPartitionSketchBytes(memoryParameters.getPartitionStatisticsMaxRetainedBytes())
-        .workerContextMap(IndexerControllerContext.makeWorkerContextMap(querySpec, false, maxConcurrentStages))
+        .workerContextMap(dartContextBuilder.build())
         .build();
   }
 
@@ -172,8 +183,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, final Number value)
+  public void emitMetric(final String metric, Map<String, Object> overrideDimension, final Number value)
   {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, context);
+    overrideDimension.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

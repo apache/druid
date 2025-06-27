@@ -40,12 +40,9 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
@@ -272,14 +269,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
-    Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
     final ControllerContext context = new IndexerControllerContext(
-        this.getTaskLockType(),
-        this.getDataSource(),
-        this.getQuerySpec().getContext(),
-        this.getContext(),
-        metricBuilder,
+        this,
         toolbox,
         injector,
         clientFactory,

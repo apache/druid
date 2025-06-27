@@ -185,6 +185,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -553,9 +554,26 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-    // Emit summary metrics
+    // Emit metrics
+    emitQueryMetrics(queryDef, taskStateForReport.isSuccess());
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
+  }
+
+  private void emitQueryMetrics(@Nullable final QueryDefinition queryDef, final boolean success)
+  {
+    final Set<String> datasources = new HashSet<>();
+    final Set<Interval> intervals = new HashSet<>();
+    if (queryDef != null) {
+      MSQMetricUtils.populateDatasourcesAndInterval(queryDef, datasources, intervals);
+    }
+
+    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
+    context.emitMetric(
+        "query/time",
+        MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success),
+        startTime - System.currentTimeMillis()
+    );
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -593,7 +611,7 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
-    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
+    context.emitMetric("ingest/input/bytes", Map.of(), totalProcessedBytes);
   }
 
   /**
@@ -1513,9 +1531,9 @@ public class ControllerImpl implements Controller
       );
     }
 
-    context.emitMetric("ingest/tombstones/count", numTombstones);
+    context.emitMetric("ingest/tombstones/count", Map.of(), numTombstones);
     // Include tombstones in the reported segments count
-    context.emitMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric("ingest/segments/count", Map.of(), segmentsWithTombstones.size());
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(

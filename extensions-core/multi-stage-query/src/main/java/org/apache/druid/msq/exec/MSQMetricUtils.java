@@ -1,0 +1,131 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.msq.exec;
+
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.joda.time.Interval;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Utility methods for setting up dimensions on metrics.
+ */
+public class MSQMetricUtils
+{
+  private static void setQueryIdDimensions(
+      final ServiceMetricEvent.Builder metricBuilder,
+      final QueryContext queryContext
+  )
+  {
+    metricBuilder.setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
+    metricBuilder.setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
+    metricBuilder.setDimension(DruidMetrics.TYPE, "msq");
+  }
+
+  public static void setDartQueryIdDimensions(
+      final ServiceMetricEvent.Builder metricBuilder,
+      final QueryContext queryContext
+  )
+  {
+    setQueryIdDimensions(metricBuilder, queryContext);
+    metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryContext.get(QueryContexts.CTX_DART_QUERY_ID));
+  }
+
+  public static void setTaskQueryIdDimensions(
+      final ServiceMetricEvent.Builder metricBuilder,
+      final Task task,
+      final QueryContext queryContext
+  )
+  {
+    setQueryIdDimensions(metricBuilder, queryContext);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task); // Setup common non-MSQ task dimensions
+    metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
+  }
+
+  public static void populateDatasourcesAndInterval(
+      final QueryDefinition queryDefinition,
+      final Set<String> datasources,
+      final Set<Interval> intervals
+  )
+  {
+    for (StageDefinition stageDefinition : queryDefinition.getStageDefinitions()) {
+      populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
+    }
+  }
+
+  /**
+   * Populates the datasources and intervals parameters with their corresponding values for all {@link TableInputSpec}
+   * in the stageDefinition.
+   */
+  public static void populateDatasourcesAndInterval(
+      final StageDefinition stageDefinition,
+      final Set<String> datasources,
+      final Set<Interval> intervals
+  )
+  {
+    for (InputSpec inputSpec : stageDefinition.getInputSpecs()) {
+      if (inputSpec instanceof TableInputSpec) {
+        TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
+        datasources.add(tableInputSpec.getDataSource());
+        intervals.addAll(tableInputSpec.getIntervals());
+      }
+    }
+  }
+
+  /**
+   * Creates dimensions for reporting metrics. Creates the following dimensions:
+   * <ul>
+   * <li>dataSource</li>
+   * <li>interval</li>
+   * <li>duration</li>
+   * <li>success</li>
+   * </ul>
+   */
+  public static Map<String, Object> createQueryMetricDimensions(
+      final Set<String> datasources,
+      final Collection<Interval> intervals,
+      final boolean success
+  )
+  {
+    Map<String, Object> dims = new HashMap<>();
+    dims.put(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
+    dims.put(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
+    dims.put("duration", BaseQuery.calculateDuration(intervals));
+    dims.put("success", success);
+    return dims;
+  }
+}

@@ -36,6 +36,7 @@ public class DruidMetrics
   public static final String ID = "id";
   public static final String SUBQUERY_ID = "subQueryId";
   public static final String STATUS = "status";
+  public static final String ENGINE = "engine";
 
   // Task dimensions
   public static final String TASK_ID = "taskId";

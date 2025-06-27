@@ -32,9 +32,11 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.MSQMetricUtils;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -67,6 +69,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -202,6 +205,18 @@ public class IndexerWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
+  {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+    // Attach task specific dimensions
+    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, QueryContext.of(task.getContext()));
+
+    overrideDimension.forEach(metricBuilder::setDimension);
+    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 
   @Override

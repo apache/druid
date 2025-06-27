@@ -41,6 +41,7 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -80,6 +81,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -155,6 +157,16 @@ public class WorkerImpl implements Worker
    */
   private volatile boolean controllerAlive = true;
 
+  /**
+   * Stores list of datasources queried for metric dimensions.
+   */
+  private final Set<String> datasources = new HashSet<>();
+
+  /**
+   * Stores list of intervals queried for metric dimensions.
+   */
+  private final Set<Interval> intervals = new HashSet<>();
+
   public WorkerImpl(@Nullable final MSQWorkerTask task, final WorkerContext context)
   {
     this.task = task;
@@ -176,6 +188,7 @@ public class WorkerImpl implements Worker
     }
 
     try (final Closer closer = Closer.create()) {
+      final Stopwatch stopwatch = Stopwatch.createStarted();
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
       controllerClient = kernelHolders.getControllerClient();
 
@@ -196,6 +209,9 @@ public class WorkerImpl implements Worker
             )
         );
       }
+
+      // Report query metrics
+      reportQueryMetrics(maybeErrorReport.isEmpty(), stopwatch.millisElapsed());
 
       if (maybeErrorReport.isPresent()) {
         final MSQErrorReport errorReport = maybeErrorReport.get();
@@ -220,6 +236,18 @@ public class WorkerImpl implements Worker
     finally {
       runFuture.set(null);
     }
+  }
+
+  private void reportQueryMetrics(boolean success, long time)
+  {
+    long cpuTimeNs = 0L;
+    for (final CounterTracker tracker : stageCounters.values()) {
+      cpuTimeNs += tracker.totalCpu();
+    }
+
+    final Map<String, Object> dims = MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success);
+    context.emitMetric("query/time", dims, time);
+    context.emitMetric("query/cpu/time", dims, TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
   }
 
   /**
@@ -367,6 +395,7 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
+    MSQMetricUtils.populateDatasourcesAndInterval(workOrder.getQueryDefinition(), datasources, intervals);
     final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
