@@ -75,8 +75,8 @@ public class UnusedSegmentKillerConfig
   }
 
   /**
-   * Period describing the frequency at which the unused segment killer duty
-   * should be run. This config is for testing only and should not be used in
+   * Period dictating the frequency at which the unused segment killer duty
+   * should be run. This config is for testing only and SHOULD NOT be used in
    * production clusters.
    */
   public Period getDutyPeriod()

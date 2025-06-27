@@ -68,8 +68,8 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Runs the given SQL query using the broker client used by the {@link #cluster}.
-   * This is a shorthand for {@code runSql(callApi(cluster.anyBroker().submitSqlQuery(...)))}.
+   * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
+   * of the cluster.
    *
    * @return The result of the SQL as a single CSV string.
    */

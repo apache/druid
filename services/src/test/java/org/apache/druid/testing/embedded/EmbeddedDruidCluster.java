@@ -21,10 +21,8 @@ package org.apache.druid.testing.embedded;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -266,6 +264,11 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return clusterApis;
   }
 
+  /**
+   * Runs the given SQL on this cluster and returns the result as a single csv String.
+   *
+   * @see EmbeddedClusterApis#runSql(String, Object...)
+   */
   public String runSql(String sql, Object... args)
   {
     return clusterApis.runSql(sql, args);
@@ -307,10 +310,5 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     final String csv = items.stream().map(name -> "\"" + name + "\"").collect(Collectors.joining(","));
     return "[" + csv + "]";
-  }
-
-  private static <T> T callApi(ListenableFuture<T> future)
-  {
-    return FutureUtils.getUnchecked(future, true);
   }
 }
