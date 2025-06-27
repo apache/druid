@@ -23,9 +23,9 @@ import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.simulate.EmbeddedResource;
-import org.apache.druid.testing.simulate.EmbeddedZookeeper;
-import org.apache.druid.testing.simulate.TestFolder;
+import org.apache.druid.testing.embedded.EmbeddedResource;
+import org.apache.druid.testing.embedded.EmbeddedZookeeper;
+import org.apache.druid.testing.embedded.TestFolder;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -43,7 +43,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Embedded Kafka server used in Druid simulation tests.
+ * Embedded Kafka server used in Druid embedded tests.
  * Contains some logic common with {@link org.apache.druid.indexing.kafka.test.TestBroker}.
  */
 public class EmbeddedKafkaServer implements EmbeddedResource

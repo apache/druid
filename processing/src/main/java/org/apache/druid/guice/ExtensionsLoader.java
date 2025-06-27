@@ -403,20 +403,20 @@ public class ExtensionsLoader
 
   private class ServiceLoadingFromExtensions<T>
   {
-    private final boolean isSimulation;
+    private final boolean isEmbeddedTest;
     private final Class<T> serviceClass;
     private final List<T> implsToLoad = new ArrayList<>();
     private final Set<String> implClassNamesToLoad = new HashSet<>();
 
     private ServiceLoadingFromExtensions(Class<T> serviceClass)
     {
-      this.isSimulation = extensionsConfig.getModulesForSimulation() != null;
-      if (isSimulation) {
+      this.isEmbeddedTest = extensionsConfig.getModulesForEmbeddedTest() != null;
+      if (isEmbeddedTest) {
         log.warn(
-            "Running service in simulation testing mode with allowed modules[%s]."
+            "Running service in embedded testing mode with allowed modules[%s]."
             + "This is an unsafe test-only mode and must never be used in a production cluster."
-            + " Remove property 'druid.extensions.modulesForSimulation' to disable simulation mode.",
-            extensionsConfig.getModulesForSimulation()
+            + " Remove property 'druid.extensions.modulesForEmbeddedTest' to disable embedded testing mode.",
+            extensionsConfig.getModulesForEmbeddedTest()
         );
       }
 
@@ -469,10 +469,10 @@ public class ExtensionsLoader
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
-      } else if (isSimulation && !extensionsConfig.getModulesForSimulation().contains(serviceImplName)) {
+      } else if (isEmbeddedTest && !extensionsConfig.getModulesForEmbeddedTest().contains(serviceImplName)) {
         log.debug(
             "Skipping extension[%s] as it is not listed in config[%s]",
-            serviceImplName, extensionsConfig.getModulesForSimulation()
+            serviceImplName, extensionsConfig.getModulesForEmbeddedTest()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.debug(

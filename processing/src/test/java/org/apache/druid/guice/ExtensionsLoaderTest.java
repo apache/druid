@@ -444,12 +444,12 @@ public class ExtensionsLoaderTest
   }
 
   @Test
-  public void test_getModules_inSimulationMode_returnsOnlyAllowedModules()
+  public void test_getModules_inEmbeddedMode_returnsOnlyAllowedModules()
   {
     // Verify with 1 module configured
     final ExtensionsConfig configWithAllowedModules = new ExtensionsConfig() {
       @Override
-      public LinkedHashSet<String> getModulesForSimulation()
+      public LinkedHashSet<String> getModulesForEmbeddedTest()
       {
         return new LinkedHashSet<>(List.of(TestDruidModule.class.getName()));
       }
@@ -463,7 +463,7 @@ public class ExtensionsLoaderTest
     // Verify with no modules configured
     final ExtensionsConfig configWithNoModules = new ExtensionsConfig() {
       @Override
-      public LinkedHashSet<String> getModulesForSimulation()
+      public LinkedHashSet<String> getModulesForEmbeddedTest()
       {
         return new LinkedHashSet<>();
       }

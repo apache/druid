@@ -277,7 +277,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     // Schedule refresh of min and max message time only if the period is valid
     // The refreshRejectionPeriodsInMinutes is zero when `taskDuration` < 1 minute,
-    // but this can happen only in simulation tests, never in production
+    // but this can happen only in embedded tests, never in production
     if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null
         && ioConfig.getRefreshRejectionPeriodsInMinutes() > 0) {
       rejectionPeriodUpdaterExec.scheduleWithFixedDelay(this::refreshMinMaxMessageTime,

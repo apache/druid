@@ -17,5 +17,5 @@
 # under the License.
 #
 
-org.apache.druid.testing.simulate.derby.InMemoryDerbyModule
-org.apache.druid.testing.simulate.emitter.LatchableEmitterModule
+org.apache.druid.testing.embedded.derby.InMemoryDerbyModule
+org.apache.druid.testing.embedded.emitter.LatchableEmitterModule

@@ -54,7 +54,7 @@ public class ExtensionsConfig
   private LinkedHashSet<String> loadList;
 
   @JsonProperty
-  private LinkedHashSet<String> modulesForSimulation = null;
+  private LinkedHashSet<String> modulesForEmbeddedTest = null;
 
   public boolean searchCurrentClassloader()
   {
@@ -92,13 +92,13 @@ public class ExtensionsConfig
   }
 
   /**
-   * List of extension {@code DruidModule} class names that should be used in a
-   * simulation. This property is for TESTING ONLY and must NEVER be set in
+   * List of extension {@code DruidModule} class names that should be used in an
+   * embedded test. This property is for TESTING ONLY and must NEVER be set in
    * production.
    */
-  public LinkedHashSet<String> getModulesForSimulation()
+  public LinkedHashSet<String> getModulesForEmbeddedTest()
   {
-    return modulesForSimulation;
+    return modulesForEmbeddedTest;
   }
 
   @Override

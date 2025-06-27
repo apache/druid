@@ -62,7 +62,7 @@ public class LatchableEmitter extends StubServiceEmitter
   private final ReentrantReadWriteLock eventReadWriteLock = new ReentrantReadWriteLock(true);
 
   /**
-   * Creates a {@link StubServiceEmitter} that may be used in simulation tests.
+   * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
   public LatchableEmitter(String service, String host, ScheduledExecutorFactory executorFactory)
   {

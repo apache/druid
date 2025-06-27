@@ -149,7 +149,7 @@ public class JettyServerInitUtils
    * to be instantiated with the 1-argument constructor that uses an injected
    * non-static FilterPipeline. Since the FilterPipeline is non-static, multiple
    * Jetty servers may be initialized by separate Guice Injectors running in the
-   * same JVM. This is currently needed only for running simulation tests.
+   * same JVM. This is currently needed only for running embedded tests.
    *
    * @see GuiceFilter#GuiceFilter
    */
