@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.worker;
 
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.query.QueryContext;
 
 import java.io.File;
@@ -27,7 +28,7 @@ import java.io.File;
 /**
  * Used by {@link DartWorkerRunner} to create new {@link Worker} instances.
  */
-public interface DartWorkerFactory
+public interface DartWorkerContextFactory
 {
-  Worker build(String queryId, String controllerHost, File tempDir, QueryContext context);
+  WorkerContext build(String queryId, String controllerHost, File tempDir, QueryContext context);
 }
