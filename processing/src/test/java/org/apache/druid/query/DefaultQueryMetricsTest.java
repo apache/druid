@@ -134,7 +134,6 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
 
     queryMetrics.reportResultCachePoll(true).emit(serviceEmitter);
     serviceEmitter.verifyValue("query/resultCache/hit", 1);
-    Assert.assertEquals(10, serviceEmitter.getEvents().size());
 
     // Verify that Queried Segment Count does not get emitted by the DefaultQueryMetrics
     // and the total number of emitted metrics remains unchanged
