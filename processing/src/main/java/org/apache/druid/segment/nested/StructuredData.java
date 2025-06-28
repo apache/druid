@@ -38,11 +38,16 @@ public class StructuredData implements Comparable<StructuredData>
 {
   private static final XXHash64 HASH_FUNCTION = XXHashFactory.fastestInstance().hash64();
 
-  // seed from the example... but, it doesn't matter what it is as long as its the same every time
+  // seed from the example... but, it doesn't matter what it is as long as it's the same every time
   private static int SEED = 0x9747b28c;
 
   public static final Comparator<StructuredData> COMPARATOR = Comparators.naturalNullsFirst();
 
+  /**
+   * The hash computation requires that Map keys are sorted, else there is a possibility of a transitivity
+   * violation as demonstrated in {@link StructuredDataTest#testCompareToWithDifferentJSONOrder()}. This is handled
+   * at ingestion time by {@link org.apache.druid.segment.AutoTypeColumnIndexer#sortMapKeys(Object)}
+   */
   private static long computeHash(StructuredData data)
   {
     try {
