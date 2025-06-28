@@ -58,7 +58,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.logging.log4j.ThreadContext;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

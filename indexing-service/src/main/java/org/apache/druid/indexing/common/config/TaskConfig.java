@@ -214,7 +214,7 @@ public class TaskConfig implements TaskDirectory
   }
 
   @Override
-  public File getTaskLogDir(String taskId)
+  public File getTaskLogFile(String taskId)
   {
     return new File(getTaskDir(taskId), "log");
   }

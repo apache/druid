@@ -40,7 +40,7 @@ public interface TaskDirectory
   /**
    * @return {@code {baseTaskDir}/{taskId}/log}
    */
-  File getTaskLogDir(String taskId);
+  File getTaskLogFile(String taskId);
 
   /**
    * @return {@code {baseTaskDir}/{taskId}/temp}

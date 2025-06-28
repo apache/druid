@@ -54,6 +54,7 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.logging.log4j.ThreadContext;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -67,6 +68,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandlingTest
 {
@@ -98,6 +100,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     EasyMock.replay(appenderatorConfig);
 
     final TaskDirectory taskDirectory = EasyMock.createMock(TaskDirectory.class);
+    EasyMock.expect(taskDirectory.getTaskLogFile("taskId")).andReturn(new File("/mnt/var/taskId"));
+    EasyMock.replay(taskDirectory);
 
     appenderator = manager.createBatchAppenderatorForTask(
         "taskId",
@@ -286,6 +290,18 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   public void test_getWorkerConfig()
   {
     Assert.assertSame(workerConfig, manager.getWorkerConfig());
+  }
+
+  @Test
+  public void test_setTaskThreadContext()
+  {
+    appenderator.setTaskThreadContext();
+    final Map<String, String> threadContext = ThreadContext.getContext();
+    Assert.assertEquals(
+        Map.of("task.log.id", "taskId", "task.log.file", "/mnt/var/taskId"),
+        threadContext
+    );
+    appenderator.clearTaskThreadContext();
   }
 
   /**

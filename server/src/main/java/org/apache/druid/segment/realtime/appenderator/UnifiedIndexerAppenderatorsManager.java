@@ -199,7 +199,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Override
         public void setTaskThreadContext()
         {
-          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogDir(taskId));
+          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
         }
 
         @Override
@@ -252,7 +252,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Override
         public void setTaskThreadContext()
         {
-          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogDir(taskId));
+          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
         }
 
         @Override
