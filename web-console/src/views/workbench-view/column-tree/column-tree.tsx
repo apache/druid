@@ -267,7 +267,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         );
 
                         const getQueryOnTable = () => {
-                          return SqlQuery.create(
+                          return SqlQuery.selectStarFrom(
                             SqlTable.create(
                               tableName,
                               schemaName === 'druid' ? undefined : schemaName,

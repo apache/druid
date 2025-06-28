@@ -198,13 +198,13 @@ export class ExploreState {
   }
 
   public changeToTable(tableName: string): ExploreState {
-    return this.changeSource(SqlQuery.create(tableName), undefined);
+    return this.changeSource(SqlQuery.selectStarFrom(tableName), undefined);
   }
 
   public initToTable(tableName: string): ExploreState {
     const { moduleStates } = this;
     return this.change({
-      source: SqlQuery.create(tableName).toString(),
+      source: SqlQuery.selectStarFrom(tableName).toString(),
       moduleStates: isEmpty(moduleStates) ? { '0': ModuleState.INIT_STATE } : moduleStates,
     });
   }

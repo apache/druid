@@ -57,9 +57,12 @@ export class QuerySource {
   static stripToBaseSource(query: SqlQuery): SqlQuery {
     if (query.hasGroupBy()) {
       if (!query.fromClause) throw new Error('must have FROM clause');
-      return SqlQuery.create(query.fromClause);
+      return SqlQuery.selectStarFrom(query.fromClause);
     } else {
-      return query.changeSelectExpressions([SqlStar.PLAIN]).changeLimitValue(undefined);
+      return query
+        .changeSelectExpressions([SqlStar.PLAIN])
+        .changeLimitValue(undefined)
+        .changeContextStatements([]);
     }
   }
 

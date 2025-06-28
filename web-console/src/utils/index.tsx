@@ -28,6 +28,8 @@ export * from './druid-query';
 export * from './explain';
 export * from './formatter';
 export * from './general';
+export * from './hjson-context';
+export * from './json-completion';
 export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
 export * from './mouse-tooltip/mouse-tooltip';

@@ -70,11 +70,15 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
     if (measures.some(measure => measure.equivalent(initMeasure))) return 'saved';
     return MeasurePattern.fit(initMeasure.expression) ? 'compose' : 'sql';
   });
-  const [outputName, setOutputName] = useState<string>(initMeasure?.as || '');
+  const [outputName, setOutputName] = useState<string>(
+    initMeasure && !initMeasure.isSavedMeasure() ? initMeasure.as || '' : '',
+  );
   const [measurePattern, setMeasurePattern] = useState<MeasurePattern | undefined>(
     initMeasure ? MeasurePattern.fit(initMeasure.expression) : undefined,
   );
-  const [formula, setFormula] = useState<string>(initMeasure ? String(initMeasure.expression) : '');
+  const [formula, setFormula] = useState<string>(
+    initMeasure && !initMeasure.isSavedMeasure() ? String(initMeasure.expression) : '',
+  );
 
   function getMeasure(): Measure | undefined {
     switch (tab) {
