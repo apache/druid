@@ -75,31 +75,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public boolean reserve(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean release(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void cleanup(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void loadSegmentIntoPageCache(DataSegment segment)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }

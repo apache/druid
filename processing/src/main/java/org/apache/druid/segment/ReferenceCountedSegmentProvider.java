@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link org.apache.druid.timeline.TimelineLookup}.
  */
 public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
-    implements Overshadowable<ReferenceCountedSegmentProvider>, ReferenceCountedObjectProvider<Segment>
+    implements Overshadowable<ReferenceCountedSegmentProvider>, LeafSegmentReferenceProvider
 {
   public static ReferenceCountedSegmentProvider wrapRootGenerationSegment(Segment baseSegment)
   {
@@ -90,7 +90,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   private final short minorVersion;
   private final short atomicUpdateGroupSize;
 
-  private ReferenceCountedSegmentProvider(
+  public ReferenceCountedSegmentProvider(
       Segment baseSegment,
       int startRootPartitionId,
       int endRootPartitionId,

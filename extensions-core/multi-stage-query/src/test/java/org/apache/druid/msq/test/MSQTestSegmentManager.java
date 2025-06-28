@@ -58,7 +58,7 @@ public class MSQTestSegmentManager
       testGeneratedDataSegments.put(dataSegment.getId(), dataSegment);
 
       try {
-        segmentCacheManager.getSegmentFiles(dataSegment);
+        segmentCacheManager.getSegment(dataSegment);
       }
       catch (SegmentLoadingException e) {
         throw new ISE(e, "Unable to load segment [%s]", dataSegment.getId());

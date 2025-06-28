@@ -45,6 +45,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.loading.CacheEntry;
+import org.apache.druid.segment.loading.CacheEntryIdentifier;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -63,6 +65,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -201,12 +204,8 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
                       .toString();
                   // StorageLocation keeps track of how much storage capacity is being used.
                   // Newly found files should be known to the StorageLocation to keep it up to date.
-                  final File reservedFile = location.reserve(
-                      relativeSegmentPath,
-                      eachFile.getName(),
-                      eachFile.length()
-                  );
-                  if (reservedFile == null) {
+                  final File reservedFile;
+                  if (!location.reserve(new FileNameCacheEntry(relativeSegmentPath, eachFile.length()))) {
                     LOG.warn("Can't add a discovered partition[%s]", eachFile.getAbsolutePath());
                   }
                 }
@@ -335,9 +334,10 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
             segment.getInterval(),
             bucketNumberedShardSpec.getBucketId() // we must use the bucket ID instead of partition ID
         );
-        final File destFile = location.reserve(partitionFilePath, segment.getId().toString(), tempZippedFile.length());
-        if (destFile != null) {
+        File destFile = null;
+        if (location.reserve(new FileNameCacheEntry(partitionFilePath, tempZippedFile.length()))) {
           try {
+            destFile = new File(location.getPath(), partitionFilePath);
             FileUtils.mkdirp(destFile.getParentFile());
             FileUtils.writeAtomically(
                 destFile,
@@ -352,7 +352,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
             return segment.withSize(unzippedSizeBytes).withBinaryVersion(SegmentUtils.getVersionFromDir(segmentDir));
           }
           catch (Exception e) {
-            location.release(partitionFilePath, tempZippedFile.length());
+            location.release(new FileNameCacheEntry(partitionFilePath, tempZippedFile.length()));
             org.apache.commons.io.FileUtils.deleteQuietly(destFile);
             LOG.warn(
                 e,
@@ -415,11 +415,78 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
       if (supervisorTaskPath.exists()) {
         LOG.info("Cleaning up [%s]", supervisorTaskPath);
         for (File eachFile : org.apache.commons.io.FileUtils.listFiles(supervisorTaskPath, null, true)) {
-          location.removeFile(eachFile);
+          final String relativeSegmentPath = location.getPath()
+                                                     .toPath()
+                                                     .toAbsolutePath()
+                                                     .relativize(eachFile.toPath().toAbsolutePath())
+                                                     .toString();
+          location.release(new FileNameCacheEntry(relativeSegmentPath, eachFile.length()));
         }
         org.apache.commons.io.FileUtils.forceDelete(supervisorTaskPath);
       }
     }
     supervisorTaskCheckTimes.remove(supervisorTaskId);
+  }
+
+  private static class FileNameCacheEntry implements CacheEntry
+  {
+    private final FileNameCacheEntryIdentifier name;
+    private final long size;
+
+    private FileNameCacheEntry(String file, long size)
+    {
+      this.name = new FileNameCacheEntryIdentifier(file);
+      this.size = size;
+    }
+
+    @Override
+    public FileNameCacheEntryIdentifier getId()
+    {
+      return name;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public void mount(File location)
+    {
+      // do nothing, since we are just using StorageLocation as an accountant
+    }
+
+    @Override
+    public void unmount()
+    {
+      // do nothing, since we are just using StorageLocation as an accountant
+    }
+  }
+
+  private static final class FileNameCacheEntryIdentifier implements CacheEntryIdentifier
+  {
+    private final String name;
+
+    private FileNameCacheEntryIdentifier(String name)
+    {
+      this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      FileNameCacheEntryIdentifier that = (FileNameCacheEntryIdentifier) o;
+      return Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hashCode(name);
+    }
   }
 }
