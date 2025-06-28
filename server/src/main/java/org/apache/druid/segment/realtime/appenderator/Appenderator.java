@@ -221,6 +221,22 @@ public interface Appenderator extends QuerySegmentWalker
   void closeNow();
 
   /**
+   * Sets thread context for task threads on Indexers.
+   */
+  default void setTaskThreadContext()
+  {
+
+  }
+
+  /**
+   * Clears thread context for task threads on Indexers.
+   */
+  default void clearTaskThreadContext()
+  {
+
+  }
+
+  /**
    * Result of {@link Appenderator#add} containing following information
    * - {@link SegmentIdWithShardSpec} - identifier of segment to which rows are being added
    * - int - positive number indicating how many summarized rows exist in this segment so far and

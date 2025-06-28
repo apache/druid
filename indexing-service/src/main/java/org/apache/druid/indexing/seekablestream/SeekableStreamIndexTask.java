@@ -211,6 +211,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
             tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
             toolbox.getProcessingConfig()
         ),
+        toolbox.getConfig(),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getJsonMapper(),

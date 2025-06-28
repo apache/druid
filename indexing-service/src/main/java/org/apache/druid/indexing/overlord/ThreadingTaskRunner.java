@@ -40,6 +40,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -52,6 +53,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -61,6 +63,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -130,10 +133,12 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<InputStream> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskId, long offset) throws IOException
   {
-    // task logs will appear in the main indexer log, streaming individual task logs is not supported
-    return Optional.absent();
+    final ThreadingTaskRunnerWorkItem workItem = tasks.get(taskId);
+    return workItem == null || workItem.logFile == null
+           ? Optional.absent()
+           : Optional.of(LogUtils.streamFile(workItem.logFile, offset));
   }
 
   @Override
@@ -186,6 +191,7 @@ public class ThreadingTaskRunner
 
                             final File taskFile = new File(taskDir, "task.json");
                             final File reportsFile = new File(attemptDir, "report.json");
+                            final File logFile = new File(taskDir, "log");
                             taskReportFileWriter.add(task.getId(), reportsFile);
 
                             // time to adjust process holders
@@ -225,7 +231,11 @@ public class ThreadingTaskRunner
                                 TaskStatus.running(task.getId())
                             );
 
+                            taskWorkItem.logFile = logFile;
                             taskWorkItem.setState(RunnerTaskState.RUNNING);
+
+                            LOGGER.info("Logging output of task[%s] to file[%s].", task.getId(), logFile);
+                            Appenderators.setTaskThreadContextForIndexers(task.getId(), logFile);
                             try {
                               taskStatus = task.run(toolbox);
                             }
@@ -245,6 +255,10 @@ public class ThreadingTaskRunner
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);
                               }
+                              if (logFile.exists()) {
+                                taskLogPusher.pushTaskLog(task.getId(), logFile);
+                              }
+                              Appenderators.clearTaskThreadContextForIndexers();
                             }
 
                             TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
@@ -542,6 +556,7 @@ public class ThreadingTaskRunner
     private volatile boolean shutdown = false;
     private volatile ListenableFuture shutdownFuture;
     private volatile RunnerTaskState state;
+    private volatile File logFile;
 
     private ThreadingTaskRunnerWorkItem(
         Task task,
