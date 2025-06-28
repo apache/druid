@@ -468,6 +468,27 @@ public class CoordinatorClientImplTest
   }
 
   @Test
+  public void test_updateCoordinatorDynamicConfig() throws Exception
+  {
+    final CoordinatorDynamicConfig config = CoordinatorDynamicConfig
+        .builder()
+        .withMaxSegmentsToMove(105)
+        .withReplicantLifetime(500)
+        .withReplicationThrottleLimit(5)
+        .build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/config")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(null)
+    );
+
+    Assert.assertNull(coordinatorClient.updateCoordinatorDynamicConfig(config).get());
+  }
+
+  @Test
   public void test_fetchLookupsForTier_detailedEnabled() throws Exception
   {
     LookupExtractorFactory lookupData = new MapLookupExtractorFactory(

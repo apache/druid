@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
+import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;

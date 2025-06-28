@@ -100,11 +100,16 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(
       String tier
   )
   {
     throw new UnsupportedOperationException();
   }
-
 }

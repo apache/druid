@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -45,6 +46,8 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -227,6 +230,21 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskReport.ReportMap.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor)
+  {
+    final String path = "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true";
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, supervisor),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -429,6 +447,31 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), Boolean.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<ClusterCompactionConfig> getClusterCompactionConfig()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), ClusterCompactionConfig.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<UpdateResponse> updateClusterCompactionConfig(ClusterCompactionConfig config)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+                .jsonContent(jsonMapper, config),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), UpdateResponse.class)
     );
   }
 

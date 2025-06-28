@@ -98,11 +98,18 @@ public interface CoordinatorClient
   ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig();
 
   /**
-   * Gets the lookup configuration for a tier
+   * Updates the Coordinator dynamic config.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/config}
+   */
+  ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
+
+  /**
+   * Gets the lookup configuration for a tier.
    * <p>
    * API: {@code GET /druid/coordinator/v1/lookups/config/<tier>}
    *
-   * @param tier         The name of the tier for which the lookup configuration is to be fetched.
+   * @param tier The name of the tier for which the lookup configuration is to be fetched.
    */
   ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(String tier);
 }
