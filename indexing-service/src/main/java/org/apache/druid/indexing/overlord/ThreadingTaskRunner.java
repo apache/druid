@@ -53,6 +53,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -92,8 +93,6 @@ public class ThreadingTaskRunner
     implements TaskLogStreamer, QuerySegmentWalker
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ThreadingTaskRunner.class);
-  private static final String THREAD_CONTEXT_TASK_LOG_FILE = "task.log.file";
-  private static final String THREAD_CONTEXT_TASK_ID = "task.log.id";
 
   private final TaskToolboxFactory toolboxFactory;
   private final TaskLogPusher taskLogPusher;
@@ -237,8 +236,7 @@ public class ThreadingTaskRunner
                             taskWorkItem.setState(RunnerTaskState.RUNNING);
 
                             LOGGER.info("Logging output of task[%s] to file[%s].", task.getId(), logFile);
-                            ThreadContext.put(THREAD_CONTEXT_TASK_ID, task.getId());
-                            ThreadContext.put(THREAD_CONTEXT_TASK_LOG_FILE, logFile.getAbsolutePath());
+                            Appenderators.setTaskThreadContextForIndexers(task.getId(), logFile);
                             try {
                               taskStatus = task.run(toolbox);
                             }
@@ -261,8 +259,7 @@ public class ThreadingTaskRunner
                               if (logFile.exists()) {
                                 taskLogPusher.pushTaskLog(task.getId(), logFile);
                               }
-                              ThreadContext.remove(THREAD_CONTEXT_TASK_LOG_FILE);
-                              ThreadContext.remove(THREAD_CONTEXT_TASK_ID);
+                              Appenderators.clearTaskThreadContextForIndexers();
                             }
 
                             TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);

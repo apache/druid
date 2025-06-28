@@ -29,6 +29,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.TaskDirectory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -44,7 +45,7 @@ import java.util.List;
  * See {@link org.apache.druid.indexing.overlord.config.DefaultTaskConfig} if you want to apply the same configuration
  * to all tasks submitted to the overlord.
  */
-public class TaskConfig
+public class TaskConfig implements TaskDirectory
 {
   private static final Logger log = new Logger(TaskConfig.class);
   private static final String HADOOP_LIB_VERSIONS = "hadoop.indexer.libs.version";
@@ -200,21 +201,31 @@ public class TaskConfig
     return baseTaskDir;
   }
 
+  @Override
   public File getTaskDir(String taskId)
   {
     return new File(baseTaskDir, IdUtils.validateId("task ID", taskId));
   }
 
+  @Override
   public File getTaskWorkDir(String taskId)
   {
     return new File(getTaskDir(taskId), "work");
   }
 
+  @Override
+  public File getTaskLogDir(String taskId)
+  {
+    return new File(getTaskDir(taskId), "log");
+  }
+
+  @Override
   public File getTaskTempDir(String taskId)
   {
     return new File(getTaskDir(taskId), "temp");
   }
 
+  @Override
   public File getTaskLockFile(String taskId)
   {
     return new File(getTaskDir(taskId), "lock");

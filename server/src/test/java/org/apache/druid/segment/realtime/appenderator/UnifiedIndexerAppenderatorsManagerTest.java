@@ -47,7 +47,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -77,7 +76,6 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
-      JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
       workerConfig,
       MapCache.create(10),
       new CacheConfig(),
@@ -98,6 +96,9 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
     EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
     EasyMock.replay(appenderatorConfig);
+
+    final TaskDirectory taskDirectory = EasyMock.createMock(TaskDirectory.class);
+
     appenderator = manager.createBatchAppenderatorForTask(
         "taskId",
         DataSchema.builder()
@@ -106,6 +107,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()))
                   .build(),
         appenderatorConfig,
+        taskDirectory,
         new SegmentGenerationMetrics(),
         new NoopDataSegmentPusher(),
         TestHelper.makeJsonMapper(),

@@ -54,7 +54,7 @@
           </File>
         </Route>
 
-        <!-- Other service logs are routed to the usual FileAppender -->
+        <!-- Default route to send non-task logs to the usual FileAppender -->
         <Route key="$${ctx:task.log.id}" ref="FileAppender"/>
       </Routes>
     </Routing>
