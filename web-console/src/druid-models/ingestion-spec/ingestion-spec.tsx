@@ -523,7 +523,7 @@ export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> 
     spec = deleteKeys(spec, ['dataSource'] as any[]);
   }
 
-  return deleteKeys(spec, ['id', 'groupId', 'resource']);
+  return deleteKeys(spec, ['groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {

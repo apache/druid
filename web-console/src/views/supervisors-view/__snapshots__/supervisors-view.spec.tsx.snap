@@ -70,6 +70,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       columns={
         [
           "Supervisor ID",
+          "Datasource",
           "Type",
           "Topic/Stream",
           "Status",
@@ -167,15 +168,16 @@ exports[`SupervisorsView matches snapshot 1`] = `
           [
             {
               "Cell": [Function],
-              "Header": <React.Fragment>
-                Supervisor ID
-                <br />
-                <i>
-                  (datasource)
-                </i>
-              </React.Fragment>,
+              "Header": "Supervisor ID",
               "accessor": "supervisor_id",
               "id": "supervisor_id",
+              "show": true,
+              "width": 280,
+            },
+            {
+              "Cell": [Function],
+              "Header": "Datasource",
+              "accessor": "datasource",
               "show": true,
               "width": 280,
             },
