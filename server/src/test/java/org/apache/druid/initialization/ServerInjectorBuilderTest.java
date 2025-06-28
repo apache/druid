@@ -19,7 +19,6 @@
 
 package org.apache.druid.initialization;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -34,6 +33,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
@@ -43,9 +43,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 public class ServerInjectorBuilderTest
@@ -113,25 +111,6 @@ public class ServerInjectorBuilderTest
     Assert.assertNotNull(injector);
     Assert.assertNotNull(ExtensionsLoader.instance(injector));
     Assert.assertSame(extnLoader, ExtensionsLoader.instance(injector));
-  }
-
-  // Note: this name is referenced in
-  // src/test/resources/META-INF/services/org.apache.druid.initialization.DruidModule
-  // which impacts many tests, not just those here.
-  // This is likely a bug, not a feature.
-  public static class TestDruidModule implements DruidModule
-  {
-    @Override
-    public List<? extends Module> getJacksonModules()
-    {
-      return ImmutableList.of();
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-      // Do nothing
-    }
   }
 
   @Test

@@ -49,7 +49,6 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
-import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -79,7 +78,6 @@ import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -96,7 +94,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -130,30 +127,15 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<IntObjectPair<StageId>, CounterTracker> stageCounters = new ConcurrentHashMap<>();
 
   /**
-   * Atomic that is set to true when {@link #run()} starts (or when {@link #stop(CancellationReason reason)} is called before {@link #run()}).
-   */
-  private final AtomicBoolean didRun = new AtomicBoolean();
-
-  /**
    * Future that resolves when {@link #run()} completes.
    */
   private final SettableFuture<Void> runFuture = SettableFuture.create();
-
-  /**
-   * Set once in {@link #run} and never reassigned. This is in a field so {@link #doCancel(CancellationReason reason)} can close it.
-   */
-  private volatile ControllerClient controllerClient;
 
   /**
    * Set once in {@link #runInternal} and never reassigned. Used by processing threads so we can contact other workers
    * during a shuffle.
    */
   private volatile WorkerClient workerClient;
-
-  /**
-   * Set to false by {@link #controllerFailed()} as a way of enticing the {@link #runInternal} method to exit promptly.
-   */
-  private volatile boolean controllerAlive = true;
 
   public WorkerImpl(@Nullable final MSQWorkerTask task, final WorkerContext context)
   {
@@ -171,13 +153,9 @@ public class WorkerImpl implements Worker
   @Override
   public void run()
   {
-    if (!didRun.compareAndSet(false, true)) {
-      throw new ISE("already run");
-    }
-
     try (final Closer closer = Closer.create()) {
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
-      controllerClient = kernelHolders.getControllerClient();
+      final ControllerClient controllerClient = kernelHolders.getControllerClient();
 
       Throwable t = null;
       Optional<MSQErrorReport> maybeErrorReport;
@@ -202,7 +180,11 @@ public class WorkerImpl implements Worker
         final String logMessage = MSQTasks.errorReportToLogMessage(errorReport);
         log.warn("%s", logMessage);
 
-        if (controllerAlive) {
+        // Inform controller of any errors that occur, unless we were canceled. This prevents attempting to contact
+        // the controller after cancellation due to controller failure. For situations where the worker is canceled
+        // but the controller is still alive, cancellation propagates to the controller in other ways. (For example,
+        // with single-shot tasks, the controller notices the task fails.)
+        if (!(errorReport.getFault() instanceof CanceledFault)) {
           controllerClient.postWorkerError(errorReport);
         }
 
@@ -275,7 +257,7 @@ public class WorkerImpl implements Worker
             && kernelHolders.runningKernelCount() < context.maxConcurrentStages()) {
           handleNewWorkOrder(
               kernelHolder,
-              controllerClient,
+              kernelHolders.controllerClient,
               workerExec,
               criticalWarningCodes,
               maxVerboseParseExceptions
@@ -285,7 +267,7 @@ public class WorkerImpl implements Worker
         }
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT
-            && handleReadingInput(kernelHolder, controllerClient)) {
+            && handleReadingInput(kernelHolder, kernelHolders.controllerClient)) {
           didSomething = true;
           logKernelStatus(kernelHolders.getAllKernels());
         }
@@ -297,7 +279,7 @@ public class WorkerImpl implements Worker
         }
 
         if (kernel.getPhase() == WorkerStagePhase.RESULTS_COMPLETE
-            && handleResultsReady(kernelHolder, controllerClient)) {
+            && handleResultsReady(kernelHolder, kernelHolders.controllerClient)) {
           didSomething = true;
           logKernelStatus(kernelHolders.getAllKernels());
         }
@@ -427,17 +409,15 @@ public class WorkerImpl implements Worker
   {
     final WorkerStageKernel kernel = kernelHolder.kernel;
     if (kernel.hasResultKeyStatisticsSnapshot()) {
-      if (controllerAlive) {
-        PartialKeyStatisticsInformation partialKeyStatisticsInformation =
-            kernel.getResultKeyStatisticsSnapshot()
-                  .partialKeyStatistics();
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation =
+          kernel.getResultKeyStatisticsSnapshot()
+                .partialKeyStatistics();
 
-        controllerClient.postPartialKeyStatistics(
-            kernel.getStageDefinition().getId(),
-            kernel.getWorkOrder().getWorkerNumber(),
-            partialKeyStatisticsInformation
-        );
-      }
+      controllerClient.postPartialKeyStatistics(
+          kernel.getStageDefinition().getId(),
+          kernel.getWorkOrder().getWorkerNumber(),
+          partialKeyStatisticsInformation
+      );
 
       kernel.startPreshuffleWaitingForResultPartitionBoundaries();
       return true;
@@ -446,7 +426,7 @@ public class WorkerImpl implements Worker
                && !kernel.getStageDefinition().mustGatherResultKeyStatistics()) {
       // Skip postDoneReadingInput when context.maxConcurrentStages() == 1, for backwards compatibility.
       // See Javadoc comment on ControllerClient#postDoneReadingInput.
-      if (controllerAlive && context.maxConcurrentStages() > 1) {
+      if (context.maxConcurrentStages() > 1) {
         controllerClient.postDoneReadingInput(
             kernel.getStageDefinition().getId(),
             kernel.getWorkOrder().getWorkerNumber()
@@ -492,7 +472,7 @@ public class WorkerImpl implements Worker
     final boolean didNotPostYet =
         kernel.addPostedResultsComplete(kernel.getStageDefinition().getId(), kernel.getWorkOrder().getWorkerNumber());
 
-    if (controllerAlive && didNotPostYet) {
+    if (didNotPostYet) {
       controllerClient.postResultsComplete(
           kernel.getStageDefinition().getId(),
           kernel.getWorkOrder().getWorkerNumber(),
@@ -514,37 +494,6 @@ public class WorkerImpl implements Worker
     if (kernelHolder.kernel.getWorkOrder().getOutputChannelMode().isDurable()) {
       removeStageDurableStorageOutput(kernel.getStageDefinition().getId());
     }
-  }
-
-  @Override
-  public void stop(CancellationReason reason)
-  {
-    // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-    log.info("Worker id[%s] canceled.", context.workerId());
-
-    if (didRun.compareAndSet(false, true)) {
-      // run() hasn't been called yet. Set runFuture so awaitStop() still works.
-      runFuture.set(null);
-    } else {
-      doCancel(reason);
-    }
-  }
-
-  @Override
-  public void awaitStop()
-  {
-    FutureUtils.getUnchecked(runFuture, false);
-  }
-
-  @Override
-  public void controllerFailed()
-  {
-    log.info(
-        "Controller task[%s] for worker[%s] failed. Canceling.",
-        task != null ? task.getControllerTaskId() : null,
-        id()
-    );
-    doCancel(CancellationReason.TASK_SHUTDOWN);
   }
 
   @Override
@@ -685,6 +634,14 @@ public class WorkerImpl implements Worker
     }
 
     return retVal;
+  }
+
+  /**
+   * Returns the context used to create this worker.
+   */
+  public WorkerContext getWorkerContext()
+  {
+    return context;
   }
 
   /**
@@ -910,7 +867,7 @@ public class WorkerImpl implements Worker
   {
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
-    if (controllerAlive && !snapshotsTree.isEmpty()) {
+    if (!snapshotsTree.isEmpty()) {
       controllerClient.postCounters(id(), snapshotsTree);
     }
   }
@@ -972,36 +929,6 @@ public class WorkerImpl implements Worker
   private static String cancellationIdFor(final StageId stageId, final int workerNumber)
   {
     return StringUtils.format("msq-worker[%s_%s]", stageId, workerNumber);
-  }
-
-  /**
-   * Called by {@link #stop(CancellationReason reason)} (task canceled, or containing process shut down) and
-   * {@link #controllerFailed()}.
-   */
-  private void doCancel(CancellationReason reason)
-  {
-    // Set controllerAlive = false so we don't try to contact the controller after being canceled. If it canceled us,
-    // it doesn't need to know that we were canceled. If we were canceled by something else, the controller will
-    // detect this as part of its monitoring of workers.
-    controllerAlive = false;
-
-    // Close controller client to cancel any currently in-flight calls to the controller.
-    if (controllerClient != null) {
-      controllerClient.close();
-    }
-
-    // Close worker client to cancel any currently in-flight calls to other workers.
-    if (workerClient != null) {
-      CloseableUtils.closeAndSuppressExceptions(workerClient, e -> log.warn("Failed to close workerClient"));
-    }
-
-    // Clear the main loop event queue, then throw a CanceledFault into the loop to exit it promptly.
-    kernelManipulationQueue.clear();
-    kernelManipulationQueue.add(
-        kernel -> {
-          throw new MSQException(new CanceledFault(reason));
-        }
-    );
   }
 
   /**

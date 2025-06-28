@@ -21,6 +21,8 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -40,6 +42,7 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -48,16 +51,17 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
-  private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(
-      new ThreadFactoryBuilder().setNameFormat("dart-worker-%d").build()
+  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder().setNameFormat("dart-worker-%d").build()
+      )
   );
 
-  private Map<String, Worker> workerMap;
+  private final Map<String, WorkerRunRef> workerMap;
   public Controller controller;
 
   @Inject
@@ -70,7 +74,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
       final ServiceEmitter emitter,
-      @Dart Map<String, Worker> workerMap)
+      @Dart Map<String, WorkerRunRef> workerMap
+  )
   {
     super(injector, jsonMapper, smileMapper, selfNode, serviceClientFactory, memoryIntrospector, serverView, emitter);
     this.workerMap = workerMap;
@@ -108,13 +113,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     }
 
     @Override
-    protected Worker newWorker(String workerId)
+    protected WorkerRunRef newWorker(String workerId)
     {
-      String queryId = workerId;
-      Worker worker = new WorkerImpl(
+      final Worker worker = new WorkerImpl(
           null,
           new MSQTestWorkerContext(
-              queryId,
+              workerId,
               inMemoryWorkers,
               controller,
               jsonMapper,
@@ -123,20 +127,10 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
           )
       );
-
-      EXECUTOR.submit(() -> {
-        try {
-          worker.run();
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          inMemoryWorkers.remove(workerId);
-        }
-      });
-
-      return worker;
+      final WorkerRunRef workerRunRef = new WorkerRunRef();
+      workerRunRef.run(worker, EXECUTOR)
+                  .addListener(() -> inMemoryWorkers.remove(workerId), MoreExecutors.directExecutor());
+      return workerRunRef;
     }
 
     @Override

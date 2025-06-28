@@ -17,6 +17,10 @@ on:
   schedule:
     - cron: '18 15 * * 4'
 
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
