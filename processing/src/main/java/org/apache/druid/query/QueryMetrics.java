@@ -356,6 +356,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 
   /**
+   * Emits iff a given query polled the result-level cache and the success of that operation.
+   */
+  QueryMetrics<QueryType> reportResultCachePoll(boolean hit);
+
+  /**
    * Registers "cpu time" metric.
    */
   QueryMetrics<QueryType> reportCpuTime(long timeNs);
