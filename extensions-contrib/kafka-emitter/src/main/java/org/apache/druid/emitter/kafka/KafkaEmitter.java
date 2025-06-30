@@ -66,7 +66,6 @@ public class KafkaEmitter implements Emitter
   private final AtomicLong previousSegmentMetadataLost;
   private final AtomicLong previousInvalidLost;
 
-
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
   private final ObjectMapper jsonMapper;
@@ -171,26 +170,24 @@ public class KafkaEmitter implements Emitter
       long deltaInvalidLost = currentInvalidLost - previousInvalidLost.getAndSet(currentInvalidLost);
 
       // Refrain from clogging logs when there are no lost messages.
-      if (deltaMetricLost + deltaAlertLost + deltaRequestLost + deltaSegmentMetadataLost + deltaInvalidLost == 0) {
-        return;
+      if (deltaMetricLost + deltaAlertLost + deltaRequestLost + deltaSegmentMetadataLost + deltaInvalidLost > 0) {
+        log.info("Messages lost for past %d minutes: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
+                 DEFAULT_SEND_LOST_INTERVAL_MINUTES,
+                 deltaMetricLost,
+                 deltaAlertLost,
+                 deltaRequestLost,
+                 deltaSegmentMetadataLost,
+                 deltaInvalidLost
+        );
+
+        log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
+                 currentMetricLost,
+                 currentAlertLost,
+                 currentRequestLost,
+                 currentSegmentMetadataLost,
+                 currentInvalidLost
+        );
       }
-
-      log.info("Messages lost for past %d minutes: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
-               DEFAULT_SEND_LOST_INTERVAL_MINUTES,
-               deltaMetricLost,
-               deltaAlertLost,
-               deltaRequestLost,
-               deltaSegmentMetadataLost,
-               deltaInvalidLost
-      );
-
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
-               currentMetricLost,
-               currentAlertLost,
-               currentRequestLost,
-               currentSegmentMetadataLost,
-               currentInvalidLost
-      );
     }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
