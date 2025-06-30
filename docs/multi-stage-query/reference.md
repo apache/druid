@@ -390,7 +390,7 @@ The multi-stage query task engine supports the [SQL context parameters](../query
 
 You can specify the context parameters in SELECT, INSERT, or REPLACE statements.
 
-For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
+For detailed instructions on configuring query context parameters, refer to [Set the query context](../querying/set-query-context.md).
 
 The following table lists the context parameters for the MSQ task engine:
 

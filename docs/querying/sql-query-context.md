@@ -29,7 +29,9 @@ sidebar_label: "SQL query context"
 :::
 
 Druid supports query context parameters which affect [SQL query](./sql.md) planning.
-See [Query context](query-context.md) for general query context parameters for all query types.
+See [Query context](query-context-reference.md) for general query context parameters for all query types.
+
+For more detailed instructions on how to set query context in Apache Druid, see [Set the query context](../querying/set-query-context.md)
 
 ## SQL query context parameters
 
@@ -39,7 +41,7 @@ For more information, see [Overriding default query context values](../configura
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
-|`sqlQueryId`|SQL query ID. For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context.md). Setting `queryId` for a SQL request has no effect. All native queries underlying SQL use an auto-generated `queryId`.|auto-generated|
+|`sqlQueryId`|SQL query ID. For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context-reference.md). Setting `queryId` for a SQL request has no effect. All native queries underlying SQL use an auto-generated `queryId`.|auto-generated|
 |`sqlTimeZone`|Time zone for a connection. For example, "America/Los_Angeles" or an offset like "-08:00". This parameter affects how time functions and timestamp literals behave. |UTC|
 |`sqlStringifyArrays`|If `true`, Druid serializes result columns with array values as JSON strings in the response instead of arrays.|`true`, except for JDBC connections, where it's always `false`|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|`true`|
