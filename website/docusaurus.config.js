@@ -33,7 +33,8 @@ module.exports={
   ],
   "stylesheets": [
     "https://use.fontawesome.com/releases/v5.7.2/css/all.css",
-    "/css/code-block-buttons.css"
+    "/css/code-block-buttons.css",
+    "/css/api.css"
   ],
   "favicon": "img/favicon.png",
   "customFields": {
