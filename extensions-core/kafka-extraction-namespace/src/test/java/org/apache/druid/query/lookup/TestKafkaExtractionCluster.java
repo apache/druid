@@ -228,7 +228,7 @@ public class TestKafkaExtractionCluster
   }
 
   @Test
-  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty() throws IOException
+  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty()
   {
     Map<String, String> properties = getConsumerProperties();
     properties.put("sasl.mechanism", "OAUTHBEARER");
