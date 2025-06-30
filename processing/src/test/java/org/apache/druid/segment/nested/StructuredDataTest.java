@@ -95,9 +95,7 @@ public class StructuredDataTest
 
   }
 
-  /**
-   * Map keys are sorted at ingestion time so we don't expect to encounter this scenario
-   */
+  @Test
   public void testCompareToWithDifferentJSONOrder()
   {
     StructuredData sd0 = new StructuredData(ImmutableMap.of("D", 0.0, "E", 0.0, "F", 0.0, "A", 0.0, "B", 0.0, "C", 0.0));

@@ -637,28 +637,6 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ColumnType.NESTED_DATA, indexer.getLogicalType());
   }
 
-  @Test
-  public void testMapKeysSorted()
-  {
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
-    EncodedKeyComponent<StructuredData> key;
-
-    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
-    Assert.assertEquals(ImmutableMap.of(), key.getComponent().getValue());
-
-    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("y", 2.0, "x", 1.0), true);
-    Assert.assertEquals(ImmutableMap.of("x", 1.0, "y", 2.0), key.getComponent().getValue());
-
-    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("y", ImmutableMap.of("y", 2.0, "x", 1.0), "x", 1.0), true);
-    Assert.assertEquals(ImmutableMap.of("x", 1.0, "y", ImmutableMap.of("x", 1.0, "y", 2.0)), key.getComponent().getValue());
-
-    key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("y", ImmutableMap.of("y", 2.0, "x", 1.0), "x", ImmutableList.of(2.0, 3.0, 1.0)), true);
-    Assert.assertEquals(ImmutableMap.of("x", ImmutableList.of(2.0, 3.0, 1.0), "y", ImmutableMap.of("x", 1.0, "y", 2.0)), key.getComponent().getValue());
-
-    key =  indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(ImmutableMap.of("y", 2.0, "x", 1.0), ImmutableMap.of("b", 2.0, "a", 1.0)), true);
-    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("x", 1.0, "y", 2.0), ImmutableMap.of("a", 1.0, "b", 2.0)), key.getComponent().getValue());
-  }
-
   @Nonnull
   private static IncrementalIndex makeIncrementalIndex(long minTimestamp)
   {

@@ -208,7 +208,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     } else if (dimValues instanceof StructuredData) {
       data = (StructuredData) dimValues;
     } else {
-      data = new StructuredData(sortMapKeys(dimValues));
+      data = new StructuredData(dimValues);
     }
     final StructuredDataProcessor.ProcessResults info = indexerProcessor.processFields(
         data == null ? null : data.getValue()
@@ -223,33 +223,6 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
     effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
     return new EncodedKeyComponent<>(data, effectiveSizeBytes);
-  }
-
-  /**
-   * Sorting Map keys is necessary to satisfy transitivity in {@link StructuredData#computeHash(StructuredData)}
-   */
-  private Object sortMapKeys(Object value)
-  {
-    if (value instanceof Map) {
-      Map<?, ?> original = (Map<?, ?>) value;
-      Map<String, Object> sorted = new TreeMap<>();
-      for (Map.Entry<?, ?> entry : original.entrySet()) {
-        Object key = entry.getKey();
-        if (!(key instanceof String)) {
-          throw new IllegalArgumentException("Non-string key found in map: " + key);
-        }
-        sorted.put((String) key, sortMapKeys(entry.getValue()));
-      }
-      return sorted;
-    } else if (value instanceof List) {
-      List<?> original = (List<?>) value;
-      List<Object> sortedList = new ArrayList<>(original.size());
-      for (Object elem : original) {
-        sortedList.add(sortMapKeys(elem));
-      }
-      return sortedList;
-    }
-    return value;
   }
 
   @Override
