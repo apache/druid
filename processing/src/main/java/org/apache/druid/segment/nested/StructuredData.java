@@ -46,7 +46,8 @@ public class StructuredData implements Comparable<StructuredData>
   public static final Comparator<StructuredData> COMPARATOR = Comparators.naturalNullsFirst();
 
   /** SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS is required so that hash computations for JSON objects that
-   *  have different key orders but are otherwise equivalent will be consistent
+   *  have different key orders but are otherwise equivalent will be consistent. See
+   *  {@link StructuredDataTest#testCompareToWithDifferentJSONOrder()} for an example
    */
   private static final ObjectWriter WRITER = ColumnSerializerUtils.SMILE_MAPPER.writer(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
 
