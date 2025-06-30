@@ -14,11 +14,11 @@ You'll use query context when you need to:
 - Set priorities to ensure critical queries get computational resources first.
 - Adjust memory limits for queries that process large datasets.
 
-Druid offers mutiple approches for you set up your query context. This guide covers all the approaches—from the web console to programmatic APIs with practical examples you can adapt for your use case.
+Druid offers multiple approaches for you to set up your query context. This guide covers all the approaches—from the web console to programmatic APIs with practical examples you can adapt for your use case.
 
 Before you begin, identify which context parameters you need to configure in order to establish your query context as context carriers. For a complete list of available parameters and their descriptions, see [Query context reference](query-context-reference.md).
 
-## Druid Web console
+## Druid web console
 
 The easiest way to set query context is through the Druid web console. You can define context parameters using the Query context editor with these steps:
 
@@ -218,7 +218,7 @@ Native queries in Druid are JSON objects that you typically send to the Broker o
 
 **Using curl with a query file:**
 
-First, you need to create a JSON file with your query and context parameters. The following exmaple is the content from **query.json**.
+First, you need to create a JSON file with your query and context parameters. The following example is the content from `query.json` file.
 
 ```json
 {
@@ -283,8 +283,8 @@ For more information about native query structure and available query types, see
 
 
 ## Learn more
-- [Query context reference](query-context-reference.md) for a complete list of all available query context parameters.c
-- [SQL query context](sql-query-context.md) for SQL-specific context parameters and their default values.
+- [Query context reference](query-context-reference.md) for a complete list of all available query context parameters.
+- [SQL query context](sql-query-context.md) for SQL-specific context parameters.
 - [Multi-stage query context](../multi-stage-query/reference.md#context-parameters) for context parameters specific to SQL-based ingestion.
 - [Native queries](querying.md) for details on constructing native queries with context.
 - [SET](sql.md#set) for complete syntax and usage of SET statements.
