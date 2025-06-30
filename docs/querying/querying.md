@@ -30,6 +30,8 @@ title: "Native queries"
  it runs a SQL query, refer to the [SQL documentation](sql-translation.md#query-types).
 :::
 
+For instructions on how the different approaches for set query context in your queries, see [Set the Query Context](./set-query-context.md).
+
 Native queries in Druid are JSON objects and are typically issued to the Broker or Router processes. Queries can be
 posted like this:
 

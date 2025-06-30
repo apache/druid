@@ -1,7 +1,7 @@
 ---
-id: query-context
-title: "Query context"
-sidebar_label: "Query context"
+id: query-context-reference
+title: "Query context reference"
+sidebar_label: "Query context reference"
 ---
 
 <!--
@@ -23,8 +23,9 @@ sidebar_label: "Query context"
   ~ under the License.
   -->
 
-The query context is used for various query configuration parameters. Query context parameters can be specified in
-the following ways:
+Query context provides runtime configuration for individual queries in Apache Druid. You can configure query context through context parameters. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
+
+Query context parameters can be specified in the following ways:
 
 - For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
 HTTP POST API, or as properties to the JDBC connection.
@@ -32,6 +33,14 @@ HTTP POST API, or as properties to the JDBC connection.
 
 Note that setting query context will override both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}` (if set). 
+
+This reference contains all available context parameters organized by their scope: 
+
+- **General parameters**: Apply to all query types and control execution behavior, resource limits, and caching
+- **Query type-specific parameters**: Available only for certain query types like TopN, Timeseries, or GroupBy
+- **Vectorization parameters**: Control vectorized query execution for supported query types
+
+For instructions on how the different approaches for set query context in your queries, see [Set the Query Context](./set-query-context.md).
 
 ## General parameters
 
