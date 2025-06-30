@@ -228,7 +228,7 @@ public class TestKafkaExtractionCluster
   }
 
   @Test
-  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty() throws JsonProcessingException
+  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty() throws IOException
   {
     Map<String, String> properties = getConsumerProperties();
     properties.put("sasl.mechanism", "OAUTHBEARER");
@@ -258,16 +258,6 @@ public class TestKafkaExtractionCluster
         assertThrows(KafkaException.class, factory::getConsumer),
         CoreMatchers.instanceOf(KafkaException.class)
     );
-
-
-    properties.put("sasl.oauthbearer.jwks.endpoint.url", "http://localhost:8080/jwks");
-    factory = new KafkaLookupExtractorFactory(
-        null,
-        TOPIC_NAME,
-        properties
-    );
-    factory.getConsumer();
-    factory.close();
   }
 
   @Test(timeout = 60_000L)

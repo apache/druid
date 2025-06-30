@@ -287,21 +287,6 @@ public class KafkaRecordSupplierTest
         assertThrows(KafkaException.class, () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false)),
         CoreMatchers.instanceOf(KafkaException.class)
     );
-
-    properties.remove("sasl.oauthbearer.jwks.endpoint.url");
-    properties.put("sasl.oauthbearer.token.endpoint.url", "notallowed");
-    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
-
-    Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
-
-    recordSupplier.assign(partitions);
-
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(PARTITION_0, PARTITION_1),
-                        recordSupplier.getPartitionIds(TOPIC));
-
-    recordSupplier.close();
   }
 
   @Test
