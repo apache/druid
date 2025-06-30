@@ -64,6 +64,17 @@ import java.util.concurrent.atomic.AtomicReference;
 @JsonTypeName("kafka")
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 {
+  // by default, we reject all URLs for OAuthBearer authentication
+  // CVE ref: https://www.cve.org/CVERecord?id=CVE-2025-27817
+  // Upgrade kafka dependencies to 4.x to remove the need for this static block
+  static {
+    final String allowedSaslOauthbearerUrlsConfig = "org.apache.kafka.sasl.oauthbearer.allowed.urls";
+    String allowedUrlsProp = System.getProperty(allowedSaslOauthbearerUrlsConfig);
+    if (allowedUrlsProp == null) {
+      System.setProperty(allowedSaslOauthbearerUrlsConfig, "notallowed");
+    }
+  }
+
   private static final Logger LOG = new Logger(KafkaLookupExtractorFactory.class);
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
