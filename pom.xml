@@ -267,6 +267,7 @@
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
+        <module>embedded-tests</module>
     </modules>
 
     <repositories>

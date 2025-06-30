@@ -34,9 +34,7 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
-import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
-import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
@@ -50,9 +48,9 @@ import org.apache.druid.server.DruidNode;
 import java.io.File;
 
 /**
- * Production implementation of {@link DartWorkerFactory}.
+ * Production implementation of {@link DartWorkerContextFactory}.
  */
-public class DartWorkerFactoryImpl implements DartWorkerFactory
+public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
 {
   private final DruidNode selfNode;
   private final ObjectMapper jsonMapper;
@@ -72,7 +70,7 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
   private final ServiceEmitter emitter;
 
   @Inject
-  public DartWorkerFactoryImpl(
+  public DartWorkerContextFactoryImpl(
       @Self DruidNode selfNode,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
@@ -110,9 +108,14 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
   }
 
   @Override
-  public Worker build(String queryId, String controllerHost, File tempDir, QueryContext queryContext)
+  public WorkerContext build(
+      String queryId,
+      String controllerHost,
+      File tempDir,
+      QueryContext queryContext
+  )
   {
-    final WorkerContext workerContext = new DartWorkerContext(
+    return new DartWorkerContext(
         queryId,
         controllerHost,
         selfNode,
@@ -137,7 +140,5 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
         ),
         emitter
     );
-
-    return new WorkerImpl(null, workerContext);
   }
 }

@@ -17,17 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.worker;
+package org.apache.druid.guice;
 
-import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.query.QueryContext;
+import com.fasterxml.jackson.databind.Module;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
 
-import java.io.File;
+import java.util.List;
 
 /**
- * Used by {@link DartWorkerRunner} to create new {@link Worker} instances.
+ * Base no-op {@link DruidModule} used in tests. This module is also referenced
+ * in {@code server/src/test/resources/META-INF/services/org.apache.druid.initialization.DruidModule}
+ * for some tests in {@link ExtensionsLoaderTest}.
  */
-public interface DartWorkerFactory
+public class TestDruidModule implements DruidModule
 {
-  Worker build(String queryId, String controllerHost, File tempDir, QueryContext context);
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return List.of();
+  }
+
+  @Override
+  public void configure(Binder binder)
+  {
+    // Do nothing
+  }
 }

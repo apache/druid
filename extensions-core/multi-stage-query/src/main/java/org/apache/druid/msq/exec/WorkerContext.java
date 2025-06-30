@@ -29,6 +29,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
+import java.io.Closeable;
 import java.io.File;
 import java.util.Map;
 
@@ -37,7 +38,7 @@ import java.util.Map;
  *
  * Each context is scoped to a {@link Worker} and is shared across all {@link WorkOrder} run by that worker.
  */
-public interface WorkerContext
+public interface WorkerContext extends Closeable
 {
   /**
    * Query ID for this context.
@@ -66,6 +67,10 @@ public interface WorkerContext
   /**
    * Callback from the worker implementation to "register" the worker. Used in
    * the indexer to set up the task chat services.
+   *
+   * @param worker instance that is running with this context
+   * @param closer closer that is tied to the lifecycle of the worker. Any registration done by this method should
+   *               be un-done by closeables attached to the closer.
    */
   void registerWorker(Worker worker, Closer closer);
 
@@ -116,4 +121,7 @@ public interface WorkerContext
    * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
    */
   boolean includeAllCounters();
+
+  @Override
+  void close();
 }

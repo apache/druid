@@ -78,7 +78,7 @@ For example:
 }
 ```
 
-Context parameters can also be set by including [`SET` statements](./sql.md#set-statements) as part of the `query`
+Context parameters can also be set by including [SET](./sql.md#set) as part of the `query`
 string in the request, separated from the query by `;`. Context parameters set by `SET` statements take priority over
 values set in `context`.
 

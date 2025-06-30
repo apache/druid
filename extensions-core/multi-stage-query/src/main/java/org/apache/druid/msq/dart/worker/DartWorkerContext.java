@@ -51,6 +51,7 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
@@ -163,16 +164,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public void registerWorker(Worker worker, Closer closer)
   {
-    closer.register(() -> {
-      synchronized (this) {
-        if (processingBuffersSet != null) {
-          processingBuffersSet.close();
-          processingBuffersSet = null;
-        }
-      }
-
-      workerClient.close();
-    });
+    // Nothing to register per-Worker.
   }
 
   @Override
@@ -273,5 +265,18 @@ public class DartWorkerContext implements WorkerContext
   public DruidNode selfNode()
   {
     return selfNode;
+  }
+
+  @Override
+  public void close()
+  {
+    synchronized (this) {
+      if (processingBuffersSet != null) {
+        processingBuffersSet.close();
+        processingBuffersSet = null;
+      }
+    }
+
+    CloseableUtils.closeAndWrapExceptions(workerClient);
   }
 }

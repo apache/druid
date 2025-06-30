@@ -34,6 +34,7 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -61,14 +62,14 @@ public class MSQTestWorkerContext implements WorkerContext
   private final Controller controller;
   private final ObjectMapper mapper;
   private final Injector injector;
-  private final Map<String, Worker> inMemoryWorkers;
+  private final Map<String, WorkerRunRef> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
 
   public MSQTestWorkerContext(
       String workerId,
-      Map<String, Worker> inMemoryWorkers,
+      Map<String, WorkerRunRef> inMemoryWorkers,
       Controller controller,
       ObjectMapper mapper,
       Injector injector,
@@ -179,6 +180,11 @@ public class MSQTestWorkerContext implements WorkerContext
   public boolean includeAllCounters()
   {
     return true;
+  }
+
+  @Override
+  public void close()
+  {
   }
 
   class FrameContextImpl implements FrameContext
