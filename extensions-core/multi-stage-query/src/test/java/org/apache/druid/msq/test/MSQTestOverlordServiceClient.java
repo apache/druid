@@ -143,6 +143,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
 
       msqTestControllerContext = new MSQTestControllerContext(
+          cTask.getId(),
           objectMapper,
           injector,
           taskActionClient,

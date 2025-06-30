@@ -63,7 +63,7 @@ public class DartControllerContextTest
       QueryContext.of(
           ImmutableMap.of(
               MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3,
-              QueryContexts.CTX_DART_QUERY_ID, "test"
+              QueryContexts.CTX_DART_QUERY_ID, QUERY_ID
           )
       );
   private MemoryIntrospector memoryIntrospector;
@@ -108,7 +108,7 @@ public class DartControllerContextTest
   {
     final DartControllerContext controllerContext =
         new DartControllerContext(null, null, SELF_NODE, null, memoryIntrospector, serverView, null, queryContext);
-    final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(QUERY_ID, querySpec);
+    final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(querySpec);
 
     Assertions.assertFalse(queryKernelConfig.isFaultTolerant());
     Assertions.assertFalse(queryKernelConfig.isDurableStorage());

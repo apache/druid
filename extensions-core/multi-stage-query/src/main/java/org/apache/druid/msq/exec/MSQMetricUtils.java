@@ -32,7 +32,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.joda.time.Interval;
 
 import java.util.Collection;
@@ -62,7 +61,6 @@ public class MSQMetricUtils
   {
     setQueryIdDimensions(metricBuilder, queryContext);
     metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
-    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryContext.get(QueryContexts.CTX_DART_QUERY_ID));
   }
 
   public static void setTaskQueryIdDimensions(

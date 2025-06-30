@@ -20,7 +20,6 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.error.DruidException;
@@ -115,10 +114,13 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(
-      final String queryId,
-      final MSQSpec querySpec
-  )
+  public String queryId()
+  {
+    return context.getString(QueryContexts.CTX_DART_QUERY_ID);
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(final MSQSpec querySpec)
   {
     final List<DruidServerMetadata> servers = serverView.getDruidServerMetadatas();
 
@@ -129,7 +131,7 @@ public class DartControllerContext implements ControllerContext
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
       if (server.getType() == ServerType.HISTORICAL) {
-        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId()).toString());
       }
     }
 
@@ -149,15 +151,6 @@ public class DartControllerContext implements ControllerContext
         DEFAULT_MAX_CONCURRENT_STAGES
     );
 
-    Map<String, Object> indexerContext = IndexerControllerContext.makeWorkerContextMap(
-        querySpec,
-        false,
-        maxConcurrentStages
-    );
-    final ImmutableMap.Builder<String, Object> dartContextBuilder = ImmutableMap.builder();
-    dartContextBuilder.putAll(indexerContext);
-    dartContextBuilder.put(QueryContexts.CTX_DART_QUERY_ID, querySpec.getContext().get(QueryContexts.CTX_DART_QUERY_ID));
-
     return ControllerQueryKernelConfig
         .builder()
         .controllerHost(selfNode.getHostAndPortToUse())
@@ -166,7 +159,7 @@ public class DartControllerContext implements ControllerContext
         .destination(TaskReportMSQDestination.instance())
         .maxConcurrentStages(maxConcurrentStages)
         .maxRetainedPartitionSketchBytes(memoryParameters.getPartitionStatisticsMaxRetainedBytes())
-        .workerContextMap(dartContextBuilder.build())
+        .workerContextMap(IndexerControllerContext.makeWorkerContextMap(querySpec, false, maxConcurrentStages))
         .build();
   }
 
@@ -183,11 +176,12 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, Map<String, Object> overrideDimension, final Number value)
+  public void emitMetric(final String metric, Map<String, Object> overrideDimensions, final Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, context);
-    overrideDimension.forEach(metricBuilder::setDimension);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));
+    overrideDimensions.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

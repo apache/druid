@@ -115,10 +115,13 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(
-      final String queryId,
-      final MSQSpec querySpec
-  )
+  public String queryId()
+  {
+    return task.getId();
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(final MSQSpec querySpec)
   {
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
@@ -130,7 +133,7 @@ public class IndexerControllerContext implements ControllerContext
 
     log.debug(
         "Query[%s] using %s[%s], %s[%s], %s[%s].",
-        queryId,
+        queryId(),
         MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
         config.isDurableStorage(),
         MultiStageQueryContext.CTX_FAULT_TOLERANCE,
@@ -143,14 +146,14 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
 
     // Attach task specific dimensions
     MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, taskQuerySpecContext);
 
-    overrideDimension.forEach(metricBuilder::setDimension);
+    overrideDimensions.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 
@@ -241,7 +244,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   /**
-   * Helper method for {@link #queryKernelConfig(String, MSQSpec)}. Also used in tests.
+   * Helper method for {@link #queryKernelConfig(MSQSpec)}. Also used in tests.
    */
   public static ControllerQueryKernelConfig makeQueryKernelConfig(
       final MSQSpec querySpec,

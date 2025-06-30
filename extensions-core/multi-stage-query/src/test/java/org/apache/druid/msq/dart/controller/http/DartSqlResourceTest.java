@@ -143,6 +143,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
   // Objects created in setUp() below this line.
 
+  private final String queryId = "did2";
   private SqlResource sqlResource;
   private DartControllerRegistry controllerRegistry;
   private ExecutorService controllerExecutor;
@@ -220,19 +221,19 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final DartSqlEngine engine = new DartSqlEngine(
         new MSQTestControllerContext(
+            queryId,
             objectMapper,
             injector,
             null /* not used in this test */,
             workerMemoryParameters,
             loadedSegmentsMetadata,
             TaskLockType.APPEND,
-            QueryContext.empty()
+            QueryContext.of(Map.of(QueryContexts.CTX_DART_QUERY_ID, queryId))
         ) {
           @Override
-          public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+          public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec)
           {
-            return super.queryKernelConfig(queryId, querySpec).toBuilder()
-                        .workerIds(ImmutableList.of("some")).build();
+            return super.queryKernelConfig(querySpec).toBuilder().workerIds(ImmutableList.of("some")).build();
           }
         },
         controllerRegistry = new DartControllerRegistry()
@@ -354,7 +355,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        "did2",
+        queryId,
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,
@@ -422,7 +423,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        "did2",
+        queryId,
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,
@@ -459,7 +460,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        "did2",
+        queryId,
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,

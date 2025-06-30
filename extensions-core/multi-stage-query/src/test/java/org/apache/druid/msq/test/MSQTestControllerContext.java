@@ -107,6 +107,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       false
   );
   private final Injector injector;
+  private final String queryId;
   private final ObjectMapper mapper;
 
   private Controller controller;
@@ -115,6 +116,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final QueryContext queryContext;
 
   public MSQTestControllerContext(
+      String queryId,
       ObjectMapper mapper,
       Injector injector,
       TaskActionClient taskActionClient,
@@ -124,6 +126,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       QueryContext queryContext
   )
   {
+    this.queryId = queryId;
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
@@ -279,13 +282,19 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   };
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+  public String queryId()
+  {
+    return queryId;
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
   {
   }
 

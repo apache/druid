@@ -42,9 +42,14 @@ import java.util.Map;
 public interface ControllerContext
 {
   /**
+   * Query ID for this context.
+   */
+  String queryId();
+
+  /**
    * Configuration for {@link org.apache.druid.msq.kernel.controller.ControllerQueryKernel}.
    */
-  ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec);
+  ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec);
 
   /**
    * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
@@ -61,7 +66,7 @@ public interface ControllerContext
    * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
    * metrics. These are can override any already existing context specific dimensions.
    */
-  void emitMetric(String metric, Map<String, Object> overrideDimension, Number value);
+  void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection
@@ -95,7 +100,7 @@ public interface ControllerContext
    *
    * @param queryId               query ID
    * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, MSQSpec)}
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec)}
    * @param workerFailureListener listener that receives callbacks when workers fail
    */
   WorkerManager newWorkerManager(

@@ -46,6 +46,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
@@ -189,6 +190,7 @@ public class DartWorkerContext implements WorkerContext
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, queryContext);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
     overrideDimension.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }

@@ -678,7 +678,7 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState()
   {
     this.selfDruidNode = context.selfNode();
-    this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
+    this.queryKernelConfig = context.queryKernelConfig(querySpec);
 
     final QueryContext queryContext = querySpec.getContext();
 
