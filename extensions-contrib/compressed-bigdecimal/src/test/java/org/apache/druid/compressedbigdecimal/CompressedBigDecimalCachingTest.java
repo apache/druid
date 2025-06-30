@@ -19,6 +19,9 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.compressedbigdecimal.aggregator.max.CompressedBigDecimalMaxAggregatorFactory;
+import org.apache.druid.compressedbigdecimal.aggregator.min.CompressedBigDecimalMinAggregatorFactory;
+import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumAggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;

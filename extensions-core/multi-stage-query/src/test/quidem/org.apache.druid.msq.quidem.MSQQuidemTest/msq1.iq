@@ -308,5 +308,20 @@ DruidAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()], druid=[lo
 }
 !nativePlan
 
+select dim1,BIG_SUM(dbl1)  from numfoo group by 1;
++------+-------------+
+| dim1 | EXPR$1      |
++------+-------------+
+|      | 1.000000000 |
+| 1    |             |
+| 10.1 | 1.700000000 |
+| 2    | 0           |
+| abc  |             |
+| def  |             |
++------+-------------+
+(6 rows)
+
+!ok
+
 
 

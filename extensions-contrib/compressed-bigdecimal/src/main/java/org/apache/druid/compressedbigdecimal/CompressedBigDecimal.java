@@ -114,7 +114,7 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    *
    * @param rhs a {@link CompressedBigDecimal} object
    */
-  protected abstract void setValue(CompressedBigDecimal rhs);
+  public abstract void setValue(CompressedBigDecimal rhs);
 
   /**
    * Clear any value, resetting to zero. Scale is preserved at its original value.
@@ -261,7 +261,7 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    *
    * @return the array size
    */
-  protected abstract int getArraySize();
+  public abstract int getArraySize();
 
   /**
    * Get value from the array.
@@ -269,7 +269,7 @@ public abstract class CompressedBigDecimal extends Number implements Comparable<
    * @param idx the index
    * @return value from the array at that index
    */
-  protected abstract int getArrayEntry(int idx);
+  public abstract int getArrayEntry(int idx);
 
   /**
    * Set value in the array.

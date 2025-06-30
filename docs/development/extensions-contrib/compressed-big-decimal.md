@@ -105,7 +105,7 @@ IngestionSpec syntax:
 			},
 			"metricsSpec": [{
 				"name": "saleAmount",
-				"type": *"compressedBigDecimal"*,
+				"type": "compressedBigDecimalSum",
 				"fieldName": "saleAmount"
 			}],
 			"transformSpec": {
@@ -144,6 +144,31 @@ IngestionSpec syntax:
 	}
 }
 ```
+
+SQL-based ingestion sample query:
+```sql
+
+REPLACE INTO "bigdecimal" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"local","baseDir":""/home/user/sales/data/staging/invoice-data","filter":"invoice-001.20201208.txt"}',
+      '{"type":"csv","findColumnsFromHeader":false,"columns":["timestamp","itemName","saleAmount"]}',
+      '[{"name":"timestamp","type":"string"},{"name":"itemName","type":"string"},{"name":"saleAmount","type":"double"}]'
+    )
+  ) 
+)
+SELECT
+  TIME_PARSE(TRIM("timestamp")) AS "__time",
+  "itemName",
+  BIG_SUM("saleAmount") as amount
+FROM "ext"
+group by TIME_PARSE(TRIM("timestamp")) , itemName
+PARTITIONED BY DAY
+```
+
+
 ### Group By Query  example
 
 Calculating sales groupBy all.

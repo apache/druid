@@ -119,7 +119,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
    * @return the entry
    */
   @Override
-  protected int getArrayEntry(int idx)
+  public int getArrayEntry(int idx)
   {
     return buf.getInt(position + idx * Integer.BYTES);
   }
@@ -137,7 +137,7 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
   }
 
   @Override
-  protected void setValue(CompressedBigDecimal rhs)
+  public void setValue(CompressedBigDecimal rhs)
   {
     Preconditions.checkArgument(
         rhs.getArraySize() <= getArraySize(),
