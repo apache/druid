@@ -25,7 +25,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
@@ -36,6 +35,7 @@ import org.joda.time.Interval;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,16 +44,15 @@ import java.util.Set;
  */
 public class MSQMetricUtils
 {
-  private static void setQueryIdDimensions(
-      final ServiceMetricEvent.Builder metricBuilder,
-      final QueryContext queryContext
-  )
-  {
-    metricBuilder.setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
-    metricBuilder.setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
-    metricBuilder.setDimension(DruidMetrics.TYPE, "msq");
-  }
-
+  /**
+   * Sets dimensions for Dart queries, as well as some common dimensions. Sets the following dimensions:
+   * <ul>
+   * <li>queryId</li>
+   * <li>sqlQueryId</li>
+   * <li>type</li>
+   * <li>engine</li>
+   * </ul>
+   */
   public static void setDartQueryIdDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
       final QueryContext queryContext
@@ -63,6 +62,15 @@ public class MSQMetricUtils
     metricBuilder.setDimension(DruidMetrics.ENGINE, DartSqlEngine.NAME);
   }
 
+  /**
+   * Sets dimensions for MSQ task queries, as well as some common dimensions. Sets the following dimensions:
+   * <ul>
+   * <li>queryId</li>
+   * <li>sqlQueryId</li>
+   * <li>type</li>
+   * <li>engine</li>
+   * </ul>
+   */
   public static void setTaskQueryIdDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
       final Task task,
@@ -74,34 +82,34 @@ public class MSQMetricUtils
     metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
   }
 
-  public static void populateDatasourcesAndInterval(
-      final QueryDefinition queryDefinition,
-      final Set<String> datasources,
-      final Set<Interval> intervals
-  )
-  {
-    for (StageDefinition stageDefinition : queryDefinition.getStageDefinitions()) {
-      populateDatasourcesAndInterval(stageDefinition, datasources, intervals);
-    }
-  }
-
   /**
-   * Populates the datasources and intervals parameters with their corresponding values for all {@link TableInputSpec}
-   * in the stageDefinition.
+   * Returns a set of all datasources of all {@link TableInputSpec} in the stageDefinition.
    */
-  public static void populateDatasourcesAndInterval(
-      final StageDefinition stageDefinition,
-      final Set<String> datasources,
-      final Set<Interval> intervals
-  )
+  public static Set<String> getDatasources(final StageDefinition stageDefinition)
   {
+    HashSet<String> datasources = new HashSet<>();
     for (InputSpec inputSpec : stageDefinition.getInputSpecs()) {
       if (inputSpec instanceof TableInputSpec) {
         TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
         datasources.add(tableInputSpec.getDataSource());
+      }
+    }
+    return datasources;
+  }
+
+  /**
+   * Returns a set of all intervals of all {@link TableInputSpec} in the stageDefinition.
+   */
+  public static Set<Interval> getIntervals(final StageDefinition stageDefinition)
+  {
+    HashSet<Interval> intervals = new HashSet<>();
+    for (InputSpec inputSpec : stageDefinition.getInputSpecs()) {
+      if (inputSpec instanceof TableInputSpec) {
+        TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
         intervals.addAll(tableInputSpec.getIntervals());
       }
     }
+    return intervals;
   }
 
   /**
@@ -122,8 +130,18 @@ public class MSQMetricUtils
     Map<String, Object> dims = new HashMap<>();
     dims.put(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
     dims.put(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
-    dims.put("duration", BaseQuery.calculateDuration(intervals));
-    dims.put("success", success);
+    dims.put(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals));
+    dims.put(DruidMetrics.SUCCESS, success);
     return dims;
+  }
+
+  private static void setQueryIdDimensions(
+      final ServiceMetricEvent.Builder metricBuilder,
+      final QueryContext queryContext
+  )
+  {
+    metricBuilder.setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
+    metricBuilder.setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
+    metricBuilder.setDimension(DruidMetrics.TYPE, "msq");
   }
 }

@@ -60,6 +60,7 @@ import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -75,6 +76,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
@@ -88,6 +90,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -158,14 +161,9 @@ public class WorkerImpl implements Worker
   private volatile boolean controllerAlive = true;
 
   /**
-   * Stores list of datasources queried for metric dimensions.
+   * Stores dimensions for metric emissions.
    */
-  private final Set<String> datasources = new HashSet<>();
-
-  /**
-   * Stores list of intervals queried for metric dimensions.
-   */
-  private final Set<Interval> intervals = new HashSet<>();
+  private final Map<String, Object> queryMetricDimensions = new HashMap<>();
 
   public WorkerImpl(@Nullable final MSQWorkerTask task, final WorkerContext context)
   {
@@ -238,6 +236,7 @@ public class WorkerImpl implements Worker
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void reportQueryMetrics(boolean success, long time)
   {
     long cpuTimeNs = 0L;
@@ -245,6 +244,8 @@ public class WorkerImpl implements Worker
       cpuTimeNs += tracker.totalCpu();
     }
 
+    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
+    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
     final Map<String, Object> dims = MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success);
     context.emitMetric("query/time", dims, time);
     context.emitMetric("query/cpu/time", dims, TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
@@ -395,7 +396,7 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
-    MSQMetricUtils.populateDatasourcesAndInterval(workOrder.getQueryDefinition(), datasources, intervals);
+    updateMetricDimensions(workOrder.getQueryDefinition());
     final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
@@ -439,6 +440,17 @@ public class WorkerImpl implements Worker
     kernel.startReading();
     runWorkOrder.startAsync();
     kernelHolder.partitionBoundariesFuture = runWorkOrder.getStagePartitionBoundariesFuture();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateMetricDimensions(QueryDefinition queryDef)
+  {
+    Set<String> datasourceDim = (Set<String>) queryMetricDimensions.computeIfAbsent(DruidMetrics.DATASOURCE, s -> new HashSet<>());
+    Set<Interval> intervalDim = (Set<Interval>) queryMetricDimensions.computeIfAbsent(DruidMetrics.INTERVAL, s -> new HashSet<>());
+    for (StageDefinition stageDef : queryDef.getStageDefinitions()) {
+      datasourceDim.addAll(MSQMetricUtils.getDatasources(stageDef));
+      intervalDim.addAll(MSQMetricUtils.getIntervals(stageDef));
+    }
   }
 
   /**
