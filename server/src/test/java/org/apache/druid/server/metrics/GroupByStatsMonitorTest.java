@@ -58,7 +58,8 @@ public class GroupByStatsMonitorTest
                 100L,
                 2L,
                 200L,
-                300L
+                300L,
+                1L
             );
       }
     };
@@ -89,9 +90,10 @@ public class GroupByStatsMonitorTest
                                              event -> (String) event.toMap().get("metric"),
                                              event -> (Long) event.toMap().get("value")
                                          ));
-    Assert.assertEquals(7, resultMap.size());
+    Assert.assertEquals(8, resultMap.size());
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/used"));
+    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/usedCount"));
     Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/queries"));
     Assert.assertEquals(100, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
     Assert.assertEquals(2, (long) resultMap.get("groupBy/spilledQueries"));
