@@ -107,11 +107,6 @@
       <artifactId>jsr311-api</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <scope>provided</scope>
-    </dependency>
 
     <!-- Tests -->
     <dependency>
