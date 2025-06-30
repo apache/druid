@@ -143,7 +143,7 @@ from the command line or over HTTP.
 :::
 
 
-9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
+9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context-reference.md).  
 
 That's it! We've built a simple query using some of the query builder features built into the web console. The following
 sections provide a few more example queries you can try.

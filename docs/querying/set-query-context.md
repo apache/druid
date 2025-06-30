@@ -283,7 +283,7 @@ For more information about native query structure and available query types, see
 
 
 ## Learn more
-- [Query context reference](query-context-reference.md) for a complete list of all available query context parameters.
+- [Query context reference](query-context-reference.md) for a complete list of all available query context parameters.c
 - [SQL query context](sql-query-context.md) for SQL-specific context parameters and their default values.
 - [Multi-stage query context](../multi-stage-query/reference.md#context-parameters) for context parameters specific to SQL-based ingestion.
 - [Native queries](querying.md) for details on constructing native queries with context.
