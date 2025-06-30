@@ -33,7 +33,7 @@ public class ColumnBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
   public ColumnBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    super(FrameType.COLUMNAR.ensureType(frame), signature);
+    super(frame.ensureColumnar(), signature);
   }
 
   @Nullable

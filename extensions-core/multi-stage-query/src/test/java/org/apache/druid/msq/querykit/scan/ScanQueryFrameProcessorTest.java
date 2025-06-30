@@ -100,7 +100,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             cursorFactory.getRowSignature(),
             Collections.emptyList(),
@@ -166,7 +167,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     final FrameSequenceBuilder frameSequenceBuilder =
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(5)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
 
     final RowSignature signature = frameSequenceBuilder.signature();
@@ -199,7 +200,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             signature,
             Collections.emptyList(),

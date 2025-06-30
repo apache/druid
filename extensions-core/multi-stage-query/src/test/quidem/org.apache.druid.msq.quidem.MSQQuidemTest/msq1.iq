@@ -94,6 +94,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -202,6 +203,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -307,6 +309,3 @@ DruidAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()], druid=[lo
   }
 }
 !nativePlan
-
-
-

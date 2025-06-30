@@ -495,7 +495,7 @@ public class SqlBaseBenchmark
       walker.add(
           descriptor,
           new FrameSegment(
-              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.COLUMNAR),
+              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.latestColumnar()),
               FrameReader.create(cursorFactory.getRowSignature())
           )
           {

@@ -95,8 +95,7 @@ public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   ) throws IOException
   {
     if (workerNumber > 0) {
@@ -127,7 +126,7 @@ public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
           ReadableConcatFrameChannel.open(Iterators.transform(readableInputs.iterator(), ReadableInput::getChannel)),
           outputChannel.getWritableChannel(),
           readableInputs.frameReader(),
-          stageDefinition.createFrameWriterFactory(HeapMemoryAllocator.unlimited(), removeNullBytes),
+          stageDefinition.createFrameWriterFactory(frameContext.frameWriterSpec(), HeapMemoryAllocator.unlimited()),
           offset,
           // Limit processor will add limit + offset at various points; must avoid overflow
           limit == null ? Long.MAX_VALUE - offset : limit

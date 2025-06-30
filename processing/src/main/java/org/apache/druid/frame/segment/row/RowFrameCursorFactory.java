@@ -62,7 +62,7 @@ public class RowFrameCursorFactory implements CursorFactory
       final List<FieldReader> fieldReaders
   )
   {
-    this.frame = FrameType.ROW_BASED.ensureType(frame);
+    this.frame = frame.ensureRowBased();
     this.frameReader = frameReader;
     this.fieldReaders = fieldReaders;
   }

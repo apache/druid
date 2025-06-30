@@ -41,7 +41,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
 
 /**
- * Implementation of {@link FrameComparisonWidget} for pairs of {@link FrameType#ROW_BASED} frames.
+ * Implementation of {@link FrameComparisonWidget} for pairs of {@link FrameType#isRowBased()} frames.
  *
  * Comparison logic in this class is very similar to {@link RowKeyComparator}, but is different because it works
  * on Frames instead of byte[].
@@ -125,10 +125,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   /**
    * Create a {@link FrameComparisonWidget} for the given frame.
    *
-   * Only possible for frames of type {@link FrameType#ROW_BASED}. The provided keyColumns must be a prefix
-   * of {@link FrameReader#signature()}.
+   * Only possible for row-based frames. The provided keyColumns must be a prefix of {@link FrameReader#signature()}.
    *
-   * @param frame            frame, must be {@link FrameType#ROW_BASED}
+   * @param frame            frame, must satisfy {@link FrameType#isRowBased()}
    * @param signature        signature for the frame
    * @param keyColumns       columns to sort by
    * @param keyColumnReaders readers for key columns
@@ -182,7 +181,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     }
 
     return new FrameComparisonWidgetImpl(
-        FrameType.ROW_BASED.ensureType(frame),
+        frame.ensureRowBased(),
         signature,
         frame.region(RowBasedFrameWriter.ROW_OFFSET_REGION),
         frame.region(RowBasedFrameWriter.ROW_DATA_REGION),

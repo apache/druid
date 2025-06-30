@@ -20,6 +20,10 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -27,11 +31,13 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.Closeable;
 import java.io.File;
+import java.util.List;
 
 /**
  * Provides services and objects for the functioning of the frame processors. Scoped to a specific stage of a
@@ -73,6 +79,11 @@ public interface FrameContext extends Closeable
   WorkerMemoryParameters memoryParameters();
 
   WorkerStorageParameters storageParameters();
+
+  /**
+   * Configuration for writing frames.
+   */
+  FrameWriterSpec frameWriterSpec();
 
   default File tempDir(String name)
   {

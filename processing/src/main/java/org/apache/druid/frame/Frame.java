@@ -40,8 +40,8 @@ import java.nio.channels.WritableByteChannel;
 /**
  * A data frame.
  *
- * Frames are split into contiguous "regions". With columnar frames ({@link FrameType#COLUMNAR}) each region
- * is a column. With row-based frames ({@link FrameType#ROW_BASED}) there are always two regions: row offsets
+ * Frames are split into contiguous "regions". With columnar frames ({@link FrameType#isColumnar()}) each region
+ * is a column. With row-based frames ({@link FrameType#isRowBased()}) there are always two regions: row offsets
  * and row data.
  *
  * This object is lightweight. It has constant overhead regardless of the number of rows or regions.
@@ -419,6 +419,30 @@ public class Frame
       memory.writeTo(0, numBytes, channel);
       return numBytes;
     }
+  }
+
+  /**
+   * Returns this object if {@link #type()} is row-based, otherwise throws an error.
+   */
+  public Frame ensureRowBased()
+  {
+    if (!frameType.isRowBased()) {
+      throw new ISE("Frame type[%s] not supported, must be row-based", frameType);
+    }
+
+    return this;
+  }
+
+  /**
+   * Returns this object if {@link #type()} is columnar, otherwise throws an error.
+   */
+  public Frame ensureColumnar()
+  {
+    if (frameType != FrameType.COLUMNAR) {
+      throw new ISE("Frame type[%s] not supported, must be columnar", frameType);
+    }
+
+    return this;
   }
 
   /**

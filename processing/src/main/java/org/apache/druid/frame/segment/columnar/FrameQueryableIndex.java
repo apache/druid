@@ -59,7 +59,7 @@ public class FrameQueryableIndex implements QueryableIndex
       final List<FrameColumnReader> columnReaders
   )
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = frame.ensureColumnar();
     this.signature = signature;
     this.columnReaders = columnReaders;
   }

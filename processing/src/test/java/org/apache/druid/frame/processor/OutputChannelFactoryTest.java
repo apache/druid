@@ -56,7 +56,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     this.frameSize = frameSize;
     this.sourceCursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
     this.frame = Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(sourceCursorFactory)
-                                                               .frameType(FrameType.COLUMNAR)
+                                                               .frameType(FrameType.latestColumnar())
                                                                .frames()
                                                                .toList());
   }

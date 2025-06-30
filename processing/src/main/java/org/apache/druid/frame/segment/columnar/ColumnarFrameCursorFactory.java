@@ -73,7 +73,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       final List<FrameColumnReader> columnReaders
   )
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = frame.ensureColumnar();
     this.signature = signature;
     this.columnReaders = columnReaders;
   }

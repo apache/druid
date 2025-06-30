@@ -648,7 +648,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   schema.getProjections()
                               )
                       );
-                      final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.latestRowBased());
                       return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .put("frame (columnar)", input -> {
@@ -672,7 +672,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   schema.getProjections()
                               )
                       );
-                      final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.latestColumnar());
                       return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .build();

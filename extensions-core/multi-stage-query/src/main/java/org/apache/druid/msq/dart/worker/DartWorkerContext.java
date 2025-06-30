@@ -30,6 +30,7 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -213,6 +214,7 @@ public class DartWorkerContext implements WorkerContext
     return new DartFrameContext(
         workOrder.getStageDefinition().getId(),
         this,
+        FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
         groupingEngine,
         dataSegmentProvider,
