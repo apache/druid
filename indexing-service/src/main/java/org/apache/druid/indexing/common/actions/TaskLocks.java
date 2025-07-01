@@ -59,7 +59,7 @@ public class TaskLocks
   {
     if (!isLockCoversSegments(task, taskLockbox, segments)) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .ofCategory(DruidException.Category.CONFLICT)
                           .build(
                               "Segment IDs[%s] are not covered by locks[%s] for task[%s]",
                               segments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
