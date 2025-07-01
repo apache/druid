@@ -182,7 +182,7 @@ Beyond using the `context` parameter, you can use `SET` command to specify SQL q
 
 **Using SET in the Web Console:**
 
-In the Query tab of web console, you can write your SET statements followed by your query directly. For example, 
+In the Query tab of web console, you can write your `SET` statements followed by your query directly. For example, 
 
 ```sql
 SET useApproximateTopN = false;
@@ -197,7 +197,7 @@ ORDER BY 2 DESC
 
 **Using SET via the HTTP API:**
 
-You can also include your SET statements as part of the query string in your API call. For example,
+You can also include your `SET` statements as part of the query string in your API call. For example,
 
 ```bash
 curl -X POST 'http://localhost:8888/druid/v2/sql' \
@@ -207,7 +207,7 @@ curl -X POST 'http://localhost:8888/druid/v2/sql' \
   }'
 ```
 
-You can also combine SET statements with the `context` field. If you include both, the parameter value in SET takes precedence:
+You can also combine `SET` statements with the `context` field. If you include both, the parameter value in SET takes precedence:
 
 ```json
 {
@@ -219,14 +219,14 @@ You can also combine SET statements with the `context` field. If you include bot
 }
 ```
 
-SET statements only apply to the query in the same request. Subsequent requests are not affected. 
+`SET` statements only apply to the query in the same request. Subsequent requests are not affected. 
 
-SET statements work with `SELECT`, `INSERT`, and `REPLACE` queries.
+`SET` statements work with `SELECT`, `INSERT`, and `REPLACE` queries.
 
-For more details on how to use the SET command in your SQL query, see [SET](sql.md#set).
+For more details on how to use the `SET` command in your SQL query, see [SET](sql.md#set).
 
 :::info
- You cannot use SET statements when using Druid SQL JDBC connections.
+ You cannot use `SET` statements when using Druid SQL JDBC connections.
 :::
 
 
