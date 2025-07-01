@@ -26,7 +26,7 @@ sidebar_label: "Set query context"
 
 The query context gives you fine-grained control over how Apache Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set the query context to handle specific requirements and optimize performance.
 
-You'll use query context when you need to:
+Common use cases for the query context include:
 - Override default timeouts for long-running queries or complex aggregations.
 - Control resource usage to prevent expensive queries from overwhelming your cluster.
 - Debug query performance by disabling caching during testing.
