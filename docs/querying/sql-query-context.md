@@ -31,7 +31,7 @@ sidebar_label: "SQL query context"
 Druid supports query context parameters which affect [SQL query](./sql.md) planning.
 See [Query context](query-context-reference.md) for general query context parameters for all query types.
 
-For more detailed instructions on how to set query context in Apache Druid, see [Set the query context](../querying/set-query-context.md)
+For information on how to set the query context, see [Set query context](../querying/set-query-context.md)
 
 ## SQL query context parameters
 

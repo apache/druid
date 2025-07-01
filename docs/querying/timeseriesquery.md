@@ -84,7 +84,7 @@ There are 7 main parts to a timeseries query:
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |limit|An integer that limits the number of results. The default is unlimited.|no|
-|context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [empty bucket values](#empty-bucket-values). See also [Context](../querying/query-context-reference.md) for parameters that apply to all query types.|no|
+|context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [empty bucket values](#empty-bucket-values). See also [Query context reference](../querying/query-context-reference.md) for parameters that apply to all query types.|no|
 
 To pull it all together, the above query would return 2 data points, one for each day between 2012-01-01 and 2012-01-03, from the "sample\_datasource" table. Each data point would be the (long) sum of sample\_fieldName1, the (double) sum of sample\_fieldName2 and the (double) result of sample\_fieldName1 divided by sample\_fieldName2 for the filter set. The output looks like this:
 

@@ -69,14 +69,14 @@ If you use the __high/low laning strategy__, set the following:
 
 * `druid.query.scheduler.laning.maxLowPercent` – The maximum percent of query threads to handle low priority queries. The remaining query threads are dedicated to high priority queries.
 
-Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context reference](../querying/query-context-reference.md).
+Consider also defining a [prioritization strategy](../configuration/index.md#prioritization-strategies) for the Broker to label queries as high or low priority. Otherwise, manually set the priority for incoming queries on the [query context](../querying/query-context-reference.md).
 
 If you use a __manual laning strategy__, set the following:
 
 * `druid.query.scheduler.laning.lanes.{name}` – The limit for how many queries can run in the `name` lane. Define as many named lanes as needed.
 * `druid.query.scheduler.laning.isLimitPercent` – Whether to treat the lane limit as an exact number or a percent of the minimum of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`.
 
-With manual laning, incoming queries can be labeled with the desired lane in the `lane` parameter of the [query context reference](../querying/query-context-reference.md).
+With manual laning, incoming queries can be labeled with the desired lane in the `lane` parameter of the [query context](../querying/query-context-reference.md).
 
 See [Query prioritization and laning](../configuration/index.md#query-prioritization-and-laning) for additional details on query laning configuration.
 

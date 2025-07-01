@@ -111,7 +111,7 @@ There are 11 parts to a topN query.
 |dimension|A String or JSON object defining the dimension that you want the top taken for. For more info, see [DimensionSpecs](../querying/dimensionspecs.md)|yes|
 |threshold|An integer defining the N in the topN (i.e. how many results you want in the top list)|yes|
 |metric|A String or JSON object specifying the metric to sort by for the top list. For more info, see [TopNMetricSpec](../querying/topnmetricspec.md).|yes|
-|context|See [Context](../querying/query-context-reference.md)|no|
+|context|See [Query context reference](../querying/query-context-reference.md)|no|
 
 Please note the context JSON object is also available for topN queries and should be used with the same caution as the timeseries case.
 The format of the results would look like so:
