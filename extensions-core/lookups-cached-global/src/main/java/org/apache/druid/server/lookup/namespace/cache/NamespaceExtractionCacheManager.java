@@ -21,8 +21,6 @@ package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.java.util.common.concurrent.ExecutorServices;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -47,11 +45,10 @@ public abstract class NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
 
-  private final ScheduledThreadPoolExecutor scheduledExecutorService;
+  protected final ScheduledThreadPoolExecutor scheduledExecutorService;
   private final ServiceEmitter serviceEmitter;
 
   public NamespaceExtractionCacheManager(
-      final Lifecycle lifecycle,
       final ServiceEmitter serviceEmitter,
       final NamespaceExtractionConfig config
   )
@@ -65,17 +62,15 @@ public abstract class NamespaceExtractionCacheManager
             .build()
     );
     this.serviceEmitter = serviceEmitter;
-    ExecutorServices.manageLifecycle(lifecycle, scheduledExecutorService);
-
   }
 
   @LifecycleStart
   public void initExecutor()
   {
-    scheduledExecutorService.scheduleAtFixedRate(
+    this.scheduledExecutorService.scheduleAtFixedRate(
         () -> {
           try {
-            monitor(serviceEmitter);
+            monitor(this.serviceEmitter);
           }
           catch (Exception e) {
             log.error(e, "Error emitting namespace stats");

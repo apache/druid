@@ -39,7 +39,6 @@ import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -81,7 +80,6 @@ public class CacheSchedulerTest
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
           return new OnHeapNamespaceExtractionCacheManager(
-              lifecycle,
               new NoopServiceEmitter(),
               new NamespaceExtractionConfig()
           );
@@ -95,7 +93,6 @@ public class CacheSchedulerTest
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
           return new OffHeapNamespaceExtractionCacheManager(
-              lifecycle,
               new NoopServiceEmitter(),
               new NamespaceExtractionConfig()
           );
@@ -120,7 +117,6 @@ public class CacheSchedulerTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
-  private Lifecycle lifecycle;
   private NamespaceExtractionCacheManager cacheManager;
   private CacheScheduler scheduler;
   private File tmpFile;
@@ -135,9 +131,7 @@ public class CacheSchedulerTest
   @Before
   public void setUp() throws Exception
   {
-    lifecycle = new Lifecycle();
-    lifecycle.start();
-    cacheManager = createCacheManager.apply(lifecycle);
+    cacheManager = createCacheManager.apply(null);
     final Path tmpDir = temporaryFolder.newFolder().toPath();
     final CacheGenerator<UriExtractionNamespace> cacheGenerator = (extractionNamespace, id, lastVersion, cache) -> {
       Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
@@ -165,12 +159,6 @@ public class CacheSchedulerTest
         out.flush();
       }
     }
-  }
-
-  @After
-  public void tearDown()
-  {
-    lifecycle.stop();
   }
 
   @Test(timeout = 60_000L)
@@ -214,30 +202,24 @@ public class CacheSchedulerTest
   {
     final int repeatCount = 5;
     final long delay = 5;
-    try {
-      final UriExtractionNamespace namespace = getUriExtractionNamespace(delay);
-      final long start = System.currentTimeMillis();
-      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
+    final UriExtractionNamespace namespace = getUriExtractionNamespace(delay);
+    final long start = System.currentTimeMillis();
+    try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
 
-        Assert.assertFalse(entry.getUpdaterFuture().isDone());
-        Assert.assertFalse(entry.getUpdaterFuture().isCancelled());
+      Assert.assertFalse(entry.getUpdaterFuture().isDone());
+      Assert.assertFalse(entry.getUpdaterFuture().isCancelled());
 
-        entry.awaitTotalUpdates(repeatCount);
+      entry.awaitTotalUpdates(repeatCount);
 
-        long minEnd = start + ((repeatCount - 1) * delay);
-        long end = System.currentTimeMillis();
-        Assert.assertTrue(
-            StringUtils.format(
-                "Didn't wait long enough between runs. Expected more than %d was %d",
-                minEnd - start,
-                end - start
-            ), minEnd <= end
-        );
-      }
-    }
-    finally {
-      lifecycle.stop();
-      cacheManager.waitForServiceToEnd(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+      long minEnd = start + ((repeatCount - 1) * delay);
+      long end = System.currentTimeMillis();
+      Assert.assertTrue(
+          StringUtils.format(
+              "Didn't wait long enough between runs. Expected more than %d was %d",
+              minEnd - start,
+              end - start
+          ), minEnd <= end
+      );
     }
     checkNoMoreRunning();
   }
@@ -366,57 +348,16 @@ public class CacheSchedulerTest
     );
   }
 
-  @Test(timeout = 60_000L)
-  public void testShutdown()
-      throws InterruptedException
-  {
-    final long period = 5L;
-    try {
-
-      final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
-
-      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
-        final Future<?> future = entry.getUpdaterFuture();
-        entry.awaitNextUpdates(1);
-
-        Assert.assertFalse(future.isCancelled());
-        Assert.assertFalse(future.isDone());
-
-        final long prior = scheduler.updatesStarted();
-        entry.awaitNextUpdates(1);
-        Assert.assertTrue(scheduler.updatesStarted() > prior);
-      }
-    }
-    finally {
-      lifecycle.stop();
-    }
-    while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
-      // keep waiting
-    }
-
-    checkNoMoreRunning();
-
-    Assert.assertTrue(cacheManager.scheduledExecutorService().isShutdown());
-    Assert.assertTrue(cacheManager.scheduledExecutorService().isTerminated());
-  }
 
   @Test(timeout = 60_000L)
   public void testRunCount() throws InterruptedException
   {
     final int numWaits = 5;
-    try {
-      final UriExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
-      try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
-        final Future<?> future = entry.getUpdaterFuture();
-        entry.awaitNextUpdates(numWaits);
-        Assert.assertFalse(future.isDone());
-      }
-    }
-    finally {
-      lifecycle.stop();
-    }
-    while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
-      // keep waiting
+    final UriExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
+    try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
+      final Future<?> future = entry.getUpdaterFuture();
+      entry.awaitNextUpdates(numWaits);
+      Assert.assertFalse(future.isDone());
     }
     Assert.assertTrue(scheduler.updatesStarted() >= numWaits);
     checkNoMoreRunning();

@@ -24,7 +24,7 @@ import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.Cleaners;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -66,7 +66,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
      * {@link Cleaners.Cleanable#clean()} completes, because shutdown is not blocked by it. However this should be
      * harmless because anyway we remove the whole MapDB's file in lifecycle.stop()
      * (see {@link OffHeapNamespaceExtractionCacheManager#OffHeapNamespaceExtractionCacheManager}).
-     *
+     * <p>
      * However if we persist off-heap DB between JVM runs, this decision should be revised.
      */
     final AtomicBoolean disposed = new AtomicBoolean(false);
@@ -159,12 +159,11 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
 
   @Inject
   public OffHeapNamespaceExtractionCacheManager(
-      Lifecycle lifecycle,
       ServiceEmitter serviceEmitter,
       NamespaceExtractionConfig config
   )
   {
-    super(lifecycle, serviceEmitter, config);
+    super(serviceEmitter, config);
     try {
       tmpFile = File.createTempFile("druidMapDB", getClass().getName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
@@ -183,32 +182,18 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         .commitFileSyncDisable()
         .cacheSize(config.getNumBufferedEntries())
         .make();
-    try {
-      lifecycle.addMaybeStartHandler(
-          new Lifecycle.Handler()
-          {
-            @Override
-            public void start()
-            {
-              // NOOP
-            }
+  }
 
-            @Override
-            public synchronized void stop()
-            {
-              if (!mmapDB.isClosed()) {
-                mmapDB.close();
-                if (!tmpFile.delete()) {
-                  log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
-                }
-              }
-            }
-          }
-      );
+  @LifecycleStop
+  public synchronized void stop()
+  {
+    if (!mmapDB.isClosed()) {
+      mmapDB.close();
+      if (!tmpFile.delete()) {
+        log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+      }
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    scheduledExecutorService.shutdownNow();
   }
 
   @Override

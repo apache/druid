@@ -20,7 +20,6 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
@@ -39,7 +38,6 @@ import org.junit.rules.ExpectedException;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Collections;
 
 public class JdbcCacheGeneratorTest
 {
@@ -52,15 +50,8 @@ public class JdbcCacheGeneratorTest
   private static final ServiceEmitter SERVICE_EMITTER = new NoopServiceEmitter();
 
   private static final NamespaceExtractionCacheManager CACHE_MANAGER = new OnHeapNamespaceExtractionCacheManager(
-      new Lifecycle(),
       SERVICE_EMITTER,
       new NamespaceExtractionConfig()
-  );
-
-  private static final CacheScheduler SCHEDULER = new CacheScheduler(
-      SERVICE_EMITTER,
-      Collections.emptyMap(),
-      CACHE_MANAGER
   );
 
   private static final String LAST_VERSION = "1";

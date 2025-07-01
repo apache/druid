@@ -172,12 +172,10 @@ public class UriCacheGeneratorTest
 
     final List<Function<Lifecycle, NamespaceExtractionCacheManager>> cacheManagerCreators = ImmutableList.of(
         lifecycle -> new OnHeapNamespaceExtractionCacheManager(
-            lifecycle,
             new NoopServiceEmitter(),
             new NamespaceExtractionConfig()
         ),
         lifecycle -> new OffHeapNamespaceExtractionCacheManager(
-            lifecycle,
             new NoopServiceEmitter(),
             new NamespaceExtractionConfig()
         )

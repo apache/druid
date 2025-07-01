@@ -20,14 +20,12 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,18 +37,14 @@ public class StaticMapCacheGeneratorTest
 {
   private static final Map<String, String> MAP = ImmutableMap.<String, String>builder().put("foo", "bar").build();
 
-  private Lifecycle lifecycle;
   private CacheScheduler scheduler;
   private NamespaceExtractionCacheManager cacheManager;
 
   @Before
   public void setup() throws Exception
   {
-    lifecycle = new Lifecycle();
-    lifecycle.start();
     NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
     cacheManager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle,
         noopServiceEmitter,
         new NamespaceExtractionConfig()
     );
@@ -59,12 +53,6 @@ public class StaticMapCacheGeneratorTest
         Collections.emptyMap(),
         cacheManager
     );
-  }
-
-  @After
-  public void tearDown()
-  {
-    lifecycle.stop();
   }
 
   @Test

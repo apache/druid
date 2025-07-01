@@ -23,7 +23,7 @@ import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -58,12 +58,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
 
   @Inject
   public OnHeapNamespaceExtractionCacheManager(
-      Lifecycle lifecycle,
       ServiceEmitter serviceEmitter,
       NamespaceExtractionConfig config
   )
   {
-    super(lifecycle, serviceEmitter, config);
+    super(serviceEmitter, config);
   }
 
   private void expungeCollectedCaches()
@@ -126,7 +125,8 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     if (cache.getCache() instanceof ImmutableLookupMap) {
       return ((ImmutableLookupMap) cache.getCache()).asLookupExtractor(isOneToOne, cacheKeySupplier);
     } else {
-      return new MapLookupExtractor(cache.getCache(), isOneToOne) {
+      return new MapLookupExtractor(cache.getCache(), isOneToOne)
+      {
         @Override
         public byte[] getCacheKey()
         {
@@ -169,5 +169,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
 
     serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/numEntries", numEntries));
     serviceEmitter.emit(ServiceMetricEvent.builder().setMetric("namespace/cache/heapSizeInBytes", heapSizeInBytes));
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    this.scheduledExecutorService.shutdownNow();
   }
 }

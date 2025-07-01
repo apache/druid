@@ -79,7 +79,6 @@ public class NamespacedExtractorModuleTest
     lifecycle.start();
     NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
     cacheManager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle,
         noopServiceEmitter,
         new NamespaceExtractionConfig()
     );

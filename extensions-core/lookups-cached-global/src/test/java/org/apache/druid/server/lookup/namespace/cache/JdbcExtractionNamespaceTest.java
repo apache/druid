@@ -208,17 +208,10 @@ public class JdbcExtractionNamespaceTest
                   }
               ),
               new OnHeapNamespaceExtractionCacheManager(
-                  lifecycle,
                   noopServiceEmitter,
                   new NamespaceExtractionConfig()
               )
           );
-          try {
-            lifecycle.start();
-          }
-          catch (Exception e) {
-            throw new RuntimeException(e);
-          }
           closer.register(
               () -> {
                 final ListenableFuture future = setupTeardownService.submit(() -> lifecycle.stop());
