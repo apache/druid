@@ -383,7 +383,7 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md) and the [web console](../operations/web-console.md). 
 
-For instructions on how the different approaches for set query context in your queries, see [Set the Query Context](./set-query-context.md).
+For other approaches to set the query context, see [Set query context](./set-query-context.md).
 
 The syntax of a `SET` statement is:
 
