@@ -31,8 +31,6 @@ sidebar_label: "SQL query context"
 Druid supports query context parameters which affect [SQL query](./sql.md) planning.
 See [Query context](query-context-reference.md) for general query context parameters for all query types.
 
-For information on how to set the query context, see [Set query context](../querying/set-query-context.md)
-
 ## SQL query context parameters
 
 The following table lists query context parameters you can use to configure Druid SQL planning.
@@ -65,47 +63,6 @@ For more information, see [Overriding default query context values](../configura
 
 How query context parameters are set differs depending on whether you are using the [JSON API](../api-reference/sql-api.md) or [JDBC](../api-reference/sql-jdbc.md).
 
-### Set the query context when using JSON API
-When using the JSON API, you can configure query context parameters in the `context` object of the request.
-
-For example:
-
-```
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "context" : {
-    "sqlTimeZone" : "America/Los_Angeles",
-    "useCache": false
-  }
-}
-```
-
-Context parameters can also be set by including [SET](./sql.md#set) as part of the `query`
-string in the request, separated from the query by `;`. Context parameters set by `SET` statements take priority over
-values set in `context`.
-
-The following example expresses the previous example in this form:
-
-```
-{
-  "query" : "SET sqlTimeZone = 'America/Los_Angeles'; SET useCache = false; SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'"
-}
-```
-
-### Set the query context when using JDBC
 If using JDBC, context parameters can be set using [connection properties object](../api-reference/sql-jdbc.md).
 
-For example:
-
-```java
-String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
-
-// Set any query context parameters you need here.
-Properties connectionProperties = new Properties();
-connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
-connectionProperties.setProperty("useCache", "false");
-
-try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
-  // create and execute statements, process result sets, etc
-}
-```
+For more information on other approaches to set query context, see [Set query context](../querying/set-query-context.md)
