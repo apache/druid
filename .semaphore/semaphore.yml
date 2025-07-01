@@ -36,8 +36,7 @@ blocks:
           commands:
             # This is a change meant to validate semaphore public builds
             # so thus removing configurations for Confluent's internal CodeArtifact
-            - rm -rf ~/.m2/
-            - cache clear
+            - rm ~/.m2/settings.xml
             - >
               MAVEN_OPTS="${MAVEN_OPTS} -Xmx3000m" ${MVN} clean install
               -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
@@ -58,7 +57,7 @@ blocks:
           - tar zxf cache-post-install.tgz
           # This is a change meant to validate semaphore public builds
           # so thus removing configurations for Confluent's internal CodeArtifact
-          - rm -rf ~/.m2/
+          - rm ~/.m2/settings.xml
       jobs:
         - name: "animal sniffer checks"
           commands:
