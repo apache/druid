@@ -22,7 +22,6 @@ package org.apache.druid.frame.segment.row;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.segment.data.ReadableOffset;
 

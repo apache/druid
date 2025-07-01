@@ -22,7 +22,6 @@ package org.apache.druid.frame.segment.columnar;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.DimensionHandler;
