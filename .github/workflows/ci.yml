@@ -90,4 +90,4 @@ jobs:
     with:
       script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
       key: QTest-${{ matrix.split }}
-      jdk: 17
+      jdk: 21
