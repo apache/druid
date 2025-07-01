@@ -289,6 +289,13 @@ public class TierSelectorStrategyTest
     );
   }
 
+  /**
+   * Tests the PreferredTierSelectorStrategy with various configurations and expected selections.
+   * It verifies
+   * 1. The preferred tier is respected when picking a server.
+   * 2. When getting all servers, the preferred tier is ignored, and the returned list is sorted by priority.
+   * 3. When getting a limited number of candidates, it returns the top N servers with the preferred tier first.
+   */
   private void testPreferredTierSelectorStrategy(
       PreferredTierSelectorStrategy tierSelectorStrategy,
       QueryableDruidServer... expectedSelection
@@ -321,14 +328,16 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
+    // Verify that the preferred tier is respected when picking a server
     Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
     Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
 
-    // when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
+    // Verify that when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
     List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
     allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
     Assert.assertEquals(allServers, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
 
+    // Verify that when getting a limited number of candidates, returns the top N servers with preferred tier first
     Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
