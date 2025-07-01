@@ -43,6 +43,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -271,17 +272,24 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Nullable
   @Override
-  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+  public Segment getSegment(DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     for (StorageLocation location : locations) {
       if (location.isReserved(cacheEntryIdentifier)) {
         SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
-        return segmentMapFunction.apply(cacheEntry.referenceProvider.acquireReference());
+        return cacheEntry.referenceProvider.acquireReference().orElse(null);
       }
     }
-    return segmentMapFunction.apply(Optional.empty());
+    return null;
+  }
+
+  @Override
+  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+  {
+    return segmentMapFunction.apply(Optional.ofNullable(getSegment(dataSegment)));
   }
 
   @Override
@@ -305,7 +313,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     synchronized (lock) {
       try {
         for (StorageLocation location : locations) {
-          final SegmentCacheEntry entry = location.addWeakReservationIfExists(identifier);
+          final SegmentCacheEntry entry = location.addWeakReservationHoldIfExists(identifier);
           if (entry != null && entry.referenceProvider != null) {
             return new SegmentMapAction(
                 descriptor,
@@ -317,7 +325,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         final Iterator<StorageLocation> iterator = strategy.getLocations();
         while (iterator.hasNext()) {
           StorageLocation location = iterator.next();
-          final SegmentCacheEntry entry = location.addWeakReservation(
+          final SegmentCacheEntry entry = location.addWeakReservationHold(
               identifier,
               () -> new SegmentCacheEntry(dataSegment)
           );

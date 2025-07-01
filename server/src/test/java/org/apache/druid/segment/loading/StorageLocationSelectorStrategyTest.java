@@ -39,7 +39,6 @@ import org.junit.rules.TemporaryFolder;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -394,7 +393,7 @@ public class StorageLocationSelectorStrategyTest
       }
 
       @Override
-      public void mount(File location) throws IOException, SegmentLoadingException
+      public void mount(File location)
       {
 
       }

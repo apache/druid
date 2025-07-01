@@ -31,7 +31,6 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
@@ -120,9 +119,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
         throw new SegmentLoadingException("Failed to load segment[%s]", dataSegment.getId());
       }
 
-      final Segment segment = segmentCacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY)
-                                                 .map(closer::register)
-                                                 .orElseThrow();
+      final Segment segment = closer.register(segmentCacheManager.getSegment(dataSegment));
       closer.register(() -> segmentCacheManager.drop(dataSegment));
 
       final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);

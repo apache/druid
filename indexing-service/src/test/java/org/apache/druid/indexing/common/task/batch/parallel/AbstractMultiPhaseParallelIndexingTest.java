@@ -53,7 +53,6 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -300,7 +299,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         .manufacturate(tempSegmentDir);
     try {
       cacheManager.load(dataSegment);
-      return cacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY).orElseThrow();
+      return cacheManager.getSegment(dataSegment);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

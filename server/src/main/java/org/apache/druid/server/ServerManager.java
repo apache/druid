@@ -62,7 +62,6 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
@@ -192,47 +191,58 @@ public class ServerManager implements QuerySegmentWalker
     return new ResourceManagingQueryRunner<>(timeline, factory, toolChest, ev, specs);
   }
 
-  protected List<SegmentMapAction> mapSegments(
+  /**
+   * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
+   * {@link VersionedIntervalTimeline}, then use
+   * {@link SegmentManager#mapSegments(Iterable, SegmentMapFunction, Closer, long)} to apply {@link SegmentMapFunction}
+   * to get the segments from the cache (or loaded from deep storage if necessary) and transform the segments as
+   * appropriate for query processing into {@link SegmentReference} wrappers. The wrappers contain the
+   * {@link SegmentDescriptor} and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to
+   * the {@link Closer}. If empty, the segment was not in the timeline, not in the cache, or the map function transform
+   * was unable to be applied.
+   */
+  protected List<SegmentReference> getAndLoadAllSegmentReferences(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFunction,
-      Closer closer
-  ) throws SegmentLoadingException
-  {
-    final Iterable<DataSegmentAndDescriptor> segmentsToMap = FunctionalIterable
-        .create(segments)
-        .transform(
-            descriptor -> {
-              final PartitionChunk<DataSegment> chunk = timeline.findChunk(
-                  descriptor.getInterval(),
-                  descriptor.getVersion(),
-                  descriptor.getPartitionNumber()
-              );
-
-              if (chunk != null) {
-                final DataSegment segment = chunk.getObject();
-                if (segment != null) {
-                  return new DataSegmentAndDescriptor(segment, descriptor);
-                }
-              }
-              return new DataSegmentAndDescriptor(null, descriptor);
-            }
-        );
-    return segmentManager.mapSegments(segmentsToMap, segmentMapFunction, closer);
-  }
-
-  protected List<SegmentReference> ensureLoadedAndAcquireAllSegments(
-      VersionedIntervalTimeline<String, DataSegment> timeline,
-      Iterable<SegmentDescriptor> segments,
-      SegmentMapFunction segmentMapFn,
       final long timeout,
       Closer closer
   )
   {
     final Closer loadCloser = Closer.create();
     try {
-      final List<SegmentMapAction> loaders = mapSegments(timeline, segments, segmentMapFn, loadCloser);
-      return loadSegmentReferences(loaders, timeout, closer);
+      final Iterable<DataSegmentAndDescriptor> segmentsToMap = FunctionalIterable
+          .create(segments)
+          .transform(
+              descriptor -> {
+                final PartitionChunk<DataSegment> chunk = timeline.findChunk(
+                    descriptor.getInterval(),
+                    descriptor.getVersion(),
+                    descriptor.getPartitionNumber()
+                );
+
+                if (chunk != null) {
+                  final DataSegment segment = chunk.getObject();
+                  if (segment != null) {
+                    return new DataSegmentAndDescriptor(segment, descriptor);
+                  }
+                }
+                return new DataSegmentAndDescriptor(null, descriptor);
+              }
+          );
+      final List<SegmentMapAction> loaders = segmentManager.mapSegments(segmentsToMap, segmentMapFunction, closer);
+      final Iterable<ListenableFuture<Optional<Segment>>> loadFutures =
+          () -> loaders.stream().map(SegmentMapAction::getSegmentFuture).iterator();
+      final List<Optional<Segment>> loadedProviders =
+          Futures.allAsList(loadFutures).get(timeout, TimeUnit.MILLISECONDS);
+
+      final List<SegmentReference> segmentReferences = new ArrayList<>();
+      for (int i = 0; i < loaders.size(); i++) {
+        segmentReferences.add(
+            new SegmentReference(loaders.get(i).getDescriptor(), loadedProviders.get(i).map(closer::register))
+        );
+      }
+      return segmentReferences;
     }
     catch (InterruptedException | ExecutionException | TimeoutException | SegmentLoadingException e) {
       throw new RuntimeException(e);
@@ -246,14 +256,15 @@ public class ServerManager implements QuerySegmentWalker
 
 
   /**
-   * For each {@link SegmentDescriptor}, we try to fetch a {@link ReferenceCountedSegmentProvider} from the supplied
-   * {@link VersionedIntervalTimeline} and apply {@link SegmentMapFunction} to acquire a reference and transform the
-   * segment as appropriate for query processing, returning a {@link SegmentReference} wrapper. The wrapper contains the
-   * {@link SegmentDescriptor} and an {@link Optional<Segment>}, which if present the {@link Segment} will be registered
-   * to the {@link Closer}, and will be empty if the segment was not actually in the timeline, or if unable to apply
-   * the reference
+   * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
+   * {@link VersionedIntervalTimeline}, then {@link SegmentManager#mapSegment(DataSegment, SegmentMapFunction)} to
+   * apply {@link SegmentMapFunction} to get the segments from the cache and transform the segments as appropriate for
+   * query processing into {@link SegmentReference} wrappers. The wrappers contain the {@link SegmentDescriptor}
+   * and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to the {@link Closer}.
+   * If empty, the segment was not in the timeline, not in the cache, or the map function transform was
+   * unable to be applied.
    */
-  protected List<SegmentReference> acquireAllSegments(
+  protected List<SegmentReference> getAllSegmentReferences(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
@@ -300,9 +311,9 @@ public class ServerManager implements QuerySegmentWalker
     // todo (clint): this feels hella wack... but otherwise we're going to be loading weak assignments more or less as
     //  soon as they are assigned instead of on demand at query time
     if (query instanceof SegmentMetadataQuery) {
-      segmentReferences = acquireAllSegments(timeline, specs, segmentMapFn, closer);
+      segmentReferences = getAllSegmentReferences(timeline, specs, segmentMapFn, closer);
     } else {
-      segmentReferences = ensureLoadedAndAcquireAllSegments(
+      segmentReferences = getAndLoadAllSegmentReferences(
           timeline,
           specs,
           segmentMapFn,
@@ -424,26 +435,6 @@ public class ServerManager implements QuerySegmentWalker
       throw e;
     }
     return factory;
-  }
-
-  public static List<SegmentReference> loadSegmentReferences(
-      List<SegmentMapAction> loaders,
-      long timeout,
-      Closer closer
-  ) throws InterruptedException, ExecutionException, TimeoutException
-  {
-    final Iterable<ListenableFuture<Optional<Segment>>> loadFutures =
-        () -> loaders.stream().map(SegmentMapAction::getSegmentFuture).iterator();
-    final List<Optional<Segment>> loadedProviders =
-        Futures.allAsList(loadFutures).get(timeout, TimeUnit.MILLISECONDS);
-
-    final List<SegmentReference> segmentReferences = new ArrayList<>();
-    for (int i = 0; i < loaders.size(); i++) {
-      segmentReferences.add(
-          new SegmentReference(loaders.get(i).getDescriptor(), loadedProviders.get(i).map(closer::register))
-      );
-    }
-    return segmentReferences;
   }
 
   private static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)

@@ -65,21 +65,21 @@ public interface SegmentCacheManager
 
   /**
    * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a
-   * {@link Segment} from deep storage, this method returns a
-   * {@link ReferenceCountedSegmentProvider}, which manages the lifecycle for the
-   * {@link Segment}, allowing callers to check out reference, perform actions
-   * using the segment and release the reference when done, ensuring that storage management cannot drop it while in
-   * use.
+   * {@link Segment} from deep storage, this method returns true if the cache is able to load and subsequently serve it
+   * to callers via {@link #mapSegment(DataSegment, SegmentMapFunction)} or
+   * {@link #mapSegment(DataSegment, SegmentDescriptor, SegmentMapFunction)}.
    *
    * @param segment Segment to get on each download (after service bootstrap)
    * @throws SegmentLoadingException If there is an error in loading the segment
+   *
    * @see SegmentCacheManager#bootstrap(DataSegment, SegmentLazyLoadFailCallback)
    */
   boolean load(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Similar to {@link #load(DataSegment)}, this method returns a {@link ReferenceCountedSegmentProvider} during
-   * startup on data nodes.
+   * Similar to {@link #load(DataSegment)}, this method returns true during if during startup on data nodes the cache
+   * is able to load and subsequently serve it to callers via {@link #mapSegment(DataSegment, SegmentMapFunction)} or
+   * {@link #mapSegment(DataSegment, SegmentDescriptor, SegmentMapFunction)}.
    *
    * @param segment    Segment to retrieve during service bootstrap
    * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
@@ -96,13 +96,29 @@ public interface SegmentCacheManager
    */
   void drop(DataSegment segment);
 
+  /**
+   * Applies a {@link SegmentMapFunction} to a {@link Segment} if it is available in the cache. If not present in any
+   * storage location, this method will not attempt to download the {@link DataSegment} from deep storage.
+   */
+  Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction);
+
+  /**
+   * Returns a {@link SegmentMapAction} for a given {@link DataSegment}, {@link SegmentDescriptor}, and
+   * {@link SegmentMapFunction} combination, which returns the {@link Segment} if already present in the cache, or
+   * tries to fetch from deep storage and map if not.
+   */
   SegmentMapAction mapSegment(
       DataSegment dataSegment,
       SegmentDescriptor descriptor,
       SegmentMapFunction segmentMapFunction
   ) throws SegmentLoadingException;
 
-  Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction);
+  /**
+   * Get a {@link Segment}, if it is available in the cache. If not present in any storage location, this method will
+   * not attempt to download the {@link DataSegment} from deep storage.
+   */
+  @Nullable
+  Segment getSegment(DataSegment dataSegment);
 
   /**
    * Alternative to {@link #load(DataSegment)}, to return the {@link File} location of the segment files instead

@@ -70,11 +70,12 @@ public class SegmentLoaderConfig
   @JsonProperty("isVirtualStorageFabric")
   private boolean isVirtualStorageFabric = false;
 
+  // todo (clint): lol idk, measure these for sensible defaults
   @JsonProperty("minVirtualStorageFabricLoadThreads")
-  private int minVirtualStorageFabricLoadThreads = 10;
+  private int minVirtualStorageFabricLoadThreads = 2;
 
   @JsonProperty("maxVirtualStorageFabricLoadThreads")
-  private int maxVirtualStorageFabricLoadThreads = 1000; // todo (clint): lol idk, measure this
+  private int maxVirtualStorageFabricLoadThreads = 2 * JvmUtils.getRuntimeInfo().getAvailableProcessors();
 
   @JsonProperty("virtualStorageFabricLoadThreadKeepaliveMillis")
   private long virtualStorageFabricLoadThreadKeepaliveMillis = TimeUnit.MINUTES.toMillis(1);

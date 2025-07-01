@@ -103,9 +103,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
@@ -1945,11 +1943,9 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+      public Segment getSegment(DataSegment dataSegment)
       {
-        return ReferenceCountedSegmentProvider.unmanaged(
-            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
-        );
+        return new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
       }
 
       @Override

@@ -165,8 +165,8 @@ class StorageLocationTest
     CacheEntry entry7 = new TestCacheEntry("7", 25);
     CacheEntry entry8 = new TestCacheEntry("8", 25);
 
-    Assertions.assertNotNull(location.addWeakReservation(entry1.getId(), () -> entry1));
-    Assertions.assertNotNull(location.addWeakReservation(entry2.getId(), () -> entry2));
+    Assertions.assertNotNull(location.addWeakReservationHold(entry1.getId(), () -> entry1));
+    Assertions.assertNotNull(location.addWeakReservationHold(entry2.getId(), () -> entry2));
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
@@ -175,7 +175,7 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
 
-    Assertions.assertNotNull(location.addWeakReservation(entry5.getId(), () -> entry5));
+    Assertions.assertNotNull(location.addWeakReservationHold(entry5.getId(), () -> entry5));
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));

@@ -109,7 +109,7 @@ public class SegmentManager
   }
 
   /**
-   * Returns a map of dataSource to the number of segments managed by this segmentManager.  This method should be
+   * Returns a map of dataSource to the number of segments managed by this segmentManager.  This method should be used
    * carefully because the returned map might be different from the actual data source states.
    *
    * @return a map of dataSources and number of segments
@@ -128,6 +128,13 @@ public class SegmentManager
     return Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTimeline);
   }
 
+  /**
+   * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
+   * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
+   * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
+   * {@link #mapSegment(DataSegmentAndDescriptor, SegmentMapFunction, Closer)} or
+   * {@link #mapSegments(Iterable, SegmentMapFunction, Closer)} instead.
+   */
   public Optional<Segment> mapSegment(
       DataSegment dataSegment,
       SegmentMapFunction segmentMapFunction
@@ -136,6 +143,11 @@ public class SegmentManager
     return cacheManager.mapSegment(dataSegment, segmentMapFunction);
   }
 
+  /**
+   * Returns a {@link SegmentMapAction}, where calling {@link SegmentMapAction#getSegmentFuture()} will either return
+   * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
+   * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
+   */
   public SegmentMapAction mapSegment(
       DataSegmentAndDescriptor segmentAndDescriptor,
       SegmentMapFunction segmentMapFunction,
@@ -151,6 +163,14 @@ public class SegmentManager
     );
   }
 
+  /**
+   * Given a list of {@link DataSegmentAndDescriptor}, call
+   * {@link #mapSegment(DataSegmentAndDescriptor, SegmentMapFunction, Closer)} on each of them to build a list of
+   * {@link SegmentMapAction}. Calling {@link SegmentMapAction#getSegmentFuture()} on any item in the list will either
+   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
+   * if not. Any {@link Segment} returned from these futures, if present, must be closed when the caller is finished
+   * doing segment things.
+   */
   public List<SegmentMapAction> mapSegments(
       Iterable<DataSegmentAndDescriptor> segments,
       SegmentMapFunction segmentMapFunction,
@@ -172,7 +192,9 @@ public class SegmentManager
    * Returns the collection of {@link IndexedTable} for the entire timeline (since join conditions do not currently
    * consider the queries intervals), if the timeline exists for each of its segments that are joinable.
    */
-  public Optional<Stream<ReferenceCountedIndexedTableProvider>> getIndexedTables(TableDataSource dataSource)
+  public Optional<Stream<ReferenceCountedIndexedTableProvider>> getIndexedTables(
+      TableDataSource dataSource
+  )
   {
     return getTimeline(dataSource).map(timeline -> {
       // join doesn't currently consider intervals, so just consider all segments
@@ -196,8 +218,8 @@ public class SegmentManager
   }
 
   /**
-   * Load the supplied segment into page cache on bootstrap. If the segment is already loaded, this method does not
-   * reload the segment into the page cache.
+   * Load the supplied segment into segment cache on bootstrap. If the segment is already loaded, this method does not
+   * reload the segment into the segment cache.
    *
    * @param dataSegment segment to bootstrap
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
@@ -211,7 +233,6 @@ public class SegmentManager
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountedSegmentProvider segment;
     try {
       if (!cacheManager.bootstrap(dataSegment, loadFailed)) {
         throw new SegmentLoadingException(
@@ -229,8 +250,8 @@ public class SegmentManager
 
 
   /**
-   * Load the supplied segment into page cache. If the segment is already loaded, this method does not reload the
-   * segment into the page cache. This method should be called for non-bootstrapping flows. Unlike
+   * Load the supplied segment into segment cache. If the segment is already loaded, this method does not reload the
+   * segment into the segment cache. This method should be called for non-bootstrapping flows. Unlike
    * {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)}, this method doesn't accept a lazy load
    * fail callback because the segment is loaded immediately.
    *

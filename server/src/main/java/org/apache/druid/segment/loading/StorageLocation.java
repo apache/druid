@@ -39,24 +39,25 @@ import java.util.function.Supplier;
  * recovered until {@link #release(CacheEntry)} is called. These entries are stored in {@link #staticCacheEntries}.
  * <p>
  * The second way is to store as a transient cache item with one of {@link #reserveWeak(CacheEntry)},
- * {@link #addWeakReservation(CacheEntry)}, or {@link #addWeakReservationIfExists(CacheEntry)}. {@link CacheEntry}
- * stored in this manner will exist on disk in this location until the point that another new reservation needs more
- * space than remains available in the location, at which point {@link #reclaim(long)} will be called to try to call
- * {@link CacheEntry#unmount()} on any eligible entries until enough space is available to store the new item.
- *
+ * {@link #addWeakReservationHold(CacheEntryIdentifier, Supplier)}, or
+ * {@link #addWeakReservationHoldIfExists(CacheEntryIdentifier)}. {@link CacheEntry} stored in this manner will exist on
+ * disk in this location until the point that another new reservation needs more space than remains available in the
+ * location, at which point {@link #reclaim(long)} will be called to try to call {@link CacheEntry#unmount()} on any
+ * eligible entries until enough space is available to store the new item.
+ * <p>
  * Items are chosen for eviction using an algorithm based on
  * (<a href="https://junchengyang.com/publication/nsdi24-SIEVE.pdf">SIEVE</a>) with additional mechanisms to place
  * temporary holds on cache entries. This holds required to support cases such as if a group of them are taking part
  * in a query and must all be loaded simultaneously.
- *
+ * <p>
  * Implementation-wise, {@link CacheEntry} are wrapped in {@link WeakCacheEntry} to form a doubly linked list
  * functioning as a queue which can be interacted with via 3 fields, {@link #head}, {@link #tail}, and {@link #hand}.
  * Head and tail expectedly mark the beginning and end of the queue, while the hand is the interesting bit and is used
  * as the position of the current item to consider for eviction the next time {@link #reclaim(long)} needs to be called.
  * Entries are also stored in a map, {@link #weakCacheEntries}, for fast retrieval. Using a weak cache entry sets
- * {@link WeakCacheEntry#visited} to true, and {@link #addWeakReservation(CacheEntry)} and
- * {@link #addWeakReservationIfExists(CacheEntry)} additionally will increment {@link WeakCacheEntry#holds} until
- * {@link #finishWeakReservationHold(Iterable)} is called.
+ * {@link WeakCacheEntry#visited} to true, and {@link #addWeakReservationHold(CacheEntryIdentifier, Supplier)} and
+ * {@link #addWeakReservationHoldIfExists(CacheEntryIdentifier)} additionally will increment {@link WeakCacheEntry#holds}
+ * until {@link #finishWeakReservationHold(Iterable)} is called.
  * <p>
  * When it is time to reclaim space, first the {@link #hand} is checked for holds - if any exist then the hand is moved
  * to {@link WeakCacheEntry#prev} immediately and we try again. If no holds are present, then it is checked if it has
@@ -125,6 +126,12 @@ public class StorageLocation
     return path;
   }
 
+  /**
+   * If a {@link CacheEntry} for a {@link CacheEntryIdentifier} exists in either {@link #staticCacheEntries} or
+   * {@link #weakCacheEntries}, this method will return it. Additionally, {@link WeakCacheEntry} will be marked as
+   * visited to reduce the chance that they are evicted during future calls to {@link #reclaim(long)}.
+   */
+  @Nullable
   public synchronized <T extends CacheEntry> T getCacheEntry(CacheEntryIdentifier entryId)
   {
     if (staticCacheEntries.containsKey(entryId)) {
@@ -138,22 +145,26 @@ public class StorageLocation
     return null;
   }
 
+  /**
+   * Returns true if a {@link CacheEntry} for a {@link CacheEntryIdentifier} exists in {@link #staticCacheEntries}
+   */
   public synchronized boolean isReserved(CacheEntryIdentifier identifier)
   {
     return staticCacheEntries.containsKey(identifier);
   }
 
+  /**
+   * Returns true if a {@link CacheEntry} for a {@link CacheEntryIdentifier} exists in {@link #weakCacheEntries}
+   */
   public synchronized boolean isWeakReserved(CacheEntryIdentifier identifier)
   {
     return weakCacheEntries.containsKey(identifier);
   }
 
   /**
-   * Reserves space to store the given {@link CacheEntry}.
-   * If it succeeds, it returns a file path to mount the given entry in this storage location.
-   * Returns null otherwise.
+   * Reserves space to store the given {@link CacheEntry}, returning true if sucessful and false if already reserved,
+   * or unable to be reserved.
    */
-  @Nullable
   public synchronized boolean reserve(CacheEntry entry)
   {
     if (staticCacheEntries.containsKey(entry.getId())) {
@@ -167,6 +178,10 @@ public class StorageLocation
     return false;
   }
 
+  /**
+   * Reserves space to store a 'weak' reservation for a given {@link CacheEntry}. Returns true if already reserved or
+   * was able to be successfully reserved, or false if unable to be reserved.
+   */
   public synchronized boolean reserveWeak(CacheEntry entry)
   {
     if (staticCacheEntries.containsKey(entry.getId())) {
@@ -184,7 +199,7 @@ public class StorageLocation
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservationIfExists(CacheEntryIdentifier entryId)
+  public synchronized <T extends CacheEntry> T addWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
   {
     if (staticCacheEntries.containsKey(entryId)) {
       return (T) staticCacheEntries.get(entryId);
@@ -199,9 +214,12 @@ public class StorageLocation
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservation(CacheEntryIdentifier entryId, Supplier<? extends CacheEntry> entrySupplier)
+  public synchronized <T extends CacheEntry> T addWeakReservationHold(
+      CacheEntryIdentifier entryId,
+      Supplier<? extends CacheEntry> entrySupplier
+  )
   {
-    final CacheEntry existingEntry = addWeakReservationIfExists(entryId);
+    final CacheEntry existingEntry = addWeakReservationHoldIfExists(entryId);
     if (existingEntry != null) {
       return (T) existingEntry;
     }

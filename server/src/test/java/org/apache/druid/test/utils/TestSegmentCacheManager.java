@@ -126,6 +126,12 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
+  public Segment getSegment(DataSegment dataSegment)
+  {
+    return getSegmentInternal(dataSegment).acquireReference().orElse(null);
+  }
+
+  @Override
   public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {

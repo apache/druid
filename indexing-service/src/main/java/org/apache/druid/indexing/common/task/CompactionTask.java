@@ -83,7 +83,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -795,9 +794,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               throw new SegmentLoadingException("Failed to load segment[%s]", dataSegment.getId());
             }
             closer.register(() -> segmentCacheManager.drop(dataSegment));
-            final Segment segment = closer.register(
-                segmentCacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY).orElseThrow()
-            );
+            final Segment segment = closer.register(segmentCacheManager.getSegment(dataSegment));
             return new ResourceHolder<QueryableIndex>()
             {
               @Override

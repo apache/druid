@@ -84,17 +84,23 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public SegmentMapAction mapSegment(
-      DataSegment dataSegment,
-      SegmentDescriptor descriptor,
-      SegmentMapFunction segmentMapFunction
-  )
+  public Segment getSegment(DataSegment dataSegment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SegmentMapAction mapSegment(
+      DataSegment dataSegment,
+      SegmentDescriptor descriptor,
+      SegmentMapFunction segmentMapFunction
+  )
   {
     throw new UnsupportedOperationException();
   }
