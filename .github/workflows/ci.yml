@@ -76,7 +76,7 @@ jobs:
         pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run_unit-tests -Dtest='${{ matrix.pattern }}' -fae
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dtest='${{ matrix.pattern }}' -fae
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
 
@@ -91,3 +91,18 @@ jobs:
       script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
       key: QTest-${{ matrix.split }}
       jdk: 17
+
+  # this will run only if QTest passes for java17
+  run-qtest-all-jdk:
+    needs: run-qtest
+    if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        split: [ "0/4", "1/4", "2/4", "3/4" ]
+        jdk: [ "11", "21.0.4" ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
+      key: QTest-${{ matrix.jdk }}-${{ matrix.split }}
+      jdk: ${{ matrix.jdk }}
