@@ -41,6 +41,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.server.coordination.SegmentManager;
 import org.joda.time.Interval;
 
 /**
@@ -58,7 +59,7 @@ import org.joda.time.Interval;
  * The methods on AppenderatorsManager can be called by multiple threads.
  *
  * This class provides similar functionality to the {@link org.apache.druid.server.coordination.ServerManager} and
- * {@link org.apache.druid.server.SegmentManager} on the Historical processes.
+ * {@link SegmentManager} on the Historical processes.
  */
 public interface AppenderatorsManager
 {

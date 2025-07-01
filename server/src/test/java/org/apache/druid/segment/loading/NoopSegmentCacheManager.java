@@ -19,12 +19,15 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Test implementation of {@link SegmentCacheManager} which throws an
@@ -57,13 +60,13 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getSegment(DataSegment segment)
+  public boolean load(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public boolean bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     throw new UnsupportedOperationException();
   }
@@ -75,7 +78,23 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void cleanup(DataSegment segment)
+  public void drop(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SegmentMapAction mapSegment(
+      DataSegment dataSegment,
+      SegmentDescriptor descriptor,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
   {
     throw new UnsupportedOperationException();
   }

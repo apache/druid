@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Logical representation of a local disk path to store {@link CacheEntry}, controlling that the total size of stored
@@ -90,6 +91,7 @@ public class StorageLocation
   private WeakCacheEntry tail;
   @GuardedBy("this")
   private WeakCacheEntry hand;
+
   /**
    * Current total size of files in bytes, including weak entries.
    */
@@ -136,14 +138,14 @@ public class StorageLocation
     return null;
   }
 
-  public synchronized boolean isReserved(CacheEntry entry)
+  public synchronized boolean isReserved(CacheEntryIdentifier identifier)
   {
-    return staticCacheEntries.containsKey(entry.getId());
+    return staticCacheEntries.containsKey(identifier);
   }
 
-  public synchronized boolean isWeakReserved(CacheEntry entry)
+  public synchronized boolean isWeakReserved(CacheEntryIdentifier identifier)
   {
-    return weakCacheEntries.containsKey(entry.getId());
+    return weakCacheEntries.containsKey(identifier);
   }
 
   /**
@@ -182,9 +184,8 @@ public class StorageLocation
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservationIfExists(CacheEntry entry)
+  public synchronized <T extends CacheEntry> T addWeakReservationIfExists(CacheEntryIdentifier entryId)
   {
-    final CacheEntryIdentifier entryId = entry.getId();
     if (staticCacheEntries.containsKey(entryId)) {
       return (T) staticCacheEntries.get(entryId);
     }
@@ -198,25 +199,26 @@ public class StorageLocation
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservation(CacheEntry entry)
+  public synchronized <T extends CacheEntry> T addWeakReservation(CacheEntryIdentifier entryId, Supplier<? extends CacheEntry> entrySupplier)
   {
-    final CacheEntry existingEntry = addWeakReservationIfExists(entry);
+    final CacheEntry existingEntry = addWeakReservationIfExists(entryId);
     if (existingEntry != null) {
       return (T) existingEntry;
     }
-    if (canHandle(entry)) {
-      final WeakCacheEntry newEntry = new WeakCacheEntry(entry);
-      newEntry.holds++;
-      linkNewWeakEntry(newEntry);
-      return (T) entry;
+    final CacheEntry newEntry = entrySupplier.get();
+    if (canHandle(newEntry)) {
+      final WeakCacheEntry newWeakEntry = new WeakCacheEntry(newEntry);
+      newWeakEntry.holds++;
+      linkNewWeakEntry(newWeakEntry);
+      return (T) newEntry;
     }
     return null;
   }
 
-  public synchronized void finishWeakReservationHold(Iterable<CacheEntry> reservations)
+  public synchronized void finishWeakReservationHold(Iterable<CacheEntryIdentifier> reservations)
   {
-    for (CacheEntry entry : reservations) {
-      final WeakCacheEntry reservation = weakCacheEntries.get(entry.getId());
+    for (CacheEntryIdentifier entryId : reservations) {
+      final WeakCacheEntry reservation = weakCacheEntries.get(entryId);
       if (reservation != null && reservation.holds > 0) {
         reservation.holds--;
       }

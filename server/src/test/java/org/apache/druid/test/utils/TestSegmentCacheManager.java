@@ -22,16 +22,23 @@ package org.apache.druid.test.utils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestSegmentCacheManager extends NoopSegmentCacheManager
 {
   private final List<DataSegment> cachedSegments;
+  private final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders;
 
   private final List<DataSegment> observedBootstrapSegments;
   private final List<DataSegment> observedSegments;
@@ -57,6 +65,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   public TestSegmentCacheManager(final Set<DataSegment> segmentsToCache)
   {
     this.cachedSegments = ImmutableList.copyOf(segmentsToCache);
+    this.referenceProviders = new ConcurrentHashMap<>();
 
     // While inneficient, these CopyOnWriteArrayList objects greatly simplify meeting the thread
     // safety mandate from SegmentCacheManager. For testing, this should be ok.
@@ -80,33 +89,65 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public boolean bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
-    return getSegmentInternal(segment);
+    return true;
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getSegment(final DataSegment segment)
+  public boolean load(final DataSegment segment)
   {
     observedSegments.add(segment);
-    return getSegmentInternal(segment);
+    return true;
   }
 
   private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)
   {
-    if (segment.isTombstone()) {
-      return ReferenceCountedSegmentProvider
-          .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
-    } else {
-      return ReferenceCountedSegmentProvider.wrapSegment(
-          new TestSegmentUtils.SegmentForTesting(
-              segment.getDataSource(),
-              (Interval) segment.getLoadSpec().get("interval"),
-              MapUtils.getString(segment.getLoadSpec(), "version")
-          ), segment.getShardSpec()
-      );
+    return referenceProviders.compute(
+        segment,
+        (s, existingProvider) -> {
+          if (existingProvider == null) {
+            if (s.isTombstone()) {
+              return ReferenceCountedSegmentProvider.of(TombstoneSegmentizerFactory.segmentForTombstone(s));
+            } else {
+              return ReferenceCountedSegmentProvider.of(
+                  new TestSegmentUtils.SegmentForTesting(
+                      s.getDataSource(),
+                      (Interval) s.getLoadSpec().get("interval"),
+                      MapUtils.getString(s.getLoadSpec(), "version")
+                  )
+              );
+            }
+          }
+          return existingProvider;
+        }
+    );
+  }
+
+  @Override
+  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+  {
+    if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
+      return Optional.empty();
     }
+    return segmentMapFunction.apply(getSegmentInternal(dataSegment).acquireReference());
+  }
+
+  @Override
+  public SegmentMapAction mapSegment(
+      DataSegment dataSegment,
+      SegmentDescriptor descriptor,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
+      return SegmentMapAction.missingSegment(descriptor);
+    }
+    return SegmentMapAction.alreadyLoaded(
+        descriptor,
+        segmentMapFunction.apply(getSegmentInternal(dataSegment).acquireReference())
+    );
   }
 
   @Override
@@ -126,8 +167,9 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public void cleanup(DataSegment segment)
+  public void drop(DataSegment segment)
   {
+    getSegmentInternal(segment).close();
     observedSegmentsRemovedFromCache.add(segment);
   }
 

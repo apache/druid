@@ -29,9 +29,10 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.server.SegmentManager;
+import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -64,14 +65,14 @@ public class DartDataSegmentProvider implements DataSegmentProvider
     }
 
     return () -> {
-      final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timeline =
+      final Optional<VersionedIntervalTimeline<String, DataSegment>> timeline =
           segmentManager.getTimeline(new TableDataSource(segmentId.getDataSource()));
 
       if (!timeline.isPresent()) {
         throw segmentNotFound(segmentId);
       }
 
-      final PartitionChunk<ReferenceCountedSegmentProvider> chunk =
+      final PartitionChunk<DataSegment> chunk =
           timeline.get().findChunk(
               segmentId.getInterval(),
               segmentId.getVersion(),
@@ -82,8 +83,11 @@ public class DartDataSegmentProvider implements DataSegmentProvider
         throw segmentNotFound(segmentId);
       }
 
-      final ReferenceCountedSegmentProvider segmentReference = chunk.getObject();
-      final Optional<Segment> maybeSegment = segmentReference.acquireReference();
+      final DataSegment dataSegment = chunk.getObject();
+      // in the future we should call the other version of mapSegment, instead or returning a CompleteSegment we would
+      // return a SegmentMapAction so that the load can be interleaved with processing, but that requires shuffling
+      // some stuff around
+      final Optional<Segment> maybeSegment = segmentManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY);
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);

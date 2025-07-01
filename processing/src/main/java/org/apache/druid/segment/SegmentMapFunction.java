@@ -31,12 +31,12 @@ import java.util.function.Function;
  * {@link ReferenceCountedObjectProvider<Segment>} that it came from.
  */
 @FunctionalInterface
-public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvider<Segment>, Optional<Segment>>
+public interface SegmentMapFunction extends Function<Optional<Segment>, Optional<Segment>>
 {
   /**
    * {@link SegmentMapFunction} that acquires a {@link Segment} from the {@link ReferenceCountedObjectProvider<Segment>}
    */
-  SegmentMapFunction IDENTITY = ReferenceCountedObjectProvider::acquireReference;
+  SegmentMapFunction IDENTITY = segment -> segment;
 
   /**
    * Returns a {@link SegmentMapFunction} which first applies this {@link SegmentMapFunction} and then applies

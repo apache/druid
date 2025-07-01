@@ -55,10 +55,10 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.server.coordination.SegmentManager;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
@@ -156,7 +156,8 @@ public class CalciteMSQTestsHelper
       public Supplier<ResourceHolder<CompleteSegment>> fetchSegment(
           SegmentId segmentId,
           ChannelCounters channelCounters,
-          boolean isReindex)
+          boolean isReindex
+      )
       {
         CompleteSegment a = walker.getSegment(segmentId);
         return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());

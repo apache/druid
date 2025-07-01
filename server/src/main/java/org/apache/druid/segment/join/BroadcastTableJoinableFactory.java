@@ -27,7 +27,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
-import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.SegmentManager;
 
 import java.util.Iterator;
 import java.util.Optional;

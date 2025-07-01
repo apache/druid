@@ -62,17 +62,17 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.LeafSegmentReferenceProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
-import org.apache.druid.segment.WeakSegmentReferenceProviderLoadAction;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -138,8 +138,8 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline;
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline =
+    final VersionedIntervalTimeline<String, DataSegment> timeline;
+    final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
         segmentManager.getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
 
     if (maybeTimeline.isPresent()) {
@@ -180,7 +180,7 @@ public class ServerManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
     final ExecutionVertex ev = ExecutionVertex.of(query);
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline =
+    final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
         segmentManager.getTimeline(ev.getBaseTableDataSource());
     if (maybeTimeline.isEmpty()) {
       return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
@@ -188,48 +188,42 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryRunnerFactory<T, Query<T>> factory = getQueryRunnerFactory(query);
     final QueryToolChest<T, Query<T>> toolChest = getQueryToolChest(query, factory);
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = maybeTimeline.get();
+    final VersionedIntervalTimeline<String, DataSegment> timeline = maybeTimeline.get();
 
     return new ResourceManagingQueryRunner<>(timeline, factory, toolChest, ev, specs);
   }
 
-  protected List<WeakSegmentReferenceProviderLoadAction> maybeLoadSegments(
-      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+  protected List<SegmentMapAction> mapSegments(
+      VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
+      SegmentMapFunction segmentMapFunction,
       Closer closer
   ) throws SegmentLoadingException
   {
-    List<WeakSegmentReferenceProviderLoadAction> loadActions = new ArrayList<>();
-    for (SegmentDescriptor descriptor : segments) {
-      final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
-          descriptor.getInterval(),
-          descriptor.getVersion(),
-          descriptor.getPartitionNumber()
-      );
+    final Iterable<DataSegmentAndDescriptor> segmentsToMap = FunctionalIterable
+        .create(segments)
+        .transform(
+            descriptor -> {
+              final PartitionChunk<DataSegment> chunk = timeline.findChunk(
+                  descriptor.getInterval(),
+                  descriptor.getVersion(),
+                  descriptor.getPartitionNumber()
+              );
 
-      boolean missing = true;
-      if (chunk != null) {
-        final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
-        // grab a temporary reference to ensure coordinator doesn't tell us to drop something while we are trying to
-        // lazy load
-        Optional<Segment> baseRef = referenceCounter.acquireReference();
-        if (baseRef.isPresent()) {
-          missing = false;
-          // we don't need this temporary reference for anything other than stabilizing the world during load - register
-          // it with the closer so that we release the reference when we are done loading
-          closer.register(baseRef.get());
-          loadActions.add(closer.register(referenceCounter.load(descriptor)));
-        }
-      }
-      if (missing) {
-        loadActions.add(WeakSegmentReferenceProviderLoadAction.missingSegment(descriptor));
-      }
-    }
-    return loadActions;
+              if (chunk != null) {
+                final DataSegment segment = chunk.getObject();
+                if (segment != null) {
+                  return new DataSegmentAndDescriptor(segment, descriptor);
+                }
+              }
+              return new DataSegmentAndDescriptor(null, descriptor);
+            }
+        );
+    return segmentManager.mapSegments(segmentsToMap, segmentMapFunction, closer);
   }
 
   protected List<SegmentReference> ensureLoadedAndAcquireAllSegments(
-      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
       final long timeout,
@@ -238,8 +232,8 @@ public class ServerManager implements QuerySegmentWalker
   {
     final Closer loadCloser = Closer.create();
     try {
-      final List<WeakSegmentReferenceProviderLoadAction> loaders = maybeLoadSegments(timeline, segments, loadCloser);
-      return loadSegmentReferences(loaders, segmentMapFn, timeout, closer);
+      final List<SegmentMapAction> loaders = mapSegments(timeline, segments, segmentMapFn, loadCloser);
+      return loadSegmentReferences(loaders, timeout, closer);
     }
     catch (InterruptedException | ExecutionException | TimeoutException | SegmentLoadingException e) {
       throw new RuntimeException(e);
@@ -261,7 +255,7 @@ public class ServerManager implements QuerySegmentWalker
    * the reference
    */
   protected List<SegmentReference> acquireAllSegments(
-      VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
       Closer closer
@@ -270,7 +264,7 @@ public class ServerManager implements QuerySegmentWalker
     // materialize to list to acquire all of the references
     List<SegmentReference> segmentReferences = new ArrayList<>();
     for (SegmentDescriptor descriptor : segments) {
-      final PartitionChunk<ReferenceCountedSegmentProvider> chunk = timeline.findChunk(
+      final PartitionChunk<DataSegment> chunk = timeline.findChunk(
           descriptor.getInterval(),
           descriptor.getVersion(),
           descriptor.getPartitionNumber()
@@ -278,11 +272,12 @@ public class ServerManager implements QuerySegmentWalker
       if (chunk == null) {
         segmentReferences.add(new SegmentReference(descriptor, Optional.empty()));
       } else {
-        final ReferenceCountedSegmentProvider referenceCounter = chunk.getObject();
+        final DataSegment dataSegment = chunk.getObject();
+
         segmentReferences.add(
             new SegmentReference(
                 descriptor,
-                segmentMapFn.apply(referenceCounter).map(closer::register)
+                segmentManager.mapSegment(dataSegment, segmentMapFn).map(closer::register)
             )
         );
       }
@@ -291,7 +286,7 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Iterable<SegmentDescriptor> specs,
       final Query<T> query,
       final QueryRunnerFactory<T, Query<T>> factory,
@@ -433,28 +428,21 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   public static List<SegmentReference> loadSegmentReferences(
-      List<WeakSegmentReferenceProviderLoadAction> loaders,
-      SegmentMapFunction segmentMapFn,
+      List<SegmentMapAction> loaders,
       long timeout,
       Closer closer
   ) throws InterruptedException, ExecutionException, TimeoutException
   {
-    final Iterable<ListenableFuture<LeafSegmentReferenceProvider>> loadFutures =
-        () -> loaders.stream().map(WeakSegmentReferenceProviderLoadAction::getLoadFuture).iterator();
-    final List<LeafSegmentReferenceProvider> loadedProviders =
+    final Iterable<ListenableFuture<Optional<Segment>>> loadFutures =
+        () -> loaders.stream().map(SegmentMapAction::getSegmentFuture).iterator();
+    final List<Optional<Segment>> loadedProviders =
         Futures.allAsList(loadFutures).get(timeout, TimeUnit.MILLISECONDS);
 
     final List<SegmentReference> segmentReferences = new ArrayList<>();
     for (int i = 0; i < loaders.size(); i++) {
-      final WeakSegmentReferenceProviderLoadAction loader = loaders.get(i);
-      final LeafSegmentReferenceProvider loadResult = loadedProviders.get(i);
-      if (loadResult != null) {
-        segmentReferences.add(
-            new SegmentReference(loader.getDescriptor(), segmentMapFn.apply(loadResult).map(closer::register))
-        );
-      } else {
-        segmentReferences.add(new SegmentReference(loader.getDescriptor(), Optional.empty()));
-      }
+      segmentReferences.add(
+          new SegmentReference(loaders.get(i).getDescriptor(), loadedProviders.get(i).map(closer::register))
+      );
     }
     return segmentReferences;
   }
@@ -479,14 +467,14 @@ public class ServerManager implements QuerySegmentWalker
    */
   public final class ResourceManagingQueryRunner<T> implements QueryRunner<T>
   {
-    private final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline;
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
     private final QueryRunnerFactory<T, Query<T>> factory;
     private final QueryToolChest<T, Query<T>> toolChest;
     private final ExecutionVertex ev;
     private final Iterable<SegmentDescriptor> specs;
 
     public ResourceManagingQueryRunner(
-        VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+        VersionedIntervalTimeline<String, DataSegment> timeline,
         QueryRunnerFactory<T, Query<T>> factory,
         QueryToolChest<T, Query<T>> toolChest,
         ExecutionVertex ev,
@@ -546,32 +534,6 @@ public class ServerManager implements QuerySegmentWalker
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, closer);
       }
-    }
-  }
-
-  /**
-   * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
-   * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}.
-   */
-  public static final class SegmentReference
-  {
-    private final SegmentDescriptor segmentDescriptor;
-    private final Optional<Segment> segmentReference;
-
-    public SegmentReference(SegmentDescriptor segmentDescriptor, Optional<Segment> segmentReference)
-    {
-      this.segmentDescriptor = segmentDescriptor;
-      this.segmentReference = segmentReference;
-    }
-
-    public SegmentDescriptor getSegmentDescriptor()
-    {
-      return segmentDescriptor;
-    }
-
-    public Optional<Segment> getSegmentReference()
-    {
-      return segmentReference;
     }
   }
 }

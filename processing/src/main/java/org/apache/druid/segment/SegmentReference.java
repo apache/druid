@@ -20,13 +20,31 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 
-public interface LeafSegmentReferenceProvider extends ReferenceCountedObjectProvider<Segment>
+import java.util.Optional;
+
+/**
+ * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
+ * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}.
+ */
+public class SegmentReference
 {
-  default WeakSegmentReferenceProviderLoadAction load(SegmentDescriptor descriptor)
-      throws SegmentLoadingException
+  private final SegmentDescriptor segmentDescriptor;
+  private final Optional<Segment> segmentReference;
+
+  public SegmentReference(SegmentDescriptor segmentDescriptor, Optional<Segment> segmentReference)
   {
-    return WeakSegmentReferenceProviderLoadAction.alreadyLoaded(descriptor, this);
+    this.segmentDescriptor = segmentDescriptor;
+    this.segmentReference = segmentReference;
+  }
+
+  public SegmentDescriptor getSegmentDescriptor()
+  {
+    return segmentDescriptor;
+  }
+
+  public Optional<Segment> getSegmentReference()
+  {
+    return segmentReference;
   }
 }

@@ -85,7 +85,7 @@ public class DruidSegmentInputEntity implements InputEntity
       @Override
       public void close()
       {
-        segmentCacheManager.cleanup(segment);
+        segmentCacheManager.drop(segment);
       }
     };
   }

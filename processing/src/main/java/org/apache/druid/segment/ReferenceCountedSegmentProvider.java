@@ -20,12 +20,10 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -45,33 +43,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link org.apache.druid.timeline.TimelineLookup}.
  */
 public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
-    implements Overshadowable<ReferenceCountedSegmentProvider>, LeafSegmentReferenceProvider
+    implements ReferenceCountedObjectProvider<Segment>
 {
-  public static ReferenceCountedSegmentProvider wrapRootGenerationSegment(Segment baseSegment)
+  public static ReferenceCountedSegmentProvider of(Segment segment)
   {
-    int partitionNum = baseSegment.getId() == null ? 0 : baseSegment.getId().getPartitionNum();
-    return new ReferenceCountedSegmentProvider(
-        Preconditions.checkNotNull(baseSegment, "baseSegment"),
-        partitionNum,
-        partitionNum + 1,
-        (short) 0,
-        (short) 1
-    );
+    return new ReferenceCountedSegmentProvider(segment);
   }
 
-
-  public static ReferenceCountedSegmentProvider wrapSegment(
-      Segment baseSegment,
-      ShardSpec shardSpec
-  )
+  /**
+   * Make a wrapper for a {@link Segment} that does not close the underlying segment on close
+   */
+  public static Optional<Segment> unmanaged(Segment segment)
   {
-    return new ReferenceCountedSegmentProvider(
-        baseSegment,
-        shardSpec.getStartRootPartitionId(),
-        shardSpec.getEndRootPartitionId(),
-        shardSpec.getMinorVersion(),
-        shardSpec.getAtomicUpdateGroupSize()
-    );
+    return Optional.of(new UnmanagedReference(segment));
   }
 
   /**
@@ -85,18 +69,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     return () -> Optional.of(new UnmanagedReference(segment));
   }
 
-  private final short startRootPartitionId;
-  private final short endRootPartitionId;
-  private final short minorVersion;
-  private final short atomicUpdateGroupSize;
-
-  public ReferenceCountedSegmentProvider(
-      Segment baseSegment,
-      int startRootPartitionId,
-      int endRootPartitionId,
-      short minorVersion,
-      short atomicUpdateGroupSize
-  )
+  public ReferenceCountedSegmentProvider(Segment baseSegment)
   {
     super(baseSegment);
     // ReferenceCountingSegment should not wrap another reference, because the inner reference would effectively
@@ -107,10 +80,6 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
           baseSegment.getDebugString()
       );
     }
-    this.startRootPartitionId = (short) startRootPartitionId;
-    this.endRootPartitionId = (short) endRootPartitionId;
-    this.minorVersion = minorVersion;
-    this.atomicUpdateGroupSize = atomicUpdateGroupSize;
   }
 
   @Nullable
@@ -120,60 +89,10 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   }
 
   @Override
-  public boolean overshadows(ReferenceCountedSegmentProvider other)
-  {
-    if (baseObject.getId().getDataSource().equals(other.baseObject.getId().getDataSource())
-        && baseObject.getId().getInterval().overlaps(other.baseObject.getId().getInterval())) {
-      final int majorVersionCompare = baseObject.getId().getVersion().compareTo(other.baseObject.getId().getVersion());
-      if (majorVersionCompare > 0) {
-        return true;
-      } else if (majorVersionCompare == 0) {
-        return includeRootPartitions(other) && getMinorVersion() > other.getMinorVersion();
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public int getStartRootPartitionId()
-  {
-    return startRootPartitionId;
-  }
-
-  @Override
-  public int getEndRootPartitionId()
-  {
-    return endRootPartitionId;
-  }
-
-  @Override
-  public String getVersion()
-  {
-    return baseObject.getId().getVersion();
-  }
-
-  @Override
-  public short getMinorVersion()
-  {
-    return minorVersion;
-  }
-
-  @Override
-  public short getAtomicUpdateGroupSize()
-  {
-    return atomicUpdateGroupSize;
-  }
-
-  @Override
   public Optional<Segment> acquireReference()
   {
     final Optional<Closeable> reference = incrementReferenceAndDecrementOnceCloseable();
     return reference.map(ReferenceClosingSegment::new);
-  }
-
-  private boolean includeRootPartitions(ReferenceCountedSegmentProvider other)
-  {
-    return startRootPartitionId <= other.startRootPartitionId && endRootPartitionId >= other.endRootPartitionId;
   }
 
   /**

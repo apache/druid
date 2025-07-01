@@ -104,6 +104,8 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
@@ -1937,15 +1939,21 @@ public class CompactionTaskTest
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public ReferenceCountedSegmentProvider getSegment(DataSegment segment)
+      public boolean load(DataSegment segment)
       {
-        return ReferenceCountedSegmentProvider.wrapSegment(
-            new QueryableIndexSegment(indexIO.loadIndex(segments.get(segment)), segment.getId()), segment.getShardSpec()
+        return true;
+      }
+
+      @Override
+      public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+      {
+        return ReferenceCountedSegmentProvider.unmanaged(
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
         );
       }
 
       @Override
-      public void cleanup(DataSegment segment)
+      public void drop(DataSegment segment)
       {
         // Do nothing.
       }

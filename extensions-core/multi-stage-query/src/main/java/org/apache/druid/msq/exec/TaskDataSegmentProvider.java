@@ -30,8 +30,8 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
@@ -116,11 +116,15 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 
     final Closer closer = Closer.create();
     try {
-      final ReferenceCountedSegmentProvider segmentProvider = closer.register(segmentCacheManager.getSegment(dataSegment));
-      closer.register(() -> segmentCacheManager.cleanup(dataSegment));
+      if (!segmentCacheManager.load(dataSegment)) {
+        throw new SegmentLoadingException("Failed to load segment[%s]", dataSegment.getId());
+      }
 
-      // we control the closer, so no need to acquire references here
-      final Segment segment = segmentProvider.getBaseSegment();
+      final Segment segment = segmentCacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY)
+                                                 .map(closer::register)
+                                                 .orElseThrow();
+      closer.register(() -> segmentCacheManager.drop(dataSegment));
+
       final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
       final int numRows = inspector == null ? 0 : inspector.getNumRows();
       final long size = dataSegment.getSize();

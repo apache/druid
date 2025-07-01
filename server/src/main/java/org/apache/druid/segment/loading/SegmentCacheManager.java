@@ -19,13 +19,18 @@
 
 package org.apache.druid.segment.loading;
 
+import io.github.resilience4j.core.lang.Nullable;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A class to fetch segment files from deep storage to local disk and manage the local cache. Implementations must be
@@ -53,48 +58,62 @@ public interface SegmentCacheManager
   /**
    * Remove the segment info file for the supplied segment from disk. If the file cannot be deleted, do nothing.
    *
-   * @see SegmentCacheManager#cleanup(DataSegment)
+   * @see SegmentCacheManager#drop(DataSegment)
    */
   void removeInfoFile(DataSegment segment);
 
+
   /**
    * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a
-   * {@link org.apache.druid.segment.Segment} from deep storage, this method returns a
+   * {@link Segment} from deep storage, this method returns a
    * {@link ReferenceCountedSegmentProvider}, which manages the lifecycle for the
-   * {@link org.apache.druid.segment.Segment}, allowing callers to check out reference, perform actions
+   * {@link Segment}, allowing callers to check out reference, perform actions
    * using the segment and release the reference when done, ensuring that storage management cannot drop it while in
    * use.
    *
    * @param segment Segment to get on each download (after service bootstrap)
    * @throws SegmentLoadingException If there is an error in loading the segment
-   * @see SegmentCacheManager#getBootstrapSegment(DataSegment, SegmentLazyLoadFailCallback)
+   * @see SegmentCacheManager#bootstrap(DataSegment, SegmentLazyLoadFailCallback)
    */
-  ReferenceCountedSegmentProvider getSegment(DataSegment segment) throws SegmentLoadingException;
+  boolean load(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountedSegmentProvider} during
+   * Similar to {@link #load(DataSegment)}, this method returns a {@link ReferenceCountedSegmentProvider} during
    * startup on data nodes.
    *
-   * @param segment Segment to retrieve during service bootstrap
+   * @param segment    Segment to retrieve during service bootstrap
    * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
    *                   {@code lazyLoadOnStart} is enabled
    * @throws SegmentLoadingException - If there is an error in loading the segment
-   * @see SegmentCacheManager#getSegment(DataSegment)
+   * @see SegmentCacheManager#load(DataSegment)
    */
-  ReferenceCountedSegmentProvider getBootstrapSegment(
-      DataSegment segment,
-      SegmentLazyLoadFailCallback loadFailed
-  ) throws SegmentLoadingException;
+  boolean bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 
   /**
-   * Alternative to {@link #getSegment(DataSegment)}, to return the {@link File} location of the segment files instead
-   * of a {@link ReferenceCountedSegmentProvider}.
+   * Cleanup the segment files cache space used by the segment, releasing the {@link StorageLocation} reservation
    *
+   * @see SegmentCacheManager#removeInfoFile(DataSegment)
+   */
+  void drop(DataSegment segment);
+
+  SegmentMapAction mapSegment(
+      DataSegment dataSegment,
+      SegmentDescriptor descriptor,
+      SegmentMapFunction segmentMapFunction
+  ) throws SegmentLoadingException;
+
+  Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction);
+
+  /**
+   * Alternative to {@link #load(DataSegment)}, to return the {@link File} location of the segment files instead
+   * of a {@link ReferenceCountedSegmentProvider}.
+   * <p>
    * todo (clint): should this just be moved to a different interface now that is only used in production in a single
    *  place? (druid segment input entity for ingest)
    *
    * @throws SegmentLoadingException if there is an error in downloading files
    */
+  @Nullable
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
 
   /**
@@ -102,11 +121,4 @@ public interface SegmentCacheManager
    * segments.
    */
   void shutdownBootstrap();
-
-  /**
-   * Cleanup the segment files cache space used by the segment, releasing the {@link StorageLocation} reservation
-   *
-   * @see SegmentCacheManager#removeInfoFile(DataSegment)
-   */
-  void cleanup(DataSegment segment);
 }

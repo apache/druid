@@ -113,7 +113,7 @@ public class SegmentLocalCacheManagerConcurrencyTest
   }
 
   @Test
-  public void testGetSegment() throws IOException, ExecutionException, InterruptedException
+  public void testMapSegment() throws IOException, ExecutionException, InterruptedException
   {
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     final List<DataSegment> segmentsToLoad = new ArrayList<>(4);

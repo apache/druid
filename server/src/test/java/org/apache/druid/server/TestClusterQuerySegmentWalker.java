@@ -52,6 +52,7 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -76,7 +77,8 @@ import java.util.Set;
  */
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
-  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines;
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines;
+  private final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
@@ -84,7 +86,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   public static class TestSegmentsBroker
   {
-    public final Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines = new HashMap<>();
+    public final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    public final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders = new HashMap<>();
   }
 
   @Inject
@@ -94,16 +97,19 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       @Nullable QueryScheduler scheduler,
       EtagProvider etagProvider)
   {
-    this(testSegmentsBroker.timelines, conglomerate, scheduler, etagProvider);
+    this(testSegmentsBroker.timelines, testSegmentsBroker.referenceProviders, conglomerate, scheduler, etagProvider);
   }
 
   TestClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines,
+      Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      EtagProvider etagProvider)
+      EtagProvider etagProvider
+  )
   {
     this.timelines = timelines;
+    this.referenceProviders = referenceProviders;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
     this.etagProvider = etagProvider;
@@ -247,8 +253,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                           .transform(
                               segment ->
                                   new SpecificSegmentQueryRunner<>(
-                                      factory.createRunner(closer.register(segmentMapFn.apply(segment.getSegment())
-                                                                                       .orElseThrow())),
+                                      factory.createRunner(
+                                          closer.register(
+                                              segmentMapFn.apply(referenceProviders.get(segment.getSegment()).acquireReference())
+                                                          .orElseThrow()
+                                          )
+                                      ),
                                       new SpecificSegmentSpec(segment.getDescriptor())
                                   )
                           )
@@ -268,15 +278,15 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private List<WindowedSegment> getSegmentsForTable(final String dataSource, final Interval interval)
   {
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = timelines.get(dataSource);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource);
 
     if (timeline == null) {
       return Collections.emptyList();
     } else {
       final List<WindowedSegment> retVal = new ArrayList<>();
 
-      for (TimelineObjectHolder<String, ReferenceCountedSegmentProvider> holder : timeline.lookup(interval)) {
-        for (PartitionChunk<ReferenceCountedSegmentProvider> chunk : holder.getObject()) {
+      for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(interval)) {
+        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
           retVal.add(new WindowedSegment(chunk.getObject(), holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()));
         }
       }
@@ -287,7 +297,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private List<WindowedSegment> getSegmentsForTable(final String dataSource, final Iterable<SegmentDescriptor> specs)
   {
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = timelines.get(dataSource);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource);
 
     if (timeline == null) {
       return Collections.emptyList();
@@ -295,7 +305,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       final List<WindowedSegment> retVal = new ArrayList<>();
 
       for (SegmentDescriptor spec : specs) {
-        final PartitionChunk<ReferenceCountedSegmentProvider> entry = timeline.findChunk(
+        final PartitionChunk<DataSegment> entry = timeline.findChunk(
             spec.getInterval(),
             spec.getVersion(),
             spec.getPartitionNumber()
@@ -309,18 +319,18 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private static class WindowedSegment
   {
-    private final ReferenceCountedSegmentProvider segment;
+    private final DataSegment segment;
     private final Interval interval;
     private final String version;
     private final int partitionNumber;
 
-    public WindowedSegment(ReferenceCountedSegmentProvider segment, Interval interval, String version, int partitionNumber)
+    public WindowedSegment(DataSegment segment, Interval interval, String version, int partitionNumber)
     {
-      if (segment.getBaseSegment().getId() != null) {
-        Preconditions.checkArgument(segment.getBaseSegment().getId().getInterval().contains(interval));
+      if (segment.getId() != null) {
+        Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
       } else {
         Preconditions.checkArgument(
-            segment.getBaseSegment().getDataInterval().contains(interval),
+            segment.getInterval().contains(interval),
             "Data interval for non-table segment should default to external"
         );
       }
@@ -330,7 +340,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       this.partitionNumber = partitionNumber;
     }
 
-    public ReferenceCountedSegmentProvider getSegment()
+    public DataSegment getSegment()
     {
       return segment;
     }

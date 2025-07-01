@@ -48,10 +48,9 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Optional;
@@ -133,7 +132,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
 
   @Override
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Iterable<SegmentDescriptor> specs,
       final Query<T> query,
       final QueryRunnerFactory<T, Query<T>> factory,

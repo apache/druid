@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.server.coordination;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
@@ -32,19 +32,22 @@ import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -119,9 +122,49 @@ public class SegmentManager
    * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
    * datasource of a single table.
    */
-  public Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> getTimeline(TableDataSource dataSource)
+  public Optional<VersionedIntervalTimeline<String, DataSegment>> getTimeline(TableDataSource dataSource)
   {
     return Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTimeline);
+  }
+
+  public Optional<Segment> mapSegment(
+      DataSegment dataSegment,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    return cacheManager.mapSegment(dataSegment, segmentMapFunction);
+  }
+
+  public SegmentMapAction mapSegment(
+      DataSegmentAndDescriptor segmentAndDescriptor,
+      SegmentMapFunction segmentMapFunction,
+      Closer loadCleanup
+  ) throws SegmentLoadingException
+  {
+    return loadCleanup.register(
+        cacheManager.mapSegment(
+            segmentAndDescriptor.getDataSegment(),
+            segmentAndDescriptor.getDescriptor(),
+            segmentMapFunction
+        )
+    );
+  }
+
+  public List<SegmentMapAction> mapSegments(
+      Iterable<DataSegmentAndDescriptor> segments,
+      SegmentMapFunction segmentMapFunction,
+      Closer loadCleanup
+  ) throws SegmentLoadingException
+  {
+    final List<SegmentMapAction> actions = new ArrayList<>();
+    for (DataSegmentAndDescriptor segmentAndDescriptor : segments) {
+      if (segmentAndDescriptor.getDataSegment() == null) {
+        actions.add(SegmentMapAction.missingSegment(segmentAndDescriptor.getDescriptor()));
+      } else {
+        actions.add(mapSegment(segmentAndDescriptor, segmentMapFunction, loadCleanup));
+      }
+    }
+    return actions;
   }
 
   /**
@@ -132,14 +175,14 @@ public class SegmentManager
   {
     return getTimeline(dataSource).map(timeline -> {
       // join doesn't currently consider intervals, so just consider all segments
-      final Stream<ReferenceCountedSegmentProvider> segments =
+      final Stream<DataSegment> segments =
           timeline.lookup(Intervals.ETERNITY)
                   .stream()
                   .flatMap(x -> StreamSupport.stream(x.getObject().payloads().spliterator(), false));
       ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tables =
           Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTablesLookup)
                   .orElseThrow(() -> new ISE("dataSource[%s] does not have IndexedTables", dataSource.getName()));
-      return segments.map(segment -> tables.get(segment.getBaseSegment().getId())).filter(Objects::nonNull);
+      return segments.map(segment -> tables.get(segment.getId())).filter(Objects::nonNull);
     });
   }
 
@@ -169,19 +212,18 @@ public class SegmentManager
   {
     final ReferenceCountedSegmentProvider segment;
     try {
-      segment = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
-      if (segment == null) {
+      if (!cacheManager.bootstrap(dataSegment, loadFailed)) {
         throw new SegmentLoadingException(
-            "No segment adapter found for bootstrap segment[%s] with loadSpec[%s].",
+            "Unable to bootstrap segment[%s] with loadSpec[%s].",
             dataSegment.getId(), dataSegment.getLoadSpec()
         );
       }
     }
     catch (SegmentLoadingException e) {
-      cacheManager.cleanup(dataSegment);
+      cacheManager.drop(dataSegment);
       throw e;
     }
-    loadSegmentInternal(dataSegment, segment);
+    loadSegmentInternal(dataSegment);
   }
 
 
@@ -200,24 +242,22 @@ public class SegmentManager
   {
     final ReferenceCountedSegmentProvider segment;
     try {
-      segment = cacheManager.getSegment(dataSegment);
-      if (segment == null) {
+      if (!cacheManager.load(dataSegment)) {
         throw new SegmentLoadingException(
-            "No segment adapter found for segment[%s] with loadSpec[%s].",
+            "Unable to load segment[%s] with loadSpec[%s].",
             dataSegment.getId(), dataSegment.getLoadSpec()
         );
       }
     }
     catch (SegmentLoadingException e) {
-      cacheManager.cleanup(dataSegment);
+      cacheManager.drop(dataSegment);
       throw e;
     }
-    loadSegmentInternal(dataSegment, segment);
+    loadSegmentInternal(dataSegment);
   }
 
   private void loadSegmentInternal(
-      final DataSegment dataSegment,
-      final ReferenceCountedSegmentProvider segment
+      final DataSegment dataSegment
   ) throws IOException
   {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
@@ -227,40 +267,53 @@ public class SegmentManager
         dataSegment.getDataSource(),
         (k, v) -> {
           final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
-          final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> loadedIntervals =
+          final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
-          final PartitionChunk<ReferenceCountedSegmentProvider> entry = loadedIntervals.findChunk(
+          final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
               dataSegment.getInterval(),
               dataSegment.getVersion(),
               dataSegment.getShardSpec().getPartitionNum()
           );
 
           if (entry != null) {
-            log.warn("Told to load an adapter for segment[%s] that already exists", dataSegment.getId());
+            log.warn("Told to load segment[%s] that already exists", dataSegment.getId());
             resultSupplier.set(false);
           } else {
-            final Segment baseSegment = segment.getBaseSegment();
-            final IndexedTable table = baseSegment.as(IndexedTable.class);
-            if (table != null) {
-              if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
-                dataSourceState.tablesLookup.put(baseSegment.getId(), new ReferenceCountedIndexedTableProvider(table));
-              } else {
-                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", baseSegment.getId());
-              }
-            } else if (dataSourceState.tablesLookup.size() > 0) {
-              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", baseSegment.getId());
-            }
+
             loadedIntervals.add(
                 dataSegment.getInterval(),
                 dataSegment.getVersion(),
-                dataSegment.getShardSpec().createChunk(segment)
+                dataSegment.getShardSpec().createChunk(dataSegment)
             );
-            final PhysicalSegmentInspector countInspector = baseSegment.as(PhysicalSegmentInspector.class);
-            final long numOfRows;
-            if (dataSegment.isTombstone() || countInspector == null) {
-              numOfRows = 0;
-            } else {
-              numOfRows = countInspector.getNumRows();
+
+            long numOfRows = 0;
+            final Optional<Segment> loadedSegment = cacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY);
+            if (loadedSegment.isPresent()) {
+              final Segment segment = loadedSegment.get();
+              final IndexedTable table = segment.as(IndexedTable.class);
+              if (table != null) {
+                if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
+                  dataSourceState.tablesLookup.put(
+                      segment.getId(),
+                      new ReferenceCountedIndexedTableProvider(table)
+                  );
+                } else {
+                  log.error(
+                      "Cannot load segment[%s] with IndexedTable, no existing segments are joinable",
+                      segment.getId()
+                  );
+                }
+              } else if (!dataSourceState.tablesLookup.isEmpty()) {
+                log.error(
+                    "Cannot load segment[%s] without IndexedTable, all existing segments are joinable",
+                    segment.getId()
+                );
+              }
+              final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+              if (countInspector != null) {
+                numOfRows = countInspector.getNumRows();
+              }
+              CloseableUtils.closeAndWrapExceptions(segment);
             }
             dataSourceState.addSegment(dataSegment, numOfRows);
             resultSupplier.set(true);
@@ -275,9 +328,9 @@ public class SegmentManager
     }
   }
 
-  public void dropSegment(final DataSegment segment)
+  public void dropSegment(final DataSegment dataSegment)
   {
-    final String dataSource = segment.getDataSource();
+    final String dataSource = dataSegment.getDataSource();
 
     // compute() is used to ensure that the operation for a data source is executed atomically
     dataSources.compute(
@@ -287,33 +340,34 @@ public class SegmentManager
             log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
             return null;
           } else {
-            final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> loadedIntervals =
+            final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
                 dataSourceState.getTimeline();
 
-            final ShardSpec shardSpec = segment.getShardSpec();
-            final PartitionChunk<ReferenceCountedSegmentProvider> removed = loadedIntervals.remove(
-                segment.getInterval(),
-                segment.getVersion(),
+            final PartitionChunk<DataSegment> removed = loadedIntervals.remove(
+                dataSegment.getInterval(),
+                dataSegment.getVersion(),
                 // remove() internally searches for a partitionChunk to remove which is *equal* to the given
                 // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
-                segment.getShardSpec().createChunk(ReferenceCountedSegmentProvider.wrapSegment(null, shardSpec))
+                dataSegment.getShardSpec().createChunk(dataSegment)
             );
-            final ReferenceCountedSegmentProvider oldSegmentRef = (removed == null) ? null : removed.getObject();
+            final DataSegment oldSegmentRef = (removed == null) ? null : removed.getObject();
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final PhysicalSegmentInspector countInspector = oldSegmentRef.getBaseSegment().as(PhysicalSegmentInspector.class);
-                final long numOfRows;
-                if (segment.isTombstone() || countInspector == null) {
-                  numOfRows = 0;
-                } else {
-                  numOfRows = countInspector.getNumRows();
-                }
-                dataSourceState.removeSegment(segment, numOfRows);
+                final Optional<Segment> oldSegment = cacheManager.mapSegment(oldSegmentRef, SegmentMapFunction.IDENTITY);
+                long numberOfRows = oldSegment.map(segment -> {
+                  final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+                  if (countInspector != null) {
+                    return countInspector.getNumRows();
+                  }
+                  CloseableUtils.closeAndWrapExceptions(segment);
+                  return 0;
+                }).orElse(0);
 
-                closer.register(oldSegmentRef);
-                log.info("Attempting to close segment[%s]", segment.getId());
-                final ReferenceCountedIndexedTableProvider oldTable = dataSourceState.tablesLookup.remove(segment.getId());
+                dataSourceState.removeSegment(dataSegment, numberOfRows);
+
+                log.info("Attempting to close segment[%s]", dataSegment.getId());
+                final ReferenceCountedIndexedTableProvider oldTable = dataSourceState.tablesLookup.remove(dataSegment.getId());
                 if (oldTable != null) {
                   closer.register(oldTable);
                 }
@@ -325,8 +379,8 @@ public class SegmentManager
               log.info(
                   "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
                   dataSourceName,
-                  segment.getInterval(),
-                  segment.getVersion()
+                  dataSegment.getInterval(),
+                  dataSegment.getVersion()
               );
             }
 
@@ -336,8 +390,8 @@ public class SegmentManager
         }
     );
 
-    cacheManager.removeInfoFile(segment);
-    cacheManager.cleanup(segment);
+    cacheManager.removeInfoFile(dataSegment);
+    cacheManager.drop(dataSegment);
   }
 
   /**
@@ -372,7 +426,7 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
+    private final VersionedIntervalTimeline<String, DataSegment> timeline =
         new VersionedIntervalTimeline<>(Ordering.natural());
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
@@ -405,7 +459,7 @@ public class SegmentManager
       }
     }
 
-    public VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> getTimeline()
+    public VersionedIntervalTimeline<String, DataSegment> getTimeline()
     {
       return timeline;
     }

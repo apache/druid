@@ -938,7 +938,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
           }
 
           @Override
-          public void cleanup(DataSegment segment)
+          public void drop(DataSegment segment)
           {
             segmentDirectory.delete();
           }

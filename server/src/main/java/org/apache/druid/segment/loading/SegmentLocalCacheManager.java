@@ -32,27 +32,18 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
-import org.apache.druid.segment.RowAdapters;
-import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.WeakSegmentReferenceProviderLoadAction;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,10 +53,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  *
@@ -82,16 +76,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final List<StorageLocation> locations;
 
-  // This directoryWriteRemoveLock is used when creating or removing a directory
-  private final Object directoryWriteRemoveLock = new Object();
+  private final ReadWriteLock directoryWriteRemoveLock = new ReentrantReadWriteLock();
+
 
   /**
    * A map between segment and referenceCountingLocks.
    *
-   * These locks should be acquired whenever getting or deleting files for a segment through a {@link SegmentCacheEntry}.
+   * These locks should be acquired whenever getting or deleting files for a segment.
    * If different threads try to get or delete files simultaneously, one of them creates a lock first using
-   * {@link SegmentCacheEntry#lock()}. And then, all threads compete with each other to get the lock.
-   * Finally, the lock should be released using {@link SegmentCacheEntry#unlock}.
+   * {@link #lock(DataSegment)}. And then, all threads compete with each other to get the lock.
+   * Finally, the lock should be released using {@link #unlock(DataSegment, ReferenceCountingLock)}.
    *
    * An example usage is:
    *
@@ -106,6 +100,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *   }
    * }
    */
+
   private final ConcurrentHashMap<DataSegment, ReferenceCountingLock> segmentLocks = new ConcurrentHashMap<>();
 
   private final StorageLocationSelectorStrategy strategy;
@@ -203,7 +198,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-
         boolean removeInfo = false;
         if (!segment.getId().toString().equals(file.getName())) {
           log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
@@ -278,49 +272,131 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
   {
-    if (config.isVirtualStorageFabric()) {
-      return new WeakReferenceCountedSegmentProvider(dataSegment);
-    } else {
-      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
-      final ReferenceCountingLock lock = cacheEntry.lock();
-      synchronized (lock) {
-        try {
-          final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, SegmentLazyLoadFailCallback.NOOP);
-          if (loadOnDownloadExec != null) {
-            loadOnDownloadExec.submit(entry::loadIntoPageCache);
+    final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
+    for (StorageLocation location : locations) {
+      if (location.isReserved(cacheEntryIdentifier)) {
+        SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
+        return segmentMapFunction.apply(cacheEntry.referenceProvider.acquireReference());
+      }
+    }
+    return segmentMapFunction.apply(Optional.empty());
+  }
+
+  @Override
+  public SegmentMapAction mapSegment(
+      DataSegment dataSegment,
+      SegmentDescriptor descriptor,
+      SegmentMapFunction segmentMapFunction
+  ) throws SegmentLoadingException
+  {
+
+    final ReferenceCountingLock lock = lock(dataSegment);
+    final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
+
+    final Closeable cleanup = () -> {
+      // todo (clint): this can be better probably?
+      for (StorageLocation location : locations) {
+        location.finishWeakReservationHold(Collections.singletonList(identifier));
+      }
+    };
+
+    synchronized (lock) {
+      try {
+        for (StorageLocation location : locations) {
+          final SegmentCacheEntry entry = location.addWeakReservationIfExists(identifier);
+          if (entry != null && entry.referenceProvider != null) {
+            return new SegmentMapAction(
+                descriptor,
+                () -> Futures.immediateFuture(segmentMapFunction.apply(entry.referenceProvider.acquireReference())),
+                cleanup
+            );
           }
-          return entry.referenceProvider;
         }
-        finally {
-          cacheEntry.unlock(lock);
+        final Iterator<StorageLocation> iterator = strategy.getLocations();
+        while (iterator.hasNext()) {
+          StorageLocation location = iterator.next();
+          final SegmentCacheEntry entry = location.addWeakReservation(
+              identifier,
+              () -> new SegmentCacheEntry(dataSegment)
+          );
+          if (entry != null) {
+            return new SegmentMapAction(
+                descriptor,
+                () -> SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
+                    () -> {
+                      final ReferenceCountingLock threadLock = lock(dataSegment);
+                      synchronized (threadLock) {
+                        try {
+                          entry.mount(location.getPath());
+                          return segmentMapFunction.apply(entry.referenceProvider.acquireReference());
+                        }
+                        finally {
+                          unlock(dataSegment, threadLock);
+                        }
+                      }
+                    }
+                ),
+                cleanup
+            );
+          }
         }
+        throw new SegmentLoadingException(
+            "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
+            dataSegment.getId()
+        );
+      }
+      finally {
+        unlock(dataSegment, lock);
       }
     }
   }
 
   @Override
-  public ReferenceCountedSegmentProvider getBootstrapSegment(
+  public boolean load(final DataSegment dataSegment) throws SegmentLoadingException
+  {
+    if (config.isVirtualStorageFabric()) {
+      // no-op, we'll do a load when someone asks for the segment
+      return true;
+    }
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
+    final ReferenceCountingLock lock = lock(dataSegment);
+    synchronized (lock) {
+      try {
+        final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, SegmentLazyLoadFailCallback.NOOP);
+        if (loadOnDownloadExec != null) {
+          loadOnDownloadExec.submit(entry::loadIntoPageCache);
+        }
+        return true;
+      }
+      finally {
+        unlock(dataSegment, lock);
+      }
+    }
+  }
+
+  @Override
+  public boolean bootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorageFabric()) {
-      return new WeakReferenceCountedSegmentProvider(dataSegment);
+      return true;
     } else {
       SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
-      final ReferenceCountingLock lock = cacheEntry.lock();
+      final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
         try {
           final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, loadFailed);
           if (loadOnBootstrapExec != null) {
             loadOnBootstrapExec.submit(entry::loadIntoPageCache);
           }
-          return entry.referenceProvider;
+          return true;
         }
         finally {
-          cacheEntry.unlock(lock);
+          unlock(dataSegment, lock);
         }
       }
     }
@@ -337,14 +413,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-    final ReferenceCountingLock lock = cacheEntry.lock();
+    // todo (clint): this method should no longer mount, only return files that exist
+    final ReferenceCountingLock lock = lock(segment);
     synchronized (lock) {
       try {
         final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, SegmentLazyLoadFailCallback.NOOP);
         return entry.storageDir;
       }
       finally {
-        cacheEntry.unlock(lock);
+        unlock(segment, lock);
       }
     }
   }
@@ -380,10 +457,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void cleanup(DataSegment segment)
+  public void drop(DataSegment segment)
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-    final ReferenceCountingLock lock = cacheEntry.lock();
+    final ReferenceCountingLock lock = lock(segment);
     synchronized (lock) {
       try {
         // always unmount on cleanup to unmap the segment
@@ -399,7 +476,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
       }
       finally {
-        cacheEntry.unlock(lock);
+        unlock(segment, lock);
       }
     }
   }
@@ -439,6 +516,44 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return false;
   }
 
+  public ReferenceCountingLock lock(DataSegment dataSegment)
+  {
+    return segmentLocks.compute(
+        dataSegment,
+        (segment, lock) -> {
+          final ReferenceCountingLock nonNullLock;
+          if (lock == null) {
+            nonNullLock = new ReferenceCountingLock();
+          } else {
+            nonNullLock = lock;
+          }
+          nonNullLock.increment();
+          return nonNullLock;
+        }
+    );
+  }
+
+  private void unlock(DataSegment dataSegment, ReferenceCountingLock lock)
+  {
+    segmentLocks.compute(
+        dataSegment,
+        (segment, existingLock) -> {
+          if (existingLock == null) {
+            throw new ISE("Lock has already been removed");
+          } else if (existingLock != lock) {
+            throw new ISE("Different lock instance");
+          } else {
+            if (existingLock.numReferences == 1) {
+              return null;
+            } else {
+              existingLock.decrement();
+              return existingLock;
+            }
+          }
+        }
+    );
+  }
+
   private SegmentCacheEntry assignLocationAndMount(
       SegmentCacheEntry cacheEntry,
       SegmentLazyLoadFailCallback segmentLoadFailCallback
@@ -447,7 +562,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     try {
       for (StorageLocation location : locations) {
         if (cacheEntry.checkExists(location.getPath())) {
-          if (location.isReserved(cacheEntry) || location.reserve(cacheEntry)) {
+          if (location.isReserved(cacheEntry.id) || location.reserve(cacheEntry)) {
             final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
             entry.lazyLoadCallback = segmentLoadFailCallback;
             entry.mount(location.getPath());
@@ -485,7 +600,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return;
     }
 
-    synchronized (directoryWriteRemoveLock) {
+    directoryWriteRemoveLock.writeLock().lock();
+    try {
       log.info("Deleting directory[%s]", cacheFile);
       try {
         FileUtils.deleteDirectory(cacheFile);
@@ -501,6 +617,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           cleanupCacheFiles(baseFile, parent);
         }
       }
+    }
+    finally {
+      directoryWriteRemoveLock.writeLock().unlock();
     }
   }
 
@@ -553,7 +672,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private File locationRoot;
     private File storageDir;
     private ReferenceCountedSegmentProvider referenceProvider;
-    private boolean map = true;
 
     private SegmentCacheEntry(DataSegment dataSegment)
     {
@@ -614,14 +732,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (needsLoad) {
           loadInLocationWithStartMarker(dataSegment, storageDir);
         }
-        if (map) {
-          final SegmentizerFactory factory = getSegmentFactory(storageDir);
+        final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
-          final Segment segment = factory.factorize(dataSegment, storageDir, false, lazyLoadCallback);
-          // wipe load callback after calling
-          lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
-          referenceProvider = ReferenceCountedSegmentProvider.wrapSegment(segment, dataSegment.getShardSpec());
-        }
+        final Segment segment = factory.factorize(dataSegment, storageDir, false, lazyLoadCallback);
+        // wipe load callback after calling
+        lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
+        referenceProvider = ReferenceCountedSegmentProvider.of(segment);
       }
       catch (SegmentLoadingException e) {
         try {
@@ -658,64 +774,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    public ReferenceCountingLock lock()
-    {
-      return segmentLocks.compute(
-          dataSegment,
-          (segment, lock) -> {
-            final ReferenceCountingLock nonNullLock;
-            if (lock == null) {
-              nonNullLock = new ReferenceCountingLock();
-            } else {
-              nonNullLock = lock;
-            }
-            nonNullLock.increment();
-            return nonNullLock;
-          }
-      );
-    }
-
-    public void unlock(ReferenceCountingLock lock)
-    {
-      segmentLocks.compute(
-          dataSegment,
-          (segment, existingLock) -> {
-            if (existingLock == null) {
-              throw new ISE("Lock has already been removed");
-            } else if (existingLock != lock) {
-              throw new ISE("Different lock instance");
-            } else {
-              if (existingLock.numReferences == 1) {
-                return null;
-              } else {
-                existingLock.decrement();
-                return existingLock;
-              }
-            }
-          }
-      );
-    }
-
     public void loadIntoPageCache()
     {
-      final ReferenceCountingLock lock = lock();
-      synchronized (lock) {
-        try {
-          final File[] children = storageDir.listFiles();
-          if (children != null) {
-            for (File child : children) {
-              try (InputStream in = Files.newInputStream(child.toPath())) {
-                IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
-                log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
-              }
-              catch (Exception e) {
-                log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
-              }
-            }
+      final File[] children = storageDir.listFiles();
+      if (children != null) {
+        for (File child : children) {
+          try (InputStream in = Files.newInputStream(child.toPath())) {
+            IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
+            log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
           }
-        }
-        finally {
-          unlock(lock);
+          catch (Exception e) {
+            log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
+          }
         }
       }
     }
@@ -725,22 +795,24 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
       // the parent directories of the segment are removed
       final File downloadStartMarker = new File(storageDir, DOWNLOAD_START_MARKER_FILE_NAME);
-      synchronized (directoryWriteRemoveLock) {
-        try {
-          FileUtils.mkdirp(storageDir);
+      directoryWriteRemoveLock.readLock().lock();
+      try {
+        FileUtils.mkdirp(storageDir);
 
-          if (!downloadStartMarker.createNewFile()) {
-            throw new SegmentLoadingException("Was not able to create new download marker for [%s]", storageDir);
-          }
+        if (!downloadStartMarker.createNewFile()) {
+          throw new SegmentLoadingException("Was not able to create new download marker for [%s]", storageDir);
         }
-        catch (IOException e) {
-          throw new SegmentLoadingException(e, "Unable to create marker file for [%s]", storageDir);
+        loadInLocation(segment, storageDir);
+
+        if (!downloadStartMarker.delete()) {
+          throw new SegmentLoadingException("Unable to remove marker file for [%s]", storageDir);
         }
       }
-      loadInLocation(segment, storageDir);
-
-      if (!downloadStartMarker.delete()) {
-        throw new SegmentLoadingException("Unable to remove marker file for [%s]", storageDir);
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "Unable to create marker file for [%s]", storageDir);
+      }
+      finally {
+        directoryWriteRemoveLock.readLock().unlock();
       }
     }
 
@@ -795,174 +867,4 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private static class WeakReferencePlaceholderSegment implements Segment
-  {
-    private final DataSegment dataSegment;
-
-    private WeakReferencePlaceholderSegment(DataSegment dataSegment)
-    {
-      this.dataSegment = dataSegment;
-    }
-
-    @Nullable
-    @Override
-    public SegmentId getId()
-    {
-      return dataSegment.getId();
-    }
-
-    @Override
-    public Interval getDataInterval()
-    {
-      return dataSegment.getInterval();
-    }
-
-    @Nullable
-    @Override
-    public <T> T as(@Nonnull Class<T> clazz)
-    {
-      // everything has to have a cursor factory or segment metadat gets sad...
-      if (CursorFactory.class.equals(clazz)) {
-        return (T) new RowBasedCursorFactory<>(Sequences.empty(), RowAdapters.standardRow(), RowSignature.empty());
-      } else if (PhysicalSegmentInspector.class.equals(clazz)) {
-        return (T) new PhysicalSegmentInspector()
-        {
-
-          @Nullable
-          @Override
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Metadata getMetadata()
-          {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Comparable getMinValue(String column)
-          {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Comparable getMaxValue(String column)
-          {
-            return null;
-          }
-
-          @Override
-          public int getDimensionCardinality(String column)
-          {
-            return 0;
-          }
-
-          @Override
-          public int getNumRows()
-          {
-            return 0;
-          }
-        };
-      }
-      return null;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      // close does nothing
-    }
-  }
-
-  private class WeakReferenceCountedSegmentProvider extends ReferenceCountedSegmentProvider
-  {
-    private final DataSegment dataSegment;
-
-    private WeakReferenceCountedSegmentProvider(DataSegment dataSegment)
-    {
-      super(
-          new WeakReferencePlaceholderSegment(dataSegment),
-          dataSegment.getStartRootPartitionId(),
-          dataSegment.getEndRootPartitionId(),
-          dataSegment.getMinorVersion(),
-          dataSegment.getAtomicUpdateGroupSize()
-      );
-      this.dataSegment = dataSegment;
-    }
-
-    @Nullable
-    @Override
-    public Segment getBaseSegment()
-    {
-      // todo (clint): hmm... ideally stuff should be calling ensureLoaded to get the loaded reference provider and real
-      //  segment and calling this should be an error, but segment metadata query for now purposely does not load
-      //  segments so as not to download everything when computing the SQL schema... so leave this for now?
-      return super.getBaseSegment();
-    }
-
-    @Override
-    public WeakSegmentReferenceProviderLoadAction load(SegmentDescriptor descriptor) throws SegmentLoadingException
-    {
-      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
-      final ReferenceCountingLock lock = cacheEntry.lock();
-      try {
-        for (StorageLocation location : locations) {
-          final SegmentCacheEntry entry = location.addWeakReservationIfExists(cacheEntry);
-          if (entry != null && entry.referenceProvider != null) {
-            return new WeakSegmentReferenceProviderLoadAction(
-                descriptor,
-                () -> Futures.immediateFuture(entry.referenceProvider),
-                this::cleanupLoad
-            );
-          }
-        }
-        final Iterator<StorageLocation> iterator = strategy.getLocations();
-        while (iterator.hasNext()) {
-          StorageLocation location = iterator.next();
-          final SegmentCacheEntry entry = location.addWeakReservation(cacheEntry);
-          if (entry != null) {
-            return new WeakSegmentReferenceProviderLoadAction(
-                descriptor,
-                () -> SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
-                    () -> {
-                      final ReferenceCountingLock threadLock = entry.lock();
-                      synchronized (threadLock) {
-                        try {
-                          entry.mount(location.getPath());
-                          return entry.referenceProvider;
-                        }
-                        finally {
-                          entry.unlock(threadLock);
-                        }
-                      }
-                    }
-                ),
-                this::cleanupLoad
-            );
-          }
-        }
-        throw new SegmentLoadingException(
-            "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
-            dataSegment.getId()
-        );
-      }
-      finally {
-        cacheEntry.unlock(lock);
-      }
-    }
-
-    private void cleanupLoad()
-    {
-      final SegmentCacheEntry toRelease = new SegmentCacheEntry(dataSegment);
-      // todo (clint): this can be better probably?
-      for (StorageLocation location : locations) {
-        location.finishWeakReservationHold(Collections.singletonList(toRelease));
-      }
-    }
-  }
 }

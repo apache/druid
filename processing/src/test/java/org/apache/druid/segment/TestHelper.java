@@ -43,7 +43,9 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -512,5 +514,16 @@ public class TestHelper
     catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static DataSegment toSimpleDataSegment(Segment segment, ShardSpec shardSpec)
+  {
+    return DataSegment.builder()
+                      .dataSource(segment.getId().getDataSource())
+                      .interval(segment.getId().getInterval())
+                      .version(segment.getId().getVersion())
+                      .shardSpec(shardSpec)
+                      .size(0)
+                      .build();
   }
 }

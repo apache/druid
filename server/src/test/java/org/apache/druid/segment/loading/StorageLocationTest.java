@@ -54,14 +54,14 @@ class StorageLocationTest
     location.reserveWeak(entry2);
     location.reserveWeak(entry3);
     location.reserveWeak(entry4);
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     location.reserveWeak(entry5);
-    Assertions.assertFalse(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry5));
+    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
   }
 
   @Test
@@ -77,18 +77,18 @@ class StorageLocationTest
     location.reserveWeak(entry2);
     location.reserveWeak(entry3);
     location.reserveWeak(entry4);
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     location.release(entry1);
     location.release(entry2);
     location.release(entry3);
     location.release(entry4);
-    Assertions.assertFalse(location.isWeakReserved(entry1));
-    Assertions.assertFalse(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -104,18 +104,18 @@ class StorageLocationTest
     location.reserveWeak(entry2);
     location.reserveWeak(entry3);
     location.reserveWeak(entry4);
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     location.release(entry4);
     location.release(entry3);
     location.release(entry2);
     location.release(entry1);
-    Assertions.assertFalse(location.isWeakReserved(entry1));
-    Assertions.assertFalse(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -136,20 +136,20 @@ class StorageLocationTest
     location.reserveWeak(entry2);
     location.reserveWeak(entry3);
     location.reserveWeak(entry4);
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     while (!entries.isEmpty()) {
       int toRemove = ThreadLocalRandom.current().nextInt(entries.size());
       CacheEntry entry = entries.get(toRemove);
       location.release(entry);
       entries.remove(toRemove);
     }
-    Assertions.assertFalse(location.isWeakReserved(entry1));
-    Assertions.assertFalse(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
+    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -165,54 +165,54 @@ class StorageLocationTest
     CacheEntry entry7 = new TestCacheEntry("7", 25);
     CacheEntry entry8 = new TestCacheEntry("8", 25);
 
-    Assertions.assertNotNull(location.addWeakReservation(entry1));
-    Assertions.assertNotNull(location.addWeakReservation(entry2));
+    Assertions.assertNotNull(location.addWeakReservation(entry1.getId(), () -> entry1));
+    Assertions.assertNotNull(location.addWeakReservation(entry2.getId(), () -> entry2));
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertTrue(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
 
-    Assertions.assertNotNull(location.addWeakReservation(entry5));
+    Assertions.assertNotNull(location.addWeakReservation(entry5.getId(), () -> entry5));
 
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertTrue(location.isWeakReserved(entry4));
-    Assertions.assertTrue(location.isWeakReserved(entry5));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
 
     Assertions.assertTrue(location.reserveWeak(entry6));
 
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
-    Assertions.assertTrue(location.isWeakReserved(entry5));
-    Assertions.assertTrue(location.isWeakReserved(entry6));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry6.getId()));
 
     Assertions.assertTrue(location.reserveWeak(entry7));
 
-    Assertions.assertTrue(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
-    Assertions.assertTrue(location.isWeakReserved(entry5));
-    Assertions.assertFalse(location.isWeakReserved(entry6));
-    Assertions.assertTrue(location.isWeakReserved(entry7));
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
-    location.finishWeakReservationHold(List.of(entry1, entry2, entry5));
+    location.finishWeakReservationHold(List.of(entry1.getId(), entry2.getId(), entry5.getId()));
     Assertions.assertTrue(location.reserveWeak(entry8));
 
-    Assertions.assertFalse(location.isWeakReserved(entry1));
-    Assertions.assertTrue(location.isWeakReserved(entry2));
-    Assertions.assertFalse(location.isWeakReserved(entry3));
-    Assertions.assertFalse(location.isWeakReserved(entry4));
-    Assertions.assertTrue(location.isWeakReserved(entry5));
-    Assertions.assertFalse(location.isWeakReserved(entry6));
-    Assertions.assertTrue(location.isWeakReserved(entry7));
-    Assertions.assertTrue(location.isWeakReserved(entry8));
+    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
+    Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry8.getId()));
   }
 
   @Test
@@ -292,13 +292,13 @@ class StorageLocationTest
     Assertions.assertTrue(loc.reserve(entry1));
 
     Assertions.assertEquals(900L, loc.availableSizeBytes());
-    Assertions.assertTrue(loc.isReserved(entry1));
+    Assertions.assertTrue(loc.isReserved(entry1.getId()));
 
     Assertions.assertFalse(loc.reserve(entry2));
 
     Assertions.assertTrue(loc.release(entry1));
     Assertions.assertEquals(1000L, loc.availableSizeBytes());
-    Assertions.assertFalse(loc.isReserved(entry2));
+    Assertions.assertFalse(loc.isReserved(entry2.getId()));
 
     Assertions.assertFalse(loc.release(entry2));
   }

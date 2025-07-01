@@ -17,49 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.Segment;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.function.Supplier;
 
-/**
- * Wrapper type representing the act of ensuring that a {@link ReferenceCountedSegmentProvider} is present in the
- * segment cache and mapped, ready for processing.
- */
-public class WeakSegmentReferenceProviderLoadAction implements Closeable
+public class SegmentMapAction implements Closeable
 {
   private static final Closeable NOOP = () -> {};
 
-  public static WeakSegmentReferenceProviderLoadAction alreadyLoaded(
+  public static SegmentMapAction alreadyLoaded(
       final SegmentDescriptor descriptor,
-      final LeafSegmentReferenceProvider provider
+      final Optional<Segment> segment
   )
   {
-    return new WeakSegmentReferenceProviderLoadAction(descriptor, () -> Futures.immediateFuture(provider), NOOP);
+    return new SegmentMapAction(descriptor, () -> Futures.immediateFuture(segment), NOOP);
   }
 
-  public static WeakSegmentReferenceProviderLoadAction missingSegment(final SegmentDescriptor descriptor)
+  public static SegmentMapAction missingSegment(final SegmentDescriptor descriptor)
   {
-    return new WeakSegmentReferenceProviderLoadAction(descriptor, () -> Futures.immediateFuture(null), NOOP);
+    return new SegmentMapAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP);
   }
 
   private final SegmentDescriptor segmentDescriptor;
-  private final Supplier<ListenableFuture<LeafSegmentReferenceProvider>> loadFuture;
+  private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
   private final Closeable loadCleanup;
 
-  public WeakSegmentReferenceProviderLoadAction(
+  public SegmentMapAction(
       SegmentDescriptor segmentDescriptor,
-      Supplier<ListenableFuture<LeafSegmentReferenceProvider>> loadFuture,
+      Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
       Closeable loadCleanup
   )
   {
     this.segmentDescriptor = segmentDescriptor;
-    this.loadFuture = loadFuture;
+    this.segmentFutureSupplier = segmentFutureSupplier;
     this.loadCleanup = loadCleanup;
   }
 
@@ -68,9 +66,9 @@ public class WeakSegmentReferenceProviderLoadAction implements Closeable
     return segmentDescriptor;
   }
 
-  public ListenableFuture<LeafSegmentReferenceProvider> getLoadFuture()
+  public ListenableFuture<Optional<Segment>> getSegmentFuture()
   {
-    return loadFuture.get();
+    return segmentFutureSupplier.get();
   }
 
   @Override
