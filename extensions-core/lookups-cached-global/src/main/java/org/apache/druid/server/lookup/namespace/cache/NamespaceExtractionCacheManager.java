@@ -21,8 +21,10 @@ package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -41,11 +43,14 @@ import java.util.function.Supplier;
  * cacheHandler.close();
  * }</pre>
  */
+
+@ManageLifecycle
 public abstract class NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
 
   private final ScheduledThreadPoolExecutor scheduledExecutorService;
+  private final ServiceEmitter serviceEmitter;
 
   public NamespaceExtractionCacheManager(
       final Lifecycle lifecycle,
@@ -61,7 +66,14 @@ public abstract class NamespaceExtractionCacheManager
             .setPriority(Thread.MIN_PRIORITY)
             .build()
     );
+    this.serviceEmitter = serviceEmitter;
     ExecutorServices.manageLifecycle(lifecycle, scheduledExecutorService);
+
+  }
+
+  @LifecycleStart
+  public void initExecutor()
+  {
     scheduledExecutorService.scheduleAtFixedRate(
         () -> {
           try {
