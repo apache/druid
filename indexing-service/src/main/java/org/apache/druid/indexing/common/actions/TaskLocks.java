@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.error.Forbidden;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -58,12 +58,14 @@ public class TaskLocks
   )
   {
     if (!isLockCoversSegments(task, taskLockbox, segments)) {
-      throw Forbidden.exception(
-          "Segments[%s] are not covered by locks[%s] for task[%s]",
-          segments,
-          taskLockbox.findLocksForTask(task),
-          task.getId()
-      );
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.FORBIDDEN)
+                          .build(
+                              "Segment IDs[%s] are not covered by locks[%s] for task[%s]",
+                              segments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
+                              taskLockbox.findLocksForTask(task),
+                              task.getId()
+                          );
     }
   }
 
