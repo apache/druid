@@ -187,13 +187,15 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   @LifecycleStop
   public synchronized void stop()
   {
-    if (!mmapDB.isClosed()) {
-      mmapDB.close();
-      if (!tmpFile.delete()) {
-        log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+    super.stopExecutor();
+    synchronized (this) {
+      if (!mmapDB.isClosed()) {
+        mmapDB.close();
+        if (!tmpFile.delete()) {
+          log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+        }
       }
     }
-    scheduledExecutorService.shutdownNow();
   }
 
   @Override

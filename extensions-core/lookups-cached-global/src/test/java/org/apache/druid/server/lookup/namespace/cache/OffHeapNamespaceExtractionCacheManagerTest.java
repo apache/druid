@@ -28,8 +28,11 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -62,5 +65,19 @@ public class OffHeapNamespaceExtractionCacheManagerTest
     properties.put(NamespaceExtractionModule.TYPE_PREFIX, "offHeap");
     final NamespaceExtractionCacheManager manager = injector.getInstance(NamespaceExtractionCacheManager.class);
     Assert.assertEquals(OffHeapNamespaceExtractionCacheManager.class, manager.getClass());
+  }
+
+  @Test
+  public void testStartStop()
+  {
+    // To make jacoco stop complaining
+    ServiceEmitter emitter = new NoopServiceEmitter();
+    NamespaceExtractionConfig extractionConfig = new NamespaceExtractionConfig();
+    OffHeapNamespaceExtractionCacheManager manager = new OffHeapNamespaceExtractionCacheManager(
+        emitter,
+        extractionConfig
+    );
+    manager.start();
+    manager.stop();
   }
 }

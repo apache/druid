@@ -174,6 +174,6 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @LifecycleStop
   public void stop()
   {
-    this.scheduledExecutorService.shutdownNow();
+    super.stopExecutor();
   }
 }

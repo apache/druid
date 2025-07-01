@@ -45,7 +45,7 @@ public abstract class NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
 
-  protected final ScheduledThreadPoolExecutor scheduledExecutorService;
+  private final ScheduledThreadPoolExecutor scheduledExecutorService;
   private final ServiceEmitter serviceEmitter;
 
   public NamespaceExtractionCacheManager(
@@ -65,12 +65,12 @@ public abstract class NamespaceExtractionCacheManager
   }
 
   @LifecycleStart
-  public void initExecutor()
+  public void start()
   {
     this.scheduledExecutorService.scheduleAtFixedRate(
         () -> {
           try {
-            monitor(this.serviceEmitter);
+            monitor(serviceEmitter);
           }
           catch (Exception e) {
             log.error(e, "Error emitting namespace stats");
@@ -83,6 +83,11 @@ public abstract class NamespaceExtractionCacheManager
         10,
         TimeUnit.MINUTES
     );
+  }
+
+  public void stopExecutor()
+  {
+    this.scheduledExecutorService.shutdownNow();
   }
 
   /**
