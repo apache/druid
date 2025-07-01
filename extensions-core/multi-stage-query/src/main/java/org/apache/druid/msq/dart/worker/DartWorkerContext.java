@@ -178,12 +178,12 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    MSQMetricUtils.setDartQueryIdDimensions(metricBuilder, queryContext);
+    MSQMetricUtils.setDartDimensions(metricBuilder, queryContext);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
-    overrideDimension.forEach(metricBuilder::setDimension);
+    overrideDimensions.forEach(metricBuilder::setDimension);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 

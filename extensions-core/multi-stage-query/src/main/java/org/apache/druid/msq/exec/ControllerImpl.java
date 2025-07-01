@@ -575,7 +575,7 @@ public class ControllerImpl implements Controller
     context.emitMetric(
         "query/time",
         MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success),
-        startTime - System.currentTimeMillis()
+        System.currentTimeMillis() - startTime
     );
   }
 

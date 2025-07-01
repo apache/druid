@@ -62,7 +62,7 @@ public interface WorkerContext extends Closeable
    * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
    * metrics. These are can override any already existing context specific dimensions.
    */
-  void emitMetric(String metric, Map<String, Object> overrideDimension, Number value);
+  void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

@@ -204,14 +204,14 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimension, Number value)
+  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
     // Attach task specific dimensions
-    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, QueryContext.of(task.getContext()));
+    MSQMetricUtils.setTaskDimensions(metricBuilder, task, QueryContext.of(task.getContext()));
 
-    overrideDimension.forEach(metricBuilder::setDimension);
+    overrideDimensions.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
   }
 

@@ -53,7 +53,7 @@ public class MSQMetricUtils
    * <li>engine</li>
    * </ul>
    */
-  public static void setDartQueryIdDimensions(
+  public static void setDartDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
       final QueryContext queryContext
   )
@@ -71,7 +71,7 @@ public class MSQMetricUtils
    * <li>engine</li>
    * </ul>
    */
-  public static void setTaskQueryIdDimensions(
+  public static void setTaskDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
       final Task task,
       final QueryContext queryContext

@@ -151,7 +151,7 @@ public class IndexerControllerContext implements ControllerContext
     ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
 
     // Attach task specific dimensions
-    MSQMetricUtils.setTaskQueryIdDimensions(metricBuilder, task, taskQuerySpecContext);
+    MSQMetricUtils.setTaskDimensions(metricBuilder, task, taskQuerySpecContext);
 
     overrideDimensions.forEach(metricBuilder::setDimension);
     toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
