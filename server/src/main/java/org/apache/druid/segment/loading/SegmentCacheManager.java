@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import io.github.resilience4j.core.lang.Nullable;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
@@ -27,6 +26,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
