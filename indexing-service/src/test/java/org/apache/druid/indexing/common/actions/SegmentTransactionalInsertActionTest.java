@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -217,10 +218,11 @@ public class SegmentTransactionalInsertActionTest
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
-    IllegalStateException exception = Assert.assertThrows(
-        IllegalStateException.class,
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
         () -> action.perform(task, actionTestKit.getTaskActionToolbox())
     );
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, exception.getCategory());
     Assert.assertTrue(exception.getMessage().contains("are not covered by locks"));
   }
 }

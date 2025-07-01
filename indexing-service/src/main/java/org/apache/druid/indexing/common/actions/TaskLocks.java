@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.error.Forbidden;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -57,7 +58,7 @@ public class TaskLocks
   )
   {
     if (!isLockCoversSegments(task, taskLockbox, segments)) {
-      throw new ISE(
+      throw Forbidden.exception(
           "Segments[%s] are not covered by locks[%s] for task[%s]",
           segments,
           taskLockbox.findLocksForTask(task),

@@ -33,7 +33,7 @@ public class RetryPolicyConfig
   private Period maxWait = new Period("PT1M");
 
   @JsonProperty
-  private long maxRetryCount = 60;
+  private long maxRetryCount = 20;
 
   public Period getMinWait()
   {
