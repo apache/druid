@@ -1422,7 +1422,7 @@ If the Peon is running in remote mode, there must be an Overlord up and running.
 |--------|-----------|-------|
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|`PT5S`|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|`PT1M`|
-|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
+|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|13 (about 10 minutes of retrying)|
 
 ##### SegmentWriteOutMediumFactory
 
@@ -1475,7 +1475,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). <br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|`PT5S`|
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|`PT1M`|
-|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
+|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|13 (about 10 minutes of retrying)|
 
 #### Indexer concurrent requests
 

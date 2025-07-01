@@ -63,6 +63,17 @@ import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
+  // by default, we reject all URLs for OAuthBearer authentication
+  // CVE ref: https://www.cve.org/CVERecord?id=CVE-2025-27817
+  // Upgrade kafka dependencies to 4.x to remove the need for this static block
+  static {
+    final String allowedSaslOauthbearerUrlsConfig = "org.apache.kafka.sasl.oauthbearer.allowed.urls";
+    String allowedUrlsProp = System.getProperty(allowedSaslOauthbearerUrlsConfig);
+    if (allowedUrlsProp == null) {
+      System.setProperty(allowedSaslOauthbearerUrlsConfig, "notallowed");
+    }
+  }
+
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final KafkaConsumerMonitor monitor;
   private boolean closed;

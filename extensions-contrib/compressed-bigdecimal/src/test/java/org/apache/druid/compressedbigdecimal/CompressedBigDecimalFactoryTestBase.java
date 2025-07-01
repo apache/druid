@@ -22,6 +22,7 @@ package org.apache.druid.compressedbigdecimal;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorFactoryCreator;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;

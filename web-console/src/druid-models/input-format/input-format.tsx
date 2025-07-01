@@ -24,6 +24,12 @@ import { getLink } from '../../links';
 import { compact, deepGet, deepSet, oneOf, oneOfKnown, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
+import {
+  AVRO_BYTES_DECODER_COMPLETIONS,
+  FEATURE_SPEC_COMPLETIONS,
+  PROTO_BYTES_DECODER_COMPLETIONS,
+} from './input-format-completions';
+
 export interface InputFormat {
   readonly type: string;
   readonly findColumnsFromHeader?: boolean;
@@ -101,6 +107,7 @@ function generateInputFormatFields(streaming: boolean) {
       label: 'JSON parser features',
       type: 'json',
       defined: typeIsKnown(KNOWN_TYPES, 'json'),
+      jsonCompletions: FEATURE_SPEC_COMPLETIONS,
       info: (
         <>
           <p>
@@ -249,6 +256,7 @@ function generateInputFormatFields(streaming: boolean) {
       defined: typeIsKnown(KNOWN_TYPES, 'avro_stream'),
       required: true,
       placeholder: `{ type: "schema_repo", ... }`,
+      jsonCompletions: AVRO_BYTES_DECODER_COMPLETIONS,
       info: (
         <>
           <p>Specifies how to decode bytes to Avro record.</p>
@@ -279,6 +287,7 @@ function generateInputFormatFields(streaming: boolean) {
       defined: typeIsKnown(KNOWN_TYPES, 'protobuf'),
       required: true,
       placeholder: `{ ... }`,
+      jsonCompletions: PROTO_BYTES_DECODER_COMPLETIONS,
       info: <>Specifies how to decode bytes to Protobuf record.</>,
     },
     {
