@@ -591,7 +591,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     Assert.assertEquals(
         StringUtils.format(
             "Segment IDs[[%s]] are not covered by locks[[]] for task[%s]",
-            segmentV10, replaceTask.getId()
+            segmentV10.getId(), replaceTask.getId()
         ),
         throwable.getMessage()
     );
