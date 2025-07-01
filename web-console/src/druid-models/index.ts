@@ -38,6 +38,7 @@ export * from './input-source/input-source';
 export * from './load-rule/load-rule';
 export * from './lookup-spec/lookup-spec';
 export * from './metric-spec/metric-spec';
+export * from './native-json-query/native-json-query-completions';
 export * from './overlord-dynamic-config/overlord-dynamic-config';
 export * from './query-context/query-context';
 export * from './segment/segment';
