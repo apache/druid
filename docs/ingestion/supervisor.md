@@ -191,7 +191,7 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 Before you set `stopTaskCount`, note the following: 
 
 - Some operations require all tasks to cycle at the same time, for example changes to the supervisor spec and change to the number of Kafka partitions. These operations can cause lag without sufficient task slot capacity.
-- The [task autscaler](#task-autoscaler) ignores `stopTaskCount` when shutting down tasks in response to a task count change. The task autoscaler needs to redistribute partitions across tasks, which requires all tasks to be shut down.
+- The [task autoscaler](#task-autoscaler) ignores `stopTaskCount` when shutting down tasks in response to a task count change. The task autoscaler needs to redistribute partitions across tasks, which requires all tasks to be shut down.
 - If you set `stopTaskCount` to a value less than `taskCount`, Druid cycles the longest running tasks first, then other tasks up to the value set.
 
 ### Tuning configuration
