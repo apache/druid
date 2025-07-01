@@ -21,7 +21,6 @@ package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -44,7 +43,6 @@ import java.util.function.Supplier;
  * }</pre>
  */
 
-@ManageLifecycle
 public abstract class NamespaceExtractionCacheManager
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);

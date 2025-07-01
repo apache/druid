@@ -21,6 +21,7 @@ package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -42,6 +43,7 @@ import java.util.function.Supplier;
 /**
  *
  */
+@ManageLifecycle
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
   /**
