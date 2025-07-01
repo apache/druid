@@ -63,7 +63,7 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.ResponseContextConfig;
-import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.SubqueryGuardrailHelperProvider;
 import org.apache.druid.server.coordination.SegmentBootstrapper;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
+package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -36,7 +36,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.server.coordination.SegmentManager.DataSourceState;
+import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;

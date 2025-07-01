@@ -39,7 +39,7 @@ import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.server.SegmentManager;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;

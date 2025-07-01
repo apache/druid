@@ -89,6 +89,8 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.test.utils.TestSegmentCacheManager;

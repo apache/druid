@@ -35,6 +35,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;

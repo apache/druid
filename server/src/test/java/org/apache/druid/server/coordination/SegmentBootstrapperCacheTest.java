@@ -35,6 +35,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;

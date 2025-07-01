@@ -24,7 +24,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 
 /**

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
+package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
@@ -69,8 +69,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentMapAction;
-import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
-import org.apache.druid.server.SetAndVerifyContextQueryRunner;
+import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;

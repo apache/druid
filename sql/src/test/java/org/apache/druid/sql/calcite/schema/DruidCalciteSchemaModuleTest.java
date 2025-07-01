@@ -48,7 +48,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
+package org.apache.druid.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
@@ -38,6 +38,7 @@ import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentMapAction;
+import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;

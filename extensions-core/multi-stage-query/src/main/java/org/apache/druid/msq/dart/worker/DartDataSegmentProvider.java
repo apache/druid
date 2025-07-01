@@ -31,7 +31,7 @@ import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.server.coordination.SegmentManager;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;

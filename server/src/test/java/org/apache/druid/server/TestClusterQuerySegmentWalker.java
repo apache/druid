@@ -70,7 +70,7 @@ import java.util.Set;
 
 /**
  * Mimics the behavior of {@link org.apache.druid.client.CachingClusteredClient} when it queries data servers (like
- * Historicals, which use {@link org.apache.druid.server.coordination.ServerManager}). Used by {@link QueryStackTests}.
+ * Historicals, which use {@link ServerManager}). Used by {@link QueryStackTests}.
  *
  * This class's logic is like a mashup of those two classes. With the right abstractions, it may be possible to get rid
  * of this class and replace it with the production classes.
