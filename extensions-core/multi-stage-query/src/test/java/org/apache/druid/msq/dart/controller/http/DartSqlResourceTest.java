@@ -144,7 +144,6 @@ public class DartSqlResourceTest extends MSQTestBase
 
   // Objects created in setUp() below this line.
 
-  private final String queryId = "did2";
   private SqlResource sqlResource;
   private DartControllerRegistry controllerRegistry;
   private ExecutorService controllerExecutor;
@@ -223,16 +222,22 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final DartSqlEngine engine = new DartSqlEngine(
         new MSQTestControllerContext(
-            queryId,
+            "did2",
             objectMapper,
             injector,
             null /* not used in this test */,
             workerMemoryParameters,
             loadedSegmentsMetadata,
             TaskLockType.APPEND,
-            QueryContext.of(Map.of(QueryContexts.CTX_DART_QUERY_ID, queryId)),
+            QueryContext.empty(),
             serviceEmitter
         ) {
+          @Override
+          public String queryId()
+          {
+            return getQueryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+          }
+
           @Override
           public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec)
           {
@@ -358,7 +363,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        queryId,
+        "did2",
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,
@@ -426,7 +431,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        queryId,
+        "did2",
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,
@@ -463,7 +468,7 @@ public class DartSqlResourceTest extends MSQTestBase
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
         "sid",
-        queryId,
+        "did2",
         "SELECT 2",
         "localhost:1002",
         AUTHENTICATOR_NAME,

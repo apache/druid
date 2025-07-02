@@ -115,8 +115,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final TaskLockType taskLockType;
-  private final QueryContext queryContext;
   private final ServiceEmitter serviceEmitter;
+  private QueryContext queryContext;
 
   public MSQTestControllerContext(
       String queryId,
@@ -367,6 +367,11 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     );
   }
 
+  public QueryContext getQueryContext()
+  {
+    return queryContext;
+  }
+
   @Override
   public File taskTempDir()
   {
@@ -388,6 +393,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public ControllerContext newContext(QueryContext context)
   {
+    this.queryContext = this.queryContext.override(context);
     return this;
   }
 }
