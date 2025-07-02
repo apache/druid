@@ -27,23 +27,17 @@ const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 198;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 15;
 
 const initialFunctionDocs = {
-  TABLE: [['external', convertMarkdownToHtml('Defines a logical table from an external.')]],
-  EXTERN: [
-    ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data.')],
-  ],
+  TABLE: ['external', convertMarkdownToHtml('Defines a logical table from an external.')],
+  EXTERN: ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data.')],
   TYPE: [
-    [
-      'nativeType',
-      convertMarkdownToHtml(
-        'A purely type system modification function what wraps a Druid native type to make it into a SQL type.',
-      ),
-    ],
+    'nativeType',
+    convertMarkdownToHtml(
+      'A purely type system modification function what wraps a Druid native type to make it into a SQL type.',
+    ),
   ],
   UNNEST: [
-    [
-      'arrayExpression',
-      convertMarkdownToHtml("Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.")
-    ]
+    'arrayExpression',
+    convertMarkdownToHtml("Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.")
   ]
 };
 
@@ -97,10 +91,8 @@ const readDoc = async () => {
     if (functionMatch) {
       const functionName = functionMatch[1];
       const args = sanitizeArguments(functionMatch[2]);
-      const description = convertMarkdownToHtml(functionMatch[3]);
-
-      functionDocs[functionName] = functionDocs[functionName] || [];
-      functionDocs[functionName].push([args, description]);
+      const description = convertMarkdownToHtml(functionMatch[3].trim());
+      functionDocs[functionName] = [args, description];
     }
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
@@ -146,18 +138,18 @@ const readDoc = async () => {
 // This file is auto generated and should not be modified
 
 // prettier-ignore
-export const SQL_DATA_TYPES: Record<string, [runtime: string, description: string]> = ${JSON.stringify(
-    dataTypeDocs,
-    null,
-    2,
-  )};
+export const SQL_DATA_TYPES = new Map<string, [runtime: string, description: string]>(Object.entries(${JSON.stringify(
+  dataTypeDocs,
+  null,
+  2,
+)}));
 
 // prettier-ignore
-export const SQL_FUNCTIONS: Record<string, [args: string, description: string][]> = ${JSON.stringify(
-    functionDocs,
-    null,
-    2,
-  )};
+export const SQL_FUNCTIONS = new Map<string, [args: string, description: string]>(Object.entries(${JSON.stringify(
+  functionDocs,
+  null,
+  2,
+)}));
 `;
 
   // eslint-disable-next-line no-undef
