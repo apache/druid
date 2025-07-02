@@ -250,4 +250,15 @@ public class CoordinatorClientImpl implements CoordinatorClient
         IgnoreHttpResponseHandler.INSTANCE
     );
   }
+
+  @Override
+  public ListenableFuture<Void> updateAllLookups(Object lookups)
+  {
+    final String path = "/druid/coordinator/v1/lookups/config";
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, lookups),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
 }

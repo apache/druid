@@ -102,4 +102,11 @@ public class NoopCoordinatorClient implements CoordinatorClient
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public ListenableFuture<Void> updateAllLookups(Object lookups)
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }
