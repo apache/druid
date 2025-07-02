@@ -203,7 +203,9 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       const dataWithColors = data.map((item: any) => ({
         ...item,
         itemStyle: {
-          color: splitColumn ? ColorAssigner.getColorForDimensionValue(splitColumn.name, item.name) : '#1890ff',
+          color: splitColumn
+            ? ColorAssigner.getColorForDimensionValue(splitColumn.name, item.name)
+            : '#1890ff',
         },
       }));
 

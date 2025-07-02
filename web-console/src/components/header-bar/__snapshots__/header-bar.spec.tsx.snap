@@ -181,6 +181,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
+            target="_blank"
             text="Explore"
           />
         </Blueprint5.Menu>
