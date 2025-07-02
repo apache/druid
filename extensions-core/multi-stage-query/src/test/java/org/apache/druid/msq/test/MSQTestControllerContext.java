@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
@@ -115,6 +116,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final WorkerMemoryParameters workerMemoryParameters;
   private final TaskLockType taskLockType;
   private final QueryContext queryContext;
+  private final ServiceEmitter serviceEmitter;
 
   public MSQTestControllerContext(
       String queryId,
@@ -124,13 +126,15 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
       TaskLockType taskLockType,
-      QueryContext queryContext
+      QueryContext queryContext,
+      ServiceEmitter serviceEmitter
   )
   {
     this.queryId = queryId;
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
+    this.serviceEmitter = serviceEmitter;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
 
     Mockito.when(coordinatorClient.fetchServerViewSegments(
@@ -176,7 +180,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
               mapper,
               injector,
               workerMemoryParameters,
-              workerStorageParameters
+              workerStorageParameters,
+              serviceEmitter
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();
@@ -290,6 +295,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
+    serviceEmitter.emit(metricBuilder.build("controller", queryId()));
   }
 
   @Override

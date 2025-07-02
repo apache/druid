@@ -33,6 +33,8 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
@@ -63,6 +65,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
   private final Map<String, WorkerRunRef> workerMap;
   public Controller controller;
+  private final ServiceEmitter serviceEmitter = new StubServiceEmitter();
 
   @Inject
   public TestDartControllerContextFactoryImpl(
@@ -101,6 +104,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         super.registerController(currentController, closer);
         controller = currentController;
       }
+
+      @Override
+      public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+      {
+        serviceEmitter.emit(metricBuilder.build("controller", queryId()));
+      }
     };
   }
 
@@ -124,7 +133,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               jsonMapper,
               injector,
               MSQTestBase.makeTestWorkerMemoryParameters(),
-              WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
+              WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE),
+              serviceEmitter
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();

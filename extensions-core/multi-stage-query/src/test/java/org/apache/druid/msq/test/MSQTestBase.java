@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
@@ -649,6 +650,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .when(mockFactory)
         .createDataServerQueryHandler(anyString(), any(), any());
     return mockFactory;
+  }
+
+  protected Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> getMetricEvents()
+  {
+    return indexingServiceClient.getMetricEvents();
   }
 
   @Nonnull

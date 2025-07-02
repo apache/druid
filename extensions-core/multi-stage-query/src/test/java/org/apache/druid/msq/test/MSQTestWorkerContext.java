@@ -25,6 +25,7 @@ import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
@@ -67,6 +68,7 @@ public class MSQTestWorkerContext implements WorkerContext
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
+  private final ServiceEmitter serviceEmitter;
 
   public MSQTestWorkerContext(
       String workerId,
@@ -75,7 +77,8 @@ public class MSQTestWorkerContext implements WorkerContext
       ObjectMapper mapper,
       Injector injector,
       WorkerMemoryParameters workerMemoryParameters,
-      WorkerStorageParameters workerStorageParameters
+      WorkerStorageParameters workerStorageParameters,
+      ServiceEmitter serviceEmitter
   )
   {
     this.workerId = workerId;
@@ -85,6 +88,7 @@ public class MSQTestWorkerContext implements WorkerContext
     this.injector = injector;
     this.workerMemoryParameters = workerMemoryParameters;
     this.workerStorageParameters = workerStorageParameters;
+    this.serviceEmitter = serviceEmitter;
   }
 
   @Override
@@ -114,7 +118,7 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-
+    serviceEmitter.emit(metricBuilder.build("worker", queryId()));
   }
 
   @Override
