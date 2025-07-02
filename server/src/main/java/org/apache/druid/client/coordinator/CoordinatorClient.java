@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
@@ -33,7 +32,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public interface CoordinatorClient
@@ -103,13 +101,4 @@ public interface CoordinatorClient
    * API: {@code POST /druid/coordinator/v1/config}
    */
   ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
-
-  /**
-   * Gets the lookup configuration for a tier.
-   * <p>
-   * API: {@code GET /druid/coordinator/v1/lookups/config/<tier>}
-   *
-   * @param tier The name of the tier for which the lookup configuration is to be fetched.
-   */
-  ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(String tier);
 }
