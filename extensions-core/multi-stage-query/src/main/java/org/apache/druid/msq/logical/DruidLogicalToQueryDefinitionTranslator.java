@@ -29,9 +29,11 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.logical.stages.ReadStage;
 import org.apache.druid.msq.logical.stages.SortStage;
+import org.apache.druid.msq.logical.stages.SortStage.OffsetLimitStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
@@ -122,15 +124,20 @@ public class DruidLogicalToQueryDefinitionTranslator
   {
     if (stack.getNode() instanceof DruidSort) {
       DruidSort sort = (DruidSort) stack.getNode();
-      if (sort.hasLimitOrOffset()) {
-        throw DruidException.defensive("Sort with limit or offset is not supported in MSQ logical stage builder");
-      }
       List<OrderByColumnSpec> orderBySpecs = DruidQuery.buildOrderByColumnSpecs(inputStage.getLogicalRowSignature(), sort);
       List<KeyColumn> keyColumns = Lists.transform(orderBySpecs, KeyColumn::fromOrderByColumnSpec);
-      return new SortStage(inputStage, keyColumns);
+      SortStage sortStage = new SortStage(inputStage, keyColumns);
+
+      if (sort.hasLimitOrOffset()) {
+        OffsetLimit offsetLimit = sort.getOffsetLimit();
+        return new OffsetLimitStage(sortStage, sort.getOffsetLimit());
+      } else {
+        return sortStage;
+      }
     }
     return new ReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
   }
+
 
   private List<LogicalStage> buildInputStages(DruidNodeStack stack)
   {

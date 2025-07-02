@@ -19,13 +19,18 @@
 
 package org.apache.druid.msq.logical.stages;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.logical.LogicalInputSpec;
+import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 
 import java.util.List;
@@ -62,4 +67,37 @@ public class SortStage extends AbstractShuffleStage
     return null;
   }
 
+
+  public static class OffsetLimitStage extends AbstractFrameProcessorStage
+  {
+    protected final OffsetLimit offsetLimit;
+
+    public OffsetLimitStage(LogicalStage inputStage, OffsetLimit offsetLimit)
+    {
+      super(inputStage.getRowSignature(), ImmutableList.of(LogicalInputSpec.of(inputStage)));
+      this.offsetLimit = offsetLimit;
+    }
+
+    @Override
+    public LogicalStage extendWith(DruidNodeStack stack)
+    {
+      return null;
+    }
+
+    @Override
+    public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
+    {
+      return new OffsetLimitStageProcessor(
+          offsetLimit.getOffset(),
+          offsetLimit.hasLimit() ? offsetLimit.getLimit() : null
+      );
+    }
+
+    @Override
+    public RowSignature getLogicalRowSignature()
+    {
+      return inputSpecs.get(0).getRowSignature();
+    }
+
+  }
 }
