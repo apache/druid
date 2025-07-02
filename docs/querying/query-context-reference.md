@@ -36,9 +36,9 @@ Note that setting query context will override both the default value and the run
 
 This reference contains context parameters organized by their scope: 
 
-- **General parameters**: Apply to all query types and control execution behavior, resource limits, and caching
-- **Query type-specific parameters**: Available only for certain query types like TopN, Timeseries, or GroupBy
-- **Vectorization parameters**: Control vectorized query execution for supported query types
+- **General parameters**: Applies to all query types.
+- **Parameters by query type**: Applies to the specific type of query, such as TopN, Timeseries, or GroupBy.
+- **Vectorization parameters**: Controls vectorized query execution for supported query types.
 
 For instructions on how the different approaches for set query context in your queries, see [Set the Query Context](./set-query-context.md).
 
