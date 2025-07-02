@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
@@ -33,6 +32,7 @@ import org.apache.druid.query.QueryContext;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -79,7 +79,19 @@ public class MSQMetricUtils
   )
   {
     setQueryIdDimensions(metricBuilder, queryContext);
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task); // Setup common non-MSQ task dimensions
+    metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
+    metricBuilder.setDimension(DruidMetrics.TASK_TYPE, task.getType());
+
+    // Set datasource only if it has not already been set.
+    if (metricBuilder.getDimension(DruidMetrics.DATASOURCE) == null) {
+      metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
+    }
+
+    metricBuilder.setDimensionIfNotNull(
+        DruidMetrics.TAGS,
+        task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
+    );
+    metricBuilder.setDimensionIfNotNull(DruidMetrics.GROUP_ID, task.getGroupId());
     metricBuilder.setDimension(DruidMetrics.ENGINE, MSQTaskSqlEngine.NAME);
   }
 

@@ -36,7 +36,7 @@ public class IndexTaskUtils
   {
     metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_TYPE, task.getType());
-    metricBuilder.setDimensionIfAbsent(DruidMetrics.DATASOURCE, task.getDataSource());
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
     metricBuilder.setDimensionIfNotNull(
         DruidMetrics.TAGS,
         task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
