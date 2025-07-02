@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded;
 
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
@@ -44,9 +45,19 @@ public interface ServerReferencesProvider
   CoordinatorClient leaderCoordinator();
 
   /**
+   * Leader selector to elect and find the Coordinator leader.
+   */
+  DruidLeaderSelector coordinatorLeaderSelector();
+
+  /**
    * Client to make API calls to the leader Overlord in the cluster.
    */
   OverlordClient leaderOverlord();
+
+  /**
+   * Leader selector to elect and find the Coordinator leader.
+   */
+  DruidLeaderSelector overlordLeaderSelector();
 
   /**
    * Client to submit queries to any Broker in the cluster.

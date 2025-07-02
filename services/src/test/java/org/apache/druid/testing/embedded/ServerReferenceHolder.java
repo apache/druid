@@ -21,7 +21,10 @@ package org.apache.druid.testing.embedded;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -41,7 +44,15 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   private CoordinatorClient coordinator;
 
   @Inject
+  @Coordinator
+  private DruidLeaderSelector coordinatorLeaderSelector;
+
+  @Inject
   private OverlordClient overlord;
+
+  @Inject
+  @IndexingService
+  private DruidLeaderSelector overlordLeaderSelector;
 
   @Inject
   private BrokerClient broker;
@@ -69,9 +80,21 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   }
 
   @Override
+  public DruidLeaderSelector coordinatorLeaderSelector()
+  {
+    return coordinatorLeaderSelector;
+  }
+
+  @Override
   public OverlordClient leaderOverlord()
   {
     return overlord;
+  }
+
+  @Override
+  public DruidLeaderSelector overlordLeaderSelector()
+  {
+    return overlordLeaderSelector;
   }
 
   @Override

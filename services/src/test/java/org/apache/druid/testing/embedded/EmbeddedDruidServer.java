@@ -24,7 +24,9 @@ import com.google.inject.Injector;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,13 +40,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An embedded Druid server used in embedded tests.
  * This class and most of its methods are kept package protected as they are used
  * only by the specific server implementations in the same package.
  */
-public abstract class EmbeddedDruidServer implements ServerReferencesProvider
+public abstract class EmbeddedDruidServer implements ServerReferencesProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = 100_000_000;
@@ -56,6 +59,7 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
   private static final AtomicInteger SERVER_ID = new AtomicInteger(0);
 
   private final String name;
+  private final AtomicReference<DruidServerResource> lifecycle = new AtomicReference<>();
 
   private final Map<String, String> serverProperties = new HashMap<>();
   private final ServerReferenceHolder clientHolder = new ServerReferenceHolder();
@@ -67,6 +71,28 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
         this.getClass().getSimpleName(),
         SERVER_ID.incrementAndGet()
     );
+  }
+
+  @Override
+  public void start() throws Exception
+  {
+    final DruidServerResource lifecycle = this.lifecycle.get();
+    if (lifecycle == null) {
+      throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
+    } else {
+      lifecycle.start();
+    }
+  }
+
+  @Override
+  public void stop() throws Exception
+  {
+    final DruidServerResource lifecycle = this.lifecycle.get();
+    if (lifecycle == null) {
+      throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
+    } else {
+      lifecycle.stop();
+    }
   }
 
   /**
@@ -86,6 +112,17 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
   {
     serverProperties.put(key, value);
     return this;
+  }
+
+  /**
+   * Called from {@link EmbeddedDruidCluster#addServer(EmbeddedDruidServer)} to
+   * tie the lifecycle of this server to the cluster.
+   */
+  final void onAddedToCluster(EmbeddedDruidCluster cluster, Properties commonProperties)
+  {
+    this.lifecycle.set(
+        new DruidServerResource(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
+    );
   }
 
   /**
@@ -181,9 +218,21 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
   }
 
   @Override
+  public DruidLeaderSelector coordinatorLeaderSelector()
+  {
+    return clientHolder.coordinatorLeaderSelector();
+  }
+
+  @Override
   public OverlordClient leaderOverlord()
   {
     return clientHolder.leaderOverlord();
+  }
+
+  @Override
+  public DruidLeaderSelector overlordLeaderSelector()
+  {
+    return clientHolder.overlordLeaderSelector();
   }
 
   @Override

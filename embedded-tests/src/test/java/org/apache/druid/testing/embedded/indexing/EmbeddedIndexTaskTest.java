@@ -52,57 +52,6 @@ import java.util.stream.IntStream;
  */
 public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 {
-  private static final String CSV_DATA_10_DAYS =
-      "2025-06-01T00:00:00.000Z,shirt,105"
-      + "\n2025-06-02T00:00:00.000Z,trousers,210"
-      + "\n2025-06-03T00:00:00.000Z,jeans,150"
-      + "\n2025-06-04T00:00:00.000Z,t-shirt,53"
-      + "\n2025-06-05T00:00:00.000Z,microwave,1099"
-      + "\n2025-06-06T00:00:00.000Z,spoon,11"
-      + "\n2025-06-07T00:00:00.000Z,television,1100"
-      + "\n2025-06-08T00:00:00.000Z,plant pots,75"
-      + "\n2025-06-09T00:00:00.000Z,shirt,99"
-      + "\n2025-06-10T00:00:00.000Z,toys,101";
-
-  private static final String INDEX_TASK_PAYLOAD_WITH_INLINE_DATA
-      = "{"
-        + "  \"type\": \"index\","
-        + "  \"spec\": {"
-        + "    \"ioConfig\": {"
-        + "      \"type\": \"index\","
-        + "      \"inputSource\": {"
-        + "        \"type\": \"inline\","
-        + "        \"data\": \"%s\""
-        + "      },\n"
-        + "      \"inputFormat\": {"
-        + "        \"type\": \"csv\","
-        + "        \"findColumnsFromHeader\": false,"
-        + "        \"columns\": [\"time\",\"item\",\"value\"]"
-        + "      }"
-        + "    },"
-        + "    \"tuningConfig\": {"
-        + "      \"type\": \"index_parallel\","
-        + "      \"partitionsSpec\": {"
-        + "        \"type\": \"dynamic\","
-        + "        \"maxRowsPerSegment\": 1000"
-        + "      }"
-        + "    },"
-        + "    \"dataSchema\": {"
-        + "      \"dataSource\": \"%s\","
-        + "      \"timestampSpec\": {"
-        + "        \"column\": \"time\","
-        + "        \"format\": \"iso\""
-        + "      },"
-        + "      \"dimensionsSpec\": {"
-        + "        \"dimensions\": []"
-        + "      },"
-        + "      \"granularitySpec\": {"
-        + "        \"segmentGranularity\": \"DAY\""
-        + "      }"
-        + "    }"
-        + "  }"
-        + "}";
-
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -130,7 +79,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     final String taskId = IdUtils.getRandomId();
     final Object task = createIndexTaskForInlineData(
         taskId,
-        StringUtils.replace(CSV_DATA_10_DAYS, "\n", "\\n")
+        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
     );
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
@@ -157,7 +106,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    Assertions.assertEquals(CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
+    Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
@@ -195,7 +144,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedClusterApis.createTaskFromPayload(
         taskId,
-        StringUtils.format(INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
+        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
     );
   }
 
