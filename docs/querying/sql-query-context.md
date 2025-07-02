@@ -28,14 +28,14 @@ sidebar_label: "SQL query context"
  This document describes the SQL language.
 :::
 
-Druid supports query context parameters which affect [SQL query](./sql.md) planning.
-See [Query context](query-context-reference.md) for general query context parameters for all query types.
+In Apache Druid, you can control how your queries run by using query context parameters. These are key-value pairs that let you adjust things like timeouts, caching, and how queries are prioritized.
 
-## SQL query context parameters
+If you're writing [Druid SQL queries](./sql.md), these parameters help you customize query behavior to better fit your needs. To explore available context parameters, refer to [Query context reference](query-context-reference.md). For more information on different approaches to set query context, see [Set query context](../querying/set-query-context.md).
 
-The following table lists query context parameters you can use to configure Druid SQL planning.
-You can override a parameter's default value by setting a runtime property in the format `druid.query.default.context.{query_context_key}`.
-For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+You can also override the default values for these parameters by setting a runtime property like this:
+`druid.query.default.context.{query_context_key}`. For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+
+The table below lists some of the query context parameters you can use when working with Druid SQL.
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
@@ -59,10 +59,6 @@ For more information, see [Overriding default query context values](../configura
 |`inFunctionExprThreshold`|At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`. This property only affects translation of SQL `IN` to a [native expression](math-expr.md). It doesn't affect translation of SQL `IN` to a [native filter](filters.md). This property is provided for backwards compatibility purposes, and may be removed in a future release.|`2`|
 |`inSubQueryThreshold`|At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table. `inFunctionThreshold` takes priority over this setting. A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`. A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`. |`2147483647`|
 
-## Set the query context
-
-How query context parameters are set differs depending on whether you are using the [JSON API](../api-reference/sql-api.md) or [JDBC](../api-reference/sql-jdbc.md).
-
-If using JDBC, context parameters can be set using [connection properties object](../api-reference/sql-jdbc.md).
-
-For more information on other approaches to set query context, see [Set query context](../querying/set-query-context.md)
+## Learn more
+- [Set query context](../querying/set-query-context.md) for how to set query context.
+- [Query context reference](query-context-reference.md)  for available query context parameters.

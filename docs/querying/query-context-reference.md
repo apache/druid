@@ -25,12 +25,6 @@ sidebar_label: "Query context reference"
 
 The query context provides runtime configuration for individual queries in Apache Druid. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
 
-Query context parameters can be specified in the following ways:
-
-- For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
-HTTP POST API, or as properties to the JDBC connection.
-- For [native queries](querying.md), context parameters are provided in a JSON object named `context`.
-
 Note that setting query context will override both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}` (if set). 
 
@@ -40,12 +34,15 @@ This reference contains context parameters organized by their scope:
 - **Parameters by query type**: Applies to the specific type of query, such as TopN, Timeseries, or GroupBy.
 - **Vectorization parameters**: Controls vectorized query execution for supported query types.
 
-For instructions on how the different approaches for set query context in your queries, see [Set the Query Context](./set-query-context.md).
+To learn how to set query context, see [Set query context](./set-query-context.md).
+
+If you're looking for query context parameters used specifically with Druid SQL, check out the [SQL query context](sql-query-context.md). 
+For context parameters related to Multi-Stage Queries (MSQ), see the [MSQ context parameters](../multi-stage-query/reference/#context-parameters).
+
 
 ## General parameters
 
 Unless otherwise noted, the following parameters apply to all query types, and to both native and SQL queries.
-See [SQL query context](sql-query-context.md) for other query context parameters that are specific to Druid SQL planning.
 
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
