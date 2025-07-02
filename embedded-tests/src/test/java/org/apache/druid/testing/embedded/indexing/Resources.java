@@ -19,6 +19,9 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+/**
+ * Constants and utility methods used in embedded cluster tests.
+ */
 public class Resources
 {
   public static final String CSV_DATA_10_DAYS =
@@ -33,6 +36,15 @@ public class Resources
       + "\n2025-06-09T00:00:00.000Z,shirt,99"
       + "\n2025-06-10T00:00:00.000Z,toys,101";
 
+  /**
+   * Full task payload for an "index" task. The payload has the following format
+   * arguments:
+   * <ol>
+   * <li>Data which can be provided as a single CSV string. The data is expected
+   * to have 3 columns: "time", "item" and "value". (e.g {@link #CSV_DATA_10_DAYS})</li>
+   * <li>Datasource name</li>
+   * </ol>
+   */
   public static final String INDEX_TASK_PAYLOAD_WITH_INLINE_DATA
       = "{"
         + "  \"type\": \"index\","

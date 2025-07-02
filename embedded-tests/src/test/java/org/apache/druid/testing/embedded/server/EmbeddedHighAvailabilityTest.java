@@ -38,6 +38,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.function.Function;
 
+/**
+ * Embedded cluster test to verify leadership changes in Coordinator and Overlord.
+ * Makes assertions similar to {@code ITHighAvailabilityTest}.
+ */
 public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord1 = new EmbeddedOverlord();
@@ -104,8 +108,8 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Swaps leadership between the two master servers by restarting the current
-   * leader. Returns the newly elected leader.
+   * Restarts the current leader in the server pair to force the other server to
+   * gain leadership. Returns the updated server pair.
    */
   private <S extends EmbeddedDruidServer> ServerPair<S> switchAndVerifyLeader(ServerPair<S> serverPair)
   {
@@ -134,9 +138,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
       aIsLeader = serverA.coordinatorLeaderSelector().isLeader();
     }
 
-    return aIsLeader
-           ? new ServerPair<>(serverA, serverB)
-           : new ServerPair<>(serverB, serverA);
+    return aIsLeader ? new ServerPair<>(serverA, serverB) : new ServerPair<>(serverB, serverA);
   }
 
   private <S extends EmbeddedDruidServer> void verifyLeader(ServerPair<S> serverPair)
@@ -192,8 +194,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
             serverPair.leader.selfNode().getPlaintextPort()
         ),
         cluster.runSql(
-            "SELECT plaintext_port, is_leader FROM sys.servers"
-            + " WHERE server_type='%s' ORDER BY is_leader",
+            "SELECT plaintext_port, is_leader FROM sys.servers WHERE server_type='%s' ORDER BY is_leader",
             serverType
         )
     );
