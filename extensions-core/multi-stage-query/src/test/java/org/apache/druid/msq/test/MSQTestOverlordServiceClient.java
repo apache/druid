@@ -77,6 +77,9 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   public static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
+  public static final String TEST_METRIC_DIMENSION = "testTaskType";
+  public static final String METRIC_CONTROLLER_TASK_TYPE = "controller";
+  public static final String METRIC_WORKER_TASK_TYPE = "worker";
 
   public static final long DURATION = 100L;
 
@@ -384,8 +387,11 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     taskDetailsByTaskId.get(taskId).close();
   }
 
-  public Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> getMetricEvents()
+  /**
+   *
+   */
+  public List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
   {
-    return emitter.getMetricEvents();
+    return emitter.getMetricValues(metricName, dimensionFilters);
   }
 }

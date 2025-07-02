@@ -295,7 +295,12 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    serviceEmitter.emit(metricBuilder.build("controller", queryId()));
+    serviceEmitter.emit(
+        metricBuilder.setDimension(
+            MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
+            MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE
+        )
+    );
   }
 
   @Override

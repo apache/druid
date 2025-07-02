@@ -49,6 +49,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
@@ -2342,6 +2343,13 @@ public class MSQSelectTest extends MSQTestBase
                     "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
             )
         ))
+        .setExpectedMetricDimensions(
+            Map.of(
+                DruidMetrics.DATASOURCE, "foo",
+                DruidMetrics.INTERVAL, List.of(Intervals.ETERNITY.toString()),
+                DruidMetrics.SUCCESS, false
+            )
+        )
         .verifyExecutionError();
   }
 
@@ -2785,6 +2793,56 @@ public class MSQSelectTest extends MSQTestBase
             )
         ))
         .verifyExecutionError();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectMetrics(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("m1", ColumnType.LONG)
+                                               .add("dim2", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select m1,dim2 from foo2")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                         .query(newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE2)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("m1", "dim2")
+                                    .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                                    .context(defaultScanQueryContext(
+                                        context,
+                                        RowSignature.builder()
+                                                    .add("m1", ColumnType.LONG)
+                                                    .add("dim2", ColumnType.STRING)
+                                                    .build()
+                                    ))
+                                    .build())
+                         .columnMappings(ColumnMappings.identity(resultSignature))
+                         .tuningConfig(MSQTuningConfig.defaultConfig())
+                         .destination(isDurableStorageDestination(contextName, context)
+                                      ? DurableStorageMSQDestination.INSTANCE
+                                      : TaskReportMSQDestination.INSTANCE)
+                         .build()
+        )
+        .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, "en"},
+            new Object[]{1L, "ru"},
+            new Object[]{1L, "he"}
+        ))
+        .setExpectedMetricDimensions(
+            Map.of(
+                DruidMetrics.DATASOURCE, "foo2",
+                DruidMetrics.INTERVAL, List.of(Intervals.ETERNITY.toString()),
+                DruidMetrics.SUCCESS, true
+            )
+        )
+        .verifyResults();
   }
 
   @MethodSource("data")

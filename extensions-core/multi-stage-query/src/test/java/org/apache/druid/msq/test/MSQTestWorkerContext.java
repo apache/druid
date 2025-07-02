@@ -118,7 +118,12 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    serviceEmitter.emit(metricBuilder.build("worker", queryId()));
+    serviceEmitter.emit(
+        metricBuilder.setDimension(
+            MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
+            MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE
+        )
+    );
   }
 
   @Override
