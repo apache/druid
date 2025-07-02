@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
