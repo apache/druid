@@ -157,7 +157,6 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       testTaskDetails.controllerTask = cTask;
 
       controller = new ControllerImpl(
-          cTask.getId(),
           cTask.getQuerySpec(),
           new ResultsContext(cTask.getSqlTypeNames(), cTask.getSqlResultsContext()),
           msqTestControllerContext,

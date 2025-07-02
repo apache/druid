@@ -42,7 +42,9 @@ import java.util.Map;
 public interface ControllerContext
 {
   /**
-   * Query ID for this context.
+   * Globally unique identifier for the query handled by this controller. This is used to set
+   * {@link org.apache.druid.msq.kernel.QueryDefinition#getQueryId}. Must be globally unique because this is used for
+   * identifying workers, naming temporary files, etc.
    */
   String queryId();
 

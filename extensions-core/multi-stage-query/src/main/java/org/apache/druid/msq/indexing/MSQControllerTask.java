@@ -278,7 +278,6 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     );
 
     controller = new ControllerImpl(
-        this.getId(),
         querySpec,
         new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
         context,

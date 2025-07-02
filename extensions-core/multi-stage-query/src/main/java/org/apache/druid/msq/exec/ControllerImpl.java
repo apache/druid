@@ -220,7 +220,6 @@ public class ControllerImpl implements Controller
   private static final Logger log = new Logger(ControllerImpl.class);
   private static final String RESULT_READER_CANCELLATION_ID = "result-reader";
 
-  private final String queryId;
   private final MSQSpec querySpec;
   private final Query<?> legacyQuery;
   private final ResultsContext resultsContext;
@@ -297,14 +296,12 @@ public class ControllerImpl implements Controller
   private MSQSegmentReport segmentReport;
 
   public ControllerImpl(
-      final String queryId,
       final LegacyMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = querySpec.getQuery();
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -314,14 +311,12 @@ public class ControllerImpl implements Controller
 
 
   public ControllerImpl(
-      final String queryId,
       final QueryDefMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = null;
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -333,7 +328,7 @@ public class ControllerImpl implements Controller
   @Override
   public String queryId()
   {
-    return queryId;
+    return context.queryId();
   }
 
   @Override
@@ -694,7 +689,7 @@ public class ControllerImpl implements Controller
           context.jsonMapper(),
           queryKitSpecFactory.makeQueryKitSpec(
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
-              queryId,
+              context.queryId(),
               querySpec.getTuningConfig(),
               querySpec.getContext()
           )
@@ -723,7 +718,7 @@ public class ControllerImpl implements Controller
     queryDefRef.set(queryDef);
 
     workerManager = context.newWorkerManager(
-        queryId,
+        context.queryId(),
         querySpec,
         queryKernelConfig,
         (failedTask, fault) -> {
@@ -1505,7 +1500,7 @@ public class ControllerImpl implements Controller
           segmentLoadWaiter = new SegmentLoadStatusFetcher(
               context.injector().getInstance(BrokerClient.class),
               context.jsonMapper(),
-              queryId,
+              context.queryId(),
               destination.getDataSource(),
               segmentsWithTombstones,
               true
@@ -1521,7 +1516,7 @@ public class ControllerImpl implements Controller
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
-            queryId,
+            context.queryId(),
             destination.getDataSource(),
             segments,
             true
