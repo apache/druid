@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -33,7 +34,6 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
-import java.util.Map;
 
 /**
  * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
@@ -65,10 +65,9 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
-   * metrics. These are can override any already existing context specific dimensions.
+   * Emit the metric in the {@link ServiceMetricEvent.Builder} using a {@link ServiceEmitter}.
    */
-  void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value);
+  void emitMetric(ServiceMetricEvent.Builder metricBuilder);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection

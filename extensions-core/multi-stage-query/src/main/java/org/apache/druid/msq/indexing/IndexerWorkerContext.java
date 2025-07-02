@@ -65,7 +65,6 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
-import java.util.Map;
 
 public class IndexerWorkerContext implements WorkerContext
 {
@@ -204,15 +203,11 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-
     // Attach task specific dimensions
     MSQMetricUtils.setTaskDimensions(metricBuilder, task, QueryContext.of(task.getContext()));
-
-    overrideDimensions.forEach(metricBuilder::setDimension);
-    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
+    toolbox.getEmitter().emit(metricBuilder);
   }
 
   @Override

@@ -157,6 +157,15 @@ public class ServiceMetricEvent implements Event
       return this;
     }
 
+    /**
+     * Sets the dimension if the dimension has not already been set.
+     */
+    public Builder setDimensionIfAbsent(String dim, Object value)
+    {
+      userDims.putIfAbsent(dim, value);
+      return this;
+    }
+
     public Builder setDimension(String dim, Object value)
     {
       userDims.put(dim, value);

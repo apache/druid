@@ -53,7 +53,6 @@ import org.apache.druid.server.coordination.ServerType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Dart implementation of {@link ControllerContext}.
@@ -176,13 +175,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, Map<String, Object> overrideDimensions, final Number value)
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     MSQMetricUtils.setDartDimensions(metricBuilder, context);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));
-    overrideDimensions.forEach(metricBuilder::setDimension);
-    emitter.emit(metricBuilder.setMetric(metric, value));
+    emitter.emit(metricBuilder);
   }
 
   @Override

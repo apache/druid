@@ -25,6 +25,7 @@ import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
@@ -111,7 +112,7 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
 
   }

@@ -87,6 +87,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -161,6 +162,9 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -567,11 +571,14 @@ public class ControllerImpl implements Controller
     }
 
     long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
-    context.emitMetric(
-        "query/time",
-        MSQMetricUtils.createQueryMetricDimensions(datasources, intervals, success),
-        System.currentTimeMillis() - startTime
-    );
+
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
+                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
+                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
+                 .setDimension(DruidMetrics.SUCCESS, success)
+                 .setMetric("query/time", System.currentTimeMillis() - startTime);
+    context.emitMetric(metricBuilder);
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -609,7 +616,9 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
-    context.emitMetric("ingest/input/bytes", Map.of(), totalProcessedBytes);
+
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    context.emitMetric(metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes));
   }
 
   /**
@@ -1529,9 +1538,11 @@ public class ControllerImpl implements Controller
       );
     }
 
-    context.emitMetric("ingest/tombstones/count", Map.of(), numTombstones);
+    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    context.emitMetric(metricBuilder.setMetric("ingest/tombstones/count", numTombstones));
+
     // Include tombstones in the reported segments count
-    context.emitMetric("ingest/segments/count", Map.of(), segmentsWithTombstones.size());
+    context.emitMetric(metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size()));
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(

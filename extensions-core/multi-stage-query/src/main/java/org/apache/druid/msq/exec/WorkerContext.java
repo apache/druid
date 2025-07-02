@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -31,7 +32,6 @@ import org.apache.druid.server.DruidNode;
 
 import java.io.Closeable;
 import java.io.File;
-import java.util.Map;
 
 /**
  * Context used by multi-stage query workers.
@@ -59,10 +59,9 @@ public interface WorkerContext extends Closeable
   Injector injector();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}. The dimensions passed as an argument are also emitted with the
-   * metrics. These are can override any already existing context specific dimensions.
+   * Emit the metric in the {@link ServiceMetricEvent.Builder} using a {@link ServiceEmitter}.
    */
-  void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value);
+  void emitMetric(ServiceMetricEvent.Builder metricBuilder);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in

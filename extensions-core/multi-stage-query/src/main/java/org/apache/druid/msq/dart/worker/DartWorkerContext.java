@@ -55,7 +55,6 @@ import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
-import java.util.Map;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -178,13 +177,11 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     MSQMetricUtils.setDartDimensions(metricBuilder, queryContext);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
-    overrideDimensions.forEach(metricBuilder::setDimension);
-    emitter.emit(metricBuilder.setMetric(metric, value));
+    emitter.emit(metricBuilder);
   }
 
   @Override

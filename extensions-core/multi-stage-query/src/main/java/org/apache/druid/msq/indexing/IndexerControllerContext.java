@@ -146,15 +146,11 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(String metric, Map<String, Object> overrideDimensions, Number value)
+  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
   {
-    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-
     // Attach task specific dimensions
     MSQMetricUtils.setTaskDimensions(metricBuilder, task, taskQuerySpecContext);
-
-    overrideDimensions.forEach(metricBuilder::setDimension);
-    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, value));
+    toolbox.getEmitter().emit(metricBuilder);
   }
 
   @Override

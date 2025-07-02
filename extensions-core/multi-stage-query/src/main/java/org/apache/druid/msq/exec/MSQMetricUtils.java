@@ -28,15 +28,11 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.joda.time.Interval;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -69,6 +65,11 @@ public class MSQMetricUtils
    * <li>sqlQueryId</li>
    * <li>type</li>
    * <li>engine</li>
+   * <li>taskId</li>
+   * <li>taskType</li>
+   * <li>dataSource</li>
+   * <li>tags</li>
+   * <li>groupId</li>
    * </ul>
    */
   public static void setTaskDimensions(
@@ -110,29 +111,6 @@ public class MSQMetricUtils
       }
     }
     return intervals;
-  }
-
-  /**
-   * Creates dimensions for reporting metrics. Creates the following dimensions:
-   * <ul>
-   * <li>dataSource</li>
-   * <li>interval</li>
-   * <li>duration</li>
-   * <li>success</li>
-   * </ul>
-   */
-  public static Map<String, Object> createQueryMetricDimensions(
-      final Set<String> datasources,
-      final Collection<Interval> intervals,
-      final boolean success
-  )
-  {
-    Map<String, Object> dims = new HashMap<>();
-    dims.put(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources));
-    dims.put(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals));
-    dims.put(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals));
-    dims.put(DruidMetrics.SUCCESS, success);
-    return dims;
   }
 
   private static void setQueryIdDimensions(
