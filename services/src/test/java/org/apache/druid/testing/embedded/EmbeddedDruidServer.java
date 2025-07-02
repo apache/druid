@@ -22,17 +22,11 @@ package org.apache.druid.testing.embedded;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import org.apache.druid.cli.ServerRunnable;
-import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -47,7 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * This class and most of its methods are kept package protected as they are used
  * only by the specific server implementations in the same package.
  */
-public abstract class EmbeddedDruidServer implements ServerReferencesProvider, EmbeddedResource
+public abstract class EmbeddedDruidServer implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = 100_000_000;
@@ -62,7 +56,7 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider, E
   private final AtomicReference<DruidServerResource> lifecycle = new AtomicReference<>();
 
   private final Map<String, String> serverProperties = new HashMap<>();
-  private final ServerReferenceHolder clientHolder = new ServerReferenceHolder();
+  private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
   EmbeddedDruidServer()
   {
@@ -202,55 +196,26 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider, E
    */
   final void bindReferenceHolder(Binder binder)
   {
-    binder.bind(ServerReferenceHolder.class).toInstance(clientHolder);
+    binder.bind(ServerReferenceHolder.class).toInstance(referenceHolder);
   }
 
-  @Override
-  public DruidNode selfNode()
+  /**
+   * Provides access to the various dependencies bound by Guice on this server.
+   * The bindings should be used for read-only purposes and should not mutate
+   * the state of this server or the cluster, so that the embedded cluster can
+   * mirror the behaviour of a real production cluster.
+   */
+  public final ServerReferencesProvider bindings()
   {
-    return clientHolder.selfNode();
+    return referenceHolder;
   }
 
-  @Override
-  public CoordinatorClient leaderCoordinator()
+  /**
+   * {@link LatchableEmitter} used by this server, if bound.
+   */
+  public final LatchableEmitter latchableEmitter()
   {
-    return clientHolder.leaderCoordinator();
-  }
-
-  @Override
-  public DruidLeaderSelector coordinatorLeaderSelector()
-  {
-    return clientHolder.coordinatorLeaderSelector();
-  }
-
-  @Override
-  public OverlordClient leaderOverlord()
-  {
-    return clientHolder.leaderOverlord();
-  }
-
-  @Override
-  public DruidLeaderSelector overlordLeaderSelector()
-  {
-    return clientHolder.overlordLeaderSelector();
-  }
-
-  @Override
-  public BrokerClient anyBroker()
-  {
-    return clientHolder.anyBroker();
-  }
-
-  @Override
-  public LatchableEmitter latchableEmitter()
-  {
-    return clientHolder.latchableEmitter();
-  }
-
-  @Override
-  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
-  {
-    return clientHolder.segmentsMetadataStorage();
+    return referenceHolder.latchableEmitter();
   }
 
   /**

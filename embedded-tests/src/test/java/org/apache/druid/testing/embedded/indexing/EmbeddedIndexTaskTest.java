@@ -87,7 +87,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
-        overlord.segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
+        overlord.bindings().segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
     );
     segments.sort(
         (o1, o2) -> Comparators.intervalsByStartThenEnd()

@@ -25,8 +25,11 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -62,6 +65,13 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
 
   @Inject(optional = true)
   private IndexerMetadataStorageCoordinator segmentsMetadataStorage;
+
+  @Inject
+  private DruidNodeDiscoveryProvider nodeDiscoveryProvider;
+
+  @Inject
+  @EscalatedGlobal
+  private HttpClient httpClient;
 
   @Self
   @Inject
@@ -113,5 +123,17 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
   {
     return Objects.requireNonNull(segmentsMetadataStorage, "Segment metadata storage is not bound");
+  }
+
+  @Override
+  public DruidNodeDiscoveryProvider nodeDiscovery()
+  {
+    return nodeDiscoveryProvider;
+  }
+
+  @Override
+  public HttpClient escalatedHttpClient()
+  {
+    return httpClient;
   }
 }

@@ -20,9 +20,17 @@
 package org.apache.druid.testing.embedded.server;
 
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -33,9 +41,13 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.net.URL;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -71,7 +83,26 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testLeadershipChanges()
+  public void test_allNodesHaveDiscoveredEachOther()
+  {
+    final List<EmbeddedDruidServer> allServers
+        = List.of(coordinator1, coordinator2, overlord1, overlord2, indexer, broker, router);
+
+    for (EmbeddedDruidServer server : allServers) {
+      final DruidNodeDiscoveryProvider discoveryProvider = server.bindings().nodeDiscovery();
+      final HttpClient httpClient = server.bindings().escalatedHttpClient();
+
+      // Contact all nodes using the discovery and client of this node
+      verifyNodeRoleHasServerCount(NodeRole.BROKER, 1, discoveryProvider, httpClient);
+      verifyNodeRoleHasServerCount(NodeRole.COORDINATOR, 2, discoveryProvider, httpClient);
+      verifyNodeRoleHasServerCount(NodeRole.OVERLORD, 2, discoveryProvider, httpClient);
+      verifyNodeRoleHasServerCount(NodeRole.ROUTER, 1, discoveryProvider, httpClient);
+      verifyNodeRoleHasServerCount(NodeRole.INDEXER, 1, discoveryProvider, httpClient);
+    }
+  }
+
+  @Test
+  public void test_switchLeader_andVerifyUsingSysTables()
   {
     // Ingest some data so that we can query sys tables later
     final String taskId = dataSource + "_" + IdUtils.getRandomId();
@@ -107,6 +138,46 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
+  private void verifyNodeRoleHasServerCount(
+      NodeRole role,
+      int expectedCount,
+      DruidNodeDiscoveryProvider discovery,
+      HttpClient httpClient
+  )
+  {
+    final DruidNodeDiscovery discovered = discovery.getForNodeRole(role);
+    try {
+      int count = 0;
+      for (DiscoveryDruidNode node : discovered.getAllNodes()) {
+        verifySelfDiscoveredStatusReturnsOk(node, httpClient);
+        ++count;
+      }
+      Assertions.assertEquals(expectedCount, count);
+    }
+    catch (Exception e) {
+      Assertions.fail("Failed while discovering nodes", e);
+    }
+  }
+
+  private void verifySelfDiscoveredStatusReturnsOk(
+      DiscoveryDruidNode node,
+      HttpClient httpClient
+  ) throws Exception
+  {
+    final String location = StringUtils.format(
+        "http://%s:%s/status/selfDiscovered",
+        node.getDruidNode().getHost(),
+        node.getDruidNode().getPlaintextPort()
+    );
+
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.GET, new URL(location)),
+        StatusResponseHandler.getInstance()
+    ).get();
+
+    Assertions.assertEquals(response.getStatus(), HttpResponseStatus.OK);
+  }
+
   /**
    * Restarts the current leader in the server pair to force the other server to
    * gain leadership. Returns the updated server pair.
@@ -120,7 +191,11 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
 
       // Verify that leadership has switched
       final ServerPair<S> updatedPair = new ServerPair<>(serverPair.notLeader, serverPair.leader);
-      verifyLeader(updatedPair);
+      if (updatedPair.isCoordinator) {
+        verifyOnlyOneInPairIsLeader(updatedPair, s -> s.bindings().coordinatorLeaderSelector());
+      } else {
+        verifyOnlyOneInPairIsLeader(updatedPair, s -> s.bindings().overlordLeaderSelector());
+      }
 
       return updatedPair;
     }
@@ -133,33 +208,24 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   {
     final boolean aIsLeader;
     if (serverA instanceof EmbeddedOverlord) {
-      aIsLeader = serverA.overlordLeaderSelector().isLeader();
+      aIsLeader = serverA.bindings().overlordLeaderSelector().isLeader();
     } else {
-      aIsLeader = serverA.coordinatorLeaderSelector().isLeader();
+      aIsLeader = serverA.bindings().coordinatorLeaderSelector().isLeader();
     }
 
     return aIsLeader ? new ServerPair<>(serverA, serverB) : new ServerPair<>(serverB, serverA);
-  }
-
-  private <S extends EmbeddedDruidServer> void verifyLeader(ServerPair<S> serverPair)
-  {
-    if (serverPair.isCoordinator) {
-      verifyLeader(serverPair, EmbeddedDruidServer::coordinatorLeaderSelector);
-    } else {
-      verifyLeader(serverPair, EmbeddedDruidServer::overlordLeaderSelector);
-    }
   }
 
   /**
    * Verifies that exactly one of the servers in the pair is a leader and that
    * other servers know it to be the leader.
    */
-  private <S extends EmbeddedDruidServer> void verifyLeader(
+  private <S extends EmbeddedDruidServer> void verifyOnlyOneInPairIsLeader(
       ServerPair<S> serverPair,
       Function<EmbeddedDruidServer, DruidLeaderSelector> getLeaderSelector
   )
   {
-    final String leaderUri = serverPair.leader.selfNode().getUriToUse().toString();
+    final String leaderUri = serverPair.leader.bindings().selfNode().getUriToUse().toString();
 
     // Verify that the leader knows that it is leader
     Assertions.assertTrue(getLeaderSelector.apply(serverPair.leader).isLeader());
@@ -190,8 +256,8 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         StringUtils.format(
             "%s,0\n%s,1",
-            serverPair.notLeader.selfNode().getPlaintextPort(),
-            serverPair.leader.selfNode().getPlaintextPort()
+            serverPair.notLeader.bindings().selfNode().getPlaintextPort(),
+            serverPair.leader.bindings().selfNode().getPlaintextPort()
         ),
         cluster.runSql(
             "SELECT plaintext_port, is_leader FROM sys.servers WHERE server_type='%s' ORDER BY is_leader",

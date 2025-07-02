@@ -279,19 +279,19 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public CoordinatorClient leaderCoordinator()
   {
-    return servers.get(0).leaderCoordinator();
+    return servers.get(0).bindings().leaderCoordinator();
   }
 
   @Override
   public OverlordClient leaderOverlord()
   {
-    return servers.get(0).leaderOverlord();
+    return servers.get(0).bindings().leaderOverlord();
   }
 
   @Override
   public BrokerClient anyBroker()
   {
-    return servers.get(0).anyBroker();
+    return servers.get(0).bindings().anyBroker();
   }
 
   private void validateNotStarted()
