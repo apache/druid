@@ -146,7 +146,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   )
   {
     return FunctionalIterable
-        .create(getAllSegmentReferences(timeline, specs, segmentMapFn, closer))
+        .create(getAndLoadAllSegmentReferences(timeline, specs, segmentMapFn, query.context().getTimeout(), closer))
         .transform(
             ref ->
                 ref.getSegmentReference()

@@ -26,18 +26,24 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 /**
@@ -87,7 +93,25 @@ public class DartDataSegmentProvider implements DataSegmentProvider
       // in the future we should call the other version of mapSegment, instead or returning a CompleteSegment we would
       // return a SegmentMapAction so that the load can be interleaved with processing, but that requires shuffling
       // some stuff around
-      final Optional<Segment> maybeSegment = segmentManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY);
+      final Closer loadCloser = Closer.create();
+      final Optional<Segment> maybeSegment;
+      try {
+        final SegmentMapAction mapAction = segmentManager.mapSegment(
+            new DataSegmentAndDescriptor(
+                dataSegment,
+                new SegmentDescriptor(segmentId.getInterval(), segmentId.getVersion(), segmentId.getPartitionNum())
+            ),
+            SegmentMapFunction.IDENTITY,
+            loadCloser
+        );
+        // todo (clint): this is wack, it should have a timeout
+        maybeSegment = mapAction.getSegmentFuture().get();
+        loadCloser.close();
+      }
+      catch (SegmentLoadingException | ExecutionException | InterruptedException | IOException e) {
+        throw new RuntimeException(e);
+      }
+
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);

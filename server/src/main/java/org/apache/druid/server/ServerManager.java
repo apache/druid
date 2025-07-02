@@ -57,6 +57,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.SegmentAnalyzer;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -194,7 +195,7 @@ public class ServerManager implements QuerySegmentWalker
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
    * {@link VersionedIntervalTimeline}, then use
-   * {@link SegmentManager#mapSegments(Iterable, SegmentMapFunction, Closer, long)} to apply {@link SegmentMapFunction}
+   * {@link SegmentManager#mapSegments(Iterable, SegmentMapFunction, Closer)} to apply {@link SegmentMapFunction}
    * to get the segments from the cache (or loaded from deep storage if necessary) and transform the segments as
    * appropriate for query processing into {@link SegmentReference} wrappers. The wrappers contain the
    * {@link SegmentDescriptor} and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to
@@ -256,15 +257,11 @@ public class ServerManager implements QuerySegmentWalker
 
 
   /**
-   * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
-   * {@link VersionedIntervalTimeline}, then {@link SegmentManager#mapSegment(DataSegment, SegmentMapFunction)} to
-   * apply {@link SegmentMapFunction} to get the segments from the cache and transform the segments as appropriate for
-   * query processing into {@link SegmentReference} wrappers. The wrappers contain the {@link SegmentDescriptor}
-   * and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to the {@link Closer}.
-   * If empty, the segment was not in the timeline, not in the cache, or the map function transform was
-   * unable to be applied.
+   * Special handling for {@link SegmentMetadataQuery}, to force it to only use segments that are already stored in the
+   * cache as strong references, using empty placeholder segments with a __time column and 0 rows for all segments that
+   * are in the timeline but are missing from the cache (e.g. weak references)
    */
-  protected List<SegmentReference> getAllSegmentReferences(
+  private List<SegmentReference> getSegmentMetadataSegmentReferences(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFn,
@@ -283,13 +280,23 @@ public class ServerManager implements QuerySegmentWalker
         segmentReferences.add(new SegmentReference(descriptor, Optional.empty()));
       } else {
         final DataSegment dataSegment = chunk.getObject();
-
-        segmentReferences.add(
-            new SegmentReference(
-                descriptor,
-                segmentManager.mapSegment(dataSegment, segmentMapFn).map(closer::register)
-            )
-        );
+        final Optional<Segment> theSegment = segmentManager.mapSegment(dataSegment, segmentMapFn).map(closer::register);
+        if (theSegment.isPresent()) {
+          segmentReferences.add(
+              new SegmentReference(
+                  descriptor,
+                  theSegment
+              )
+          );
+        } else {
+          // make a stub to run the segment metadata query instead of being a 'missing' segment
+          segmentReferences.add(
+              new SegmentReference(
+                  descriptor,
+                  Optional.of(SegmentAnalyzer.makeVirtualPlaceholderSegment(dataSegment))
+              )
+          );
+        }
       }
     }
     return segmentReferences;
@@ -311,7 +318,7 @@ public class ServerManager implements QuerySegmentWalker
     // todo (clint): this feels hella wack... but otherwise we're going to be loading weak assignments more or less as
     //  soon as they are assigned instead of on demand at query time
     if (query instanceof SegmentMetadataQuery) {
-      segmentReferences = getAllSegmentReferences(timeline, specs, segmentMapFn, closer);
+      segmentReferences = getSegmentMetadataSegmentReferences(timeline, specs, segmentMapFn, closer);
     } else {
       segmentReferences = getAndLoadAllSegmentReferences(
           timeline,

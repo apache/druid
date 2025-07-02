@@ -204,7 +204,6 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
                       .toString();
                   // StorageLocation keeps track of how much storage capacity is being used.
                   // Newly found files should be known to the StorageLocation to keep it up to date.
-                  final File reservedFile;
                   if (!location.reserve(new FileNameCacheEntry(relativeSegmentPath, eachFile.length()))) {
                     LOG.warn("Can't add a discovered partition[%s]", eachFile.getAbsolutePath());
                   }
