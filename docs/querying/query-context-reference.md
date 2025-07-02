@@ -23,7 +23,7 @@ sidebar_label: "Query context reference"
   ~ under the License.
   -->
 
-Query context provides runtime configuration for individual queries in Apache Druid. You can configure query context through context parameters. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
+The query context provides runtime configuration for individual queries in Apache Druid. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
 
 Query context parameters can be specified in the following ways:
 
