@@ -21,8 +21,6 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -67,8 +65,8 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -82,9 +80,6 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -195,7 +190,7 @@ public class ServerManager implements QuerySegmentWalker
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
    * {@link VersionedIntervalTimeline}, then use
-   * {@link SegmentManager#mapSegments(Iterable, SegmentMapFunction, Closer)} to apply {@link SegmentMapFunction}
+   * {@link SegmentManager#acquireSegments(Iterable, Closer)} to apply {@link SegmentMapFunction}
    * to get the segments from the cache (or loaded from deep storage if necessary) and transform the segments as
    * appropriate for query processing into {@link SegmentReference} wrappers. The wrappers contain the
    * {@link SegmentDescriptor} and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to
@@ -231,21 +226,10 @@ public class ServerManager implements QuerySegmentWalker
                 return new DataSegmentAndDescriptor(null, descriptor);
               }
           );
-      final List<SegmentMapAction> loaders = segmentManager.mapSegments(segmentsToMap, segmentMapFunction, closer);
-      final Iterable<ListenableFuture<Optional<Segment>>> loadFutures =
-          () -> loaders.stream().map(SegmentMapAction::getSegmentFuture).iterator();
-      final List<Optional<Segment>> loadedProviders =
-          Futures.allAsList(loadFutures).get(timeout, TimeUnit.MILLISECONDS);
-
-      final List<SegmentReference> segmentReferences = new ArrayList<>();
-      for (int i = 0; i < loaders.size(); i++) {
-        segmentReferences.add(
-            new SegmentReference(loaders.get(i).getDescriptor(), loadedProviders.get(i).map(closer::register))
-        );
-      }
-      return segmentReferences;
+      final List<AcquireSegmentAction> loaders = segmentManager.acquireSegments(segmentsToMap, closer);
+      return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, closer, timeout);
     }
-    catch (InterruptedException | ExecutionException | TimeoutException | SegmentLoadingException e) {
+    catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
     }
     finally {
@@ -280,7 +264,7 @@ public class ServerManager implements QuerySegmentWalker
         segmentReferences.add(new SegmentReference(descriptor, Optional.empty()));
       } else {
         final DataSegment dataSegment = chunk.getObject();
-        final Optional<Segment> theSegment = segmentManager.mapSegment(dataSegment, segmentMapFn).map(closer::register);
+        final Optional<Segment> theSegment = segmentMapFn.apply(segmentManager.acquireSegment(dataSegment)).map(closer::register);
         if (theSegment.isPresent()) {
           segmentReferences.add(
               new SegmentReference(

@@ -22,7 +22,6 @@ package org.apache.druid.segment.loading;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -84,22 +83,15 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Segment getSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireSegment(DataSegment dataSegment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public SegmentMapAction mapSegment(
+  public AcquireSegmentAction acquireSegment(
       DataSegment dataSegment,
-      SegmentDescriptor descriptor,
-      SegmentMapFunction segmentMapFunction
+      SegmentDescriptor descriptor
   )
   {
     throw new UnsupportedOperationException();

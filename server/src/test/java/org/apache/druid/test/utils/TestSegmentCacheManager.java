@@ -26,10 +26,9 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -126,33 +125,26 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public Segment getSegment(DataSegment dataSegment)
-  {
-    return getSegmentInternal(dataSegment).acquireReference().orElse(null);
-  }
-
-  @Override
-  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
+  public Optional<Segment> acquireSegment(DataSegment dataSegment)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
       return Optional.empty();
     }
-    return segmentMapFunction.apply(getSegmentInternal(dataSegment).acquireReference());
+    return getSegmentInternal(dataSegment).acquireReference();
   }
 
   @Override
-  public SegmentMapAction mapSegment(
+  public AcquireSegmentAction acquireSegment(
       DataSegment dataSegment,
-      SegmentDescriptor descriptor,
-      SegmentMapFunction segmentMapFunction
+      SegmentDescriptor descriptor
   )
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
-      return SegmentMapAction.missingSegment(descriptor);
+      return AcquireSegmentAction.missingSegment(descriptor);
     }
-    return SegmentMapAction.alreadyLoaded(
+    return AcquireSegmentAction.alreadyLoaded(
         descriptor,
-        segmentMapFunction.apply(getSegmentInternal(dataSegment).acquireReference())
+        getSegmentInternal(dataSegment).acquireReference()
     );
   }
 

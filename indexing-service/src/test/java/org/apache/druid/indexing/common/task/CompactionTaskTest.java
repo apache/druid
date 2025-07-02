@@ -1943,9 +1943,11 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Segment getSegment(DataSegment dataSegment)
+      public Optional<Segment> acquireSegment(DataSegment dataSegment)
       {
-        return new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
+        return Optional.of(
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
       }
 
       @Override

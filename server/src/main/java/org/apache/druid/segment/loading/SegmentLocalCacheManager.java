@@ -38,7 +38,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -272,31 +271,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  @Nullable
   @Override
-  public Segment getSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireSegment(DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     for (StorageLocation location : locations) {
       if (location.isReserved(cacheEntryIdentifier)) {
-        SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
-        return cacheEntry.referenceProvider.acquireReference().orElse(null);
+        final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
+        return cacheEntry.referenceProvider.acquireReference();
       }
     }
-    return null;
+    return Optional.empty();
   }
 
   @Override
-  public Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction)
-  {
-    return segmentMapFunction.apply(Optional.ofNullable(getSegment(dataSegment)));
-  }
-
-  @Override
-  public SegmentMapAction mapSegment(
+  public AcquireSegmentAction acquireSegment(
       DataSegment dataSegment,
-      SegmentDescriptor descriptor,
-      SegmentMapFunction segmentMapFunction
+      SegmentDescriptor descriptor
   ) throws SegmentLoadingException
   {
 
@@ -315,22 +306,22 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         for (StorageLocation location : locations) {
           final SegmentCacheEntry entry = location.addWeakReservationHoldIfExists(identifier);
           if (entry != null && entry.referenceProvider != null) {
-            return new SegmentMapAction(
+            return new AcquireSegmentAction(
                 descriptor,
-                () -> Futures.immediateFuture(segmentMapFunction.apply(entry.referenceProvider.acquireReference())),
+                () -> Futures.immediateFuture(entry.referenceProvider.acquireReference()),
                 cleanup
             );
           }
         }
         final Iterator<StorageLocation> iterator = strategy.getLocations();
         while (iterator.hasNext()) {
-          StorageLocation location = iterator.next();
+          final StorageLocation location = iterator.next();
           final SegmentCacheEntry entry = location.addWeakReservationHold(
               identifier,
               () -> new SegmentCacheEntry(dataSegment)
           );
           if (entry != null) {
-            return new SegmentMapAction(
+            return new AcquireSegmentAction(
                 descriptor,
                 () -> SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
                     () -> {
@@ -338,7 +329,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                       synchronized (threadLock) {
                         try {
                           entry.mount(location.getPath());
-                          return segmentMapFunction.apply(entry.referenceProvider.acquireReference());
+                          return entry.referenceProvider.acquireReference();
                         }
                         finally {
                           unlock(dataSegment, threadLock);
@@ -410,28 +401,26 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-
-  /**
-   * Make sure segments files in loc is intact, otherwise function like loadSegments will failed because of segment files is damaged.
-   * @param segment
-   * @return
-   * @throws SegmentLoadingException
-   */
+  @Nullable
   @Override
-  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  public File getSegmentFiles(DataSegment segment)
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-    // todo (clint): this method should no longer mount, only return files that exist
     final ReferenceCountingLock lock = lock(segment);
     synchronized (lock) {
       try {
-        final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, SegmentLazyLoadFailCallback.NOOP);
-        return entry.storageDir;
+        for (StorageLocation location : locations) {
+          final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+          if (entry != null) {
+            return entry.storageDir;
+          }
+        }
       }
       finally {
         unlock(segment, lock);
       }
     }
+    return null;
   }
 
   /**
@@ -524,7 +513,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return false;
   }
 
-  public ReferenceCountingLock lock(DataSegment dataSegment)
+  private ReferenceCountingLock lock(DataSegment dataSegment)
   {
     return segmentLocks.compute(
         dataSegment,

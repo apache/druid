@@ -50,4 +50,10 @@ public final class SegmentCacheEntryIdentifier implements CacheEntryIdentifier
   {
     return Objects.hashCode(segmentId);
   }
+
+  @Override
+  public String toString()
+  {
+    return segmentId.toString();
+  }
 }

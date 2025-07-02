@@ -30,7 +30,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -87,8 +86,8 @@ public class DartDataSegmentProvider implements DataSegmentProvider
       // in the future we should call the other version of mapSegment, instead or returning a CompleteSegment we would
       // return a SegmentMapAction so that the load can be interleaved with processing, but that requires shuffling
       // some stuff around
-      
-      final Optional<Segment> maybeSegment = segmentManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY);
+
+      final Optional<Segment> maybeSegment = segmentManager.acquireSegment(dataSegment);
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);

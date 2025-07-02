@@ -29,15 +29,14 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentMapAction;
 import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
@@ -132,57 +131,53 @@ public class SegmentManager
    * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
    * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #mapSegment(DataSegmentAndDescriptor, SegmentMapFunction, Closer)} or
-   * {@link #mapSegments(Iterable, SegmentMapFunction, Closer)} instead.
+   * {@link #acquireSegment(DataSegmentAndDescriptor, Closer)} or
+   * {@link #acquireSegments(Iterable, Closer)} instead.
    */
-  public Optional<Segment> mapSegment(
-      DataSegment dataSegment,
-      SegmentMapFunction segmentMapFunction
+  public Optional<Segment> acquireSegment(
+      DataSegment dataSegment
   )
   {
-    return cacheManager.mapSegment(dataSegment, segmentMapFunction);
+    return cacheManager.acquireSegment(dataSegment);
   }
 
   /**
-   * Returns a {@link SegmentMapAction}, where calling {@link SegmentMapAction#getSegmentFuture()} will either return
+   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either return
    * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
    * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
    */
-  public SegmentMapAction mapSegment(
+  public AcquireSegmentAction acquireSegment(
       DataSegmentAndDescriptor segmentAndDescriptor,
-      SegmentMapFunction segmentMapFunction,
       Closer loadCleanup
   ) throws SegmentLoadingException
   {
     return loadCleanup.register(
-        cacheManager.mapSegment(
+        cacheManager.acquireSegment(
             segmentAndDescriptor.getDataSegment(),
-            segmentAndDescriptor.getDescriptor(),
-            segmentMapFunction
+            segmentAndDescriptor.getDescriptor()
         )
     );
   }
 
   /**
    * Given a list of {@link DataSegmentAndDescriptor}, call
-   * {@link #mapSegment(DataSegmentAndDescriptor, SegmentMapFunction, Closer)} on each of them to build a list of
-   * {@link SegmentMapAction}. Calling {@link SegmentMapAction#getSegmentFuture()} on any item in the list will either
+   * {@link #acquireSegment(DataSegmentAndDescriptor, Closer)} on each of them to build a list of
+   * {@link AcquireSegmentAction}. Calling {@link AcquireSegmentAction#getSegmentFuture()} on any item in the list will either
    * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
    * if not. Any {@link Segment} returned from these futures, if present, must be closed when the caller is finished
    * doing segment things.
    */
-  public List<SegmentMapAction> mapSegments(
+  public List<AcquireSegmentAction> acquireSegments(
       Iterable<DataSegmentAndDescriptor> segments,
-      SegmentMapFunction segmentMapFunction,
       Closer loadCleanup
   ) throws SegmentLoadingException
   {
-    final List<SegmentMapAction> actions = new ArrayList<>();
+    final List<AcquireSegmentAction> actions = new ArrayList<>();
     for (DataSegmentAndDescriptor segmentAndDescriptor : segments) {
       if (segmentAndDescriptor.getDataSegment() == null) {
-        actions.add(SegmentMapAction.missingSegment(segmentAndDescriptor.getDescriptor()));
+        actions.add(AcquireSegmentAction.missingSegment(segmentAndDescriptor.getDescriptor()));
       } else {
-        actions.add(mapSegment(segmentAndDescriptor, segmentMapFunction, loadCleanup));
+        actions.add(acquireSegment(segmentAndDescriptor, loadCleanup));
       }
     }
     return actions;
@@ -237,7 +232,8 @@ public class SegmentManager
       if (!cacheManager.bootstrap(dataSegment, loadFailed)) {
         throw new SegmentLoadingException(
             "Unable to bootstrap segment[%s] with loadSpec[%s].",
-            dataSegment.getId(), dataSegment.getLoadSpec()
+            dataSegment.getId(),
+            dataSegment.getLoadSpec()
         );
       }
     }
@@ -262,12 +258,12 @@ public class SegmentManager
    */
   public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountedSegmentProvider segment;
     try {
       if (!cacheManager.load(dataSegment)) {
         throw new SegmentLoadingException(
             "Unable to load segment[%s] with loadSpec[%s].",
-            dataSegment.getId(), dataSegment.getLoadSpec()
+            dataSegment.getId(),
+            dataSegment.getLoadSpec()
         );
       }
     }
@@ -309,7 +305,7 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.mapSegment(dataSegment, SegmentMapFunction.IDENTITY);
+            final Optional<Segment> loadedSegment = cacheManager.acquireSegment(dataSegment);
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -376,7 +372,7 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.mapSegment(oldSegmentRef, SegmentMapFunction.IDENTITY);
+                final Optional<Segment> oldSegment = cacheManager.acquireSegment(oldSegmentRef);
                 long numberOfRows = oldSegment.map(segment -> {
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
                   if (countInspector != null) {

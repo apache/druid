@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -64,10 +63,9 @@ public interface SegmentCacheManager
 
 
   /**
-   * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a
-   * {@link Segment} from deep storage, this method returns true if the cache is able to load and subsequently serve it
-   * to callers via {@link #mapSegment(DataSegment, SegmentMapFunction)} or
-   * {@link #mapSegment(DataSegment, SegmentDescriptor, SegmentMapFunction)}.
+   * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a {@link Segment} from
+   * deep storage, this method returns true if the cache is able to load and subsequently serve it to callers via
+   * {@link #acquireSegment(DataSegment)} or {@link #acquireSegment(DataSegment, SegmentDescriptor)}.
    *
    * @param segment Segment to get on each download (after service bootstrap)
    * @throws SegmentLoadingException If there is an error in loading the segment
@@ -78,8 +76,8 @@ public interface SegmentCacheManager
 
   /**
    * Similar to {@link #load(DataSegment)}, this method returns true during if during startup on data nodes the cache
-   * is able to load and subsequently serve it to callers via {@link #mapSegment(DataSegment, SegmentMapFunction)} or
-   * {@link #mapSegment(DataSegment, SegmentDescriptor, SegmentMapFunction)}.
+   * is able to load and subsequently serve it to callers via {@link #acquireSegment(DataSegment)} or
+   * {@link #acquireSegment(DataSegment, SegmentDescriptor)}.
    *
    * @param segment    Segment to retrieve during service bootstrap
    * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
@@ -98,36 +96,32 @@ public interface SegmentCacheManager
 
   /**
    * Applies a {@link SegmentMapFunction} to a {@link Segment} if it is available in the cache. If not present in any
-   * storage location, this method will not attempt to download the {@link DataSegment} from deep storage.
+   * storage location, this method will not attempt to download the {@link DataSegment} from deep storage. The
+   * {@link Segment} returned by this method is considered an open reference, cache implementations must not allow it
+   * to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
+   * finished doing segment things.
    */
-  Optional<Segment> mapSegment(DataSegment dataSegment, SegmentMapFunction segmentMapFunction);
+  Optional<Segment> acquireSegment(DataSegment dataSegment);
 
   /**
-   * Returns a {@link SegmentMapAction} for a given {@link DataSegment}, {@link SegmentDescriptor}, and
-   * {@link SegmentMapFunction} combination, which returns the {@link Segment} if already present in the cache, or
-   * tries to fetch from deep storage and map if not.
+   * Returns a {@link AcquireSegmentAction} for a given {@link DataSegment} and {@link SegmentDescriptor}, which returns
+   * the {@link Segment} if already present in the cache, or tries to fetch from deep storage and map if not. The
+   * {@link Segment} returned by this method is considered an open reference, cache implementations must not allow it
+   * to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
+   * finished doing segment things.
    */
-  SegmentMapAction mapSegment(
+  AcquireSegmentAction acquireSegment(
       DataSegment dataSegment,
-      SegmentDescriptor descriptor,
-      SegmentMapFunction segmentMapFunction
+      SegmentDescriptor descriptor
   ) throws SegmentLoadingException;
 
   /**
-   * Get a {@link Segment}, if it is available in the cache. If not present in any storage location, this method will
-   * not attempt to download the {@link DataSegment} from deep storage.
-   */
-  @Nullable
-  Segment getSegment(DataSegment dataSegment);
-
-  /**
-   * Alternative to {@link #load(DataSegment)}, to return the {@link File} location of the segment files instead
-   * of a {@link ReferenceCountedSegmentProvider}.
-   * <p>
-   * todo (clint): should this just be moved to a different interface now that is only used in production in a single
-   *  place? (druid segment input entity for ingest)
-   *
-   * @throws SegmentLoadingException if there is an error in downloading files
+   * Alternative to {@link #acquireSegment(DataSegment)}, to return the {@link File} location of the segment files
+   * stored in the cache, instead of a {@link Optional<Segment>}. Unlike {@link #acquireSegment(DataSegment)} and
+   * {@link #acquireSegment(DataSegment, SegmentDescriptor)}, this method does not provide any protections for callers,
+   * and should only be used by callers that are in control of when {@link #drop(DataSegment)} is called. This method
+   * will not download the segment files from deep storage if they do not already exist in the cache, callers should use
+   * {@link #load(DataSegment)} before calling this method.
    */
   @Nullable
   File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;

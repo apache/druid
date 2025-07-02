@@ -21,36 +21,74 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-public class SegmentMapAction implements Closeable
+public class AcquireSegmentAction implements Closeable
 {
   private static final Closeable NOOP = () -> {};
 
-  public static SegmentMapAction alreadyLoaded(
+  public static List<SegmentReference> mapAllSegments(
+      List<AcquireSegmentAction> acquireSegmentActions,
+      SegmentMapFunction segmentMapFunction,
+      Closer closer,
+      long timeout
+  )
+  {
+    try {
+      final Iterable<ListenableFuture<Optional<Segment>>> futures =
+          () -> acquireSegmentActions.stream().map(AcquireSegmentAction::getSegmentFuture).iterator();
+      final List<Optional<Segment>> loadedProviders =
+          Futures.allAsList(futures).get(timeout, TimeUnit.MILLISECONDS);
+
+      final List<SegmentReference> segmentReferences = new ArrayList<>();
+      for (int i = 0; i < acquireSegmentActions.size(); i++) {
+        segmentReferences.add(
+            new SegmentReference(
+                acquireSegmentActions.get(i).getDescriptor(),
+                segmentMapFunction.apply(loadedProviders.get(i).map(closer::register))
+            )
+        );
+      }
+      return segmentReferences;
+    }
+    catch (InterruptedException | ExecutionException | TimeoutException e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+    }
+  }
+
+  public static AcquireSegmentAction alreadyLoaded(
       final SegmentDescriptor descriptor,
       final Optional<Segment> segment
   )
   {
-    return new SegmentMapAction(descriptor, () -> Futures.immediateFuture(segment), NOOP);
+    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(segment), NOOP);
   }
 
-  public static SegmentMapAction missingSegment(final SegmentDescriptor descriptor)
+  public static AcquireSegmentAction missingSegment(final SegmentDescriptor descriptor)
   {
-    return new SegmentMapAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP);
+    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP);
   }
 
   private final SegmentDescriptor segmentDescriptor;
   private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
   private final Closeable loadCleanup;
 
-  public SegmentMapAction(
+  public AcquireSegmentAction(
       SegmentDescriptor segmentDescriptor,
       Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
       Closeable loadCleanup
