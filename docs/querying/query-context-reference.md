@@ -34,7 +34,7 @@ HTTP POST API, or as properties to the JDBC connection.
 Note that setting query context will override both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}` (if set). 
 
-This reference contains all available context parameters organized by their scope: 
+This reference contains context parameters organized by their scope: 
 
 - **General parameters**: Apply to all query types and control execution behavior, resource limits, and caching
 - **Query type-specific parameters**: Available only for certain query types like TopN, Timeseries, or GroupBy
