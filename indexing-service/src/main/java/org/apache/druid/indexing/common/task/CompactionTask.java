@@ -91,7 +91,6 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -790,9 +789,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            if (!segmentCacheManager.load(dataSegment)) {
-              throw new SegmentLoadingException("Failed to load segment[%s]", dataSegment.getId());
-            }
+            segmentCacheManager.load(dataSegment);
             closer.register(() -> segmentCacheManager.drop(dataSegment));
             final Segment segment = closer.register(segmentCacheManager.acquireSegment(dataSegment).orElseThrow());
             return new ResourceHolder<QueryableIndex>()

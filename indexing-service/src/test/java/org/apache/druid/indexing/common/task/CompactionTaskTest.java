@@ -1937,9 +1937,9 @@ public class CompactionTaskTest
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public boolean load(DataSegment segment)
+      public void load(DataSegment segment)
       {
-        return true;
+        // do nothing
       }
 
       @Override

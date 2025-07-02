@@ -115,10 +115,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 
     final Closer closer = Closer.create();
     try {
-      if (!segmentCacheManager.load(dataSegment)) {
-        throw new SegmentLoadingException("Failed to load segment[%s]", dataSegment.getId());
-      }
-
+      segmentCacheManager.load(dataSegment);
       final Segment segment = closer.register(segmentCacheManager.acquireSegment(dataSegment).orElseThrow());
       closer.register(() -> segmentCacheManager.drop(dataSegment));
 

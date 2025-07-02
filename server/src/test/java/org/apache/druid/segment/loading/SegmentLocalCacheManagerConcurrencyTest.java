@@ -145,18 +145,26 @@ class SegmentLocalCacheManagerConcurrencyTest
       segmentsToLoad.add(segment);
     }
 
-    final List<Future<Boolean>> futures = segmentsToLoad
+    final List<Future<?>> futures = segmentsToLoad
         .stream()
-        .map(segment -> executorService.submit(() -> manager.load(segment)))
+        .map(segment -> executorService.submit(() -> {
+          try {
+            manager.load(segment);
+          }
+          catch (SegmentLoadingException e) {
+            throw new RuntimeException(e);
+          }
+        }))
         .collect(Collectors.toList());
 
-    for (Future<Boolean> future : futures) {
-      Assertions.assertTrue(future.get());
+    for (Future<?> future : futures) {
+      future.get();
     }
+    Assertions.assertTrue(true);
   }
 
   @Test
-  public void testAcquireSegmentFailTooManySegments() throws IOException, ExecutionException, InterruptedException
+  public void testAcquireSegmentFailTooManySegments() throws IOException
   {
     final File localStorageFolder = new File("local_storage_folder");
     final List<DataSegment> segmentsToLoad = new ArrayList<>(9);
@@ -189,15 +197,22 @@ class SegmentLocalCacheManagerConcurrencyTest
       segmentsToLoad.add(segment);
     }
 
-    final List<Future> futures = segmentsToLoad
+    final List<Future<?>> futures = segmentsToLoad
         .stream()
-        .map(segment -> executorService.submit(() -> manager.load(segment)))
+        .map(segment -> executorService.submit(() -> {
+          try {
+            manager.load(segment);
+          }
+          catch (SegmentLoadingException e) {
+            throw new RuntimeException(e);
+          }
+        }))
         .collect(Collectors.toList());
 
     Throwable t = Assertions.assertThrows(
         ExecutionException.class,
         () -> {
-          for (Future future : futures) {
+          for (Future<?> future : futures) {
             future.get();
           }
         }

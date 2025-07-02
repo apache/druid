@@ -88,17 +88,15 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public boolean bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
-    return true;
   }
 
   @Override
-  public boolean load(final DataSegment segment)
+  public void load(final DataSegment segment)
   {
     observedSegments.add(segment);
-    return true;
   }
 
   private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)

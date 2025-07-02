@@ -64,28 +64,30 @@ public interface SegmentCacheManager
 
   /**
    * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a {@link Segment} from
-   * deep storage, this method returns true if the cache is able to load and subsequently serve it to callers via
-   * {@link #acquireSegment(DataSegment)} or {@link #acquireSegment(DataSegment, SegmentDescriptor)}.
+   * deep storage, this method tries to load and subsequently serve it to callers via
+   * {@link #acquireSegment(DataSegment)} or {@link #acquireSegment(DataSegment, SegmentDescriptor)}. If the segment
+   * cannot be loaded either due to error or insufficient storage space, this method throws a
+   * {@link SegmentLoadingException}.
    *
    * @param segment Segment to get on each download (after service bootstrap)
-   * @throws SegmentLoadingException If there is an error in loading the segment
-   *
+   * @throws SegmentLoadingException If there is an error in loading the segment or insufficient storage space
    * @see SegmentCacheManager#bootstrap(DataSegment, SegmentLazyLoadFailCallback)
    */
-  boolean load(DataSegment segment) throws SegmentLoadingException;
+  void load(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Similar to {@link #load(DataSegment)}, this method returns true during if during startup on data nodes the cache
-   * is able to load and subsequently serve it to callers via {@link #acquireSegment(DataSegment)} or
-   * {@link #acquireSegment(DataSegment, SegmentDescriptor)}.
+   * Similar to {@link #load(DataSegment)}, this method loads segments during startup on data nodes. Implementations of
+   * this method may be configured to use a larger than normal work pool that only exists during startup and is shutdown
+   * after startup by calling {@link #shutdownBootstrap()}
    *
    * @param segment    Segment to retrieve during service bootstrap
    * @param loadFailed Callback to execute when segment lazy load failed. This applies only when
    *                   {@code lazyLoadOnStart} is enabled
-   * @throws SegmentLoadingException - If there is an error in loading the segment
+   * @throws SegmentLoadingException - If there is an error in loading the segment or insufficient storage space
    * @see SegmentCacheManager#load(DataSegment)
+   * @see SegmentCacheManager#shutdownBootstrap()
    */
-  boolean bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
+  void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException;
 
   /**
    * Cleanup the segment files cache space used by the segment, releasing the {@link StorageLocation} reservation

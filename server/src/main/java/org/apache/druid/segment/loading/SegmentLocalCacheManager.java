@@ -353,11 +353,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public boolean load(final DataSegment dataSegment) throws SegmentLoadingException
+  public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorageFabric()) {
       // no-op, we'll do a load when someone asks for the segment
-      return true;
+      return;
     }
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
     final ReferenceCountingLock lock = lock(dataSegment);
@@ -367,7 +367,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (loadOnDownloadExec != null) {
           loadOnDownloadExec.submit(entry::loadIntoPageCache);
         }
-        return true;
       }
       finally {
         unlock(dataSegment, lock);
@@ -376,27 +375,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public boolean bootstrap(
+  public void bootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorageFabric()) {
-      return true;
-    } else {
-      SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
-      final ReferenceCountingLock lock = lock(dataSegment);
-      synchronized (lock) {
-        try {
-          final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, loadFailed);
-          if (loadOnBootstrapExec != null) {
-            loadOnBootstrapExec.submit(entry::loadIntoPageCache);
-          }
-          return true;
+      return;
+    }
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
+    final ReferenceCountingLock lock = lock(dataSegment);
+    synchronized (lock) {
+      try {
+        final SegmentCacheEntry entry = assignLocationAndMount(cacheEntry, loadFailed);
+        if (loadOnBootstrapExec != null) {
+          loadOnBootstrapExec.submit(entry::loadIntoPageCache);
         }
-        finally {
-          unlock(dataSegment, lock);
-        }
+      }
+      finally {
+        unlock(dataSegment, lock);
       }
     }
   }

@@ -229,13 +229,7 @@ public class SegmentManager
   ) throws SegmentLoadingException, IOException
   {
     try {
-      if (!cacheManager.bootstrap(dataSegment, loadFailed)) {
-        throw new SegmentLoadingException(
-            "Unable to bootstrap segment[%s] with loadSpec[%s].",
-            dataSegment.getId(),
-            dataSegment.getLoadSpec()
-        );
-      }
+      cacheManager.bootstrap(dataSegment, loadFailed);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
@@ -259,13 +253,7 @@ public class SegmentManager
   public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
     try {
-      if (!cacheManager.load(dataSegment)) {
-        throw new SegmentLoadingException(
-            "Unable to load segment[%s] with loadSpec[%s].",
-            dataSegment.getId(),
-            dataSegment.getLoadSpec()
-        );
-      }
+      cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);

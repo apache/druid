@@ -69,13 +69,7 @@ public class DruidSegmentInputEntity implements InputEntity
   {
     final File segmentFile;
     try {
-      if (!segmentCacheManager.load(segment)) {
-        throw new SegmentLoadingException(
-            "Unable to load segment[%s] with loadSpec[%s].",
-            segment.getId(),
-            segment.getLoadSpec()
-        );
-      }
+      segmentCacheManager.load(segment);
       segmentFile = segmentCacheManager.getSegmentFiles(segment);
     }
     catch (SegmentLoadingException e) {
