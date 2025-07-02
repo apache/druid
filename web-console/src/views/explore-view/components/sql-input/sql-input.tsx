@@ -17,16 +17,14 @@
  */
 
 import type { Ace } from 'ace-builds';
-import ace from 'ace-builds';
 import type { Column } from 'druid-query-toolkit';
 import { C } from 'druid-query-toolkit';
 import React from 'react';
 import AceEditor from 'react-ace';
 
+import { getSqlCompletions } from '../../../../ace-completions/sql-completions';
 import type { RowColumn } from '../../../../utils';
 import { uniq } from '../../../../utils';
-
-const langTools = ace.require('ace/ext/language_tools');
 
 const V_PADDING = 10;
 
@@ -40,34 +38,10 @@ export interface SqlInputProps {
   showGutter?: boolean;
 }
 
-export interface SqlInputState {
-  quotedCompletions: Ace.Completion[];
-  unquotedCompletions: Ace.Completion[];
-  prevColumns?: readonly Column[];
-}
-
-export class SqlInput extends React.PureComponent<SqlInputProps, SqlInputState> {
+export class SqlInput extends React.PureComponent<SqlInputProps> {
   static aceTheme = 'solarized_dark';
 
   private aceEditor: Ace.Editor | undefined;
-
-  private readonly aceCompleters: Ace.Completer[] = [
-    // Prepend with default completers to ensure completion data from
-    // editing mode (e.g. 'dsql') is included in addition to local completions
-    langTools.snippetCompleter,
-    langTools.keyWordCompleter,
-    langTools.textCompleter,
-    // Local completions
-    {
-      getCompletions: (_state, session, pos, prefix, callback) => {
-        const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
-        callback(
-          null,
-          charBeforePrefix === '"' ? this.state.unquotedCompletions : this.state.quotedCompletions,
-        );
-      },
-    },
-  ];
 
   static getCompletions(columns: readonly Column[], quote: boolean): Ace.Completion[] {
     return ([] as Ace.Completion[]).concat(
@@ -79,28 +53,9 @@ export class SqlInput extends React.PureComponent<SqlInputProps, SqlInputState> 
     );
   }
 
-  static getDerivedStateFromProps(
-    props: SqlInputProps,
-    state: SqlInputState,
-  ): Partial<SqlInputState> | null {
-    const { columns } = props;
-
-    if (columns && columns !== state.prevColumns) {
-      return {
-        quotedCompletions: SqlInput.getCompletions(columns, true),
-        unquotedCompletions: SqlInput.getCompletions(columns, false),
-        prevColumns: columns,
-      };
-    }
-    return null;
-  }
-
   constructor(props: SqlInputProps) {
     super(props);
-    this.state = {
-      quotedCompletions: [],
-      unquotedCompletions: [],
-    };
+    this.state = {};
   }
 
   componentWillUnmount() {
@@ -125,14 +80,36 @@ export class SqlInput extends React.PureComponent<SqlInputProps, SqlInputState> 
   render() {
     const { value, onValueChange, placeholder, autoFocus, editorHeight, showGutter } = this.props;
 
+    const getColumns = () => this.props.columns?.map(column => column.name);
+    const cmp: Ace.Completer[] = [
+      {
+        getCompletions: (_state, session, pos, prefix, callback) => {
+          const allText = session.getValue();
+          const line = session.getLine(pos.row);
+          const charBeforePrefix = line[pos.column - prefix.length - 1];
+          const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
+          callback(
+            null,
+            getSqlCompletions({
+              allText,
+              lineBeforePrefix,
+              charBeforePrefix,
+              prefix,
+              columns: getColumns(),
+            }),
+          );
+        },
+      },
+    ];
+
     return (
       <AceEditor
         mode="dsql"
         theme={SqlInput.aceTheme}
         className="sql-input placeholder-padding"
         // 'react-ace' types are incomplete. Completion options can accept completers array.
-        enableBasicAutocompletion={this.aceCompleters as any}
-        enableLiveAutocompletion={this.aceCompleters as any}
+        enableBasicAutocompletion={cmp as any}
+        enableLiveAutocompletion={cmp as any}
         name="ace-editor"
         onChange={this.handleChange}
         focus

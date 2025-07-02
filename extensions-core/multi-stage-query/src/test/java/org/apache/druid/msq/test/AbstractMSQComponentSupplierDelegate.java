@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.test;
 
+import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.initialization.DruidModule;
@@ -53,7 +54,8 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
         new MSQIndexingModule(),
-        new TestMSQSqlModule()
+        new TestMSQSqlModule(),
+        new CompressedBigDecimalModule()
     );
   }
 

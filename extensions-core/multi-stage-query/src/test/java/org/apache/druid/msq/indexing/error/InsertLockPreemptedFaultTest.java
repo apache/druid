@@ -66,7 +66,7 @@ public class InsertLockPreemptedFaultTest extends MSQTestBase
     {
       if (preempted) {
         throw new ISE(
-            "Segments[dummySegment] are not covered by locks[dummyLock] for task[dummyTask]"
+            "Segment IDs[dummySegment] are not covered by locks[dummyLock] for task[dummyTask]"
         );
       }
     }

@@ -1039,7 +1039,8 @@ GROUP BY 1, 2`;
           ? {
               icon: IconNames.APPLICATION,
               title: 'Query with SQL',
-              onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
+              onAction: () =>
+                goToQuery({ queryString: SqlQuery.selectStarFrom(T(datasource)).toString() }),
             }
           : undefined,
         {

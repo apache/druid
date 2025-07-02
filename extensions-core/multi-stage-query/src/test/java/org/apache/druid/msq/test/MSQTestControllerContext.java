@@ -55,6 +55,7 @@ import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
@@ -62,7 +63,6 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
-import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -89,7 +89,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private static final Logger log = new Logger(MSQTestControllerContext.class);
   private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
-  private final Map<String, Worker> inMemoryWorkers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, WorkerRunRef> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
@@ -175,17 +175,10 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
               workerStorageParameters
           )
       );
-      inMemoryWorkers.put(task.getId(), worker);
+      final WorkerRunRef workerRunRef = new WorkerRunRef();
+      ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
+      inMemoryWorkers.put(task.getId(), workerRunRef);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
-
-      ListenableFuture<?> future = EXECUTOR.submit(() -> {
-        try {
-          worker.run();
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      });
 
       Futures.addCallback(future, new FutureCallback<Object>()
       {
@@ -270,9 +263,9 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     @Override
     public ListenableFuture<Void> cancelTask(String workerId)
     {
-      final Worker worker = inMemoryWorkers.remove(workerId);
-      if (worker != null) {
-        worker.stop(CancellationReason.TASK_SHUTDOWN);
+      final WorkerRunRef workerRunRef = inMemoryWorkers.remove(workerId);
+      if (workerRunRef != null) {
+        workerRunRef.cancel();
       }
       return Futures.immediateFuture(null);
     }
