@@ -257,7 +257,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public Map<String, LookupExtractorFactoryContainer> synchronousFetchLookupsForTier(String tier)
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier)
   {
     final String path = StringUtils.format(
         "/druid/coordinator/v1/lookups/config/%s?detailed=true",

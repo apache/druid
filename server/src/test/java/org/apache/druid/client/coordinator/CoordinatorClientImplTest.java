@@ -488,7 +488,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_synchronousFetchLookupsForTier_detailedEnabled() throws Exception
+  public void test_fetchLookupsForTierSync_detailedEnabled() throws Exception
   {
     LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
         Map.of(
@@ -514,7 +514,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         lookups,
-        coordinatorClient.synchronousFetchLookupsForTier("default_tier")
+        coordinatorClient.fetchLookupsForTierSync("default_tier")
     );
   }
 }

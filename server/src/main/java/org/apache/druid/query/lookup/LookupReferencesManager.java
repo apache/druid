@@ -472,7 +472,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
   {
     try {
-      return coordinatorClient.synchronousFetchLookupsForTier(tier);
+      return coordinatorClient.fetchLookupsForTierSync(tier);
     }
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);

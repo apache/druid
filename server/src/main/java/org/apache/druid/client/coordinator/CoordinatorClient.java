@@ -111,5 +111,5 @@ public interface CoordinatorClient
    *
    * @param tier The name of the tier for which the lookup configuration is to be fetched.
    */
-  Map<String, LookupExtractorFactoryContainer> synchronousFetchLookupsForTier(String tier);
+  Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier);
 }
