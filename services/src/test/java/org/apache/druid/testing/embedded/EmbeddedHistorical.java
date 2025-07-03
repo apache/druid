@@ -33,7 +33,7 @@ import java.util.List;
  * Add this to your {@link EmbeddedDruidCluster} if you want to load segments on
  * a historical and query them.
  */
-public class EmbeddedHistorical extends EmbeddedDruidServer
+public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
 {
 
   @Override

@@ -106,6 +106,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<Void> updateAllLookups(Object lookups)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(
       String tier
   )

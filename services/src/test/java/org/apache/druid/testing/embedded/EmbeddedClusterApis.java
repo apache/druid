@@ -165,17 +165,26 @@ public class EmbeddedClusterApis
    */
   public static Object createTaskFromPayload(String taskId, String payload)
   {
+    final Map<String, Object> task = deserializeJsonToMap(payload);
+    task.put("id", taskId);
+    return task;
+  }
+
+  /**
+   * Deserializes the given JSON string into a generic map that can be used to
+   * post JSON payloads to a Druid API. Using a generic map allows the client
+   * to make requests even if required types are not loaded.
+   */
+  public static Map<String, Object> deserializeJsonToMap(String payload)
+  {
     try {
-      final Map<String, Object> task = TestHelper.JSON_MAPPER.readValue(
+      return TestHelper.JSON_MAPPER.readValue(
           payload,
           new TypeReference<>() {}
       );
-      task.put("id", taskId);
-
-      return task;
     }
     catch (Exception e) {
-      throw new ISE(e, "Could not deserialize task payload[%s]", payload);
+      throw new ISE(e, "Could not deserialize payload[%s]", payload);
     }
   }
 

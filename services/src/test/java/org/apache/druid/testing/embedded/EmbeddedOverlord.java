@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * Embedded mode of {@link CliOverlord} used in embedded tests.
  */
-public class EmbeddedOverlord extends EmbeddedDruidServer
+public class EmbeddedOverlord extends EmbeddedDruidServer<EmbeddedOverlord>
 {
   public EmbeddedOverlord()
   {

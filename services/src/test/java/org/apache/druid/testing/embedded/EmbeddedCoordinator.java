@@ -33,7 +33,7 @@ import java.util.List;
  * Add this to your {@link EmbeddedDruidCluster} if you want to assign segments
  * to historicals.
  */
-public class EmbeddedCoordinator extends EmbeddedDruidServer
+public class EmbeddedCoordinator extends EmbeddedDruidServer<EmbeddedCoordinator>
 {
   public EmbeddedCoordinator()
   {
