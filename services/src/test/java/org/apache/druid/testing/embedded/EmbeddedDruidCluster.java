@@ -86,6 +86,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
+    addExtension(RuntimeInfoModule.class);
   }
 
   /**
@@ -242,6 +243,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
           startedFirstDruidServer = true;
         }
 
+        log.info("Starting resource[%s].", resource);
         resource.start();
         resource.onStarted(this);
       }
@@ -263,6 +265,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     // Stop the resources in reverse order
     for (EmbeddedResource resource : Lists.reverse(resources)) {
       try {
+        log.info("Stopping resource[%s].", resource);
         resource.stop();
       }
       catch (Exception e) {

@@ -39,12 +39,12 @@ import java.util.List;
 public interface BrokerClient
 {
   /**
-   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint.
+   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint, {@code /druid/v2/sql/}.
    */
   ListenableFuture<String> submitSqlQuery(ClientSqlQuery sqlQuery);
 
   /**
-   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
+   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint, {@code /druid/v2/sql/task/}.
    */
   ListenableFuture<SqlTaskStatus> submitSqlTask(ClientSqlQuery sqlQuery);
 

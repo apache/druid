@@ -35,6 +35,7 @@ import org.junit.rules.ExpectedException;
 import java.util.Properties;
 
 /**
+ *
  */
 public class DruidProcessingConfigTest
 {
@@ -166,6 +167,7 @@ public class DruidProcessingConfigTest
   {
     return makeInjector(numProcessors, directMemorySize, heapSize, new Properties());
   }
+
   private static Injector makeInjector(
       int numProcessors,
       long directMemorySize,
@@ -200,6 +202,12 @@ public class DruidProcessingConfigTest
     public int getAvailableProcessors()
     {
       return availableProcessors;
+    }
+
+    @Override
+    public long getTotalHeapSizeBytes()
+    {
+      return maxHeapSize;
     }
 
     @Override

@@ -71,6 +71,10 @@ public class JvmUtils
     return MAJOR_VERSION;
   }
 
+  /**
+   * Deprecated, inject {@link RuntimeInfo} instead of using this function.
+   */
+  @Deprecated
   public static RuntimeInfo getRuntimeInfo()
   {
     return RUNTIME_INFO;
