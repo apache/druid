@@ -430,9 +430,13 @@ public class CalciteTests
     )
     {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return coordinatorNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(coordinatorNode.getHostAndPortToUse()));
+        } catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
 

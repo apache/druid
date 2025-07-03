@@ -879,7 +879,9 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
-    EasyMock.expect(coordinatorClient.findCurrentLeader()).andReturn(coordinator.getDruidNode().getHostAndPortToUse()).once();
+    EasyMock.expect(coordinatorClient.findCurrentLeader())
+            .andReturn(Futures.immediateFuture(new URI(coordinator.getDruidNode().getHostAndPortToUse())))
+            .once();
     EasyMock.expect(overlordClient.findCurrentLeader())
             .andReturn(Futures.immediateFuture(new URI(overlord.getDruidNode().getHostAndPortToUse()))).once();
 
