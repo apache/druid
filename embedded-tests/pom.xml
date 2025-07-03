@@ -78,6 +78,10 @@
       <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.jdbi</groupId>
+      <artifactId>jdbi</artifactId>
+    </dependency>
 
     <!-- Test dependencies -->
     <dependency>
@@ -108,6 +112,12 @@
     <dependency>
       <groupId>org.apache.druid.extensions.contrib</groupId>
       <artifactId>kafka-emitter</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-lookups-cached-global</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>

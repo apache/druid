@@ -30,6 +30,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -65,6 +66,9 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
 
   @Inject(optional = true)
   private IndexerMetadataStorageCoordinator segmentsMetadataStorage;
+
+  @Inject(optional = true)
+  private SQLMetadataConnector sqlMetadataConnector;
 
   @Inject
   private DruidNodeDiscoveryProvider nodeDiscoveryProvider;
@@ -123,6 +127,12 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
   {
     return Objects.requireNonNull(segmentsMetadataStorage, "Segment metadata storage is not bound");
+  }
+
+  @Override
+  public SQLMetadataConnector sqlMetadataConnector()
+  {
+    return Objects.requireNonNull(sqlMetadataConnector, "SQLMetadataConnector is not bound");
   }
 
   @Override
