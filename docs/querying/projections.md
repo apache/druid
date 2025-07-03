@@ -49,15 +49,13 @@ Note that any projection dimension you create becomes part of your datasource. T
 
 To create a projection at ingestion time, use the [`projectionsSpec` block in your ingestion spec](../ingestion/ingestion-spec.md#projections).
 
+To create projections for SQL-based ingestion, you need to also have the [`druid-catalog`](../development/extensions-core/catalog.md) extension loaded.
+
 ### After ingestion
 
-:::info
+You can define a projection after you ingest data. Although you can define the projection in a compaction spec, we recommend using the [`druid-catalog`](../development/extensions-core/catalog.md) extension.
 
-To create a projection for an existing datasource, you must have the `druid-catalog` extension loaded.
-
-:::
-
- `POST /druid/coordinator/v1/catalog/schemas/druid/tables/{datasource}` where the payload includes a `properties.projections` block like the following:
+The following API call includes a payload with the `properties.projections` block that defines your projections:
 
 <details>
 <summary>View the payload</summary>
