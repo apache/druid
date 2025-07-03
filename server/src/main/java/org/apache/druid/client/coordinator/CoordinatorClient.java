@@ -35,6 +35,7 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -140,9 +141,9 @@ public interface CoordinatorClient
   ListenableFuture<Map<String, List<Rule>>> getRules();
 
   /**
-   * Returns the current leader's host and port.
+   * Returns the current coordinator leader's URI.
    * <p>
    * API: {@code GET /druid/coordinator/v1/leader}
    */
-  String findCurrentLeader();
+  ListenableFuture<URI> findCurrentLeader();
 }

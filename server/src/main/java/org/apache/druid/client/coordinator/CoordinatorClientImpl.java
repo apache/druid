@@ -28,7 +28,6 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -38,7 +37,6 @@ import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHa
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupUtils;
@@ -58,8 +56,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -356,35 +354,21 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public String findCurrentLeader()
+  public ListenableFuture<URI> findCurrentLeader()
   {
-    final String path = "/druid/coordinator/v1/leader";
-    final StringFullResponseHolder responseHolder;
-    try {
-      responseHolder = client.request(
-          new RequestBuilder(HttpMethod.GET, path),
-          new StringFullResponseHandler(StandardCharsets.UTF_8)
-      );
-
-      if (responseHolder.getStatus().getCode() == HttpServletResponse.SC_OK) {
-        String leaderUrl = responseHolder.getContent();
-        try {
-          URL validatedUrl = new URL(leaderUrl);
-          return validatedUrl.toString();
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        holder -> {
+          try {
+            return new URI(holder.getContent());
+          }
+          catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+          }
         }
-        catch (MalformedURLException ex) {
-          throw new RuntimeException(ex);
-        }
-      }
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-
-    throw new ISE(
-        "Couldn't find leadear, failed response status is[%s], and content[%s]",
-        responseHolder.getStatus().getCode(),
-        responseHolder.getContent()
     );
   }
 

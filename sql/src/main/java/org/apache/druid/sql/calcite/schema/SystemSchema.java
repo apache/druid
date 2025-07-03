@@ -574,7 +574,7 @@ public class SystemSchema extends AbstractSchema
       String tmpOverlordLeader = "";
 
       try {
-        tmpCoordinatorLeader = coordinatorClient.findCurrentLeader();
+        tmpCoordinatorLeader = FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString();
       }
       catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders

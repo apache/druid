@@ -694,40 +694,23 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         leaderUrl,
-        coordinatorClient.findCurrentLeader()
+        FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString()
     );
   }
 
   @Test
   public void test_findCurrentLeader_invalidUrl()
   {
-    String invalidLeaderUrl = "invalidUrl";
+    String invalidLeaderUrl = "{{1234invalidUrl";
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
         StringUtils.toUtf8(invalidLeaderUrl)
     );
-
     Assert.assertThrows(
         RuntimeException.class,
-        () -> coordinatorClient.findCurrentLeader()
-    );
-  }
-
-  @Test
-  public void test_findCurrentLeader_404Response()
-  {
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
-        HttpResponseStatus.NOT_FOUND,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
-        StringUtils.toUtf8("")
-    );
-
-    Assert.assertThrows(
-        RuntimeException.class,
-        () -> coordinatorClient.findCurrentLeader()
+        () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
     );
   }
 
@@ -741,7 +724,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertThrows(
         RuntimeException.class,
-        () -> coordinatorClient.findCurrentLeader()
+        () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
     );
   }
 
@@ -759,7 +742,7 @@ public class CoordinatorClientImplTest
     );
     // try and assert that the root cause is an HttpResponseException
     try {
-      coordinatorClient.findCurrentLeader();
+      FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true);
     }
     catch (Exception e) {
       Throwable throwable = Throwables.getRootCause(e);

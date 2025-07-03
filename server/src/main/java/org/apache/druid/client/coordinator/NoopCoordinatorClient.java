@@ -35,6 +35,7 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,7 +138,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public String findCurrentLeader()
+  public ListenableFuture<URI> findCurrentLeader()
   {
     throw new UnsupportedOperationException();
   }
