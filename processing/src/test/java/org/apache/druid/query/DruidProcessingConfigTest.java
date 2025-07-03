@@ -19,14 +19,14 @@
 
 package org.apache.druid.query;
 
+import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,12 +43,6 @@ public class DruidProcessingConfigTest
   private static final int NUM_PROCESSORS = 4;
   private static final long DIRECT_SIZE = BUFFER_SIZE * (3L + 2L + 1L);
   private static final long HEAP_SIZE = BUFFER_SIZE * 2L;
-
-  @AfterClass
-  public static void teardown()
-  {
-    JvmUtils.resetTestsToDefaultRuntimeInfo();
-  }
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -175,14 +169,14 @@ public class DruidProcessingConfigTest
       Properties props
   )
   {
-    Injector injector = new StartupInjectorBuilder().withProperties(props).add(
+    final Injector startupInjector = new StartupInjectorBuilder().withProperties(props).build();
+    return Guice.createInjector(
+        startupInjector.getInstance(DruidSecondaryModule.class),
         binder -> {
           binder.bind(RuntimeInfo.class).toInstance(new MockRuntimeInfo(numProcessors, directMemorySize, heapSize));
-          binder.requestStaticInjection(JvmUtils.class);
           JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
         }
-    ).build();
-    return injector;
+    );
   }
 
   public static class MockRuntimeInfo extends RuntimeInfo
