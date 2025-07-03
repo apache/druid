@@ -36,6 +36,13 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * Uses the underlying dictionary values of a column to provide {@link DruidPredicateIndexes} that apply an {@link Expr}
+ * to the values of an input column before matching with a {@link DruidPredicateFactory}. This supplier is only suitable
+ * for use on a direct column, and that column must be dictionary encoded and provides
+ * {@link DictionaryEncodedValueIndex} so that the dictionary values can be iterated and transformed with the
+ * {@link Expr}
+ */
 public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
 {
   private final Expr expr;
