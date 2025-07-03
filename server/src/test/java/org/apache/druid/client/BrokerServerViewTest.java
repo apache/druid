@@ -76,6 +76,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   private final ZkPathsConfig zkPathsConfig;
 
   private CountDownLatch segmentViewInitLatch;
+  private CountDownLatch serverAddedLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
@@ -237,6 +238,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public void testMultipleServerAndBroker() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
+    serverAddedLatch =  new CountDownLatch(5);
     segmentAddedLatch = new CountDownLatch(6);
 
     // temporarily set latch count to 1
@@ -266,6 +268,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupZNodeForServer(druidBroker, zkPathsConfig, jsonMapper);
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(serverAddedLatch));
 
     // check server metadatas
     Assert.assertEquals(
@@ -622,6 +625,29 @@ public class BrokerServerViewTest extends CuratorTestBase
         "test"
     )
     {
+      @Override
+      public void registerServerCallback(Executor exec, ServerCallback callback)
+      {
+        super.registerServerCallback(
+            exec,
+            new ServerCallback() {
+              @Override
+              public CallbackAction serverAdded(DruidServer server)
+              {
+                final CallbackAction res = callback.serverAdded(server);
+                serverAddedLatch.countDown();
+                return res;
+              }
+
+              @Override
+              public CallbackAction serverRemoved(DruidServer server)
+              {
+                return callback.serverRemoved(server);
+              }
+            }
+        );
+      }
+
       @Override
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
