@@ -547,7 +547,7 @@ public class CoordinatorClientImplTest
   @Test
   public void test_getMetadataSegmentsSync() throws JsonProcessingException
   {
-    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2);
+    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
     serviceClient.expectAndRespond(
         new RequestBuilder(
@@ -556,7 +556,7 @@ public class CoordinatorClientImplTest
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        DefaultObjectMapper.INSTANCE.writeValueAsBytes(segments)
+        jsonMapper.writeValueAsBytes(segments)
     );
 
     JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(null);
@@ -569,6 +569,52 @@ public class CoordinatorClientImplTest
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
                       .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_getMetadataSegmentsSync_filterByDataSource() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&dataSource=abc"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
+    );
+
+    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(Collections.singleton("abc"));
+
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        ImmutableList.of(SEGMENT3),
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_getMetadataSegmentsSync_nonOkStatus_throwsError() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments"
+        ),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of())
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> coordinatorClient.getMetadataSegmentsSync(null)
     );
   }
 }

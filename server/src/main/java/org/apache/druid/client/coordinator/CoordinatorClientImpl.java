@@ -322,7 +322,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
             responseHolder.getStatus().getReasonPhrase()
         );
       }
-      final JavaType javaType = jsonMapper.getTypeFactory().constructType(new TypeReference<>() {});
+      final JavaType javaType = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentStatusInCluster>() {});
       return new JsonParserIterator<>(
           javaType,
           Futures.immediateFuture(responseHolder.getContent()),
