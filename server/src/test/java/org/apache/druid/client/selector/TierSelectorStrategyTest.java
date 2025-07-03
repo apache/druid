@@ -323,7 +323,6 @@ public class TierSelectorStrategyTest
     for (QueryableDruidServer server : servers) {
       expectedCandidates.add(server.getServer().getMetadata());
     }
-    Collections.shuffle(servers);
     for (QueryableDruidServer server : servers) {
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
@@ -435,11 +434,11 @@ public class TierSelectorStrategyTest
         client
     );
     QueryableDruidServer anotherTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "tier1", 2),
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "tier1", 3),
         client
     );
     QueryableDruidServer yetAnotherTierMediumPriority = new QueryableDruidServer(
-        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "tier2", 1),
+        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "tier2", 2),
         client
     );
 
