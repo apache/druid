@@ -29,6 +29,7 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
@@ -125,6 +126,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
   public JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(
       @Nullable Set<String> watchedDataSources
   )
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Map<String, List<Rule>> getRulesSync()
   {
     throw new UnsupportedOperationException();
   }

@@ -29,6 +29,7 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
@@ -130,4 +131,11 @@ public interface CoordinatorClient
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
    */
   JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(@Nullable Set<String> watchedDataSources);
+
+  /**
+   * Returns the current snapshot of the rules.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/rules}
+   */
+  Map<String, List<Rule>> getRulesSync();
 }

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.guice.StartupInjectorBuilder;
@@ -49,6 +50,8 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentStatusInCluster;
@@ -63,6 +66,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -585,7 +589,9 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
     );
 
-    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(Collections.singleton("abc"));
+    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(
+        Collections.singleton("abc")
+    );
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
@@ -615,6 +621,51 @@ public class CoordinatorClientImplTest
     Assert.assertThrows(
         RuntimeException.class,
         () -> coordinatorClient.getMetadataSegmentsSync(null)
+    );
+  }
+
+  @Test
+  public void test_getRulesSync() throws Exception
+  {
+    final Map<String, List<Rule>> rules = ImmutableMap.of(
+        "xyz", ImmutableList.of(
+            new IntervalLoadRule(
+                Intervals.of("2025-01-01/2025-02-01"),
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+                null
+            ),
+            new IntervalLoadRule(
+                Intervals.of("2025-02-01/2025-03-01"),
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+                null
+            )
+        )
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/rules"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(rules)
+    );
+
+    Assert.assertEquals(
+        rules,
+        coordinatorClient.getRulesSync()
+    );
+  }
+
+  @Test
+  public void test_getRulesSync_IOException_throwsError() throws Exception
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/rules"),
+        new IOException("Simulated error")
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> coordinatorClient.getRulesSync()
     );
   }
 }

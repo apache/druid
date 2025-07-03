@@ -47,6 +47,7 @@ import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -54,6 +55,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -332,6 +334,23 @@ public class CoordinatorClientImpl implements CoordinatorClient
       );
     }
     catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Map<String, List<Rule>> getRulesSync()
+  {
+    final String path = "/druid/coordinator/v1/rules";
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+
+      return jsonMapper.readValue(responseHolder.getContent(), new TypeReference<>() {});
+    }
+    catch (InterruptedException | ExecutionException | IOException e) {
       throw new RuntimeException(e);
     }
   }
