@@ -254,12 +254,24 @@ public class BrokerServerViewTest extends CuratorTestBase
         0
     );
 
-    final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        hostname -> setupHistoricalServer("default_tier", hostname, 0)
-    );
+    // Materialize this list so all servers are set up
+    final List<DruidServer> druidServers =
+        ImmutableList.copyOf(
+            Lists.transform(
+                ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+                hostname -> setupHistoricalServer("default_tier", hostname, 0)
+            )
+        );
 
     setupZNodeForServer(druidBroker, zkPathsConfig, jsonMapper);
+
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+
+    // check server metadatas
+    Assert.assertEquals(
+        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
+        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
+    );
 
     final List<DataSegment> segments = Lists.transform(
         ImmutableList.of(
@@ -277,7 +289,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
@@ -295,12 +306,6 @@ public class BrokerServerViewTest extends CuratorTestBase
                 "2011-04-01/2011-04-09"
             )
         )
-    );
-
-    // check server metadatas
-    Assert.assertEquals(
-        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
-        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
     );
 
     // unannounce the broker segment should do nothing to announcements

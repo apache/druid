@@ -157,11 +157,24 @@ public class BrokerServerView implements TimelineServerView
         segmentFilter
     );
 
-    baseView.registerServerRemovedCallback(
+    baseView.registerServerCallback(
         exec,
-        server -> {
-          removeServer(server);
-          return CallbackAction.CONTINUE;
+        new ServerCallback() {
+          @Override
+          public CallbackAction serverAdded(DruidServer server)
+          {
+            if (!server.getType().equals(ServerType.BROKER)) {
+              addServer(server);
+            }
+            return CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction serverRemoved(DruidServer server)
+          {
+            removeServer(server);
+            return CallbackAction.CONTINUE;
+          }
         }
     );
   }
@@ -378,9 +391,9 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
-    baseView.registerServerRemovedCallback(exec, callback);
+    baseView.registerServerCallback(exec, callback);
   }
 
   @Override
