@@ -39,6 +39,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
@@ -1039,6 +1040,7 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination,
       final RowSignature signature,
       final ClusterBy clusterBy,
+      final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
@@ -1049,12 +1051,12 @@ public class ControllerImpl implements Controller
           destination,
           signature,
           clusterBy,
+          keyReader,
           partitionBoundaries,
           mayHaveMultiValuedClusterByFields,
           isStageOutputEmpty
       );
     } else {
-      final RowKeyReader keyReader = clusterBy.keyReader(signature);
       return generateSegmentIdsWithShardSpecsForAppend(
           destination,
           partitionBoundaries,
@@ -1216,6 +1218,7 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination,
       final RowSignature signature,
       final ClusterBy clusterBy,
+      final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
@@ -1225,7 +1228,6 @@ public class ControllerImpl implements Controller
       return Collections.emptyList();
     }
 
-    final RowKeyReader keyReader = clusterBy.keyReader(signature);
     final SegmentIdWithShardSpec[] retVal = new SegmentIdWithShardSpec[partitionBoundaries.size()];
     final Granularity segmentGranularity = destination.getSegmentGranularity();
     final Pair<List<String>, String> shardReasonPair = computeShardColumns(
@@ -2201,6 +2203,7 @@ public class ControllerImpl implements Controller
   {
     private final QueryDefinition queryDef;
     private final InputSpecSlicerFactory inputSpecSlicerFactory;
+    private final FrameType rowBasedFrameType;
     private final QueryListener queryListener;
     private final Closer closer;
     private final ControllerQueryKernel queryKernel;
@@ -2234,6 +2237,8 @@ public class ControllerImpl implements Controller
     {
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
+      this.rowBasedFrameType =
+          MultiStageQueryContext.getRowBasedFrameType(QueryContext.of(queryKernelConfig.getWorkerContextMap()));
       this.queryListener = queryListener;
       this.closer = closer;
       this.queryKernel = new ControllerQueryKernel(queryDef, queryKernelConfig);
@@ -2506,6 +2511,7 @@ public class ControllerImpl implements Controller
         newStageIds = queryKernel.createAndGetNewStageIds(
             inputSpecSlicerFactory,
             querySpec.getAssignmentStrategy(),
+            rowBasedFrameType,
             maxInputBytesPerWorker
         );
 
@@ -2565,14 +2571,16 @@ public class ControllerImpl implements Controller
       final ClusterByPartitions partitionBoundaries =
           queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
 
+      final StageDefinition shuffleStageDef = queryKernel.getStageDefinition(shuffleStageId);
       final boolean mayHaveMultiValuedClusterByFields =
-          !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
+          !shuffleStageDef.mustGatherResultKeyStatistics()
           || queryKernel.hasStageCollectorEncounteredAnyMultiValueField(shuffleStageId);
 
       segmentsToGenerate = generateSegmentIdsWithShardSpecs(
           (DataSourceMSQDestination) querySpec.getDestination(),
-          queryKernel.getStageDefinition(shuffleStageId).getSignature(),
-          queryKernel.getStageDefinition(shuffleStageId).getClusterBy(),
+          shuffleStageDef.getSignature(),
+          shuffleStageDef.getClusterBy(),
+          shuffleStageDef.getClusterBy().keyReader(shuffleStageDef.getSignature(), rowBasedFrameType),
           partitionBoundaries,
           mayHaveMultiValuedClusterByFields,
           isShuffleStageOutputEmpty
@@ -2723,7 +2731,8 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
+      if (queryKernelConfig.isDurableStorage()
+          || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
@@ -2744,11 +2753,11 @@ public class ControllerImpl implements Controller
             queryDef,
             queryKernel.getResultPartitionsForStage(finalStageId),
             inputChannelFactory,
+            FrameWriterSpec.fromContext(querySpec.getContext()),
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
             RESULT_READER_CANCELLATION_ID,
-            null,
-            MultiStageQueryContext.removeNullBytes(querySpec.getContext())
+            null
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(

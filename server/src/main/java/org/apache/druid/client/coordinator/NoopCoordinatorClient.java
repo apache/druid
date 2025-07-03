@@ -106,7 +106,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(
       String tier
   )
   {

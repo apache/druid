@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -302,6 +303,7 @@ public class IndexerControllerContext implements ControllerContext
   {
     final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
+    final FrameType rowBasedFrameType = MultiStageQueryContext.getRowBasedFrameType(queryContext);
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
@@ -312,6 +314,7 @@ public class IndexerControllerContext implements ControllerContext
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
         .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
+        .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version())
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 

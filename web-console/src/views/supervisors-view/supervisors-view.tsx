@@ -95,6 +95,7 @@ import './supervisors-view.scss';
 
 const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Supervisor ID',
+  'Datasource',
   'Type',
   'Topic/Stream',
   'Status',
@@ -124,6 +125,7 @@ interface SupervisorQuery extends TableState {
 
 interface SupervisorQueryResultRow {
   readonly supervisor_id: string;
+  readonly datasource: string;
   readonly type: string;
   readonly source: string;
   readonly detailed_state: string;
@@ -296,6 +298,7 @@ export class SupervisorsView extends React.PureComponent<
           const sqlQuery = assemble(
             'WITH s AS (SELECT',
             '  "supervisor_id",',
+            '  "datasource",',
             '  "type",',
             '  "source",',
             `  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",`,
@@ -347,6 +350,7 @@ export class SupervisorsView extends React.PureComponent<
             (sup: any) => {
               return {
                 supervisor_id: deepGet(sup, 'id'),
+                datasource: deepGet(sup, 'dataSource'),
                 type: deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
@@ -516,7 +520,7 @@ export class SupervisorsView extends React.PureComponent<
   };
 
   private getSupervisorActions(supervisor: SupervisorQueryResultRow): BasicAction[] {
-    const { supervisor_id, suspended, type } = supervisor;
+    const { supervisor_id, datasource, suspended, type } = supervisor;
     const { goToDatasource, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
@@ -525,7 +529,7 @@ export class SupervisorsView extends React.PureComponent<
         {
           icon: IconNames.MULTI_SELECT,
           title: 'Go to datasource',
-          onAction: () => goToDatasource(supervisor_id),
+          onAction: () => goToDatasource(datasource),
         },
         {
           icon: IconNames.CLOUD_UPLOAD,
@@ -848,7 +852,7 @@ export class SupervisorsView extends React.PureComponent<
     ): Column<SupervisorQueryResultRow>[] => {
       return [
         {
-          Header: twoLines('Supervisor ID', <i>(datasource)</i>),
+          Header: 'Supervisor ID',
           id: 'supervisor_id',
           accessor: 'supervisor_id',
           width: 280,
@@ -862,6 +866,13 @@ export class SupervisorsView extends React.PureComponent<
               {value}
             </TableClickableCell>
           ),
+        },
+        {
+          Header: 'Datasource',
+          accessor: 'datasource',
+          width: 280,
+          Cell: this.renderSupervisorFilterableCell('datasource'),
+          show: visibleColumns.shown('Datasource'),
         },
         {
           Header: 'Type',

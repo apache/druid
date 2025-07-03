@@ -426,18 +426,17 @@ public class RunWorkOrder
   {
     final String queryId = workOrder.getQueryDefinition().getQueryId();
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-    final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(workOrder.getWorkerContext());
 
     final InputChannels inputChannels =
         new InputChannelsImpl(
             workOrder.getQueryDefinition(),
             InputSlices.allReadablePartitions(workOrder.getInputs()),
             inputChannelFactory,
+            frameContext.frameWriterSpec(),
             () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
             exec,
             cancellationId,
-            counterTracker,
-            removeNullBytes
+            counterTracker
         );
 
     return new MapInputSliceReader(

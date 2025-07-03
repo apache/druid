@@ -155,13 +155,15 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   }
 
   /**
-   * Adds a Druid service to this cluster.
+   * Adds a Druid server to this cluster. A server added to the cluster after the
+   * cluster has started must be started explicitly by calling
+   * {@link EmbeddedDruidServer#start()}.
    */
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
-    validateNotStarted();
+    server.onAddedToCluster(this, commonProperties);
     servers.add(server);
-    resources.add(new DruidServerResource(server, testFolder, zookeeper, commonProperties));
+    resources.add(server);
     return this;
   }
 
@@ -277,19 +279,19 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public CoordinatorClient leaderCoordinator()
   {
-    return servers.get(0).leaderCoordinator();
+    return servers.get(0).bindings().leaderCoordinator();
   }
 
   @Override
   public OverlordClient leaderOverlord()
   {
-    return servers.get(0).leaderOverlord();
+    return servers.get(0).bindings().leaderOverlord();
   }
 
   @Override
   public BrokerClient anyBroker()
   {
-    return servers.get(0).anyBroker();
+    return servers.get(0).bindings().anyBroker();
   }
 
   private void validateNotStarted()

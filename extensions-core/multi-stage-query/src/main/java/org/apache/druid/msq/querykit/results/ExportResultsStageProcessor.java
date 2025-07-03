@@ -134,8 +134,7 @@ public class ExportResultsStageProcessor extends StandardStageProcessor<Object, 
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   )
   {
     final StageInputSlice slice = (StageInputSlice) CollectionUtils.getOnlyElement(

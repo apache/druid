@@ -38,6 +38,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -252,12 +253,14 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
 
     // Verify that some segments have been upgraded due to Concurrent Append and Replace
     final Set<String> allUsedSegmentsIds = overlord
+        .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
         .stream()
         .map(s -> s.getId().toString())
         .collect(Collectors.toSet());
     final Map<String, String> upgradedFromSegmentIds = overlord
+        .bindings()
         .segmentsMetadataStorage()
         .retrieveUpgradedFromSegmentIds(dataSource, allUsedSegmentsIds);
     Assertions.assertFalse(upgradedFromSegmentIds.isEmpty());
@@ -312,10 +315,11 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private void verifyIngestedMetricCountMatchesEmittedCount(String metricName, EmbeddedDruidServer server)
   {
     // Get the value of the metric from the datasource
+    final DruidNode selfNode = server.bindings().selfNode();
     final int expectedValueForSegmentsAssigned = (int) Double.parseDouble(
         cluster.runSql(
             "SELECT COUNT(*) FROM %s WHERE metric = '%s' AND host = '%s' AND service = '%s'",
-            dataSource, metricName, server.selfNode().getHostAndPort(), server.selfNode().getServiceName()
+            dataSource, metricName, selfNode.getHostAndPort(), selfNode.getServiceName()
         )
     );
     Assertions.assertTrue(expectedValueForSegmentsAssigned > 0);

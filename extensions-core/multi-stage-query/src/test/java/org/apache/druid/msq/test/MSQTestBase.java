@@ -44,6 +44,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -277,6 +278,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
                   .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
+                  .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
                   .build();
 
   public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =

@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -489,7 +488,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_fetchLookupsForTier_detailedEnabled() throws Exception
+  public void test_fetchLookupsForTierSync_detailedEnabled() throws Exception
   {
     LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
         Map.of(
@@ -515,7 +514,7 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         lookups,
-        FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier("default_tier"), true)
+        coordinatorClient.fetchLookupsForTierSync("default_tier")
     );
   }
 }

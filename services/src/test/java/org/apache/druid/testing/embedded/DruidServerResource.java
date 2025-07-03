@@ -69,6 +69,11 @@ class DruidServerResource implements EmbeddedResource
   @Override
   public void start() throws Exception
   {
+    if (lifecycle.get() != null) {
+      log.info("Server[%s] is already running.", server.getName());
+      return;
+    }
+
     log.info("Starting server[%s] with common properties[%s]...", server.getName(), commonProperties);
 
     // Create and start the ServerRunnable

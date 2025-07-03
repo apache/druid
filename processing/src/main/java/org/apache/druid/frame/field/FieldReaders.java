@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
@@ -41,17 +42,17 @@ public class FieldReaders
   /**
    * Helper used by {@link org.apache.druid.frame.read.FrameReader}.
    */
-  public static FieldReader create(final String columnName, final ColumnType columnType)
+  public static FieldReader create(final String columnName, final ColumnType columnType, final FrameType frameType)
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
         return LongFieldReader.forPrimitive();
 
       case FLOAT:
-        return FloatFieldReader.forPrimitive();
+        return FloatFieldReader.forPrimitive(frameType);
 
       case DOUBLE:
-        return DoubleFieldReader.forPrimitive();
+        return DoubleFieldReader.forPrimitive(frameType);
 
       case STRING:
         return new StringFieldReader();
@@ -68,10 +69,10 @@ public class FieldReaders
             return new LongArrayFieldReader();
 
           case FLOAT:
-            return new FloatArrayFieldReader();
+            return new FloatArrayFieldReader(frameType);
 
           case DOUBLE:
-            return new DoubleArrayFieldReader();
+            return new DoubleArrayFieldReader(frameType);
 
           default:
             throw new UnsupportedColumnTypeException(columnName, columnType);

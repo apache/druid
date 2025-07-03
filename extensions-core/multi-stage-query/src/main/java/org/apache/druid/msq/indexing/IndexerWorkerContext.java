@@ -33,6 +33,7 @@ import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -272,6 +273,7 @@ public class IndexerWorkerContext implements WorkerContext
     return new IndexerFrameContext(
         workOrder.getStageDefinition().getId(),
         this,
+        FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         indexIO,
         dataSegmentProvider,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),

@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -138,7 +139,8 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
     final byte[] bytes = new byte[(int) written];
     memory.getByteArray(MEMORY_POSITION, bytes, 0, (int) written);
 
-    final FieldReader fieldReader = FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY);
+    final FieldReader fieldReader =
+        FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY, FrameType.latestRowBased());
     final ColumnValueSelector<?> selector =
         fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
