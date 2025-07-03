@@ -48,7 +48,7 @@ public class InMemoryDerbyResource implements EmbeddedResource
   }
 
   @Override
-  public void configureCluster(EmbeddedDruidCluster cluster)
+  public void onStarted(EmbeddedDruidCluster cluster)
   {
     final TestDerbyConnector connector = dbRule.getConnector();
     cluster.addCommonProperty("druid.metadata.storage.type", InMemoryDerbyModule.TYPE);

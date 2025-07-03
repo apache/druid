@@ -243,7 +243,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         }
 
         resource.start();
-        resource.configureCluster(this);
+        resource.onStarted(this);
       }
       catch (Exception e) {
         // Clean up the resources that have already been started

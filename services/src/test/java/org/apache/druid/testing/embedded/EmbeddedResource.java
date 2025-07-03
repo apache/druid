@@ -40,11 +40,10 @@ public interface EmbeddedResource
   void stop() throws Exception;
 
   /**
-   * Configures a cluster to use this resource. This method executes after the resource has
-   * been started. It is intended for use by resources that are started before any Druid
-   * services.
+   * Called after {@link #start()} with a pointer to the current cluster. This is intended for use by resources
+   * that are started before any Druid services, and that need to configure the Druid services in some way.
    */
-  default void configureCluster(EmbeddedDruidCluster cluster)
+  default void onStarted(EmbeddedDruidCluster cluster)
   {
     // Do nothing by default.
   }

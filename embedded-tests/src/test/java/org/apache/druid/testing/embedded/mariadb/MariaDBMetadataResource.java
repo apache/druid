@@ -44,7 +44,7 @@ public class MariaDBMetadataResource extends TestcontainerResource<MariaDBContai
   }
 
   @Override
-  public void configureCluster(EmbeddedDruidCluster cluster)
+  public void onStarted(EmbeddedDruidCluster cluster)
   {
     cluster.addExtension(MySQLMetadataStorageModule.class);
     cluster.addCommonProperty("druid.metadata.storage.type", MySQLMetadataStorageModule.TYPE);
