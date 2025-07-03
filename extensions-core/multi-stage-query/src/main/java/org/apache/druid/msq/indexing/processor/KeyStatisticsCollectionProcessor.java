@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -109,7 +110,8 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
 
     final Frame frame = inputChannel.read();
     final Cursor cursor = FrameProcessors.makeCursor(frame, frameReader);
-    final IntSupplier rowWeightSupplier = makeRowWeightSupplier(frameReader, cursor.getColumnSelectorFactory());
+    final IntSupplier rowWeightSupplier =
+        makeRowWeightSupplier(frameReader, frame.type(), cursor.getColumnSelectorFactory());
     final FrameComparisonWidget comparisonWidget = frameReader.makeComparisonWidget(frame, clusterBy.getColumns());
 
     for (int i = 0; i < frame.numRows(); i++, cursor.advance()) {
@@ -134,11 +136,12 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
 
   private IntSupplier makeRowWeightSupplier(
       final FrameReader frameReader,
+      final FrameType frameType,
       final ColumnSelectorFactory columnSelectorFactory
   )
   {
     final Supplier<MemoryRange<Memory>> rowMemorySupplier =
-        FrameReaderUtils.makeRowMemorySupplier(columnSelectorFactory, frameReader.signature());
+        FrameReaderUtils.makeRowMemorySupplier(columnSelectorFactory, frameType, frameReader.signature());
 
     final int numFields = frameReader.signature().size();
 

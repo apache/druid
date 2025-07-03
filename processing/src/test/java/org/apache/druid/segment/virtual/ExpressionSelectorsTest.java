@@ -838,11 +838,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           new RowBasedSegment<>(Sequences.simple(rows), RowAdapters.standardRow(), rowSignature),
           FrameTestUtil.cursorFactoryToFrameSegment(
               new QueryableIndexCursorFactory(bob.buildMMappedIndex()),
-              FrameType.ROW_BASED
+              FrameType.latestRowBased()
           ),
           FrameTestUtil.cursorFactoryToFrameSegment(
               new QueryableIndexCursorFactory(bob.buildMMappedIndex()),
-              FrameType.COLUMNAR
+              FrameType.latestColumnar()
           )
       );
 

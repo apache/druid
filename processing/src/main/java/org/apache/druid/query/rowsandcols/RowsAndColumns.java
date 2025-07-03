@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -189,7 +188,7 @@ public interface RowsAndColumns
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       jsonParser.readBinaryValue(baos);
       Frame frame = Frame.wrap(baos.toByteArray());
-      if (frame.type() == FrameType.COLUMNAR) {
+      if (frame.type().isColumnar()) {
         return new ColumnBasedFrameRowsAndColumns(frame, sig);
       } else {
         return new RowBasedFrameRowsAndColumns(frame, sig);

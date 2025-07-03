@@ -22,6 +22,7 @@ package org.apache.druid.frame.key;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
@@ -71,6 +72,7 @@ public class KeyTestUtils
    */
   public static RowKey createKey(
       final RowSignature keySignature,
+      final FrameType frameType,
       final Object... objects
   )
   {
@@ -90,7 +92,8 @@ public class KeyTestUtils
         false
     );
 
-    final FrameWriterFactory writerFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+    final FrameWriterFactory writerFactory = FrameWriters.makeFrameWriterFactory(
+        frameType,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         keySignature,
         Collections.emptyList(),

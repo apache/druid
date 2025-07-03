@@ -281,7 +281,7 @@ public class FrameProcessorExecutorTest
       final Frame frame =
           Iterables.getOnlyElement(
               FrameSequenceBuilder.fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex()))
-                                  .frameType(FrameType.ROW_BASED)
+                                  .frameType(FrameType.latestRowBased())
                                   .frames()
                                   .toList()
           );
@@ -490,7 +490,7 @@ public class FrameProcessorExecutorTest
 
         FrameSequenceBuilder
             .fromCursorFactory(cursorFactory)
-            .frameType(FrameType.ROW_BASED)
+            .frameType(FrameType.latestRowBased())
             .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000))
             .maxRowsPerFrame(3)
             .frames()

@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols.concrete;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.column.ColumnType;
@@ -33,7 +32,7 @@ public class ColumnBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
   public ColumnBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    super(FrameType.COLUMNAR.ensureType(frame), signature);
+    super(frame.ensureColumnar(), signature);
   }
 
   @Nullable

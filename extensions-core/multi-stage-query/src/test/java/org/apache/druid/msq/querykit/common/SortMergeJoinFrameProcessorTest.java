@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -1478,7 +1479,8 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
   private FrameWriterFactory makeFrameWriterFactory(final RowSignature signature)
   {
     return new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new SingleMemoryAllocatorFactory(ArenaMemoryAllocator.createOnHeap(1_000_000)),
             signature,
             Collections.emptyList(),

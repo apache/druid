@@ -125,8 +125,7 @@ public class SegmentGeneratorStageProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   )
   {
     if (extra == null || extra.isEmpty()) {

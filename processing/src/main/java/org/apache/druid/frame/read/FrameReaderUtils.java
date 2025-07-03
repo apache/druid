@@ -21,19 +21,19 @@ package org.apache.druid.frame.read;
 
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.field.ComplexFieldReader;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -68,19 +68,27 @@ public class FrameReaderUtils
    * to be null. Callers must check for this.
    *
    * @param columnSelectorFactory frame column selector factory
+   * @param expectedFrameType     expected type of the target frame
    * @param expectedSignature     expected signature of the target frame
    */
   @Nullable
   public static Supplier<MemoryRange<Memory>> makeRowMemorySupplier(
       final ColumnSelectorFactory columnSelectorFactory,
+      final FrameType expectedFrameType,
       final RowSignature expectedSignature
   )
   {
     if (mayBeAbleToSelectRowMemory(columnSelectorFactory)) {
-      final ColumnValueSelector<?> signatureSelector =
+      @SuppressWarnings("unchecked")
+      final ColumnValueSelector<FrameType> frameTypeSelector =
+          columnSelectorFactory.makeColumnValueSelector(FrameColumnSelectorFactory.FRAME_TYPE_COLUMN);
+
+      @SuppressWarnings("unchecked")
+      final ColumnValueSelector<RowSignature> signatureSelector =
           columnSelectorFactory.makeColumnValueSelector(FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN);
 
-      final ColumnValueSelector<?> memorySelector =
+      @SuppressWarnings("unchecked")
+      final ColumnValueSelector<MemoryRange<Memory>> memorySelector =
           columnSelectorFactory.makeColumnValueSelector(FrameColumnSelectorFactory.ROW_MEMORY_COLUMN);
 
       return new Supplier<>()
@@ -91,7 +99,13 @@ public class FrameReaderUtils
         @Override
         public MemoryRange<Memory> get()
         {
-          final RowSignature selectedSignature = (RowSignature) signatureSelector.getObject();
+          final FrameType selectedFrameType = frameTypeSelector.getObject();
+
+          if (selectedFrameType != expectedFrameType) {
+            return null;
+          }
+
+          final RowSignature selectedSignature = signatureSelector.getObject();
 
           //noinspection ObjectEquality: checking reference equality on purpose
           if (selectedSignature != lastSignature) {
@@ -100,8 +114,7 @@ public class FrameReaderUtils
           }
 
           if (lastSignatureOk) {
-            //noinspection unchecked
-            return (MemoryRange<Memory>) memorySelector.getObject();
+            return memorySelector.getObject();
           } else {
             return null;
           }
@@ -274,18 +287,16 @@ public class FrameReaderUtils
    */
   private static boolean mayBeAbleToSelectRowMemory(final ColumnSelectorFactory columnSelectorFactory)
   {
-    final ColumnCapabilities rowSignatureCapabilities =
-        columnSelectorFactory.getColumnCapabilities(FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN);
+    final List<String> requiredColumns = List.of(
+        FrameColumnSelectorFactory.FRAME_TYPE_COLUMN,
+        FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN,
+        FrameColumnSelectorFactory.ROW_MEMORY_COLUMN
+    );
 
-    if (rowSignatureCapabilities == null || rowSignatureCapabilities.getType() != ValueType.COMPLEX) {
-      return false;
-    }
-
-    final ColumnCapabilities rowMemoryCapabilities =
-        columnSelectorFactory.getColumnCapabilities(FrameColumnSelectorFactory.ROW_MEMORY_COLUMN);
-
-    if (rowMemoryCapabilities == null || rowMemoryCapabilities.getType() != ValueType.COMPLEX) {
-      return false;
+    for (final String columnName : requiredColumns) {
+      if (columnSelectorFactory.getColumnCapabilities(columnName) == null) {
+        return false;
+      }
     }
 
     return true;

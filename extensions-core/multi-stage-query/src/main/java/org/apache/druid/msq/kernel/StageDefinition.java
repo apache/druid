@@ -27,6 +27,7 @@ import com.google.common.base.Suppliers;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
@@ -39,6 +40,7 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
@@ -336,7 +338,10 @@ public class StageDefinition
     }
   }
 
-  public ClusterByStatisticsCollector createResultKeyStatisticsCollector(final int maxRetainedBytes)
+  public ClusterByStatisticsCollector createResultKeyStatisticsCollector(
+      final FrameType frameType,
+      final int maxRetainedBytes
+  )
   {
     if (!mustGatherResultKeyStatistics()) {
       throw new ISE("No statistics needed for stage[%d]", getStageNumber());
@@ -345,6 +350,7 @@ public class StageDefinition
     return ClusterByStatisticsCollectorImpl.create(
         shuffleSpec.clusterBy(),
         signature,
+        frameType,
         maxRetainedBytes,
         Limits.MAX_PARTITION_BUCKETS,
         ((GlobalSortShuffleSpec) shuffleSpec).doesAggregate(),
@@ -357,17 +363,21 @@ public class StageDefinition
    *
    * Calls {@link MemoryAllocatorFactory#newAllocator()} for each frame.
    */
-  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory memoryAllocatorFactory, final boolean removeNullBytes)
+  public FrameWriterFactory createFrameWriterFactory(
+      final FrameWriterSpec writerSpec,
+      final MemoryAllocatorFactory allocatorFactory
+  )
   {
-    return FrameWriters.makeRowBasedFrameWriterFactory(
-        memoryAllocatorFactory,
+    return FrameWriters.makeFrameWriterFactory(
+        writerSpec.getRowBasedFrameType(),
+        allocatorFactory,
         signature,
 
         // Main processor does not sort when there is a hash going on, even if isSort = true. This is because
         // FrameChannelHashPartitioner is expected to be attached to the processor and do the sorting. We don't
         // want to double-sort.
         doesShuffle() && !shuffleSpec.kind().isHash() ? getClusterBy().getColumns() : Collections.emptyList(),
-        removeNullBytes
+        writerSpec.getRemoveNullBytes()
     );
   }
 
@@ -376,9 +386,9 @@ public class StageDefinition
    *
    * Re-uses the same {@link MemoryAllocator} for each frame.
    */
-  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocator allocator, final boolean removeNullBytes)
+  public FrameWriterFactory createFrameWriterFactory(final FrameWriterSpec writerSpec, final MemoryAllocator allocator)
   {
-    return createFrameWriterFactory(new SingleMemoryAllocatorFactory(allocator), removeNullBytes);
+    return createFrameWriterFactory(writerSpec, new SingleMemoryAllocatorFactory(allocator));
   }
 
   public FrameReader getFrameReader()

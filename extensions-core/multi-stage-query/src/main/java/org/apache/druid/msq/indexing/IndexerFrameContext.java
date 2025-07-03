@@ -24,6 +24,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
@@ -43,6 +44,7 @@ public class IndexerFrameContext implements FrameContext
 {
   private final StageId stageId;
   private final IndexerWorkerContext context;
+  private final FrameWriterSpec frameWriterSpec;
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
@@ -53,6 +55,7 @@ public class IndexerFrameContext implements FrameContext
   public IndexerFrameContext(
       StageId stageId,
       IndexerWorkerContext context,
+      FrameWriterSpec frameWriterSpec,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
       ResourceHolder<ProcessingBuffers> processingBuffers,
@@ -63,6 +66,7 @@ public class IndexerFrameContext implements FrameContext
   {
     this.stageId = stageId;
     this.context = context;
+    this.frameWriterSpec = frameWriterSpec;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
     this.processingBuffers = processingBuffers;
@@ -161,6 +165,12 @@ public class IndexerFrameContext implements FrameContext
   public WorkerStorageParameters storageParameters()
   {
     return storageParameters;
+  }
+
+  @Override
+  public FrameWriterSpec frameWriterSpec()
+  {
+    return frameWriterSpec;
   }
 
   @Override

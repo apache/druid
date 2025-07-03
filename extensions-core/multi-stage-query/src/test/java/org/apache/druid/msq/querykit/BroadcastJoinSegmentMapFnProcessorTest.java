@@ -90,7 +90,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     // File 1: the entire test dataset.
     testDataFile1 = FrameTestUtil.writeFrameFile(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.ROW_BASED) // No particular reason to test with both frame types
+                            .frameType(FrameType.latestRowBased())
                             .allocator(allocator)
                             .frames(),
         temporaryFolder.newFile()
@@ -99,7 +99,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     // File 2: just two rows.
     testDataFile2 = FrameTestUtil.writeFrameFile(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.ROW_BASED) // No particular reason to test with both frame types
+                            .frameType(FrameType.latestRowBased())
                             .allocator(allocator)
                             .maxRowsPerFrame(1)
                             .frames()
