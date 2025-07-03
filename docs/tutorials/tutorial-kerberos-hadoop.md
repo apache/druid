@@ -23,6 +23,12 @@ sidebar_label: Kerberized HDFS deep storage
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. Use SQL-based ingestion instead of MapReduce or MiddleManager-less ingestion with Kubernetes instead of YARN
+
+:::
+
 
 ## Hadoop Setup
 

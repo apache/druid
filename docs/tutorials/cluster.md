@@ -133,8 +133,8 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 We recommend running your favorite Linux distribution. You will also need 
 
-* [Java 11 or 17](../operations/java.md)
-* Python 2 or Python 3
+* [17](../operations/java.md)
+* Python 3
 
 :::info
  If needed, you can specify where to find Java using the environment variables

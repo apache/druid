@@ -23,6 +23,11 @@ sidebar_label: Load from Apache Hadoop
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated.
+
+:::
 
 This tutorial shows you how to load data files into Apache Druid using a remote Hadoop cluster.
 

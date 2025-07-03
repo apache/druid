@@ -23,6 +23,12 @@ title: "Working with different versions of Apache Hadoop"
   -->
 
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated.
+
+:::
+
 Apache Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.md) using the druid-hdfs-storage extension.

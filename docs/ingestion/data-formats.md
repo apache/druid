@@ -962,11 +962,15 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-:::info
- You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated.
+
 :::
 
 :::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+
  See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 :::
 
