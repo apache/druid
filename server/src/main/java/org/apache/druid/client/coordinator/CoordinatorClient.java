@@ -105,6 +105,13 @@ public interface CoordinatorClient
   ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig);
 
   /**
+   * Updates lookups for all tiers.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/lookups/config}
+   */
+  ListenableFuture<Void> updateAllLookups(Object lookups);
+
+  /**
    * Gets the lookup configuration for a tier synchronously.
    * <p>
    * API: {@code GET /druid/coordinator/v1/lookups/config/<tier>}

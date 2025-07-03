@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * This class and most of its methods are kept package protected as they are used
  * only by the specific server implementations in the same package.
  */
-public abstract class EmbeddedDruidServer implements EmbeddedResource
+public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = 100_000_000;
@@ -102,10 +102,11 @@ public abstract class EmbeddedDruidServer implements EmbeddedResource
    * {@code runtime.properties} file in a real Druid cluster, and override the
    * common properties specified via {@link EmbeddedDruidCluster#addCommonProperty}.
    */
-  public final EmbeddedDruidServer addProperty(String key, String value)
+  @SuppressWarnings("unchecked")
+  public final T addProperty(String key, String value)
   {
     serverProperties.put(key, value);
-    return this;
+    return (T) this;
   }
 
   /**

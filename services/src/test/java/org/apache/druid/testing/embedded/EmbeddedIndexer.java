@@ -33,7 +33,7 @@ import java.util.List;
  * Add this to your {@link EmbeddedDruidCluster} if you want to run ingestion
  * tasks.
  */
-public class EmbeddedIndexer extends EmbeddedDruidServer
+public class EmbeddedIndexer extends EmbeddedDruidServer<EmbeddedIndexer>
 {
   public EmbeddedIndexer()
   {

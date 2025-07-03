@@ -52,16 +52,15 @@ import java.util.stream.IntStream;
  */
 public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 {
-  private final EmbeddedBroker broker = new EmbeddedBroker();
-  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedHistorical historical = new EmbeddedHistorical();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  protected final EmbeddedBroker broker = new EmbeddedBroker();
+  protected final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "25");
+  protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  protected final EmbeddedHistorical historical = new EmbeddedHistorical();
+  protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    indexer.addProperty("druid.worker.capacity", "25");
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .addServer(coordinator)
@@ -102,7 +101,12 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
       start = start.plusDays(1);
     }
 
-    // Wait for segments to be queryable
+    // Wait for all segments to be loaded and queryable
+    coordinator.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/loadQueue/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(10)
+    );
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
