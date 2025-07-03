@@ -70,7 +70,7 @@ public final class TestFrameProcessorUtils
   {
     final CursorFactory cursorFactory = toCursorFactory(inputRows);
     return Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                                                        .frameType(FrameType.ROW_BASED)
+                                                        .frameType(FrameType.latestRowBased())
                                                         .frames()
                                                         .toList());
   }

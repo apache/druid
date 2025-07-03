@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -43,19 +44,22 @@ import javax.annotation.Nullable;
 public class FloatFieldReader extends NumericFieldReader
 {
 
-  public static FloatFieldReader forPrimitive()
+  public static FloatFieldReader forPrimitive(final FrameType frameType)
   {
-    return new FloatFieldReader(false);
+    return new FloatFieldReader(false, frameType);
   }
 
-  public static FloatFieldReader forArray()
+  public static FloatFieldReader forArray(final FrameType frameType)
   {
-    return new FloatFieldReader(true);
+    return new FloatFieldReader(true, frameType);
   }
 
-  private FloatFieldReader(final boolean forArray)
+  private final FrameType frameType;
+
+  private FloatFieldReader(final boolean forArray, final FrameType frameType)
   {
     super(forArray);
+    this.frameType = frameType;
   }
 
   @Override
@@ -71,7 +75,7 @@ public class FloatFieldReader extends NumericFieldReader
       final byte nullIndicatorByte
   )
   {
-    return new FloatFieldSelector(memory, fieldPointer, nullIndicatorByte);
+    return new FloatFieldSelector(memory, fieldPointer, nullIndicatorByte, frameType);
   }
 
   private static class FloatFieldSelector extends NumericFieldReader.Selector implements FloatColumnSelector
@@ -79,12 +83,19 @@ public class FloatFieldReader extends NumericFieldReader
 
     final Memory dataRegion;
     final ReadableFieldPointer fieldPointer;
+    final FrameType frameType;
 
-    public FloatFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+    public FloatFieldSelector(
+        Memory dataRegion,
+        ReadableFieldPointer fieldPointer,
+        byte nullIndicatorByte,
+        FrameType frameType
+    )
     {
       super(dataRegion, fieldPointer, nullIndicatorByte);
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
+      this.frameType = frameType;
     }
 
     @Override
@@ -92,7 +103,7 @@ public class FloatFieldReader extends NumericFieldReader
     {
       assert !isNull();
       final int bits = dataRegion.getInt(fieldPointer.position() + Byte.BYTES);
-      return TransformUtils.detransformToFloat(bits);
+      return TransformUtils.detransformToFloat(bits, frameType);
     }
 
     @Override
@@ -226,7 +237,7 @@ public class FloatFieldReader extends NumericFieldReader
 
         private float getFloatAtPosition(long rhsPosition)
         {
-          return TransformUtils.detransformToFloat(dataRegion.getInt(rhsPosition + Byte.BYTES));
+          return TransformUtils.detransformToFloat(dataRegion.getInt(rhsPosition + Byte.BYTES), frameType);
         }
       };
     }

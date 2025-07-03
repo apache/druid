@@ -35,6 +35,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -278,6 +279,13 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (msqMode != null) {
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContextOverrides);
     }
+
+    // Use the latest row-based frame type. The default is an older type, to ensure compatibility during rolling
+    // updates. Since the Broker is updated last, it's safe to set this property on the Broker.
+    nativeQueryContextOverrides.putIfAbsent(
+        MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE,
+        (int) FrameType.latestRowBased().version()
+    );
 
     // Add the start time.
     nativeQueryContextOverrides.put(MultiStageQueryContext.CTX_START_TIME, DateTimes.nowUtc().toString());

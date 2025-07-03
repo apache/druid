@@ -37,6 +37,7 @@ public class EmbeddedOverlord extends EmbeddedDruidServer
 {
   public EmbeddedOverlord()
   {
+    addProperty("druid.indexer.storage.type", "metadata");
     addProperty("druid.indexer.queue.startDelay", "PT0S");
     addProperty("druid.indexer.queue.restartDelay", "PT0S");
 

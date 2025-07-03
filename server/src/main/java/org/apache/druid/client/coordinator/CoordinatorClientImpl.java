@@ -30,8 +30,11 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupUtils;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -47,7 +50,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -248,6 +253,39 @@ public class CoordinatorClientImpl implements CoordinatorClient
         new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/config")
             .jsonContent(jsonMapper, dynamicConfig),
         IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier)
+  {
+    final String path = StringUtils.format(
+        "/druid/coordinator/v1/lookups/config/%s?detailed=true",
+        StringUtils.urlEncode(tier)
+    );
+
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+      return extractLookupFactory(responseHolder);
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
+  {
+    Map<String, Object> lookupNameToGenericConfig = JacksonUtils.readValue(
+        jsonMapper,
+        holder.getContent(),
+        new TypeReference<>() {}
+    );
+    return LookupUtils.tryConvertObjectMapToLookupConfigMap(
+        lookupNameToGenericConfig,
+        jsonMapper
     );
   }
 }

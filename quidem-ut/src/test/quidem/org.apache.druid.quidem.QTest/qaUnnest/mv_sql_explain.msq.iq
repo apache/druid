@@ -96,6 +96,7 @@ FROM test_unnest,
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "scanSignature" : "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
@@ -219,6 +220,7 @@ FROM
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "scanSignature" : "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"c_str\",\"type\":\"STRING\"},{\"name\":\"c_long\",\"type\":\"LONG\"},{\"name\":\"c_float\",\"type\":\"FLOAT\"},{\"name\":\"c_double\",\"type\":\"DOUBLE\"},{\"name\":\"c_mv_complex\",\"type\":\"STRING\"},{\"name\":\"c_mv_num\",\"type\":\"STRING\"},{\"name\":\"c_mv_complex_with_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"c_mv_num_with_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"c_mv_complex_with_null_and_empty_row\",\"type\":\"STRING\"},{\"name\":\"c_mv_num_with_null_and_empty_row\",\"type\":\"STRING\"},{\"name\":\"c_mv_all_null_and_empty_val\",\"type\":\"STRING\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
@@ -372,6 +374,7 @@ GROUP BY c;
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -458,6 +461,7 @@ GROUP BY c;
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__

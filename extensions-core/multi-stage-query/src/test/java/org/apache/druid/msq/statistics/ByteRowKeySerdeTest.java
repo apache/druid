@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -47,7 +48,7 @@ public class ByteRowKeySerdeTest extends InitializedNullHandlingTest
                                             .add("y", ColumnType.LONG)
                                             .build();
 
-    testSerde(KeyTestUtils.createKey(rowSignature, 2, 4).array());
+    testSerde(KeyTestUtils.createKey(rowSignature, FrameType.latestRowBased(), 2, 4).array());
   }
 
   @Test

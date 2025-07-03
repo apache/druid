@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -42,20 +43,22 @@ import javax.annotation.Nullable;
  */
 public class DoubleFieldReader extends NumericFieldReader
 {
-
-  public static DoubleFieldReader forPrimitive()
+  public static DoubleFieldReader forPrimitive(final FrameType frameType)
   {
-    return new DoubleFieldReader(false);
+    return new DoubleFieldReader(false, frameType);
   }
 
-  public static DoubleFieldReader forArray()
+  public static DoubleFieldReader forArray(final FrameType frameType)
   {
-    return new DoubleFieldReader(true);
+    return new DoubleFieldReader(true, frameType);
   }
 
-  private DoubleFieldReader(final boolean forArray)
+  private final FrameType frameType;
+
+  private DoubleFieldReader(final boolean forArray, final FrameType frameType)
   {
     super(forArray);
+    this.frameType = frameType;
   }
 
   @Override
@@ -71,7 +74,7 @@ public class DoubleFieldReader extends NumericFieldReader
       final byte nullIndicatorByte
   )
   {
-    return new DoubleFieldReader.DoubleFieldSelector(memory, fieldPointer, nullIndicatorByte);
+    return new DoubleFieldReader.DoubleFieldSelector(memory, fieldPointer, nullIndicatorByte, frameType);
   }
 
   private static class DoubleFieldSelector extends NumericFieldReader.Selector implements DoubleColumnSelector
@@ -79,12 +82,19 @@ public class DoubleFieldReader extends NumericFieldReader
 
     final Memory dataRegion;
     final ReadableFieldPointer fieldPointer;
+    final FrameType frameType;
 
-    public DoubleFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+    public DoubleFieldSelector(
+        Memory dataRegion,
+        ReadableFieldPointer fieldPointer,
+        byte nullIndicatorByte,
+        FrameType frameType
+    )
     {
       super(dataRegion, fieldPointer, nullIndicatorByte);
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
+      this.frameType = frameType;
     }
 
     @Override
@@ -92,7 +102,7 @@ public class DoubleFieldReader extends NumericFieldReader
     {
       assert !isNull();
       final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
-      return TransformUtils.detransformToDouble(bits);
+      return TransformUtils.detransformToDouble(bits, frameType);
     }
 
     @Override
@@ -226,7 +236,7 @@ public class DoubleFieldReader extends NumericFieldReader
 
         private double getDoubleAtPosition(long lhsPosition)
         {
-          return TransformUtils.detransformToDouble(dataRegion.getLong(lhsPosition + Byte.BYTES));
+          return TransformUtils.detransformToDouble(dataRegion.getLong(lhsPosition + Byte.BYTES), frameType);
         }
       };
     }

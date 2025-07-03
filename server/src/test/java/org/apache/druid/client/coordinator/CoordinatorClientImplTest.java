@@ -35,6 +35,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
@@ -95,7 +98,10 @@ public class CoordinatorClientImplTest
     jsonMapper.setInjectableValues(
         new InjectableValues.Std(ImmutableMap.of(
             DataSegment.PruneSpecsHolder.class.getName(),
-            DataSegment.PruneSpecsHolder.DEFAULT)));
+            DataSegment.PruneSpecsHolder.DEFAULT
+        ))
+    );
+    jsonMapper.registerSubtypes(MapLookupExtractorFactory.class);
     serviceClient = new MockServiceClient();
     coordinatorClient = new CoordinatorClientImpl(serviceClient, jsonMapper);
   }
@@ -144,7 +150,10 @@ public class CoordinatorClientImplTest
                    .build();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=false"),
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=false"
+        ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segment)
@@ -345,10 +354,13 @@ public class CoordinatorClientImplTest
                    .size(1)
                    .build(),
         serverMetadataSet
-        );
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/datasources/xyz/intervals/2001-01-01T00:00:00.000Z_2002-01-01T00:00:00.000Z/serverview?full"),
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/datasources/xyz/intervals/2001-01-01T00:00:00.000Z_2002-01-01T00:00:00.000Z/serverview?full"
+        ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(Collections.singletonList(immutableSegmentLoadInfo1))
@@ -366,7 +378,10 @@ public class CoordinatorClientImplTest
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/datasources/xyz/intervals/2501-01-01T00:00:00.000Z_2502-01-01T00:00:00.000Z/serverview?full"),
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/datasources/xyz/intervals/2501-01-01T00:00:00.000Z_2502-01-01T00:00:00.000Z/serverview?full"
+        ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(Collections.singletonList(immutableSegmentLoadInfo2))
@@ -470,5 +485,36 @@ public class CoordinatorClientImplTest
     );
 
     Assert.assertNull(coordinatorClient.updateCoordinatorDynamicConfig(config).get());
+  }
+
+  @Test
+  public void test_fetchLookupsForTierSync_detailedEnabled() throws Exception
+  {
+    LookupExtractorFactory lookupData = new MapLookupExtractorFactory(
+        Map.of(
+            "77483", "United States",
+            "77484", "India"
+        ),
+        true
+    );
+    LookupExtractorFactoryContainer lookupDataContainer = new LookupExtractorFactoryContainer("v0", lookupData);
+    Map<String, LookupExtractorFactoryContainer> lookups = Map.of(
+        "default_tier", lookupDataContainer
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/lookups/config/default_tier?detailed=true"
+        ),
+        HttpResponseStatus.OK,
+        Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(lookups)
+    );
+
+    Assert.assertEquals(
+        lookups,
+        coordinatorClient.fetchLookupsForTierSync("default_tier")
+    );
   }
 }

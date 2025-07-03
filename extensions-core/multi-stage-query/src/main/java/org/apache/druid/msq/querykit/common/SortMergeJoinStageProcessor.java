@@ -134,8 +134,7 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   ) throws IOException
   {
     if (inputSlices.size() != 2 || !inputSlices.stream().allMatch(slice -> slice instanceof StageInputSlice)) {
@@ -181,7 +180,10 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
               readableInputs.get(LEFT),
               readableInputs.get(RIGHT),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
+              stageDefinition.createFrameWriterFactory(
+                  frameContext.frameWriterSpec(),
+                  outputChannel.getFrameMemoryAllocator()
+              ),
               rightPrefix,
               keyColumns,
               requiredNonNullKeyParts,

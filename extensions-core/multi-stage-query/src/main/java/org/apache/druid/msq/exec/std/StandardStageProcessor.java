@@ -29,7 +29,6 @@ import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -79,8 +78,7 @@ public abstract class StandardStageProcessor<T, R, ExtraInfoType> implements Sta
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   ) throws IOException;
 
   @Override
@@ -100,8 +98,7 @@ public abstract class StandardStageProcessor<T, R, ExtraInfoType> implements Sta
           context.frameContext(),
           context.threadCount(),
           context.counters(),
-          context::onWarning,
-          MultiStageQueryContext.removeNullBytes(context.workOrder().getWorkerContext())
+          context::onWarning
       );
 
       return stageRunner.run(processors);

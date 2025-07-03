@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
@@ -54,6 +55,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
 import java.util.Date;
@@ -80,6 +82,11 @@ class ControllerStageTracker
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
+
+  /**
+   * Type to use for row-based frames, generally based on {@link MultiStageQueryContext#getRowBasedFrameType}.
+   */
+  private final FrameType rowBasedFrameType;
 
   // worker-> workerStagePhase
   // Controller keeps track of the stage with this map.
@@ -128,12 +135,14 @@ class ControllerStageTracker
   private ControllerStageTracker(
       final StageDefinition stageDef,
       final WorkerInputs workerInputs,
+      final FrameType rowBasedFrameType,
       final int maxRetainedPartitionSketchBytes
   )
   {
     this.stageDef = stageDef;
     this.workerCount = workerInputs.workerCount();
     this.workerInputs = workerInputs;
+    this.rowBasedFrameType = rowBasedFrameType;
     this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
 
     initializeWorkerState(workerInputs.workers());
@@ -167,6 +176,7 @@ class ControllerStageTracker
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final FrameType rowBasedFrameType,
       final int maxRetainedPartitionSketchBytes,
       final long maxInputBytesPerWorker
   )
@@ -182,6 +192,7 @@ class ControllerStageTracker
     return new ControllerStageTracker(
         stageDef,
         workerInputs,
+        rowBasedFrameType,
         maxRetainedPartitionSketchBytes
     );
   }
@@ -549,7 +560,10 @@ class ControllerStageTracker
             timeChunk,
             (ignored, collector) -> {
               if (collector == null) {
-                collector = stageDef.createResultKeyStatisticsCollector(maxRetainedPartitionSketchBytes);
+                collector = stageDef.createResultKeyStatisticsCollector(
+                    rowBasedFrameType,
+                    maxRetainedPartitionSketchBytes
+                );
               }
               collector.addAll(clusterByStatisticsSnapshot);
               return collector;
@@ -676,7 +690,10 @@ class ControllerStageTracker
           STATIC_TIME_CHUNK_FOR_PARALLEL_MERGE,
           (timeChunk, stats) -> {
             if (stats == null) {
-              stats = stageDef.createResultKeyStatisticsCollector(maxRetainedPartitionSketchBytes);
+              stats = stageDef.createResultKeyStatisticsCollector(
+                  rowBasedFrameType,
+                  maxRetainedPartitionSketchBytes
+              );
             }
             stats.addAll(clusterByStatsSnapshot);
             return stats;
