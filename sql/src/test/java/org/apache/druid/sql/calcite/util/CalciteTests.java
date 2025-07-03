@@ -427,7 +427,14 @@ public class CalciteTests
     final CoordinatorClient coordinatorClient = new CoordinatorClientImpl(
         new MockServiceClient(),
         getJsonMapper()
-    );
+    )
+    {
+      @Override
+      public String findCurrentLeader()
+      {
+        return coordinatorNode.getHostAndPortToUse();
+      }
+    };
 
     final OverlordClient overlordClient = new NoopOverlordClient()
     {

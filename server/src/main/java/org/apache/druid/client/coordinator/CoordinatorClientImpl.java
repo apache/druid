@@ -58,7 +58,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -228,7 +227,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   {
     final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/compaction/status");
     if (dataSource != null && !dataSource.isEmpty()) {
-      pathBuilder.append("?").append("dataSource=").append(StringUtils.urlEncode(dataSource));
+      pathBuilder.append("?").append("datasources=").append(StringUtils.urlEncode(dataSource));
     }
 
     return FutureUtils.transform(
@@ -345,20 +344,15 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public Map<String, List<Rule>> getRulesSync()
+  public ListenableFuture<Map<String, List<Rule>>> getRules()
   {
     final String path = "/druid/coordinator/v1/rules";
-    try {
-      BytesFullResponseHolder responseHolder = client.request(
-          new RequestBuilder(HttpMethod.GET, path),
-          new BytesFullResponseHandler()
-      );
-
-      return jsonMapper.readValue(responseHolder.getContent(), new TypeReference<>() {});
-    }
-    catch (InterruptedException | ExecutionException | IOException e) {
-      throw new RuntimeException(e);
-    }
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ), holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
   }
 
   @Override

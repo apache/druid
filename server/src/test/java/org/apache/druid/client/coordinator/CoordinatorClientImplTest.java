@@ -32,6 +32,7 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -71,7 +72,6 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -450,7 +450,7 @@ public class CoordinatorClientImplTest
         AutoCompactionSnapshot.builder("ds1").build()
     );
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/compaction/status?dataSource=ds1"),
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/compaction/status?datasources=ds1"),
         HttpResponseStatus.OK,
         Map.of(),
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
@@ -631,7 +631,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getRulesSync() throws Exception
+  public void test_getRules() throws Exception
   {
     final Map<String, List<Rule>> rules = ImmutableMap.of(
         "xyz", ImmutableList.of(
@@ -657,22 +657,28 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         rules,
-        coordinatorClient.getRulesSync()
+        coordinatorClient.getRules().get()
     );
   }
 
   @Test
-  public void test_getRulesSync_IOException_throwsError() throws Exception
+  public void test_getRules_HttpException_throwsError()
   {
     serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/rules"),
-        new IOException("Simulated error")
+        new HttpResponseException(
+            new StringFullResponseHolder(
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                StandardCharsets.UTF_8
+            )
+        )
     );
 
-    Assert.assertThrows(
+    RuntimeException thrown = Assert.assertThrows(
         RuntimeException.class,
-        () -> coordinatorClient.getRulesSync()
+        () -> FutureUtils.getUnchecked(coordinatorClient.getRules(), true)
     );
+    Assert.assertTrue(Throwables.getRootCause(thrown) instanceof HttpResponseException);
   }
 
   @Test

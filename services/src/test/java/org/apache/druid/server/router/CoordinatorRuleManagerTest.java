@@ -88,7 +88,7 @@ public class CoordinatorRuleManagerTest
   public void testThrowingExceptionOnHTTPException()
   {
     final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
-    EasyMock.expect(client.getRulesSync()).andThrow(
+    EasyMock.expect(client.getRules()).andThrow(
         new RuntimeException(
             new HttpResponseException(
                 new StringFullResponseHolder(
@@ -154,7 +154,7 @@ public class CoordinatorRuleManagerTest
         ImmutableList.of(new ForeverLoadRule(ImmutableMap.of("__default", 2), null))
     );
     final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
-    EasyMock.expect(client.getRulesSync())
+    EasyMock.expect(client.getRules())
             .andReturn(rules);
     EasyMock.replay(client);
     return client;

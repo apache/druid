@@ -137,7 +137,7 @@ public interface CoordinatorClient
    * <p>
    * API: {@code GET /druid/coordinator/v1/rules}
    */
-  Map<String, List<Rule>> getRulesSync();
+  ListenableFuture<Map<String, List<Rule>>> getRules();
 
   /**
    * Returns the current leader's host and port.

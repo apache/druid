@@ -131,7 +131,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public Map<String, List<Rule>> getRulesSync()
+  public ListenableFuture<Map<String, List<Rule>>> getRules()
   {
     throw new UnsupportedOperationException();
   }

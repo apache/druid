@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -122,7 +123,7 @@ public class CoordinatorRuleManager
   public void poll()
   {
     try {
-      final Map<String, List<Rule>> map = coordinatorClient.getRulesSync();
+      final Map<String, List<Rule>> map = FutureUtils.getUnchecked(coordinatorClient.getRules(), true);
       final Map<String, List<Rule>> immutableMapBuilder = Maps.newHashMapWithExpectedSize(map.size());
       map.forEach((k, list) -> immutableMapBuilder.put(k, Collections.unmodifiableList(list)));
       rules.set(Collections.unmodifiableMap(immutableMapBuilder));
