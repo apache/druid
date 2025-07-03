@@ -230,7 +230,7 @@ public class ServerManager implements QuerySegmentWalker
       return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, closer, timeout);
     }
     catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
+      throw CloseableUtils.closeAndWrapInCatch(e, loadCloser);
     }
     finally {
       // we acquire references to stuff while bulk loading, release them after we have acquired the real references
