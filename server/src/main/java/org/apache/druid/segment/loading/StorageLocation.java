@@ -47,8 +47,8 @@ import java.util.function.Supplier;
  * <p>
  * Items are chosen for eviction using an algorithm based on
  * <a href="https://www.usenix.org/system/files/nsdi24spring_prepub_zhang-yazhuo.pdf">SIEVE</a> with additional
- * mechanisms to place temporary holds on cache entries. This holds required to support cases such as if a group of
- * them are taking part in a query and must all be loaded simultaneously.
+ * mechanisms to place temporary holds on cache entries. The holds are required to support cases such as if a group of
+ * cache entries are taking part in a query and must all be loaded simultaneously before processing can continue.
  * <p>
  * Implementation-wise, {@link CacheEntry} are wrapped in {@link WeakCacheEntry} to form a doubly linked list
  * functioning as a queue which can be interacted with via 3 fields, {@link #head}, {@link #tail}, and {@link #hand}.

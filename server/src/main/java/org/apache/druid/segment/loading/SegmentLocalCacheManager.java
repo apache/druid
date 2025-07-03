@@ -40,6 +40,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -345,6 +346,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
             dataSegment.getId()
         );
+      }
+      catch (SegmentLoadingException e) {
+        CloseableUtils.closeAndWrapExceptions(cleanup);
+        throw e;
+      }
+      catch (Throwable e) {
+        throw CloseableUtils.closeAndWrapInCatch(e, cleanup);
       }
       finally {
         unlock(dataSegment, lock);
