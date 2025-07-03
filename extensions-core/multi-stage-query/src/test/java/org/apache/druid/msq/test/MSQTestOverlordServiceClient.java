@@ -388,7 +388,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   }
 
   /**
-   *
+   * Returns a list of emitted metrics matching the name and user dimensions.
    */
   public List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
   {

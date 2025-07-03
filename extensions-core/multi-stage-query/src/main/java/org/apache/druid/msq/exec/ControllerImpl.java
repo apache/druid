@@ -565,7 +565,7 @@ public class ControllerImpl implements Controller
     final Set<Interval> intervals = new HashSet<>();
     if (queryDef != null) {
       for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
-        datasources.addAll(MSQMetricUtils.getDatasources(stageDefinition));
+        datasources.addAll(stageDefinition.getDatasources());
         intervals.addAll(MSQMetricUtils.getIntervals(stageDefinition));
       }
     }

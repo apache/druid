@@ -439,7 +439,7 @@ public class WorkerImpl implements Worker
     Set<String> datasourceDim = (Set<String>) queryMetricDimensions.computeIfAbsent(DruidMetrics.DATASOURCE, s -> new HashSet<>());
     Set<Interval> intervalDim = (Set<Interval>) queryMetricDimensions.computeIfAbsent(DruidMetrics.INTERVAL, s -> new HashSet<>());
     for (StageDefinition stageDef : queryDef.getStageDefinitions()) {
-      datasourceDim.addAll(MSQMetricUtils.getDatasources(stageDef));
+      datasourceDim.addAll(stageDef.getDatasources());
       intervalDim.addAll(MSQMetricUtils.getIntervals(stageDef));
     }
   }

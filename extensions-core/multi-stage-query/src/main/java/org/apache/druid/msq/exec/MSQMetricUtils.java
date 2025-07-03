@@ -96,21 +96,6 @@ public class MSQMetricUtils
   }
 
   /**
-   * Returns a set of all datasources of all {@link TableInputSpec} in the stageDefinition.
-   */
-  public static Set<String> getDatasources(final StageDefinition stageDefinition)
-  {
-    HashSet<String> datasources = new HashSet<>();
-    for (InputSpec inputSpec : stageDefinition.getInputSpecs()) {
-      if (inputSpec instanceof TableInputSpec) {
-        TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
-        datasources.add(tableInputSpec.getDataSource());
-      }
-    }
-    return datasources;
-  }
-
-  /**
    * Returns a set of all intervals of all {@link TableInputSpec} in the stageDefinition.
    */
   public static Set<Interval> getIntervals(final StageDefinition stageDefinition)
