@@ -754,7 +754,8 @@ public class CoordinatorClientImplTest
     // try and assert that the root cause is an HttpResponseException
     try {
       coordinatorClient.findCurrentLeader();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       Throwable throwable = Throwables.getRootCause(e);
       Assert.assertTrue(throwable instanceof HttpResponseException);
     }

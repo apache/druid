@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
@@ -69,7 +68,7 @@ public class CoordinatorRuleManager
   @Inject
   public CoordinatorRuleManager(
       Supplier<TieredBrokerConfig> config,
-      @Coordinator CoordinatorClient coordinatorClient
+      CoordinatorClient coordinatorClient
   )
   {
     this.config = config;

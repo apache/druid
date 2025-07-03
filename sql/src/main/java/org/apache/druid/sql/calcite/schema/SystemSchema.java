@@ -51,7 +51,6 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
@@ -238,7 +237,7 @@ public class SystemSchema extends AbstractSchema
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
-      final @Coordinator CoordinatorClient coordinatorClient,
+      final CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper

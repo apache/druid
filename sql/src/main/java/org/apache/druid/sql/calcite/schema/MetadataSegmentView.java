@@ -28,7 +28,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.JsonParserIterator;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
@@ -84,7 +83,7 @@ public class MetadataSegmentView
 
   @Inject
   public MetadataSegmentView(
-      final @Coordinator CoordinatorClient coordinatorClient,
+      final CoordinatorClient coordinatorClient,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerSegmentMetadataCacheConfig config
   )
