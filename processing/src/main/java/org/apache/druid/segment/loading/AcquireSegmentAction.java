@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, finally
@@ -56,29 +57,37 @@ public class AcquireSegmentAction implements Closeable
       List<AcquireSegmentAction> acquireSegmentActions,
       SegmentMapFunction segmentMapFunction,
       Closer closer,
-      long timeout
+      long timeoutAt
   )
   {
-    try {
-      final Iterable<ListenableFuture<Optional<Segment>>> futures =
-          () -> acquireSegmentActions.stream().map(AcquireSegmentAction::getSegmentFuture).iterator();
-      final List<Optional<Segment>> loadedProviders =
-          Futures.allAsList(futures).get(timeout, TimeUnit.MILLISECONDS);
-
-      final List<SegmentReference> segmentReferences = new ArrayList<>();
-      for (int i = 0; i < acquireSegmentActions.size(); i++) {
+    final List<ListenableFuture<Optional<Segment>>> futures =
+        acquireSegmentActions.stream().map(AcquireSegmentAction::getSegmentFuture).collect(Collectors.toList());
+    final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
+    Throwable failure = null;
+    for (int i = 0; i < acquireSegmentActions.size(); i++) {
+      try {
+        final ListenableFuture<Optional<Segment>> future = futures.get(i);
+        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+                                                .map(closer::register);
         segmentReferences.add(
             new SegmentReference(
                 acquireSegmentActions.get(i).getDescriptor(),
-                segmentMapFunction.apply(loadedProviders.get(i).map(closer::register))
+                segmentMapFunction.apply(segment)
             )
         );
       }
-      return segmentReferences;
+      catch (InterruptedException | ExecutionException | TimeoutException e) {
+        if (failure == null) {
+          failure = e;
+        } else {
+          failure.addSuppressed(e);
+        }
+      }
     }
-    catch (InterruptedException | ExecutionException | TimeoutException e) {
-      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+    if (failure != null) {
+      throw CloseableUtils.closeAndWrapInCatch(failure, closer);
     }
+    return segmentReferences;
   }
 
   public static AcquireSegmentAction alreadyLoaded(

@@ -227,7 +227,8 @@ public class ServerManager implements QuerySegmentWalker
               }
           );
       final List<AcquireSegmentAction> loaders = segmentManager.acquireSegments(segmentsToMap, loadCloser);
-      return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, closer, timeout);
+      long timeoutAt = System.currentTimeMillis() + timeout;
+      return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, closer, timeoutAt);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
