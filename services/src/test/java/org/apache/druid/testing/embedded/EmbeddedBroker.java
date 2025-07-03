@@ -36,6 +36,7 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -99,7 +100,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer
   private static class SegmentAvailabilityTracker implements ServerView.SegmentCallback
   {
     @GuardedBy("itself")
-    private final Set<SegmentId> segments = Sets.newHashSet();
+    private final Set<SegmentId> segments = new HashSet<>();
 
     public void waitForSegmentAvailability(Collection<SegmentId> desiredSegments) throws InterruptedException
     {
