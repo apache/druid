@@ -20,6 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -27,10 +28,13 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -44,6 +48,7 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -53,6 +58,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -281,6 +288,49 @@ public class CoordinatorClientImpl implements CoordinatorClient
           new BytesFullResponseHandler()
       );
       return extractLookupFactory(responseHolder);
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(
+      @Nullable List<String> watchedDataSources
+  )
+  {
+    final StringBuilder pathBuilder = new StringBuilder(
+        "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      for (String dataSource : watchedDataSources) {
+        pathBuilder.append("&dataSource=").append(StringUtils.urlEncode(dataSource));
+      }
+    }
+
+    try {
+      String query = pathBuilder.toString();
+      InputStreamFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, query),
+          new InputStreamFullResponseHandler()
+      );
+
+      if (responseHolder.getStatus().getCode() != SC_OK) {
+        throw new RE(
+            "Failed to talk to leader node at[%s]. Error code[%d], description[%s].",
+            query,
+            responseHolder.getStatus().getCode(),
+            responseHolder.getStatus().getReasonPhrase()
+        );
+      }
+      final JavaType javaType = jsonMapper.getTypeFactory().constructType(new TypeReference<>() {});
+      return new JsonParserIterator<>(
+          javaType,
+          Futures.immediateFuture(responseHolder.getContent()),
+          null,
+          null,
+          null,
+          jsonMapper
+      );
     }
     catch (InterruptedException | ExecutionException e) {
       throw new RuntimeException(e);

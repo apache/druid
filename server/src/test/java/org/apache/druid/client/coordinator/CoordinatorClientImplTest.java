@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -51,6 +51,7 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -62,6 +63,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +87,15 @@ public class CoordinatorClientImplTest
 
   private static final DataSegment SEGMENT2 = DataSegment.builder()
                                                          .dataSource("xyz")
+                                                         .interval(Intervals.of("2000/3000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
+
+  private static final DataSegment SEGMENT3 = DataSegment.builder()
+                                                         .dataSource("abc")
                                                          .interval(Intervals.of("2000/3000"))
                                                          .version("1")
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
@@ -530,6 +541,34 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         lookups,
         coordinatorClient.fetchLookupsForTierSync("default_tier")
+    );
+  }
+
+  @Test
+  public void test_getMetadataSegmentsSync() throws JsonProcessingException
+  {
+    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(segments)
+    );
+
+    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(null);
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        segments,
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
     );
   }
 }

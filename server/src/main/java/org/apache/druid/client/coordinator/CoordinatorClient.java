@@ -22,6 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -29,6 +30,7 @@ import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -119,4 +121,13 @@ public interface CoordinatorClient
    * @param tier The name of the tier for which the lookup configuration is to be fetched.
    */
   Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier);
+
+  /**
+   * Returns an iterator over the metadata segments in the cluster.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments}
+   *
+   * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
+   */
+  JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(@Nullable List<String> watchedDataSources);
 }
