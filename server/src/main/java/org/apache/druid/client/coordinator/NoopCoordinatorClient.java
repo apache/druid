@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
@@ -32,6 +33,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class NoopCoordinatorClient implements CoordinatorClient
@@ -109,4 +111,11 @@ public class NoopCoordinatorClient implements CoordinatorClient
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(
+      String tier
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
 }
