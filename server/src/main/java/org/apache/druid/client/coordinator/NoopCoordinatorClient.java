@@ -123,7 +123,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(
-      @Nullable List<String> watchedDataSources
+      @Nullable Set<String> watchedDataSources
   )
   {
     throw new UnsupportedOperationException();

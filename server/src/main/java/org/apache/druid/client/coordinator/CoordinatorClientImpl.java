@@ -296,7 +296,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
 
   @Override
   public JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(
-      @Nullable List<String> watchedDataSources
+      @Nullable Set<String> watchedDataSources
   )
   {
     final StringBuilder pathBuilder = new StringBuilder(

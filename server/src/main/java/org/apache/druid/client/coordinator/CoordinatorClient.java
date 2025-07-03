@@ -129,5 +129,5 @@ public interface CoordinatorClient
    *
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
    */
-  JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(@Nullable List<String> watchedDataSources);
+  JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(@Nullable Set<String> watchedDataSources);
 }

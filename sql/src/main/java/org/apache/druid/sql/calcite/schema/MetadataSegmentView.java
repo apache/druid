@@ -31,6 +31,7 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
@@ -61,7 +62,7 @@ public class MetadataSegmentView
 {
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
-  private final DruidLeaderClient coordinatorDruidLeaderClient;
+  private final CoordinatorClient coordinatorClient;
   private final ObjectMapper jsonMapper;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
@@ -87,14 +88,14 @@ public class MetadataSegmentView
 
   @Inject
   public MetadataSegmentView(
-      final @Coordinator DruidLeaderClient druidLeaderClient,
+      final @Coordinator CoordinatorClient druidLeaderClient,
       final ObjectMapper jsonMapper,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerSegmentMetadataCacheConfig config
   )
   {
     Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
-    this.coordinatorDruidLeaderClient = druidLeaderClient;
+    this.coordinatorClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
@@ -140,8 +141,7 @@ public class MetadataSegmentView
   {
     log.info("Polling segments from coordinator");
     final JsonParserIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
-        coordinatorDruidLeaderClient,
-        jsonMapper,
+        coordinatorClient,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
@@ -175,8 +175,7 @@ public class MetadataSegmentView
       return publishedSegments.iterator();
     } else {
       return getMetadataSegments(
-          coordinatorDruidLeaderClient,
-          jsonMapper,
+          coordinatorClient,
           segmentWatcherConfig.getWatchedDataSources()
       );
     }
@@ -184,32 +183,13 @@ public class MetadataSegmentView
 
   // Note that coordinator must be up to get segments
   private JsonParserIterator<SegmentStatusInCluster> getMetadataSegments(
-      DruidLeaderClient coordinatorClient,
-      ObjectMapper jsonMapper,
+      CoordinatorClient coordinatorClient,
       Set<String> watchedDataSources
   )
   {
     // includeRealtimeSegments flag would additionally request realtime segments
     // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
-    StringBuilder queryBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
-    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
-      log.debug(
-          "Filtering datasources in segments based on broker's watchedDataSources[%s]", watchedDataSources);
-      final StringBuilder sb = new StringBuilder();
-      for (String ds : watchedDataSources) {
-        sb.append("datasources=").append(ds).append("&");
-      }
-      sb.setLength(sb.length() - 1);
-      queryBuilder.append("&");
-      queryBuilder.append(sb);
-    }
-
-    return SystemSchema.getThingsFromLeaderNode(
-        queryBuilder.toString(),
-        new TypeReference<>() {},
-        coordinatorClient,
-        jsonMapper
-    );
+    return coordinatorClient.getMetadataSegmentsSync(watchedDataSources);
   }
 
   private class PollTask implements Runnable
