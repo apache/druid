@@ -38,4 +38,13 @@ public interface EmbeddedResource
    * Cleans up this resource.
    */
   void stop() throws Exception;
+
+  /**
+   * Called after {@link #start()} with a pointer to the current cluster. This is intended for use by resources
+   * that are started before any Druid services, and that need to configure the Druid services in some way.
+   */
+  default void onStarted(EmbeddedDruidCluster cluster)
+  {
+    // Do nothing by default.
+  }
 }

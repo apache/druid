@@ -19,102 +19,49 @@
 
 package org.apache.druid.indexing.kafka.simulate;
 
-import kafka.server.KafkaConfig;
-import kafka.server.KafkaServer;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.embedded.EmbeddedResource;
-import org.apache.druid.testing.embedded.EmbeddedZookeeper;
-import org.apache.druid.testing.embedded.TestFolder;
+import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.utils.Time;
-import scala.Some;
+import org.testcontainers.kafka.KafkaContainer;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Embedded Kafka server used in Druid embedded tests.
- * Contains some logic common with {@link org.apache.druid.indexing.kafka.test.TestBroker}.
+ * A Kafka container for use in embedded tests.
  */
-public class EmbeddedKafkaServer implements EmbeddedResource
+public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  private static final Random RANDOM = ThreadLocalRandom.current();
-
-  private final EmbeddedZookeeper zk;
-  private final TestFolder testFolder;
-  private final Map<String, String> brokerProperties;
-
-  private volatile KafkaServer server;
-  private volatile String bootstrapServerUrl;
-
-  public EmbeddedKafkaServer(
-      EmbeddedZookeeper zk,
-      TestFolder testFolder,
-      Map<String, String> brokerProperties
-  )
+  public KafkaResource()
   {
-    this.zk = zk;
-    this.testFolder = testFolder;
-    this.brokerProperties = brokerProperties == null ? Map.of() : brokerProperties;
+    super();
   }
 
-  @Override
-  public void start() throws IOException
-  {
-    final Properties props = new Properties();
-    props.setProperty("zookeeper.connect", zk.getConnectString());
-    props.setProperty("zookeeper.session.timeout.ms", "30000");
-    props.setProperty("zookeeper.connection.timeout.ms", "30000");
-    props.setProperty("log.dirs", testFolder.newFolder().toString());
-    props.setProperty("broker.id", String.valueOf(1));
-    props.setProperty("port", String.valueOf(ThreadLocalRandom.current().nextInt(9999) + 10000));
-    props.setProperty("advertised.host.name", "localhost");
-    props.setProperty("transaction.state.log.replication.factor", "1");
-    props.setProperty("offsets.topic.replication.factor", "1");
-    props.setProperty("transaction.state.log.min.isr", "1");
-    props.putAll(brokerProperties);
-
-    final KafkaConfig config = new KafkaConfig(props);
-
-    server = new KafkaServer(
-        config,
-        Time.SYSTEM,
-        Some.apply(StringUtils.format("EmbeddedKafka[1]-")),
-        false
-    );
-
-    server.startup();
-    bootstrapServerUrl = StringUtils.format("localhost:%d", getPort());
-  }
+  private static final String KAFKA_IMAGE = "apache/kafka-native:4.0.0";
 
   @Override
-  public void stop()
+  protected KafkaContainer createContainer()
   {
-    if (server != null) {
-      server.shutdown();
-      server.awaitShutdown();
-    }
+    return new KafkaContainer(KAFKA_IMAGE);
   }
 
   public String getBootstrapServerUrl()
   {
-    return bootstrapServerUrl;
+    ensureRunning();
+    return getContainer().getBootstrapServers();
   }
 
   public Map<String, Object> consumerProperties()
   {
     final Map<String, Object> props = new HashMap<>(KafkaConsumerConfigs.getConsumerProperties());
-    props.put("bootstrap.servers", bootstrapServerUrl);
+    props.put("bootstrap.servers", getBootstrapServerUrl());
     return props;
   }
 
@@ -124,6 +71,16 @@ public class EmbeddedKafkaServer implements EmbeddedResource
       admin.createTopics(
           List.of(new NewTopic(topicName, numPartitions, (short) 1))
       ).all().get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Set<String> listTopics()
+  {
+    try (Admin admin = newAdminClient()) {
+      return admin.listTopics().names().get();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -158,21 +115,6 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     }
   }
 
-  private int getPort()
-  {
-    return server.advertisedListeners().apply(0).port();
-  }
-
-  private KafkaProducer<byte[], byte[]> newProducer()
-  {
-    return new KafkaProducer<>(producerProperties());
-  }
-
-  private Admin newAdminClient()
-  {
-    return Admin.create(commonClientProperties());
-  }
-
   public Map<String, Object> producerProperties()
   {
     final Map<String, Object> props = new HashMap<>(commonClientProperties());
@@ -181,13 +123,23 @@ public class EmbeddedKafkaServer implements EmbeddedResource
     props.put("value.serializer", ByteArraySerializer.class.getName());
     props.put("acks", "all");
     props.put("enable.idempotence", "true");
-    props.put("transactional.id", String.valueOf(RANDOM.nextInt()));
+    props.put("transactional.id", String.valueOf(ThreadLocalRandom.current().nextInt()));
 
     return props;
   }
 
+  public Admin newAdminClient()
+  {
+    return Admin.create(commonClientProperties());
+  }
+
+  private KafkaProducer<byte[], byte[]> newProducer()
+  {
+    return new KafkaProducer<>(producerProperties());
+  }
+
   private Map<String, Object> commonClientProperties()
   {
-    return Map.of("bootstrap.servers", bootstrapServerUrl);
+    return Map.of("bootstrap.servers", getBootstrapServerUrl());
   }
 }
