@@ -33,7 +33,6 @@ import org.apache.druid.msq.logical.stages.SortStage.OffsetLimitStage;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
@@ -129,7 +128,6 @@ public class DruidLogicalToQueryDefinitionTranslator
       SortStage sortStage = new SortStage(inputStage, keyColumns);
 
       if (sort.hasLimitOrOffset()) {
-        OffsetLimit offsetLimit = sort.getOffsetLimit();
         return new OffsetLimitStage(sortStage, sort.getOffsetLimit());
       } else {
         return sortStage;
