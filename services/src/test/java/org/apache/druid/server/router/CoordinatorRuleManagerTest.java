@@ -21,6 +21,7 @@ package org.apache.druid.server.router;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -155,7 +156,7 @@ public class CoordinatorRuleManagerTest
     );
     final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
     EasyMock.expect(client.getRules())
-            .andReturn(rules);
+            .andReturn(Futures.immediateFuture(rules));
     EasyMock.replay(client);
     return client;
   }
