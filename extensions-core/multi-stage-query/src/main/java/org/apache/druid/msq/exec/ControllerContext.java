@@ -25,7 +25,6 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -65,9 +64,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit the metric in the {@link ServiceMetricEvent.Builder} using a {@link ServiceEmitter}.
+   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * context dependant dimensions.
    */
-  void emitMetric(ServiceMetricEvent.Builder metricBuilder);
+  void emitMetric(MSQMetriceEventBuilder metricBuilder);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection

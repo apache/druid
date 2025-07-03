@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.InputChannelFactory;
@@ -75,6 +74,7 @@ import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DecoratedExecutorService;
+import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryMetrics;
@@ -232,14 +232,17 @@ public class WorkerImpl implements Worker
     final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
     final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
 
-    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
                  .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
                  .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
-                 .setDimension(DruidMetrics.SUCCESS, success);
+                 .setDimension(DruidMetrics.SUCCESS, success)
+                 .setMetric("query/time", time);
 
-    context.emitMetric(metricBuilder.setMetric("query/time", time));
-    context.emitMetric(metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs)));
+    context.emitMetric(metricBuilder);
+
+    metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
+    context.emitMetric(metricBuilder);
   }
 
   /**

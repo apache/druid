@@ -45,11 +45,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -293,7 +293,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
   {
     serviceEmitter.emit(
         metricBuilder.setDimension(

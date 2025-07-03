@@ -30,11 +30,10 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetricUtils;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -146,10 +145,10 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(ServiceMetricEvent.Builder metricBuilder)
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
   {
     // Attach task specific dimensions
-    MSQMetricUtils.setTaskDimensions(metricBuilder, task, taskQuerySpecContext);
+    metricBuilder.setTaskDimensions(task, taskQuerySpecContext);
     toolbox.getEmitter().emit(metricBuilder);
   }
 

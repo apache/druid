@@ -87,7 +87,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -161,6 +160,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
+import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryMetrics;
@@ -572,7 +572,7 @@ public class ControllerImpl implements Controller
 
     long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
 
-    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
                  .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
                  .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
@@ -617,8 +617,9 @@ public class ControllerImpl implements Controller
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
 
-    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-    context.emitMetric(metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes));
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
+    context.emitMetric(metricBuilder);
   }
 
   /**
@@ -1538,11 +1539,14 @@ public class ControllerImpl implements Controller
       );
     }
 
-    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-    context.emitMetric(metricBuilder.setMetric("ingest/tombstones/count", numTombstones));
+    MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+
+    metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
+    context.emitMetric(metricBuilder);
 
     // Include tombstones in the reported segments count
-    context.emitMetric(metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size()));
+    metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric(metricBuilder);
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(
