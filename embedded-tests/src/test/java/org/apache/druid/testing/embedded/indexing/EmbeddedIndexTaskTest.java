@@ -24,7 +24,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -103,9 +102,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     }
 
     // Wait for segments to be queryable
-    broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
+    broker.waitForSegmentAvailability(segments.stream().map(DataSegment::getId).collect(Collectors.toList()));
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }

@@ -89,7 +89,7 @@ class DruidServerResource implements EmbeddedResource
     executorService.submit(() -> runServer(serverRunnable));
 
     // Wait for lifecycle to be created and started
-    if (lifecycleCreated.await(10, TimeUnit.SECONDS)) {
+    if (lifecycleCreated.await(30, TimeUnit.SECONDS)) {
       awaitLifecycleStart();
     } else {
       throw new ISE("Timed out waiting for lifecycle of server[%s] to be created", server.getName());
