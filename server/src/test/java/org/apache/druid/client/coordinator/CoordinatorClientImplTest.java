@@ -471,4 +471,18 @@ public class CoordinatorClientImplTest
 
     Assert.assertNull(coordinatorClient.updateCoordinatorDynamicConfig(config).get());
   }
+
+  @Test
+  public void test_updateAllLookups_withEmptyLookup() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/lookups/config")
+            .jsonContent(jsonMapper, Map.of()),
+        HttpResponseStatus.OK,
+        Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(null)
+    );
+
+    Assert.assertNull(coordinatorClient.updateAllLookups(Map.of()).get());
+  }
 }
