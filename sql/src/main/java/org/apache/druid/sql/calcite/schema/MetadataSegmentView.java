@@ -27,14 +27,15 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
-import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
@@ -133,7 +134,7 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("Polling segments from coordinator");
-    final JsonParserIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
+    final CloseableIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
         coordinatorClient,
         segmentWatcherConfig.getWatchedDataSources()
     );
@@ -175,14 +176,14 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentStatusInCluster> getMetadataSegments(
+  private CloseableIterator<SegmentStatusInCluster> getMetadataSegments(
       CoordinatorClient coordinatorClient,
       Set<String> watchedDataSources
   )
   {
     // includeRealtimeSegments flag would additionally request realtime segments
     // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
-    return coordinatorClient.getMetadataSegmentsSync(watchedDataSources);
+    return FutureUtils.getUnchecked(coordinatorClient.getMetadataSegments(watchedDataSources), true);
   }
 
   private class PollTask implements Runnable

@@ -31,13 +31,13 @@ import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
@@ -555,7 +555,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegmentsSync() throws JsonProcessingException
+  public void test_getMetadataSegments() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -569,7 +569,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segments)
     );
 
-    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(null);
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.getMetadataSegments(null),
+        true
+    );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
@@ -583,7 +586,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegmentsSync_filterByDataSource() throws Exception
+  public void test_getMetadataSegments_filterByDataSource() throws Exception
   {
     serviceClient.expectAndRespond(
         new RequestBuilder(
@@ -595,8 +598,10 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
     );
 
-    JsonParserIterator<SegmentStatusInCluster> iterator = coordinatorClient.getMetadataSegmentsSync(
-        Collections.singleton("abc")
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.getMetadataSegments(
+            Collections.singleton("abc")
+        ), true
     );
 
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -608,25 +613,6 @@ public class CoordinatorClientImplTest
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
                       .collect(ImmutableList.toImmutableList())
-    );
-  }
-
-  @Test
-  public void test_getMetadataSegmentsSync_nonOkStatus_throwsError() throws Exception
-  {
-    serviceClient.expectAndRespond(
-        new RequestBuilder(
-            HttpMethod.GET,
-            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments"
-        ),
-        HttpResponseStatus.INTERNAL_SERVER_ERROR,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(ImmutableList.of())
-    );
-
-    Assert.assertThrows(
-        RuntimeException.class,
-        () -> coordinatorClient.getMetadataSegmentsSync(null)
     );
   }
 

@@ -22,7 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.JsonParserIterator;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -131,7 +131,9 @@ public interface CoordinatorClient
    *
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
    */
-  JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(@Nullable Set<String> watchedDataSources);
+  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
+      @Nullable Set<String> watchedDataSources
+  );
 
   /**
    * Returns the current snapshot of the rules.

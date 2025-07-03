@@ -434,7 +434,8 @@ public class CalciteTests
       {
         try {
           return Futures.immediateFuture(new URI(coordinatorNode.getHostAndPortToUse()));
-        } catch (URISyntaxException e) {
+        }
+        catch (URISyntaxException e) {
           throw new RuntimeException(e);
         }
       }

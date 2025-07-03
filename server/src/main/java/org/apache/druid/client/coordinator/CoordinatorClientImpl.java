@@ -20,7 +20,6 @@
 package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -28,13 +27,11 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
@@ -55,7 +52,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -299,7 +295,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public JsonParserIterator<SegmentStatusInCluster> getMetadataSegmentsSync(
+  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
       @Nullable Set<String> watchedDataSources
   )
   {
@@ -311,34 +307,19 @@ public class CoordinatorClientImpl implements CoordinatorClient
       }
     }
 
-    try {
-      String query = pathBuilder.toString();
-      InputStreamFullResponseHolder responseHolder = client.request(
-          new RequestBuilder(HttpMethod.GET, query),
-          new InputStreamFullResponseHandler()
-      );
-
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to talk to leader node at[%s]. Error code[%d], description[%s].",
-            query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
-        );
-      }
-      final JavaType javaType = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentStatusInCluster>() {});
-      return new JsonParserIterator<>(
-          javaType,
-          Futures.immediateFuture(responseHolder.getContent()),
-          null,
-          null,
-          null,
-          jsonMapper
-      );
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    }
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
+            new InputStreamResponseHandler()
+        ),
+        inputStream -> {
+          return new JsonParserIterator<>(
+              jsonMapper.getTypeFactory().constructType(SegmentStatusInCluster.class),
+              Futures.immediateFuture(inputStream),
+              jsonMapper
+          );
+        }
+    );
   }
 
   @Override
