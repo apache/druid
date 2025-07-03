@@ -375,6 +375,7 @@ public class StorageLocation
         WeakCacheEntry toRemove = hand;
         unlinkAndUnmountWeakEntry(toRemove);
         sizeFreed += toRemove.cacheEntry.getSize();
+        startEntry = null;
       }
 
       // loop around
