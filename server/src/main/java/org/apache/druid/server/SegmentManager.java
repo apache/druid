@@ -145,6 +145,10 @@ public class SegmentManager
    * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either return
    * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
    * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
+   * <p>
+   * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
+   * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
+   * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
   public AcquireSegmentAction acquireSegment(
       DataSegmentAndDescriptor segmentAndDescriptor,
@@ -160,12 +164,16 @@ public class SegmentManager
   }
 
   /**
-   * Given a list of {@link DataSegmentAndDescriptor}, call
-   * {@link #acquireSegment(DataSegmentAndDescriptor, Closer)} on each of them to build a list of
-   * {@link AcquireSegmentAction}. Calling {@link AcquireSegmentAction#getSegmentFuture()} on any item in the list will either
-   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
-   * if not. Any {@link Segment} returned from these futures, if present, must be closed when the caller is finished
-   * doing segment things.
+   * Given a list of {@link DataSegmentAndDescriptor}, call {@link #acquireSegment(DataSegmentAndDescriptor, Closer)}
+   * on each of them to build a list of {@link AcquireSegmentAction}. Calling
+   * {@link AcquireSegmentAction#getSegmentFuture()} on any item in the list will either return immediately if the
+   * {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not. Any
+   * {@link Segment} returned from these futures, if present, must be closed when the caller is finished doing segment
+   * things.
+   * <p>
+   * Calling this method is treated as an intent to acquire and use the segments via resolving the futures, and cache
+   * manager implementations will place a hold on all segments specified until the 'loadCleanup' closer is closed -
+   * typically after resolving all the futures to acquire the references to the actual {@link Segment} objects.
    */
   public List<AcquireSegmentAction> acquireSegments(
       Iterable<DataSegmentAndDescriptor> segments,

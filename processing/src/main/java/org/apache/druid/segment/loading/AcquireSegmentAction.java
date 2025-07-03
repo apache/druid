@@ -38,6 +38,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+/**
+ * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, finally
+ * closing when done. When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
+ * 'hold' to ensure it cannot be removed from the cache until this action has been closed. {@link #getSegmentFuture()}
+ * will return the segment if already cached, or attempt to download from deep storage to load into the cache if not.
+ * The {@link Segment} returned by the future places a separate hold on the cache until the segment itself is closed,
+ * and MUST be closed when the caller is finished doing segment things with it. The caller must also call
+ * {@link #close()} to clean up the hold that exists while possibly loading the segment, and may do so as soon as
+ * the {@link Segment} is acquired (or can do so earlier to abort the load and release the hold).
+ */
 public class AcquireSegmentAction implements Closeable
 {
   private static final Closeable NOOP = () -> {};

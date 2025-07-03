@@ -226,7 +226,7 @@ public class ServerManager implements QuerySegmentWalker
                 return new DataSegmentAndDescriptor(null, descriptor);
               }
           );
-      final List<AcquireSegmentAction> loaders = segmentManager.acquireSegments(segmentsToMap, closer);
+      final List<AcquireSegmentAction> loaders = segmentManager.acquireSegments(segmentsToMap, loadCloser);
       return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, closer, timeout);
     }
     catch (SegmentLoadingException e) {
@@ -347,10 +347,10 @@ public class ServerManager implements QuerySegmentWalker
 
     final SegmentId segmentId = segment.getId();
     final Interval segmentInterval = segment.getDataInterval();
-    String segmentIdString = segmentId.toString();
+    final String segmentIdString = segmentId.toString();
 
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
+    final MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
         factory.createRunner(segment),
