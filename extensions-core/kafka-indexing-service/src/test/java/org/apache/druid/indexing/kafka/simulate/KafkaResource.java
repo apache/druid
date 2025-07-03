@@ -31,6 +31,7 @@ import org.testcontainers.kafka.KafkaContainer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -70,6 +71,16 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
       admin.createTopics(
           List.of(new NewTopic(topicName, numPartitions, (short) 1))
       ).all().get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Set<String> listTopics()
+  {
+    try (Admin admin = newAdminClient()) {
+      return admin.listTopics().names().get();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -117,14 +128,14 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return props;
   }
 
+  public Admin newAdminClient()
+  {
+    return Admin.create(commonClientProperties());
+  }
+
   private KafkaProducer<byte[], byte[]> newProducer()
   {
     return new KafkaProducer<>(producerProperties());
-  }
-
-  private Admin newAdminClient()
-  {
-    return Admin.create(commonClientProperties());
   }
 
   private Map<String, Object> commonClientProperties()

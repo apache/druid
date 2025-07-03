@@ -22,6 +22,9 @@ package org.apache.druid.indexing.kafka.simulate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.Map;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,12 +51,13 @@ public class KafkaResourceTest
     assertEquals("true", producerProps.get("enable.idempotence"));
 
     // Test consumer properties
-    final var consumerProps = resource.consumerProperties();
+    final Map<String, Object> consumerProps = resource.consumerProperties();
     assertEquals(bootstrapServerUrl, consumerProps.get("bootstrap.servers"));
 
     // Test topic creation
     final String topicName = "test-topic";
     resource.createTopicWithPartitions(topicName, 3);
+    assertEquals(Set.of(topicName), resource.listTopics());
     resource.deleteTopic(topicName);
 
     resource.stop();
