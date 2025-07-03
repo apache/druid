@@ -33,9 +33,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -76,11 +74,11 @@ public class AcquireSegmentAction implements Closeable
             )
         );
       }
-      catch (InterruptedException | ExecutionException | TimeoutException e) {
+      catch (Throwable t) {
         if (failure == null) {
-          failure = e;
+          failure = t;
         } else {
-          failure.addSuppressed(e);
+          failure.addSuppressed(t);
         }
       }
     }
