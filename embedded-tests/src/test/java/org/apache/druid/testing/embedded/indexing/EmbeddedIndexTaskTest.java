@@ -101,7 +101,12 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
       start = start.plusDays(1);
     }
 
-    // Wait for segments to be queryable
+    // Wait for all segments to be loaded and queryable
+    coordinator.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/loadQueue/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(10)
+    );
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
