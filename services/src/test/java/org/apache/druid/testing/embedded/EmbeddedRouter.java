@@ -33,7 +33,7 @@ import java.util.List;
  * Add this to your {@link EmbeddedDruidCluster} if you want to use the Druid
  * web-console for debugging or if you want to test the behaviour of the Router.
  */
-public class EmbeddedRouter extends EmbeddedDruidServer
+public class EmbeddedRouter extends EmbeddedDruidServer<EmbeddedRouter>
 {
   public EmbeddedRouter()
   {

@@ -38,4 +38,14 @@ public interface EmbeddedResource
    * Cleans up this resource.
    */
   void stop() throws Exception;
+
+  /**
+   * Configures a cluster to use this resource. This method executes after the resource has
+   * been started. It is intended for use by resources that are started before any Druid
+   * services.
+   */
+  default void configureCluster(EmbeddedDruidCluster cluster)
+  {
+    // Do nothing by default.
+  }
 }

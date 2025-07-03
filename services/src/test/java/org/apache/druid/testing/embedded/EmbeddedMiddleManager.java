@@ -38,7 +38,7 @@ import java.util.List;
  * as it launches tasks as child processes which is undesirable in unit tests.
  */
 @Deprecated
-public class EmbeddedMiddleManager extends EmbeddedDruidServer
+public class EmbeddedMiddleManager extends EmbeddedDruidServer<EmbeddedMiddleManager>
 {
 
   @Override

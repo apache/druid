@@ -79,13 +79,26 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
-  private boolean started = false;
+  private boolean startedFirstDruidServer = false;
   private EmbeddedZookeeper zookeeper;
 
   private EmbeddedDruidCluster()
   {
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
+  }
+
+  /**
+   * Creates a cluster with an embedded Zookeeper server, but no particular
+   * metadata store configured.
+   *
+   * @see EmbeddedZookeeper
+   */
+  public static EmbeddedDruidCluster withZookeeper()
+  {
+    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
+    cluster.addEmbeddedZookeeper();
+    return cluster;
   }
 
   /**
@@ -97,10 +110,9 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public static EmbeddedDruidCluster withEmbeddedDerbyAndZookeeper()
   {
-    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
-    cluster.resources.add(new InMemoryDerbyResource(cluster));
+    final EmbeddedDruidCluster cluster = withZookeeper();
+    cluster.resources.add(new InMemoryDerbyResource());
     cluster.extensionModules.add(InMemoryDerbyModule.class);
-    cluster.addEmbeddedZookeeper();
 
     return cluster;
   }
@@ -142,14 +154,10 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   /**
    * Adds an extension to this cluster. The list of extensions is populated in
    * the common property {@code druid.extensions.modulesForSimulation}.
-   * All extensions must be added before any server has been added to the cluster.
    */
   public EmbeddedDruidCluster addExtension(Class<? extends DruidModule> moduleClass)
   {
     validateNotStarted();
-    if (!servers.isEmpty()) {
-      throw new ISE("All extensions must be added to the cluster before adding any Druid server");
-    }
     extensionModules.add(moduleClass);
     return this;
   }
@@ -219,15 +227,23 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public void start() throws Exception
   {
-    Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
-
-    addCommonProperty("druid.extensions.modulesForEmbeddedTest", getExtensionModuleProperty());
-    log.info("Starting cluster with common properties[%s].", commonProperties);
+    Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have at least one embedded Druid server");
 
     // Start the resources in order
     for (EmbeddedResource resource : resources) {
       try {
+        if (resource instanceof DruidServerResource && !startedFirstDruidServer) {
+          // Defer setting the extensions property until the first Druid server starts, so configureCluster calls for
+          // earlier resources can add extensions.
+          addCommonProperty("druid.extensions.modulesForEmbeddedTest", getExtensionModuleProperty());
+          log.info("Starting Druid services with common properties[%s].", commonProperties);
+
+          // Mark the cluster as started so that no new resource, server or property is added
+          startedFirstDruidServer = true;
+        }
+
         resource.start();
+        resource.configureCluster(this);
       }
       catch (Exception e) {
         // Clean up the resources that have already been started
@@ -235,9 +251,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         throw e;
       }
     }
-
-    // Mark the cluster as added so that no new resource, server or property is added
-    started = true;
   }
 
   /**
@@ -296,8 +309,8 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   private void validateNotStarted()
   {
-    if (started) {
-      throw new ISE("Cluster has already started");
+    if (startedFirstDruidServer) {
+      throw new ISE("Cluster has already begun starting up");
     }
   }
 
