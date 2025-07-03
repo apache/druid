@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -473,7 +472,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
   {
     try {
-      return FutureUtils.getUnchecked(coordinatorClient.fetchLookupsForTier(tier), true);
+      return coordinatorClient.synchronousFetchLookupsForTier(tier);
     }
     catch (Exception e) {
       Throwable rootCause = Throwables.getRootCause(e);

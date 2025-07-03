@@ -257,7 +257,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(String tier)
+  public Map<String, LookupExtractorFactoryContainer> synchronousFetchLookupsForTier(String tier)
   {
     final String path = StringUtils.format(
         "/druid/coordinator/v1/lookups/config/%s?detailed=true",
@@ -269,9 +269,8 @@ public class CoordinatorClientImpl implements CoordinatorClient
           new RequestBuilder(HttpMethod.GET, path),
           new BytesFullResponseHandler()
       );
-      return Futures.immediateFuture(extractLookupFactory(responseHolder));
+      return extractLookupFactory(responseHolder);
     }
-
     catch (InterruptedException | ExecutionException e) {
       throw new RuntimeException(e);
     }

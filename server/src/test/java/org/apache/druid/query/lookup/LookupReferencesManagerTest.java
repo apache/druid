@@ -22,7 +22,6 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -101,7 +100,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForStartStop", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     Assert.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
     Assert.assertNull(lookupReferencesManager.mainThread);
@@ -154,7 +153,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForAddGetRemove", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
@@ -186,7 +185,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForAddGetRemove", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
@@ -232,7 +231,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForAddGetRemove", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
@@ -276,7 +275,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForCloseIsCalledAfterStopping", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testMock", new LookupExtractorFactoryContainer("0", lookupExtractorFactory));
@@ -299,7 +298,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForDestroyIsCalledAfterRemove", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
     lookupReferencesManager.start();
@@ -319,7 +318,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForGetNotThere", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("notThere"));
@@ -341,7 +340,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForUpdateWithHigherVersion", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
@@ -366,7 +365,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForUpdateWithLowerVersion", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
@@ -388,7 +387,7 @@ public class LookupReferencesManagerTest
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
@@ -404,7 +403,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForRemoveNonExisting", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.remove("test", null);
@@ -426,7 +425,7 @@ public class LookupReferencesManagerTest
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("one", container1);
@@ -483,7 +482,7 @@ public class LookupReferencesManagerTest
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("one", container1);
@@ -516,7 +515,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testMockForRealModeWithMainThread", container);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertTrue(lookupReferencesManager.mainThread.isAlive());
@@ -594,7 +593,7 @@ public class LookupReferencesManagerTest
     lookupMap.put("testLookup3", container3);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
@@ -632,7 +631,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(lookupLoadingSpec);
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
@@ -729,7 +728,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
 
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andThrow(new RuntimeException()).anyTimes();
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andThrow(new RuntimeException()).anyTimes();
     EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
@@ -757,8 +756,8 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.ALL).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(
-        Futures.immediateFailedFuture(
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andThrow(
+        new RuntimeException(
             new HttpResponseException(
                 new StringFullResponseHolder(
                     new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
@@ -797,7 +796,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
 
-    EasyMock.expect(coordinatorClient.fetchLookupsForTier(LOOKUP_TIER)).andReturn(Futures.immediateFuture(lookupMap));
+    EasyMock.expect(coordinatorClient.synchronousFetchLookupsForTier(LOOKUP_TIER)).andReturn(lookupMap);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("testMockForDisableLookupSync"));
   }
