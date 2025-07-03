@@ -148,4 +148,18 @@ public interface CoordinatorClient
    * API: {@code GET /druid/coordinator/v1/leader}
    */
   ListenableFuture<URI> findCurrentLeader();
+
+  /**
+   * Returns the serialized user map for the given prefix stored in coordinator.
+   * <p>
+   * API: {@code GET /druid-ext/basic-security/authorization/db/<prefix>/cachedSerializedUserMap}
+   */
+  byte[] getCachedSerializedUserMapSync(String prefix);
+
+  /**
+   * Returns the serialized group mapping and role map for the given prefix stored in coordinator.
+   * <p>
+   * API: {@code GET /druid-ext/basic-security/authorization/db/<prefix>/cachedSerializedGroupMappingMap}
+   */
+  byte[] getCachedSerializedGroupMappingMapSync(String prefix);
 }

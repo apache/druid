@@ -20,11 +20,9 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Injector;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
@@ -56,44 +54,37 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
             .andReturn(new AuthenticatorMapper(Map.of("test-basic-auth", authenticator))).once();
 
     // Create a mock leader client and request
-    final DruidLeaderClient leaderClient = EasyMock.createStrictMock(DruidLeaderClient.class);
+    final CoordinatorClient coordinatorClient = EasyMock.createStrictMock(CoordinatorClient.class);
     final Request request = EasyMock.createStrictMock(Request.class);
 
     // Return the first request immediately
-    EasyMock.expect(leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString()))
-            .andReturn(request).once();
-    EasyMock.expect(
-        leaderClient.go(EasyMock.anyObject(), EasyMock.anyObject(BytesFullResponseHandler.class))
-    ).andReturn(
-        new BytesFullResponseHolder(null)
-    ).once();
+    EasyMock.expect(coordinatorClient.getCachedSerializedUserMapSync("test-basic-auth"))
+            .andReturn(null)
+            .once();
 
     // Block the second request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
 
-    EasyMock.expect(leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString()))
-            .andReturn(request).once();
-    EasyMock.expect(
-        leaderClient.go(EasyMock.anyObject(), EasyMock.anyObject(BytesFullResponseHandler.class))
-    ).andAnswer(() -> {
-      try {
-        Thread.sleep(10_000);
-        return null;
-      }
-      catch (InterruptedException e) {
-        isInterrupted.set(true);
-        throw e;
-      }
-    }).once();
+    EasyMock.expect(coordinatorClient.getCachedSerializedUserMapSync("test-basic-auth"))
+            .andAnswer(() -> {
+              try {
+                Thread.sleep(10_000);
+                return null;
+              }
+              catch (InterruptedException e) {
+                isInterrupted.set(true);
+                throw e;
+              }
+            }).once();
 
-    EasyMock.replay(injector, leaderClient);
+    EasyMock.replay(injector, coordinatorClient);
 
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthenticatorCacheManager manager = new CoordinatorPollingBasicAuthenticatorCacheManager(
         injector,
         new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         TestHelper.JSON_MAPPER,
-        leaderClient
+        coordinatorClient
     );
 
     // Start the manager and wait for a while to ensure that polling has started
@@ -106,7 +97,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 
     Assert.assertTrue(isInterrupted.get());
 
-    EasyMock.verify(injector, leaderClient);
+    EasyMock.verify(injector, coordinatorClient);
   }
 
 }

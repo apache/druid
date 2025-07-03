@@ -142,4 +142,16 @@ public class NoopCoordinatorClient implements CoordinatorClient
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public byte[] getCachedSerializedUserMapSync(String prefix)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public byte[] getCachedSerializedGroupMappingMapSync(String prefix)
+  {
+    throw new UnsupportedOperationException();
+  }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
@@ -29,6 +30,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
@@ -37,6 +39,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHandler
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupUtils;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -49,6 +52,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -63,6 +67,8 @@ import java.util.concurrent.ExecutionException;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
+  private static final Logger LOG = new Logger(CoordinatorClientImpl.class);
+
   private final ServiceClient client;
   private final ObjectMapper jsonMapper;
 
@@ -351,6 +357,56 @@ public class CoordinatorClientImpl implements CoordinatorClient
           }
         }
     );
+  }
+
+  @Override
+  public byte[] getCachedSerializedUserMapSync(String prefix)
+  {
+    final String path = StringUtils.format(
+        "/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap",
+        StringUtils.urlEncode(prefix)
+    );
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+      return responseHolder.getContent();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public byte[] getCachedSerializedGroupMappingMapSync(String prefix)
+  {
+    final String path = StringUtils.format(
+        "/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap",
+        StringUtils.urlEncode(prefix)
+    );
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+      return responseHolder.getContent();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        HttpResponseException httpResponseException = (HttpResponseException) rootCause;
+        if (HttpResponseStatus.NOT_FOUND.equals(httpResponseException.getResponse().getStatus())) {
+          LOG.warn("cachedSerializedGroupMappingMap is not available from the coordinator,"
+              + " skipping fetch of group mappings for now.");
+        } else if (!HttpResponseStatus.OK.equals(httpResponseException.getResponse().getStatus())) {
+          LOG.warn("Got an unexpected response status[%s] when loading group mappings.",
+              httpResponseException.getResponse().getStatus()
+          );
+        }
+      }
+      throw new RuntimeException(e);
+    }
   }
 
   private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
