@@ -350,6 +350,7 @@ class StorageLocationTest
   {
     private final SegmentCacheEntryIdentifier identifier;
     private final DataSegment segment;
+    private boolean isMounted = false;
 
     public TestSegmentCacheEntry(String intervalString, long size)
     {
@@ -370,23 +371,29 @@ class StorageLocationTest
     }
 
     @Override
+    public boolean isMounted()
+    {
+      return isMounted;
+    }
+
+    @Override
     public void mount(File location)
     {
-
+      isMounted = true;
     }
 
     @Override
     public void unmount()
     {
-
+      isMounted = false;
     }
-
   }
 
   private static final class TestCacheEntry implements CacheEntry
   {
     private final StringCacheIdentifier id;
     private final long size;
+    private boolean isMounted = false;
 
     private TestCacheEntry(String id, long size)
     {
@@ -407,15 +414,21 @@ class StorageLocationTest
     }
 
     @Override
+    public boolean isMounted()
+    {
+      return isMounted;
+    }
+
+    @Override
     public void mount(File location)
     {
-
+      isMounted = true;
     }
 
     @Override
     public void unmount()
     {
-
+      isMounted = false;
     }
   }
 

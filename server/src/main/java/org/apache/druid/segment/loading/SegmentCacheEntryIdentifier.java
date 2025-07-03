@@ -48,7 +48,7 @@ public final class SegmentCacheEntryIdentifier implements CacheEntryIdentifier
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(segmentId);
+    return segmentId.hashCode();
   }
 
   @Override

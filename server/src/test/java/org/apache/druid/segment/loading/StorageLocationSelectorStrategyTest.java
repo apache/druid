@@ -380,6 +380,8 @@ public class StorageLocationSelectorStrategyTest
     final StorageLocationTest.StringCacheIdentifier identifier = new StorageLocationTest.StringCacheIdentifier(label);
     return new CacheEntry()
     {
+      private boolean isMounted = false;
+
       @Override
       public CacheEntryIdentifier getId()
       {
@@ -393,15 +395,21 @@ public class StorageLocationSelectorStrategyTest
       }
 
       @Override
+      public boolean isMounted()
+      {
+        return isMounted;
+      }
+
+      @Override
       public void mount(File location)
       {
-
+        isMounted = true;
       }
 
       @Override
       public void unmount()
       {
-
+        isMounted = false;
       }
     };
   }

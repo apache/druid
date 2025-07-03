@@ -694,6 +694,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return dataSegment.getSize();
     }
 
+    @Override
+    public boolean isMounted()
+    {
+      return referenceProvider != null;
+    }
+
     public boolean checkExists(File location)
     {
       return toPotentialLocation(location).exists();

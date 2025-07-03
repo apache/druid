@@ -37,6 +37,8 @@ public interface CacheEntry
    */
   long getSize();
 
+  boolean isMounted();
+
   /**
    * Materializes the cache entry into the assigned {@link StorageLocation}. If a cache entry is already mounted in the
    * location, calling this method should be a no-op. If the cache entry is mounted in a different location, this method

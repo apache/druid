@@ -451,6 +451,12 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     }
 
     @Override
+    public boolean isMounted()
+    {
+      return true;
+    }
+
+    @Override
     public void mount(File location)
     {
       // do nothing, since we are just using StorageLocation as an accountant

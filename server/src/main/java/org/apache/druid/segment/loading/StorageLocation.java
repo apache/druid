@@ -239,6 +239,9 @@ public class StorageLocation
       final WeakCacheEntry reservation = weakCacheEntries.get(entryId);
       if (reservation != null && reservation.holds > 0) {
         reservation.holds--;
+        if (reservation.holds == 0 && !reservation.cacheEntry.isMounted()) {
+          unlinkAndUnmountWeakEntry(reservation);
+        }
       }
     }
   }
