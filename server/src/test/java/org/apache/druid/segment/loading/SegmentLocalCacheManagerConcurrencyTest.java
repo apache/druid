@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -147,14 +148,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     final List<Future<?>> futures = segmentsToLoad
         .stream()
-        .map(segment -> executorService.submit(() -> {
-          try {
-            manager.load(segment);
-          }
-          catch (SegmentLoadingException e) {
-            throw new RuntimeException(e);
-          }
-        }))
+        .map(segment -> executorService.submit(new Load(manager, segment)))
         .collect(Collectors.toList());
 
     for (Future<?> future : futures) {
@@ -199,14 +193,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     final List<Future<?>> futures = segmentsToLoad
         .stream()
-        .map(segment -> executorService.submit(() -> {
-          try {
-            manager.load(segment);
-          }
-          catch (SegmentLoadingException e) {
-            throw new RuntimeException(e);
-          }
-        }))
+        .map(segment -> executorService.submit(new Load(manager, segment)))
         .collect(Collectors.toList());
 
     Throwable t = Assertions.assertThrows(
@@ -242,5 +229,24 @@ class SegmentLocalCacheManagerConcurrencyTest
                       .binaryVersion(9)
                       .size(1000L)
                       .build();
+  }
+
+  private static class Load implements Callable<Void>
+  {
+    private final SegmentLocalCacheManager segmentManager;
+    private final DataSegment segment;
+
+    private Load(SegmentLocalCacheManager segmentManager, DataSegment segment)
+    {
+      this.segmentManager = segmentManager;
+      this.segment = segment;
+    }
+
+    @Override
+    public Void call() throws SegmentLoadingException
+    {
+      segmentManager.load(segment);
+      return null;
+    }
   }
 }
