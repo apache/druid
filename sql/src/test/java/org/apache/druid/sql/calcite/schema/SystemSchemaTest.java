@@ -43,11 +43,11 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -157,8 +157,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private SystemSchema schema;
   private SpecificSegmentsQuerySegmentWalker walker;
-  private DruidLeaderClient client;
-  private DruidLeaderClient coordinatorClient;
+  private CoordinatorClient coordinatorClient;
   private OverlordClient overlordClient;
   private TimelineServerView serverView;
   private StringFullResponseHolder responseHolder;
@@ -189,8 +188,7 @@ public class SystemSchemaTest extends CalciteTestBase
   public void setUp(@TempDir File tmpDir) throws Exception
   {
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
-    client = EasyMock.createMock(DruidLeaderClient.class);
-    coordinatorClient = EasyMock.createMock(DruidLeaderClient.class);
+    coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
     overlordClient = EasyMock.createMock(OverlordClient.class);
     responseHolder = EasyMock.createMock(StringFullResponseHolder.class);
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
@@ -275,7 +273,7 @@ public class SystemSchemaTest extends CalciteTestBase
         serverView,
         serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
-        client,
+        coordinatorClient,
         overlordClient,
         druidNodeDiscoveryProvider,
         MAPPER
@@ -579,7 +577,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
 
-    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), null).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
@@ -733,7 +731,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
 
-    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(
         dataContext,

@@ -138,4 +138,11 @@ public interface CoordinatorClient
    * API: {@code GET /druid/coordinator/v1/rules}
    */
   Map<String, List<Rule>> getRulesSync();
+
+  /**
+   * Returns the current leader's host and port.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/leader}
+   */
+  String findCurrentLeader();
 }

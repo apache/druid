@@ -22,6 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -36,10 +37,12 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
@@ -56,8 +59,10 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -67,6 +72,7 @@ import org.junit.Test;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -667,5 +673,90 @@ public class CoordinatorClientImplTest
         RuntimeException.class,
         () -> coordinatorClient.getRulesSync()
     );
+  }
+
+  @Test
+  public void test_findCurrentLeader() throws Exception
+  {
+    String leaderUrl = "http://localhost:8081";
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
+        StringUtils.toUtf8(leaderUrl)
+    );
+
+    Assert.assertEquals(
+        leaderUrl,
+        coordinatorClient.findCurrentLeader()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_invalidUrl()
+  {
+    String invalidLeaderUrl = "invalidUrl";
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
+        StringUtils.toUtf8(invalidLeaderUrl)
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> coordinatorClient.findCurrentLeader()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_404Response()
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        HttpResponseStatus.NOT_FOUND,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
+        StringUtils.toUtf8("")
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> coordinatorClient.findCurrentLeader()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_runtimeException()
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        new RuntimeException("Simulated runtime error")
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> coordinatorClient.findCurrentLeader()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_httpResponseException()
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        new HttpResponseException(
+            new StringFullResponseHolder(
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                StandardCharsets.UTF_8
+            )
+        )
+    );
+    // try and assert that the root cause is an HttpResponseException
+    try {
+      coordinatorClient.findCurrentLeader();
+    } catch (Exception e) {
+      Throwable throwable = Throwables.getRootCause(e);
+      Assert.assertTrue(throwable instanceof HttpResponseException);
+    }
   }
 }

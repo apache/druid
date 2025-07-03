@@ -52,6 +52,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -237,7 +238,7 @@ public class SystemSchema extends AbstractSchema
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
-      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
+      final @Coordinator CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
@@ -253,7 +254,7 @@ public class SystemSchema extends AbstractSchema
             serverInventoryView,
             authorizerMapper,
             overlordClient,
-            coordinatorDruidLeaderClient
+            coordinatorClient
         ),
         SERVER_SEGMENTS_TABLE,
         new ServerSegmentsTable(serverView, authorizerMapper),
@@ -531,21 +532,21 @@ public class SystemSchema extends AbstractSchema
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
-    private final DruidLeaderClient coordinatorLeaderClient;
+    private final CoordinatorClient coordinatorClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        DruidLeaderClient coordinatorLeaderClient
+        CoordinatorClient coordinatorClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
-      this.coordinatorLeaderClient = coordinatorLeaderClient;
+      this.coordinatorClient = coordinatorClient;
     }
 
     @Override
@@ -574,7 +575,7 @@ public class SystemSchema extends AbstractSchema
       String tmpOverlordLeader = "";
 
       try {
-        tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
+        tmpCoordinatorLeader = coordinatorClient.findCurrentLeader();
       }
       catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders

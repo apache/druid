@@ -116,7 +116,7 @@ public class TieredBrokerHostSelectorTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     brokerSelector = new TieredBrokerHostSelector(
-        new TestRuleManager(null, null),
+        new TestRuleManager(null),
         new TieredBrokerConfig()
         {
           @Override
@@ -401,11 +401,10 @@ public class TieredBrokerHostSelectorTest
   private static class TestRuleManager extends CoordinatorRuleManager
   {
     public TestRuleManager(
-        @Json ObjectMapper jsonMapper,
         Supplier<TieredBrokerConfig> config
     )
     {
-      super(jsonMapper, config, null);
+      super(config, null);
     }
 
     @Override

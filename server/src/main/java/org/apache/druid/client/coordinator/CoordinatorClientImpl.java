@@ -28,6 +28,7 @@ import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -36,6 +37,8 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupUtils;
@@ -56,6 +59,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -353,6 +359,39 @@ public class CoordinatorClientImpl implements CoordinatorClient
     catch (InterruptedException | ExecutionException | IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public String findCurrentLeader()
+  {
+    final String path = "/druid/coordinator/v1/leader";
+    final StringFullResponseHolder responseHolder;
+    try {
+      responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new StringFullResponseHandler(StandardCharsets.UTF_8)
+      );
+
+      if (responseHolder.getStatus().getCode() == HttpServletResponse.SC_OK) {
+        String leaderUrl = responseHolder.getContent();
+        try {
+          URL validatedUrl = new URL(leaderUrl);
+          return validatedUrl.toString();
+        }
+        catch (MalformedURLException ex) {
+          throw new RuntimeException(ex);
+        }
+      }
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+
+    throw new ISE(
+        "Couldn't find leadear, failed response status is[%s], and content[%s]",
+        responseHolder.getStatus().getCode(),
+        responseHolder.getContent()
+    );
   }
 
   private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)

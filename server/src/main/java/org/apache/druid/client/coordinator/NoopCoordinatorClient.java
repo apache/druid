@@ -135,4 +135,10 @@ public class NoopCoordinatorClient implements CoordinatorClient
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public String findCurrentLeader()
+  {
+    throw new UnsupportedOperationException();
+  }
 }

@@ -425,20 +425,6 @@ public class CalciteTests
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        provider,
-        NodeRole.COORDINATOR,
-        "/simple/leader"
-    )
-    {
-      @Override
-      public String findCurrentLeader()
-      {
-        return coordinatorNode.getHostAndPortToUse();
-      }
-    };
-
     final CoordinatorClient coordinatorClient = new CoordinatorClientImpl(
         new MockServiceClient(),
         getJsonMapper()
@@ -494,14 +480,13 @@ public class CalciteTests
         druidSchema,
         new MetadataSegmentView(
             coordinatorClient,
-            getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
         timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
-        druidLeaderClient,
+        coordinatorClient,
         overlordClient,
         provider,
         getJsonMapper()

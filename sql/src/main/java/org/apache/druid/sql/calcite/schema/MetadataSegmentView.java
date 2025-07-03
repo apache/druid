@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -61,7 +60,6 @@ public class MetadataSegmentView
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
   private final CoordinatorClient coordinatorClient;
-  private final ObjectMapper jsonMapper;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
@@ -86,15 +84,13 @@ public class MetadataSegmentView
 
   @Inject
   public MetadataSegmentView(
-      final @Coordinator CoordinatorClient druidLeaderClient,
-      final ObjectMapper jsonMapper,
+      final @Coordinator CoordinatorClient coordinatorClient,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final BrokerSegmentMetadataCacheConfig config
   )
   {
     Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
-    this.coordinatorClient = druidLeaderClient;
-    this.jsonMapper = jsonMapper;
+    this.coordinatorClient = coordinatorClient;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
