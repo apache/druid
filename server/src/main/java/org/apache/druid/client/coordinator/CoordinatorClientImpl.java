@@ -53,13 +53,12 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-
-import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -314,7 +313,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
           new InputStreamFullResponseHandler()
       );
 
-      if (responseHolder.getStatus().getCode() != SC_OK) {
+      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
             "Failed to talk to leader node at[%s]. Error code[%d], description[%s].",
             query,

@@ -60,7 +60,6 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.rpc.MockServiceClient;
-import org.apache.druid.rpc.ServiceClientImpl;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;

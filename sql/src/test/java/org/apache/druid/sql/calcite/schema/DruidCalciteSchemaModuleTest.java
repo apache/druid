@@ -32,6 +32,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -89,6 +90,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Mock
   private DruidLeaderClient coordinatorDruidLeaderClient;
   @Mock
+  private CoordinatorClientImpl coordinatorClient;
+  @Mock
   private DruidLeaderClient overlordDruidLeaderClient;
   @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -121,6 +124,9 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidOperatorTable.class).toInstance(druidOperatorTable);
+          binder.bind(CoordinatorClient.class)
+                .annotatedWith(Coordinator.class)
+                .toInstance(coordinatorClient);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
                 .toInstance(coordinatorDruidLeaderClient);
