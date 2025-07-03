@@ -50,7 +50,7 @@ public interface ServerView
      * again after they are done.  The contract is that the callback will eventually be unregistered, enforcing
      * a happens-before relationship is not part of the contract.
      *
-     * @param server The server that was removed.
+     * @param server The server that was added.
      * @return UNREGISTER if the callback has completed its work and should be unregistered.  CONTINUE if the callback
      * should remain registered.
      */
