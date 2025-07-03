@@ -159,7 +159,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         hostname -> setupHistoricalServer("default_tier", hostname, 0)
     );
 
@@ -238,7 +238,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public void testMultipleServerAndBroker() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
-    serverAddedLatch =  new CountDownLatch(5);
+    serverAddedLatch =  new CountDownLatch(6);
     segmentAddedLatch = new CountDownLatch(6);
 
     // temporarily set latch count to 1
@@ -260,7 +260,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     final List<DruidServer> druidServers =
         ImmutableList.copyOf(
             Lists.transform(
-                ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+                ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
                 hostname -> setupHistoricalServer("default_tier", hostname, 0)
             )
         );
