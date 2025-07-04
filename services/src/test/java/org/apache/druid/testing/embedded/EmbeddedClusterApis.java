@@ -28,6 +28,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.TaskMetrics;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -109,6 +110,24 @@ public class EmbeddedClusterApis
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );
     verifyTaskHasStatus(taskId, TaskStatus.success(taskId));
+  }
+
+  /**
+   * Waits for all used segments (including overshadowed) of the given datasource
+   * to be loaded on historicals.
+   */
+  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator)
+  {
+    final int numSegments = coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .size();
+    coordinator.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/loadQueue/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numSegments)
+    );
   }
 
   /**

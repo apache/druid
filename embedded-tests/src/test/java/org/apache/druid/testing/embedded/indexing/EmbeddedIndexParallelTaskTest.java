@@ -1,0 +1,228 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.testing.embedded.indexing;
+
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
+import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Makes assertions similar to {@code ITPerfectRollupParallelIndexTest}.
+ */
+public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
+{
+  private final EmbeddedBroker broker = new EmbeddedBroker();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
+      .addProperty("druid.worker.capacity", "20")
+      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+      .addProperty("druid.indexer.task.ignoreTimestampSpecForDruidInputSource", "true");
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+                               .useLatchableEmitter()
+                               .addServer(coordinator)
+                               .addServer(indexer)
+                               .addServer(overlord)
+                               .addServer(historical)
+                               .addServer(broker)
+                               .addServer(new EmbeddedRouter());
+  }
+
+  public static List<Map<String, Object>> getTestParamPartitionsSpec()
+  {
+    return List.of(
+        Map.of("type", "dynamic"),
+        Map.of("type", "hashed", "numShards", 2),
+        Map.of("type", "range", "targetRowsPerSegment", 2, "partitionDimensions", List.of("namespace"))
+    );
+  }
+
+  @Test
+  public void test_theNewSyntax()
+  {
+    final String taskId = dataSource + "_" + IdUtils.getRandomId();
+    Object task = CreateTask.ofType("index")
+                            .dataSource(dataSource)
+                            .csvInputFormatWithColumns("time", "item", "value")
+                            .isoTimestampColumn("time")
+                            .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+                            .segmentGranularity("DAY")
+                            .dynamicPartitionsWithMaxRows(1000)
+                            .build(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+  }
+
+  @CsvSource({"true, 5000", "false, 1"})
+  @ParameterizedTest(name = "isAvailabilityConfirmed={0}, availabilityTimeout={1}")
+  public void test_segmentAvailabilityIsConfirmed_whenTaskWaits5secondsForHandoff(
+      final boolean isSegmentAvailabilityConfirmed,
+      final long segmentAvailabilityTimeoutMillis
+  )
+  {
+    final CreateTask indexTask =
+        CreateTask.ofType("index_parallel")
+                  .dataSource(dataSource)
+                  .partitionsSpec(Map.of("type", "dynamic"))
+                  .timestampColumn("timestamp")
+                  .inputFormat(Map.of("type", "json"))
+                  .localInputSourceWithFiles(Resources.WIKIPEDIA_1_JSON)
+                  .dimensions()
+                  .awaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis);
+
+    final String taskId = runTask(indexTask, dataSource);
+
+    // Get the task report to verify that segment availability has been confirmed
+    final TaskReport.ReportMap taskReport = cluster.callApi().onLeaderOverlord(
+        o -> o.taskReportAsMap(taskId)
+    );
+    final Optional<IngestionStatsAndErrorsTaskReport> statsReportOptional
+        = taskReport.findReport("ingestionStatsAndErrors");
+    Assertions.assertTrue(statsReportOptional.isPresent());
+
+    final IngestionStatsAndErrors statsAndErrors = statsReportOptional.get().getPayload();
+    Assertions.assertEquals(
+        isSegmentAvailabilityConfirmed,
+        statsAndErrors.isSegmentAvailabilityConfirmed()
+    );
+  }
+
+  @MethodSource("getTestParamPartitionsSpec")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_runIndexTask_andReindexIntoAnotherDatasource(Map<String, Object> partitionsSpec)
+  {
+    final boolean isRollup = !partitionsSpec.get("type").equals("dynamic");
+
+    final CreateTask indexTask =
+        CreateTask.ofType("index_parallel")
+                  .dataSource(dataSource)
+                  .partitionsSpec(partitionsSpec)
+                  .forceGuaranteedRollup(isRollup)
+                  .timestampColumn("timestamp")
+                  .inputFormat(Map.of("type", "json"))
+                  .localInputSourceWithFiles(
+                      Resources.WIKIPEDIA_1_JSON,
+                      Resources.WIKIPEDIA_2_JSON,
+                      Resources.WIKIPEDIA_3_JSON
+                  )
+                  .segmentGranularity("DAY")
+                  .dimensions("namespace", "page", "language")
+                  .metricAggregate("added", "doubleSum")
+                  .metricAggregate("deleted", "doubleSum")
+                  .metricAggregate("delta", "doubleSum")
+                  .metricAggregate("count", "count")
+                  .maxConcurrentSubTasks(10)
+                  .splitHintSpec(Map.of("type", "maxSize", "maxSplitSize", 1));
+
+    runTask(indexTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    runQueries(dataSource);
+
+    // Re-index into a different datasource, indexing 1 segment per sub-task
+    final String dataSource2 = EmbeddedClusterApis.createTestDatasourceName();
+    final CreateTask reindexTaskSplitBySegment =
+        CreateTask.ofType("index_parallel")
+                  .dataSource(dataSource2)
+                  .dimensionsSpec(Map.of("dimensionExclusions", List.of("robot", "continent")))
+                  .isoTimestampColumn("ignored")
+                  .druidInputSource(dataSource, Intervals.ETERNITY)
+                  .maxConcurrentSubTasks(10)
+                  .forceGuaranteedRollup(isRollup)
+                  .partitionsSpec(partitionsSpec)
+                  .splitHintSpec(Map.of("type", "segments", "maxInputSegmentBytesPerTask", 1));
+
+    runTask(reindexTaskSplitBySegment, dataSource2);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator);
+    runQueries(dataSource2);
+
+    // Re-index into a different datasource, indexing 1 file per sub-task
+    final String dataSource3 = EmbeddedClusterApis.createTestDatasourceName();
+    final CreateTask reindexTaskSplitByFile =
+        CreateTask.ofType("index_parallel")
+                  .dataSource(dataSource3)
+                  .partitionsSpec(partitionsSpec)
+                  .forceGuaranteedRollup(isRollup)
+                  .timestampColumn("timestamp")
+                  .druidInputSource(dataSource, Intervals.ETERNITY)
+                  .dimensionsSpec(Map.of("dimensionExclusions", List.of("robot", "continent")))
+                  .maxConcurrentSubTasks(10)
+                  .splitHintSpec(Map.of("type", "maxSize", "maxNumFiles", 1));
+
+    runTask(reindexTaskSplitByFile, dataSource3);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator);
+    runQueries(dataSource3);
+  }
+
+  private String runTask(CreateTask taskBuilder, String dataSource)
+  {
+    final String taskId = dataSource + "_" + IdUtils.getRandomId();
+    final Object taskPayload = taskBuilder.build(taskId);
+
+    System.out.println("Running task: " + taskPayload);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskPayload));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+
+    return taskId;
+  }
+
+  private void runQueries(String dataSource)
+  {
+    Assertions.assertEquals(
+        "10,2013-09-01T12:41:27.000Z,2013-08-31T01:02:33.000Z",
+        cluster.runSql("SELECT COUNT(*), MAX(__time), MIN(__time) FROM %s", dataSource)
+    );
+    Assertions.assertEquals(
+        "Crimson Typhoon,1,905.0,9050.0",
+        cluster.runSql(
+            "SELECT \"page\", COUNT(*) AS \"rows\", SUM(\"added\"), 10 * SUM(\"added\") AS added_times_ten"
+            + " FROM %s"
+            + " WHERE \"language\" = 'zh' AND __time < '2013-09-01'"
+            + " GROUP BY 1"
+            + " HAVING added_times_ten > 9000",
+            dataSource
+        )
+    );
+  }
+}

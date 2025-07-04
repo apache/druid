@@ -24,6 +24,9 @@ package org.apache.druid.testing.embedded.indexing;
  */
 public class Resources
 {
+  /**
+   * 10 rows (1 row per day) of inline CSV data with 3 columns (time, item, value).
+   */
   public static final String CSV_DATA_10_DAYS =
       "2025-06-01T00:00:00.000Z,shirt,105"
       + "\n2025-06-02T00:00:00.000Z,trousers,210"
@@ -36,51 +39,7 @@ public class Resources
       + "\n2025-06-09T00:00:00.000Z,shirt,99"
       + "\n2025-06-10T00:00:00.000Z,toys,101";
 
-  /**
-   * Full task payload for an "index" task. The payload has the following format
-   * arguments:
-   * <ol>
-   * <li>Data which can be provided as a single CSV string. The data is expected
-   * to have 3 columns: "time", "item" and "value". (e.g {@link #CSV_DATA_10_DAYS})</li>
-   * <li>Datasource name</li>
-   * </ol>
-   */
-  public static final String INDEX_TASK_PAYLOAD_WITH_INLINE_DATA
-      = "{"
-        + "  \"type\": \"index\","
-        + "  \"spec\": {"
-        + "    \"ioConfig\": {"
-        + "      \"type\": \"index\","
-        + "      \"inputSource\": {"
-        + "        \"type\": \"inline\","
-        + "        \"data\": \"%s\""
-        + "      },\n"
-        + "      \"inputFormat\": {"
-        + "        \"type\": \"csv\","
-        + "        \"findColumnsFromHeader\": false,"
-        + "        \"columns\": [\"time\",\"item\",\"value\"]"
-        + "      }"
-        + "    },"
-        + "    \"tuningConfig\": {"
-        + "      \"type\": \"index_parallel\","
-        + "      \"partitionsSpec\": {"
-        + "        \"type\": \"dynamic\","
-        + "        \"maxRowsPerSegment\": 1000"
-        + "      }"
-        + "    },"
-        + "    \"dataSchema\": {"
-        + "      \"dataSource\": \"%s\","
-        + "      \"timestampSpec\": {"
-        + "        \"column\": \"time\","
-        + "        \"format\": \"iso\""
-        + "      },"
-        + "      \"dimensionsSpec\": {"
-        + "        \"dimensions\": []"
-        + "      },"
-        + "      \"granularitySpec\": {"
-        + "        \"segmentGranularity\": \"DAY\""
-        + "      }"
-        + "    }"
-        + "  }"
-        + "}";
+  public static final String WIKIPEDIA_1_JSON = "data/json/wikipedia_1.json";
+  public static final String WIKIPEDIA_2_JSON = "data/json/wikipedia_2.json";
+  public static final String WIKIPEDIA_3_JSON = "data/json/wikipedia_3.json";
 }

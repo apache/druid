@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -78,7 +77,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     final String taskId = IdUtils.getRandomId();
     final Object task = createIndexTaskForInlineData(
         taskId,
-        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
+        Resources.CSV_DATA_10_DAYS
     );
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
@@ -101,12 +100,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
       start = start.plusDays(1);
     }
 
-    // Wait for all segments to be loaded and queryable
-    coordinator.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/loadQueue/success")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(10)
-    );
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
@@ -146,10 +140,14 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
   private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
-    return EmbeddedClusterApis.createTaskFromPayload(
-        taskId,
-        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
-    );
+    return CreateTask.ofType("index")
+                     .dataSource(dataSource)
+                     .csvInputFormatWithColumns("time", "item", "value")
+                     .isoTimestampColumn("time")
+                     .inlineInputSourceWithData(inlineDataCsv)
+                     .segmentGranularity("DAY")
+                     .dimensions()
+                     .build(taskId);
   }
 
   /**
