@@ -29,7 +29,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 import org.apache.druid.sql.calcite.rel.logical.DruidFilter;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidProject;
 
 /**
@@ -53,14 +55,15 @@ public class ReadStage extends AbstractFrameProcessorStage
   @Override
   public LogicalStage extendWith(DruidNodeStack stack)
   {
-    if (stack.getNode() instanceof DruidFilter) {
-      DruidFilter filter = (DruidFilter) stack.getNode();
+    DruidLogicalNode node = stack.getNode();
+    if (node instanceof DruidFilter) {
+      DruidFilter filter = (DruidFilter) node;
       return makeFilterStage(stack.getPlannerContext(), filter);
     }
 
-    if (stack.getNode() instanceof DruidProject) {
+    if (node instanceof DruidProject || node instanceof DruidAggregate) {
 
-      DruidProject project = (DruidProject) stack.getNode();
+      DruidLogicalNode project = node;
       DruidFilter dummyFilter = new DruidFilter(
           project.getCluster(), project.getTraitSet(), project,
           project.getCluster().getRexBuilder().makeLiteral(true)

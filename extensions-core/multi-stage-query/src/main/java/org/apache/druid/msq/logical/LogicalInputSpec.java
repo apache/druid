@@ -92,7 +92,7 @@ public abstract class LogicalInputSpec
     @Override
     public RowSignature getRowSignature()
     {
-      return inputStage.getRowSignature();
+      return inputStage.getLogicalRowSignature();
     }
   }
 }

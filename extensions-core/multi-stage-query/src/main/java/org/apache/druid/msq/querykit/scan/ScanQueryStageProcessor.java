@@ -37,6 +37,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.filtration.Filtration;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
@@ -70,10 +71,13 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
       RowSignature signature,
       DimFilter dimFilter)
   {
+    Filtration filtration = Filtration.create(dimFilter).optimizeFilterOnly(signature);
+    DimFilter newFilter = filtration.getDimFilter();
+
     ScanQuery scanQuery = Druids.newScanQueryBuilder()
         .dataSource(IRRELEVANT)
         .intervals(QuerySegmentSpec.ETERNITY)
-        .filters(dimFilter)
+        .filters(newFilter)
         .virtualColumns(virtualColumns)
         .columns(signature.getColumnNames())
         .columnTypes(signature.getColumnTypes())

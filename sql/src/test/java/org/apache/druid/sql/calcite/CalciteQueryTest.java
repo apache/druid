@@ -121,6 +121,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -386,6 +387,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.NO_INFORMATION_SCHEMA_SUPPORT)
   @Test
   public void testAggregatorsOnInformationSchemaColumns()
   {
@@ -2582,6 +2584,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctWithFilter2()
@@ -3326,6 +3329,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testUnionAllSameTableThreeTimes()
@@ -3370,6 +3374,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
@@ -6244,6 +6249,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_NULL_COLUMN_ORDER)
   @Test
   public void testOrderByNullType()
   {
@@ -7102,6 +7108,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_INCORRECT_RESULTS_EMPTY_STRING)
   @Test
   public void testApproxCountDistinctWhenHllDisabled()
   {
@@ -7220,6 +7227,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.AGG_COL_EXCHANGE)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
@@ -12513,6 +12521,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
@@ -14735,6 +14744,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14779,6 +14789,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
@@ -15451,6 +15462,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testWindowingOverJoin()
   {

@@ -19,20 +19,51 @@
 
 package org.apache.druid.msq.logical.stages;
 
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Project;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 
 class ProjectStage extends FilterStage
 {
+  protected final RowSignature projectInputSignature;
+
   public ProjectStage(FilterStage stage, VirtualColumnRegistry virtualColumnRegistry, RowSignature signature)
   {
     super(stage, virtualColumnRegistry, signature);
+    projectInputSignature = stage.signature;
+  }
+
+  public ProjectStage(ProjectStage stage, RowSignature rowSignature)
+  {
+    super(stage, stage.virtualColumnRegistry, rowSignature);
+    projectInputSignature = stage.projectInputSignature;
   }
 
   @Override
   public LogicalStage extendWith(DruidNodeStack stack)
   {
+    if (stack.getNode() instanceof DruidAggregate) {
+      DruidAggregate aggregate = (DruidAggregate) stack.getNode();
+      RelNode aggregateInput = aggregate.getInput();
+      Project selectProject = aggregateInput instanceof Project ? (Project) aggregateInput : null;
+
+      Grouping grouping = DruidQuery.buildGrouping(
+          aggregate,
+          selectProject,
+          null,
+          stack.getPlannerContext(),
+          projectInputSignature,
+          virtualColumnRegistry,
+          false
+      );
+
+      return GroupByStages.buildStages(this, grouping);
+    }
     return null;
   }
 }
