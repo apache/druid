@@ -26,9 +26,8 @@ import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 import type { Filter } from 'react-table';
 
-import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
-import type { QueryContext, QueryWithContext } from './druid-models';
+import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
@@ -51,20 +50,20 @@ import './console-application.scss';
 
 type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
 
-function changeTabWithFilter(tab: HeaderActiveTab, filters: Filter[]) {
+function changeTabWithFilter(tab: ConsoleViewId, filters: Filter[]) {
   const filterString = tableFiltersToString(filters);
   location.hash = tab + (filterString ? `/${filterString}` : '');
 }
 
-function viewFilterChange(tab: HeaderActiveTab) {
+function viewFilterChange(tab: ConsoleViewId) {
   return (filters: Filter[]) => changeTabWithFilter(tab, filters);
 }
 
-function pathWithFilter(tab: HeaderActiveTab) {
+function pathWithFilter(tab: ConsoleViewId) {
   return `/${tab}/:filters?`;
 }
 
-function switchTab(tab: HeaderActiveTab) {
+function switchTab(tab: ConsoleViewId) {
   location.hash = tab;
 }
 
@@ -245,7 +244,7 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrapInViewContainer = (
-    active: HeaderActiveTab | null,
+    active: ConsoleViewId | null,
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' | 'thin' | 'thinner' = 'normal',
   ) => {
@@ -254,7 +253,7 @@ export class ConsoleApplication extends React.PureComponent<
     return (
       <>
         <HeaderBar
-          active={active}
+          activeView={active}
           capabilities={capabilities}
           onUnrestrict={this.handleUnrestrict}
         />
@@ -438,10 +437,6 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedExploreView = () => {
-    return this.wrapInViewContainer('explore', <ExploreView />, 'thinner');
-  };
-
   render() {
     const { capabilities, capabilitiesLoading } = this.state;
 
@@ -500,7 +495,10 @@ export class ConsoleApplication extends React.PureComponent<
               )}
 
               {capabilities.hasSql() && (
-                <Route path="/explore" component={this.wrappedExploreView} />
+                <Route
+                  path="/explore"
+                  component={() => <ExploreView capabilities={capabilities} />}
+                />
               )}
 
               <Route component={this.wrappedHomeView} />

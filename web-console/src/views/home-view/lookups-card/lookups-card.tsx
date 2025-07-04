@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
@@ -50,7 +50,7 @@ export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardPro
     <HomeViewCard
       className="lookups-card"
       href="#lookups"
-      icon={IconNames.PROPERTIES}
+      icon={getConsoleViewIcon('lookups')}
       title="Lookups"
       loading={lookupsCountState.loading}
       error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}
