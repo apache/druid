@@ -43,8 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Makes assertions similar to {@code ITPerfectRollupParallelIndexTest} and
- * {@code ITBestEffortRollupParallelIndexTest}.
+ * Runs tasks of "index_parallel" type using Indexers.
  */
 public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 {
@@ -80,7 +79,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
     );
   }
 
-  @CsvSource({"true, 5000", "false, 1"})
+  @CsvSource({"true, 5000", "false, 1", "false, 0"})
   @ParameterizedTest(name = "isAvailabilityConfirmed={0}, availabilityTimeout={1}")
   public void test_segmentAvailabilityIsConfirmed_whenTaskWaits5secondsForHandoff(
       final boolean isSegmentAvailabilityConfirmed,
@@ -185,7 +184,6 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
     final String taskId = dataSource + "_" + IdUtils.getRandomId();
     final Object taskPayload = taskBuilder.build(taskId);
 
-    System.out.println("Running task: " + taskPayload);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskPayload));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
 
