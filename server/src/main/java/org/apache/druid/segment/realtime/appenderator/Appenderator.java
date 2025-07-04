@@ -221,7 +221,9 @@ public interface Appenderator extends QuerySegmentWalker
   void closeNow();
 
   /**
-   * Sets thread context for task threads on Indexers.
+   * Sets thread context for task threads on Indexers. If the {@link Appenderator}
+   * and the underlying threadpools for persist, push, publish are freshly
+   * created for each task ID, it is not necessary to clear this context.
    */
   default void setTaskThreadContext()
   {

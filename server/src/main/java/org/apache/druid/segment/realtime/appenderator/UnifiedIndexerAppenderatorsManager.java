@@ -195,7 +195,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           rowIngestionMeters,
           parseExceptionHandler,
           centralizedDatasourceSchemaConfig
-      ) {
+      )
+      {
         @Override
         public void setTaskThreadContext()
         {
@@ -248,7 +249,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           rowIngestionMeters,
           parseExceptionHandler,
           centralizedDatasourceSchemaConfig
-      ) {
+      )
+      {
         @Override
         public void setTaskThreadContext()
         {
