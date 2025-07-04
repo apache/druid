@@ -152,8 +152,6 @@ public class TestNGGroup
 
   public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
 
-  public static final String HTTP_ENDPOINT = "http-endpoint";
-
   public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
 
   public static final String CDS_TASK_SCHEMA_PUBLISH_DISABLED = "cds-task-schema-publish-disabled";
