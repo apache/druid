@@ -131,8 +131,8 @@ public class SegmentManager
    * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
    * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #acquireSegment(DataSegmentAndDescriptor, Closer)} or
-   * {@link #acquireSegments(Iterable, Closer)} instead.
+   * {@link #acquireSegment(DataSegmentAndDescriptor)} or
+   * {@link #acquireSegments(Iterable)} instead.
    */
   public Optional<Segment> acquireSegment(
       DataSegment dataSegment
@@ -151,20 +151,17 @@ public class SegmentManager
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
   public AcquireSegmentAction acquireSegment(
-      DataSegmentAndDescriptor segmentAndDescriptor,
-      Closer loadCleanup
+      DataSegmentAndDescriptor segmentAndDescriptor
   ) throws SegmentLoadingException
   {
-    return loadCleanup.register(
-        cacheManager.acquireSegment(
-            segmentAndDescriptor.getDataSegment(),
-            segmentAndDescriptor.getDescriptor()
-        )
+    return cacheManager.acquireSegment(
+        segmentAndDescriptor.getDataSegment(),
+        segmentAndDescriptor.getDescriptor()
     );
   }
 
   /**
-   * Given a list of {@link DataSegmentAndDescriptor}, call {@link #acquireSegment(DataSegmentAndDescriptor, Closer)}
+   * Given a list of {@link DataSegmentAndDescriptor}, call {@link #acquireSegment(DataSegmentAndDescriptor)}
    * on each of them to build a list of {@link AcquireSegmentAction}. Calling
    * {@link AcquireSegmentAction#getSegmentFuture()} on any item in the list will either return immediately if the
    * {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not. Any
@@ -172,23 +169,28 @@ public class SegmentManager
    * things.
    * <p>
    * Calling this method is treated as an intent to acquire and use the segments via resolving the futures, and cache
-   * manager implementations will place a hold on all segments specified until the 'loadCleanup' closer is closed -
-   * typically after resolving all the futures to acquire the references to the actual {@link Segment} objects.
+   * manager implementations will place a hold on all segments specified until the {@link AcquireSegmentAction} which
+   * produced each segment- typically after resolving all the futures to acquire the references to the actual {@link Segment} objects.
    */
   public List<AcquireSegmentAction> acquireSegments(
-      Iterable<DataSegmentAndDescriptor> segments,
-      Closer loadCleanup
-  ) throws SegmentLoadingException
+      Iterable<DataSegmentAndDescriptor> segments
+  )
   {
     final List<AcquireSegmentAction> actions = new ArrayList<>();
-    for (DataSegmentAndDescriptor segmentAndDescriptor : segments) {
-      if (segmentAndDescriptor.getDataSegment() == null) {
-        actions.add(AcquireSegmentAction.missingSegment(segmentAndDescriptor.getDescriptor()));
-      } else {
-        actions.add(acquireSegment(segmentAndDescriptor, loadCleanup));
+    final Closer fail = Closer.create();
+    try {
+      for (DataSegmentAndDescriptor segmentAndDescriptor : segments) {
+        if (segmentAndDescriptor.getDataSegment() == null) {
+          actions.add(fail.register(AcquireSegmentAction.missingSegment(segmentAndDescriptor.getDescriptor())));
+        } else {
+          actions.add(fail.register(acquireSegment(segmentAndDescriptor)));
+        }
       }
+      return actions;
     }
-    return actions;
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, fail);
+    }
   }
 
   /**

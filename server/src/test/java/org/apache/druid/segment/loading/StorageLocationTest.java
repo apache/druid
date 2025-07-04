@@ -21,8 +21,10 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -165,8 +167,9 @@ class StorageLocationTest
     CacheEntry entry7 = new TestCacheEntry("7", 25);
     CacheEntry entry8 = new TestCacheEntry("8", 25);
 
-    Assertions.assertNotNull(location.addWeakReservationHold(entry1.getId(), () -> entry1));
-    Assertions.assertNotNull(location.addWeakReservationHold(entry2.getId(), () -> entry2));
+    final Closer closer = Closer.create();
+    Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry1.getId(), () -> entry1)));
+    Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry2.getId(), () -> entry2)));
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
@@ -175,7 +178,7 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
 
-    Assertions.assertNotNull(location.addWeakReservationHold(entry5.getId(), () -> entry5));
+    Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry5.getId(), () -> entry5)));
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -202,7 +205,7 @@ class StorageLocationTest
     Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
-    location.finishWeakReservationHold(List.of(entry1.getId(), entry2.getId(), entry5.getId()));
+    CloseableUtils.closeAndWrapExceptions(closer);
     Assertions.assertTrue(location.reserveWeak(entry8));
 
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
@@ -416,19 +419,19 @@ class StorageLocationTest
     @Override
     public boolean isMounted()
     {
-      return isMounted;
+      return true;
     }
 
     @Override
     public void mount(File location)
     {
-      isMounted = true;
+      // do nothing
     }
 
     @Override
     public void unmount()
     {
-      isMounted = false;
+      // do nothing
     }
   }
 

@@ -20,13 +20,17 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -72,6 +76,7 @@ import java.util.function.Supplier;
  * One example usage is that a historical can use multiple threads to load different segments in parallel
  * from deep storage.
  */
+@ThreadSafe
 public class StorageLocation
 {
   private static final EmittingLogger log = new EmittingLogger(StorageLocation.class);
@@ -80,27 +85,30 @@ public class StorageLocation
   private final long maxSizeBytes;
   private final long freeSpaceToKeep;
 
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private final Map<CacheEntryIdentifier, CacheEntry> staticCacheEntries = new HashMap<>();
 
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private final Map<CacheEntryIdentifier, WeakCacheEntry> weakCacheEntries = new HashMap<>();
 
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private WeakCacheEntry head;
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private WeakCacheEntry tail;
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private WeakCacheEntry hand;
 
   /**
    * Current total size of files in bytes, including weak entries.
    */
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private long currSizeBytes = 0;
 
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private long currWeakSizeBytes = 0;
+
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
 
   public StorageLocation(File path, long maxSizeBytes, @Nullable Double freeSpacePercent)
   {
@@ -132,141 +140,217 @@ public class StorageLocation
    * visited to reduce the chance that they are evicted during future calls to {@link #reclaim(long)}.
    */
   @Nullable
-  public synchronized <T extends CacheEntry> T getCacheEntry(CacheEntryIdentifier entryId)
+  public <T extends CacheEntry> T getCacheEntry(CacheEntryIdentifier entryId)
   {
-    if (staticCacheEntries.containsKey(entryId)) {
-      return (T) staticCacheEntries.get(entryId);
+    lock.readLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entryId)) {
+        return (T) staticCacheEntries.get(entryId);
+      }
+      if (weakCacheEntries.containsKey(entryId)) {
+        final WeakCacheEntry weakCacheEntry = weakCacheEntries.get(entryId);
+        weakCacheEntry.visited = true;
+        return (T) weakCacheEntry.cacheEntry;
+      }
+      return null;
     }
-    if (weakCacheEntries.containsKey(entryId)) {
-      final WeakCacheEntry weakCacheEntry = weakCacheEntries.get(entryId);
-      weakCacheEntry.visited = true;
-      return (T) weakCacheEntry.cacheEntry;
+    finally {
+      lock.readLock().unlock();
     }
-    return null;
   }
 
   /**
    * Returns true if a {@link CacheEntry} for a {@link CacheEntryIdentifier} exists in {@link #staticCacheEntries}
    */
-  public synchronized boolean isReserved(CacheEntryIdentifier identifier)
+  public boolean isReserved(CacheEntryIdentifier identifier)
   {
-    return staticCacheEntries.containsKey(identifier);
+    lock.readLock().lock();
+    try {
+      return staticCacheEntries.containsKey(identifier);
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
   /**
    * Returns true if a {@link CacheEntry} for a {@link CacheEntryIdentifier} exists in {@link #weakCacheEntries}
    */
-  public synchronized boolean isWeakReserved(CacheEntryIdentifier identifier)
+  public boolean isWeakReserved(CacheEntryIdentifier identifier)
   {
-    return weakCacheEntries.containsKey(identifier);
+    lock.readLock().lock();
+    try {
+      return weakCacheEntries.containsKey(identifier);
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
   /**
    * Reserves space to store the given {@link CacheEntry}, returning true if sucessful and false if already reserved,
    * or unable to be reserved.
    */
-  public synchronized boolean reserve(CacheEntry entry)
+  public boolean reserve(CacheEntry entry)
   {
-    if (staticCacheEntries.containsKey(entry.getId())) {
+    lock.readLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entry.getId())) {
+        return false;
+      }
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+
+    lock.writeLock().lock();
+    try {
+      if (canHandle(entry)) {
+        staticCacheEntries.put(entry.getId(), entry);
+        currSizeBytes += entry.getSize();
+        return true;
+      }
       return false;
     }
-    if (canHandle(entry)) {
-      staticCacheEntries.put(entry.getId(), entry);
-      currSizeBytes += entry.getSize();
-      return true;
+    finally {
+      lock.writeLock().unlock();
     }
-    return false;
   }
 
   /**
    * Reserves space to store a 'weak' reservation for a given {@link CacheEntry}. Returns true if already reserved or
    * was able to be successfully reserved, or false if unable to be reserved.
    */
-  public synchronized boolean reserveWeak(CacheEntry entry)
+  public boolean reserveWeak(CacheEntry entry)
   {
-    if (staticCacheEntries.containsKey(entry.getId())) {
-      return true;
+    lock.readLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entry.getId())) {
+        return true;
+      }
+      if (weakCacheEntries.containsKey(entry.getId())) {
+        weakCacheEntries.get(entry.getId()).visited = true;
+        return true;
+      }
     }
-    if (weakCacheEntries.containsKey(entry.getId())) {
-      weakCacheEntries.get(entry.getId()).visited = true;
-      return true;
+    finally {
+      lock.readLock().unlock();
     }
-    if (canHandle(entry)) {
-      linkNewWeakEntry(new WeakCacheEntry(entry));
-      return true;
+
+    lock.writeLock().lock();
+    try {
+      if (canHandle(entry)) {
+        linkNewWeakEntry(new WeakCacheEntry(entry));
+        return true;
+      }
+      return false;
     }
-    return false;
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
+  public <T extends CacheEntry> ReservationHold<T> addWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
   {
-    if (staticCacheEntries.containsKey(entryId)) {
-      return (T) staticCacheEntries.get(entryId);
+    lock.readLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entryId)) {
+        return new ReservationHold<>((T) staticCacheEntries.get(entryId));
+      }
     }
-    if (weakCacheEntries.containsKey(entryId)) {
-      WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
-      existingEntry.visited = true;
-      existingEntry.holds++;
-      return (T) existingEntry.cacheEntry;
+    finally {
+      lock.readLock().unlock();
     }
-    return null;
+
+    lock.writeLock().lock();
+    try {
+      if (weakCacheEntries.containsKey(entryId)) {
+        WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
+        existingEntry.visited = true;
+        existingEntry.holds++;
+        return new ReservationHold<>((T) existingEntry.cacheEntry);
+      }
+      return null;
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
   @Nullable
-  public synchronized <T extends CacheEntry> T addWeakReservationHold(
+  public <T extends CacheEntry> ReservationHold<T> addWeakReservationHold(
       CacheEntryIdentifier entryId,
       Supplier<? extends CacheEntry> entrySupplier
   )
   {
-    final CacheEntry existingEntry = addWeakReservationHoldIfExists(entryId);
+    final ReservationHold<T> existingEntry = addWeakReservationHoldIfExists(entryId);
     if (existingEntry != null) {
-      return (T) existingEntry;
+      return existingEntry;
     }
+
     final CacheEntry newEntry = entrySupplier.get();
-    if (canHandle(newEntry)) {
-      final WeakCacheEntry newWeakEntry = new WeakCacheEntry(newEntry);
-      newWeakEntry.holds++;
-      linkNewWeakEntry(newWeakEntry);
-      return (T) newEntry;
+    lock.writeLock().lock();
+    try {
+      if (canHandle(newEntry)) {
+        final WeakCacheEntry newWeakEntry = new WeakCacheEntry(newEntry);
+        newWeakEntry.holds++;
+        linkNewWeakEntry(newWeakEntry);
+        return new ReservationHold<>((T) newEntry);
+      }
+      return null;
     }
-    return null;
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
-  public synchronized void finishWeakReservationHold(Iterable<CacheEntryIdentifier> reservations)
+  public boolean release(CacheEntry entry)
   {
-    for (CacheEntryIdentifier entryId : reservations) {
-      final WeakCacheEntry reservation = weakCacheEntries.get(entryId);
-      if (reservation != null && reservation.holds > 0) {
-        reservation.holds--;
-        if (reservation.holds == 0 && !reservation.cacheEntry.isMounted()) {
-          unlinkAndUnmountWeakEntry(reservation);
+    lock.writeLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entry.getId())) {
+        final CacheEntry toRemove = staticCacheEntries.get(entry.getId());
+        toRemove.unmount();
+        currSizeBytes -= entry.getSize();
+        staticCacheEntries.remove(entry.getId());
+        return true;
+      } else if (weakCacheEntries.containsKey(entry.getId())) {
+        final WeakCacheEntry toRemove = weakCacheEntries.get(entry.getId());
+        unlinkAndUnmountWeakEntry(toRemove);
+        return true;
+      }
+      log.warn("Entry[%s] is not found under this location[%s]", entry.getId(), path);
+      return false;
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  private void finishWeakReservationHold(Iterable<CacheEntryIdentifier> reservations)
+  {
+    lock.writeLock().lock();
+    try {
+      for (CacheEntryIdentifier entryId : reservations) {
+        final WeakCacheEntry reservation = weakCacheEntries.get(entryId);
+        if (reservation != null && reservation.holds > 0) {
+          reservation.holds--;
+          if (reservation.holds == 0 && !reservation.cacheEntry.isMounted()) {
+            unlinkAndUnmountWeakEntry(reservation);
+          }
         }
       }
     }
-  }
-
-  public synchronized boolean release(CacheEntry entry)
-  {
-    if (staticCacheEntries.containsKey(entry.getId())) {
-      final CacheEntry toRemove = staticCacheEntries.get(entry.getId());
-      toRemove.unmount();
-      currSizeBytes -= entry.getSize();
-      staticCacheEntries.remove(entry.getId());
-      return true;
-    } else if (weakCacheEntries.containsKey(entry.getId())) {
-      final WeakCacheEntry toRemove = weakCacheEntries.get(entry.getId());
-      unlinkAndUnmountWeakEntry(toRemove);
-      return true;
+    finally {
+      lock.writeLock().unlock();
     }
-    log.warn("Entry[%s] is not found under this location[%s]", entry.getId(), path);
-    return false;
   }
 
   /**
    * Inserts a new
    */
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private void linkNewWeakEntry(WeakCacheEntry newWeakEntry)
   {
     if (head != null) {
@@ -286,7 +370,7 @@ public class StorageLocation
   /**
    * Removes a {@link WeakCacheEntry} from the queue, calling {@link CacheEntry#unmount()}
    */
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private void unlinkAndUnmountWeakEntry(WeakCacheEntry toRemove)
   {
     if (hand == toRemove) {
@@ -315,7 +399,7 @@ public class StorageLocation
    * Use {@link #reserve} instead.
    */
   @VisibleForTesting
-  @GuardedBy("this")
+  @GuardedBy("lock")
   boolean canHandle(CacheEntry entry)
   {
     if (availableSizeBytes() < entry.getSize()) {
@@ -354,7 +438,7 @@ public class StorageLocation
     return true;
   }
 
-  @GuardedBy("this")
+  @GuardedBy("lock")
   private boolean reclaim(long sizeToReclaim)
   {
     if (head == null) {
@@ -393,14 +477,26 @@ public class StorageLocation
     return sizeFreed >= sizeToReclaim;
   }
 
-  public synchronized long availableSizeBytes()
+  public long availableSizeBytes()
   {
-    return maxSizeBytes - currSizeBytes;
+    lock.readLock().lock();
+    try {
+      return maxSizeBytes - currSizeBytes;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
-  public synchronized long currSizeBytes()
+  public long currSizeBytes()
   {
-    return currSizeBytes;
+    try {
+      lock.readLock().lock();
+      return currSizeBytes;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
   private static final class WeakCacheEntry
@@ -414,6 +510,27 @@ public class StorageLocation
     private WeakCacheEntry(CacheEntry cacheEntry)
     {
       this.cacheEntry = cacheEntry;
+    }
+  }
+
+  public class ReservationHold<TEntry extends CacheEntry> implements Closeable
+  {
+    private final TEntry entry;
+
+    public ReservationHold(TEntry entry)
+    {
+      this.entry = entry;
+    }
+
+    public TEntry getEntry()
+    {
+      return entry;
+    }
+
+    @Override
+    public void close()
+    {
+      finishWeakReservationHold(Collections.singletonList(entry.getId()));
     }
   }
 }

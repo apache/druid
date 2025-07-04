@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, finally
@@ -49,28 +48,43 @@ import java.util.stream.Collectors;
  */
 public class AcquireSegmentAction implements Closeable
 {
-  private static final Closeable NOOP = () -> {};
+  public static final Closeable NOOP_CLEANUP = () -> {};
 
   public static List<SegmentReference> mapAllSegments(
       List<AcquireSegmentAction> acquireSegmentActions,
       SegmentMapFunction segmentMapFunction,
-      Closer closer,
       long timeoutAt
   )
   {
-    final List<ListenableFuture<Optional<Segment>>> futures =
-        acquireSegmentActions.stream().map(AcquireSegmentAction::getSegmentFuture).collect(Collectors.toList());
+    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
     final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
+
+    final Closer safetyNet = Closer.create();
+    try {
+      for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
+        safetyNet.register(acquireSegmentAction);
+        // getting the future kicks off any background action, so materialize them all to a list to get things started
+        futures.add(acquireSegmentAction.getSegmentFuture());
+      }
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+    }
+
     Throwable failure = null;
     for (int i = 0; i < acquireSegmentActions.size(); i++) {
+      // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
+      // all references before rethrowing the error
       try {
+        final AcquireSegmentAction action = acquireSegmentActions.get(i);
         final ListenableFuture<Optional<Segment>> future = futures.get(i);
         final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-                                                .map(closer::register);
+                                                .map(safetyNet::register);
         segmentReferences.add(
             new SegmentReference(
-                acquireSegmentActions.get(i).getDescriptor(),
-                segmentMapFunction.apply(segment)
+                action.getDescriptor(),
+                segmentMapFunction.apply(segment),
+                action
             )
         );
       }
@@ -83,7 +97,7 @@ public class AcquireSegmentAction implements Closeable
       }
     }
     if (failure != null) {
-      throw CloseableUtils.closeAndWrapInCatch(failure, closer);
+      throw CloseableUtils.closeAndWrapInCatch(failure, safetyNet);
     }
     return segmentReferences;
   }
@@ -93,12 +107,12 @@ public class AcquireSegmentAction implements Closeable
       final Optional<Segment> segment
   )
   {
-    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(segment), NOOP);
+    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(segment), NOOP_CLEANUP);
   }
 
   public static AcquireSegmentAction missingSegment(final SegmentDescriptor descriptor)
   {
-    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP);
+    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP_CLEANUP);
   }
 
   private final SegmentDescriptor segmentDescriptor;

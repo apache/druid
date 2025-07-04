@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
@@ -44,13 +45,11 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -61,6 +60,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 /**
  *
@@ -108,9 +108,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
+  private final ListeningExecutorService virtualStorageFabricLoadOnDemandExec;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
-  private final ListeningExecutorService virtualStorageFabricLoadOnDemandExec;
 
   @Inject
   public SegmentLocalCacheManager(
@@ -255,7 +255,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void storeInfoFile(DataSegment segment) throws IOException
+  public void storeInfoFile(final DataSegment segment) throws IOException
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
@@ -264,7 +264,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void removeInfoFile(DataSegment segment)
+  public void removeInfoFile(final DataSegment segment)
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.delete()) {
@@ -273,7 +273,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireSegment(final DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     for (StorageLocation location : locations) {
@@ -287,72 +287,55 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   @Override
   public AcquireSegmentAction acquireSegment(
-      DataSegment dataSegment,
-      SegmentDescriptor descriptor
+      final DataSegment dataSegment,
+      final SegmentDescriptor descriptor
   ) throws SegmentLoadingException
   {
 
-    final ReferenceCountingLock lock = lock(dataSegment);
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
-
-    final Closeable cleanup = () -> {
-      // todo (clint): this can be better probably?
-      for (StorageLocation location : locations) {
-        location.finishWeakReservationHold(Collections.singletonList(identifier));
-      }
-    };
-
+    final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
         for (StorageLocation location : locations) {
-          final SegmentCacheEntry entry = location.addWeakReservationHoldIfExists(identifier);
-          if (entry != null && entry.referenceProvider != null) {
-            return new AcquireSegmentAction(
-                descriptor,
-                () -> Futures.immediateFuture(entry.referenceProvider.acquireReference()),
-                cleanup
-            );
+          final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
+              location.addWeakReservationHoldIfExists(identifier);
+          try {
+            if (hold != null && hold.getEntry().referenceProvider != null) {
+              return new AcquireSegmentAction(
+                  descriptor,
+                  () -> Futures.immediateFuture(hold.getEntry().referenceProvider.acquireReference()),
+                  hold
+              );
+            }
+          }
+          catch (Throwable t) {
+            throw CloseableUtils.closeAndWrapInCatch(t, hold);
           }
         }
         final Iterator<StorageLocation> iterator = strategy.getLocations();
         while (iterator.hasNext()) {
           final StorageLocation location = iterator.next();
-          final SegmentCacheEntry entry = location.addWeakReservationHold(
+          final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
               identifier,
               () -> new SegmentCacheEntry(dataSegment)
           );
-          if (entry != null) {
-            return new AcquireSegmentAction(
-                descriptor,
-                () -> SegmentLocalCacheManager.this.virtualStorageFabricLoadOnDemandExec.submit(
-                    () -> {
-                      final ReferenceCountingLock threadLock = lock(dataSegment);
-                      synchronized (threadLock) {
-                        try {
-                          entry.mount(location.getPath());
-                          return entry.referenceProvider.acquireReference();
-                        }
-                        finally {
-                          unlock(dataSegment, threadLock);
-                        }
-                      }
-                    }
-                ),
-                cleanup
-            );
+          try {
+            if (hold != null) {
+              return new AcquireSegmentAction(
+                  descriptor,
+                  makeOnDemandLoadSupplier(dataSegment, hold.getEntry(), location),
+                  hold
+              );
+            }
+          }
+          catch (Throwable t) {
+            throw CloseableUtils.closeAndWrapInCatch(t, hold);
           }
         }
         throw new SegmentLoadingException(
             "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
             dataSegment.getId()
         );
-      }
-      catch (SegmentLoadingException e) {
-        CloseableUtils.closeAndWrapExceptions(cleanup);
-        throw e;
-      }
-      catch (Throwable e) {
-        throw CloseableUtils.closeAndWrapInCatch(e, cleanup);
       }
       finally {
         unlock(dataSegment, lock);
@@ -408,7 +391,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   @Nullable
   @Override
-  public File getSegmentFiles(DataSegment segment)
+  public File getSegmentFiles(final DataSegment segment)
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
     final ReferenceCountingLock lock = lock(segment);
@@ -428,38 +411,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return null;
   }
 
-  /**
-   * Returns the effective segment info directory based on the configuration settings.
-   * The directory is selected based on the following configurations injected into this class:
-   * <ul>
-   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
-   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
-   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
-   *   first storage location is used.</li>
-   * </ul>
-   *
-   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
-   */
-  private File getEffectiveInfoDir()
-  {
-    final File infoDir;
-    if (config.getInfoDir() != null) {
-      infoDir = config.getInfoDir();
-    } else if (!config.getLocations().isEmpty()) {
-      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
-    } else if (!locations.isEmpty()) {
-      infoDir = new File(locations.get(0).getPath(), "info_dir");
-    } else {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
-                                 + "or 'druid.segmentCache.locations' is set correctly.");
-    }
-    return infoDir;
-  }
-
   @Override
-  public void drop(DataSegment segment)
+  public void drop(final DataSegment segment)
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
     final ReferenceCountingLock lock = lock(segment);
@@ -518,7 +471,59 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return false;
   }
 
-  private ReferenceCountingLock lock(DataSegment dataSegment)
+  /**
+   * Returns the effective segment info directory based on the configuration settings.
+   * The directory is selected based on the following configurations injected into this class:
+   * <ul>
+   *   <li>{@link SegmentLoaderConfig#getInfoDir()} - If {@code infoDir} is set, it is used as the info directory.</li>
+   *   <li>{@link SegmentLoaderConfig#getLocations()} - If the info directory is not set, the first location from this list is used.</li>
+   *   <li>List of {@link StorageLocation}s injected - If both the info directory and locations list are not set, the
+   *   first storage location is used.</li>
+   * </ul>
+   *
+   * @throws DruidException if none of the configurations are set, and the info directory cannot be determined.
+   */
+  private File getEffectiveInfoDir()
+  {
+    final File infoDir;
+    if (config.getInfoDir() != null) {
+      infoDir = config.getInfoDir();
+    } else if (!config.getLocations().isEmpty()) {
+      infoDir = new File(config.getLocations().get(0).getPath(), "info_dir");
+    } else if (!locations.isEmpty()) {
+      infoDir = new File(locations.get(0).getPath(), "info_dir");
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("Could not determine infoDir. Make sure 'druid.segmentCache.infoDir' "
+                                 + "or 'druid.segmentCache.locations' is set correctly.");
+    }
+    return infoDir;
+  }
+
+  private Supplier<ListenableFuture<Optional<Segment>>> makeOnDemandLoadSupplier(
+      final DataSegment dataSegment,
+      final SegmentCacheEntry entry,
+      final StorageLocation location
+  )
+  {
+    return () -> virtualStorageFabricLoadOnDemandExec.submit(
+        () -> {
+          final ReferenceCountingLock threadLock = lock(dataSegment);
+          synchronized (threadLock) {
+            try {
+              entry.mount(location.getPath());
+              return entry.referenceProvider.acquireReference();
+            }
+            finally {
+              unlock(dataSegment, threadLock);
+            }
+          }
+        }
+    );
+  }
+
+  private ReferenceCountingLock lock(final DataSegment dataSegment)
   {
     return segmentLocks.compute(
         dataSegment,
@@ -535,7 +540,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     );
   }
 
-  private void unlock(DataSegment dataSegment, ReferenceCountingLock lock)
+  private void unlock(final DataSegment dataSegment, final ReferenceCountingLock lock)
   {
     segmentLocks.compute(
         dataSegment,
@@ -557,8 +562,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   private SegmentCacheEntry assignLocationAndMount(
-      SegmentCacheEntry cacheEntry,
-      SegmentLazyLoadFailCallback segmentLoadFailCallback
+      final SegmentCacheEntry cacheEntry,
+      final SegmentLazyLoadFailCallback segmentLoadFailCallback
   ) throws SegmentLoadingException
   {
     try {
@@ -596,7 +601,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     throw new SegmentLoadingException("Failed to load segment[%s] in all locations.", cacheEntry.id);
   }
 
-  private void cleanupCacheFiles(File baseFile, File cacheFile)
+  private void cleanupCacheFiles(final File baseFile, final File cacheFile)
   {
     if (cacheFile.equals(baseFile)) {
       return;
@@ -625,7 +630,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private static String getSegmentDir(DataSegment segment)
+  private static String getSegmentDir(final DataSegment segment)
   {
     return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
@@ -635,7 +640,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * @param dir segments cache dir
    * @return true means segment files may be damaged.
    */
-  private static boolean isPossiblyCorrupted(File dir)
+  private static boolean isPossiblyCorrupted(final File dir)
   {
     return hasStartMarker(dir);
   }
@@ -644,13 +649,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * If {@link #DOWNLOAD_START_MARKER_FILE_NAME} exists in the path, the segment files might be damaged because this
    * file is typically deleted after the segment is pulled from deep storage.
    */
-  private static boolean hasStartMarker(File localStorageDir)
+  private static boolean hasStartMarker(final File localStorageDir)
   {
     final File downloadStartMarker = new File(localStorageDir.getPath(), DOWNLOAD_START_MARKER_FILE_NAME);
     return downloadStartMarker.exists();
   }
 
-  private static class ReferenceCountingLock
+  private static final class ReferenceCountingLock
   {
     private int numReferences;
 
@@ -665,7 +670,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private class SegmentCacheEntry implements CacheEntry
+  private final class SegmentCacheEntry implements CacheEntry
   {
     private final SegmentCacheEntryIdentifier id;
     private final DataSegment dataSegment;
@@ -675,7 +680,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private File storageDir;
     private ReferenceCountedSegmentProvider referenceProvider;
 
-    private SegmentCacheEntry(DataSegment dataSegment)
+    private SegmentCacheEntry(final DataSegment dataSegment)
     {
       this.dataSegment = dataSegment;
       this.id = new SegmentCacheEntryIdentifier(dataSegment.getId());
@@ -700,21 +705,26 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return referenceProvider != null;
     }
 
-    public boolean checkExists(File location)
+    public boolean checkExists(final File location)
     {
       return toPotentialLocation(location).exists();
     }
 
-    public File toPotentialLocation(File location)
+    public File toPotentialLocation(final File location)
     {
       return new File(location, relativePathString);
     }
 
     @Override
-    public void mount(File location) throws IOException, SegmentLoadingException
+    public void mount(final File location) throws IOException, SegmentLoadingException
     {
       if (locationRoot != null) {
-        log.debug("already mounted [%s] in location[%s], but asked to load in [%s], unmounting old location", id, locationRoot, location);
+        log.debug(
+            "already mounted [%s] in location[%s], but asked to load in [%s], unmounting old location",
+            id,
+            locationRoot,
+            location
+        );
         if (!locationRoot.equals(location)) {
           unmount();
         } else {
@@ -798,7 +808,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    private void loadInLocationWithStartMarker(DataSegment segment, File storageDir) throws SegmentLoadingException
+    private void loadInLocationWithStartMarker(final DataSegment segment, final File storageDir)
+        throws SegmentLoadingException
     {
       // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
       // the parent directories of the segment are removed
@@ -824,7 +835,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    private void loadInLocation(DataSegment segment, File storageDir) throws SegmentLoadingException
+    private void loadInLocation(final DataSegment segment, final File storageDir)
+        throws SegmentLoadingException
     {
       // LoadSpec isn't materialized until here so that any system can interpret Segment without having to have all the
       // LoadSpec dependencies.
@@ -874,5 +886,4 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return Objects.hashCode(dataSegment);
     }
   }
-
 }
