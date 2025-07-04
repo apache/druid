@@ -63,7 +63,7 @@ public class BrokerProcessingModuleTest
   public void testIntermediateResultsPool()
   {
     DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
-    target.getIntermediateResultsPool(druidProcessingConfig);
+    target.getIntermediateResultsPool(druidProcessingConfig, JvmUtils.getRuntimeInfo());
   }
 
 
@@ -71,7 +71,7 @@ public class BrokerProcessingModuleTest
   public void testMergeBufferPool()
   {
     DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
-    target.getMergeBufferPool(druidProcessingConfig);
+    target.getMergeBufferPool(druidProcessingConfig, JvmUtils.getRuntimeInfo());
   }
 
   @Test
@@ -106,7 +106,7 @@ public class BrokerProcessingModuleTest
 
     DruidProcessingConfig processingBufferConfig = injector1.getInstance(DruidProcessingConfig.class);
     BrokerProcessingModule module = new BrokerProcessingModule();
-    module.getMergeBufferPool(processingBufferConfig);
+    module.getMergeBufferPool(processingBufferConfig, JvmUtils.getRuntimeInfo());
   }
 
   private Injector makeInjector(Properties props)

@@ -34,7 +34,7 @@ import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 
@@ -53,11 +53,12 @@ public class DartWorkerMemoryManagementModule implements DruidModule
   @Provides
   public MemoryIntrospector createMemoryIntrospector(
       final DartWorkerConfig workerConfig,
-      final DruidProcessingConfig druidProcessingConfig
+      final DruidProcessingConfig druidProcessingConfig,
+      final RuntimeInfo runtimeInfo
   )
   {
     return new MemoryIntrospectorImpl(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+        runtimeInfo.getMaxHeapSizeBytes(),
         workerConfig.getHeapFraction(),
         computeConcurrentQueries(workerConfig, druidProcessingConfig),
         druidProcessingConfig.getNumThreads(),

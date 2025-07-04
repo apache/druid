@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -99,6 +100,9 @@ public class LatchableEmitter extends StubServiceEmitter
 
   /**
    * Waits until an event that satisfies the given predicate is emitted.
+   *
+   * @param condition     condition to wait for
+   * @param timeoutMillis timeout, or negative to not use a timeout
    */
   public void waitForEvent(Predicate<Event> condition, long timeoutMillis)
   {
@@ -107,7 +111,8 @@ public class LatchableEmitter extends StubServiceEmitter
 
     triggerConditionEvaluations();
     try {
-      if (!waitCondition.countDownLatch.await(timeoutMillis, TimeUnit.MILLISECONDS)) {
+      final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
+      if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
         throw new ISE("Timed out waiting for event");
       }
     }
@@ -120,9 +125,7 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Waits until a metric event that matches the given condition is emitted.
-   *
-   * @throws ISE if a timeout of 30 seconds elapses waiting for the event.
+   * Wait indefinitely until a metric event that matches the given condition is emitted.
    */
   public ServiceMetricEvent waitForEvent(UnaryOperator<EventMatcher> condition)
   {
@@ -130,16 +133,14 @@ public class LatchableEmitter extends StubServiceEmitter
     waitForEvent(
         event -> event instanceof ServiceMetricEvent
                  && matcher.test((ServiceMetricEvent) event),
-        30_000
+        -1
     );
     return matcher.matchingEvent.get();
   }
 
   /**
-   * Waits until the overall aggregate of matching events satisfies the given
-   * criteria.
-   *
-   * @throws ISE if a timeout of 5 minutes elapses waiting for the aggregate.
+   * Waits indefinitely until the overall aggregate of matching events satisfies the given criteria.
+   * Use {@link Timeout} on the overall test case to get a timeout.
    */
   public void waitForEventAggregate(
       UnaryOperator<EventMatcher> condition,

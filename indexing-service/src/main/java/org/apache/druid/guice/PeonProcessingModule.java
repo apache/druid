@@ -42,6 +42,7 @@ import org.apache.druid.query.NoopQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 
@@ -101,10 +102,14 @@ public class PeonProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(Task task, DruidProcessingConfig config)
+  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(
+      Task task,
+      DruidProcessingConfig config,
+      RuntimeInfo runtimeInfo
+  )
   {
     if (task.supportsQueries()) {
-      return DruidProcessingModule.createIntermediateResultsPool(config);
+      return DruidProcessingModule.createIntermediateResultsPool(config, runtimeInfo);
     } else {
       return DummyNonBlockingPool.instance();
     }
@@ -113,10 +118,10 @@ public class PeonProcessingModule implements Module
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
     if (task.supportsQueries()) {
-      return DruidProcessingModule.createMergeBufferPool(config);
+      return DruidProcessingModule.createMergeBufferPool(config, runtimeInfo);
     } else {
       if (config.isNumMergeBuffersConfigured()) {
         log.warn(

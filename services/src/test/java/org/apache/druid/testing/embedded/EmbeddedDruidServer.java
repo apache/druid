@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -55,6 +54,8 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private final String name;
   private final AtomicReference<DruidServerResource> lifecycle = new AtomicReference<>();
 
+  private long serverMemory = MEM_100_MB;
+  private long serverDirectMemory = MEM_100_MB;
   private final Map<String, String> serverProperties = new HashMap<>();
   private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
@@ -110,6 +111,24 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   }
 
   /**
+   * Sets the amount of heap memory visible to the server through {@link RuntimeInfo}.
+   */
+  public final EmbeddedDruidServer setServerMemory(long serverMemory)
+  {
+    this.serverMemory = serverMemory;
+    return this;
+  }
+
+  /**
+   * Sets the amount of direct (off-heap) memory visible to the server through {@link RuntimeInfo}.
+   */
+  public final EmbeddedDruidServer setServerDirectMemory(long serverDirectMemory)
+  {
+    this.serverDirectMemory = serverDirectMemory;
+    return this;
+  }
+
+  /**
    * Called from {@link EmbeddedDruidCluster#addServer(EmbeddedDruidServer)} to
    * tie the lifecycle of this server to the cluster.
    */
@@ -135,16 +154,6 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
   );
-
-  /**
-   * {@link RuntimeInfo} to use for this server.
-   *
-   * @return {@link RuntimeInfo} with 2 processors and 100MB memory by default.
-   */
-  RuntimeInfo getRuntimeInfo()
-  {
-    return new DruidProcessingConfigTest.MockRuntimeInfo(2, MEM_100_MB, MEM_100_MB);
-  }
 
   /**
    * Properties to be used in the {@code StartupInjectorBuilder} while launching
@@ -185,6 +194,10 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
           )
       );
     }
+
+    // Add properties for RuntimeInfoModule
+    serverProperties.setProperty(RuntimeInfoModule.SERVER_MEMORY_PROPERTY, String.valueOf(serverMemory));
+    serverProperties.setProperty(RuntimeInfoModule.SERVER_DIRECT_MEMORY_PROPERTY, String.valueOf(serverDirectMemory));
 
     serverProperties.putAll(this.serverProperties);
     return serverProperties;

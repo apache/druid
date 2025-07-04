@@ -27,8 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.JvmUtils;
-import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -161,10 +159,6 @@ class DruidServerResource implements EmbeddedResource
       final Injector injector = new StartupInjectorBuilder()
           .withProperties(serverProperties)
           .withExtensions()
-          .add(binder -> {
-            binder.bind(RuntimeInfo.class).toInstance(server.getRuntimeInfo());
-            binder.requestStaticInjection(JvmUtils.class);
-          })
           .build();
 
       injector.injectMembers(runnable);
@@ -181,5 +175,13 @@ class DruidServerResource implements EmbeddedResource
     finally {
       log.info("Stopped server[%s].", server.getName());
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidServerResource{" +
+           "server=" + server.getName() +
+           '}';
   }
 }

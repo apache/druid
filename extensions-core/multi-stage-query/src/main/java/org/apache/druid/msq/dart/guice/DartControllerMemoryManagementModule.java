@@ -27,7 +27,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 /**
  * Memory management module for Brokers.
@@ -35,12 +35,6 @@ import org.apache.druid.utils.JvmUtils;
 @LoadScope(roles = {NodeRole.BROKER_JSON_NAME})
 public class DartControllerMemoryManagementModule implements DruidModule
 {
-  /**
-   * Allocate up to 15% of memory for the MSQ framework. This accounts for additional overhead due to native queries,
-   * the segment timeline, and lookups (which aren't accounted for by our {@link MemoryIntrospector}).
-   */
-  public static final double USABLE_MEMORY_FRACTION = 0.15;
-
   @Override
   public void configure(Binder binder)
   {
@@ -49,13 +43,14 @@ public class DartControllerMemoryManagementModule implements DruidModule
 
   @Provides
   public MemoryIntrospector createMemoryIntrospector(
+      final RuntimeInfo runtimeInfo,
       final DruidProcessingConfig processingConfig,
       final DartControllerConfig controllerConfig
   )
   {
     return new MemoryIntrospectorImpl(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-        USABLE_MEMORY_FRACTION,
+        runtimeInfo.getMaxHeapSizeBytes(),
+        controllerConfig.getHeapFraction(),
         controllerConfig.getConcurrentQueries(),
         processingConfig.getNumThreads(),
         null

@@ -33,7 +33,7 @@ import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.indexing.IndexerProcessingBuffersProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 /**
  * Provides {@link MemoryIntrospector} for multi-task-per-JVM model.
@@ -63,6 +63,7 @@ public class IndexerMemoryManagementModule implements DruidModule
   @Provides
   @ManageLifecycle
   public MemoryIntrospector createMemoryIntrospector(
+      final RuntimeInfo runtimeInfo,
       final LookupExtractorFactoryContainerProvider lookupProvider,
       final TaskMemoryManagementConfig taskMemoryManagementConfig,
       final DruidProcessingConfig processingConfig,
@@ -70,7 +71,7 @@ public class IndexerMemoryManagementModule implements DruidModule
   )
   {
     return new MemoryIntrospectorImpl(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+        runtimeInfo.getMaxHeapSizeBytes(),
         MSQ_MEMORY_FRACTION,
         workerConfig.getCapacity(),
         PeonMemoryManagementModule.getNumThreads(taskMemoryManagementConfig, processingConfig),
@@ -82,11 +83,12 @@ public class IndexerMemoryManagementModule implements DruidModule
   @LazySingleton
   public ProcessingBuffersProvider createProcessingBuffersProvider(
       final MemoryIntrospector memoryIntrospector,
-      final WorkerConfig workerConfig
+      final WorkerConfig workerConfig,
+      final RuntimeInfo runtimeInfo
   )
   {
     return new IndexerProcessingBuffersProvider(
-        (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * PROCESSING_MEMORY_FRACTION),
+        (long) (runtimeInfo.getMaxHeapSizeBytes() * PROCESSING_MEMORY_FRACTION),
         workerConfig.getCapacity(),
         memoryIntrospector.numProcessingThreads()
     );

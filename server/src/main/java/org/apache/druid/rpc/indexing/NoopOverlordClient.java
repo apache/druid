@@ -109,6 +109,12 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
   {
     throw new UnsupportedOperationException();

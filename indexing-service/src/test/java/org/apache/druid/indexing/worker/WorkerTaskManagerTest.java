@@ -57,6 +57,7 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -171,7 +172,8 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 "1",
-                CentralizedDatasourceSchemaConfig.create()
+                CentralizedDatasourceSchemaConfig.create(),
+                JvmUtils.getRuntimeInfo()
             ),
             taskConfig,
             location

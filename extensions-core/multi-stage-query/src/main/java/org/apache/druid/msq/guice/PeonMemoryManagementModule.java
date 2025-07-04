@@ -34,7 +34,7 @@ import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.indexing.PeonProcessingBuffersProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 
@@ -68,11 +68,12 @@ public class PeonMemoryManagementModule implements DruidModule
   public MemoryIntrospector createMemoryIntrospector(
       final LookupExtractorFactoryContainerProvider lookupProvider,
       final DruidProcessingConfig processingConfig,
-      final TaskMemoryManagementConfig taskMemoryManagementConfig
+      final TaskMemoryManagementConfig taskMemoryManagementConfig,
+      final RuntimeInfo runtimeInfo
   )
   {
     return new MemoryIntrospectorImpl(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+        runtimeInfo.getMaxHeapSizeBytes(),
         USABLE_MEMORY_FRACTION,
         NUM_WORKERS_IN_JVM,
         getNumThreads(taskMemoryManagementConfig, processingConfig),

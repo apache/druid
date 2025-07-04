@@ -20,17 +20,27 @@
 package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.msq.exec.MemoryIntrospector;
 
 /**
  * Runtime configuration for controllers (which run on Brokers).
  */
 public class DartControllerConfig
 {
+  /**
+   * Allocate up to 15% of memory for the MSQ framework. This accounts for additional overhead due to native queries,
+   * the segment timeline, and lookups (which aren't accounted for by our {@link MemoryIntrospector}).
+   */
+  private static final double DEFAULT_HEAP_FRACTION = 0.15;
+
   @JsonProperty("concurrentQueries")
   private int concurrentQueries = 1;
 
   @JsonProperty("maxQueryReportSize")
   private int maxQueryReportSize = 100_000_000;
+
+  @JsonProperty("heapFraction")
+  private double heapFraction = DEFAULT_HEAP_FRACTION;
 
   public int getConcurrentQueries()
   {
@@ -40,5 +50,10 @@ public class DartControllerConfig
   public int getMaxQueryReportSize()
   {
     return maxQueryReportSize;
+  }
+
+  public double getHeapFraction()
+  {
+    return heapFraction;
   }
 }

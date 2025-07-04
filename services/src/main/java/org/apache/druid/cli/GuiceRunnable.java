@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.log.StartupLoggingConfig;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.List;
 import java.util.Properties;
@@ -99,10 +99,11 @@ public abstract class GuiceRunnable implements Runnable
     try {
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
+      final RuntimeInfo runtimeInfo = injector.getInstance(RuntimeInfo.class);
 
       Long directSizeBytes = null;
       try {
-        directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+        directSizeBytes = runtimeInfo.getDirectMemorySizeBytes();
       }
       catch (UnsupportedOperationException ignore) {
         // querying direct memory is not supported
@@ -110,9 +111,9 @@ public abstract class GuiceRunnable implements Runnable
 
       log.info(
           "Starting up with processors [%,d], memory [%,d], maxMemory [%,d]%s. Properties follow.",
-          JvmUtils.getRuntimeInfo().getAvailableProcessors(),
-          JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
-          JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+          runtimeInfo.getAvailableProcessors(),
+          runtimeInfo.getTotalHeapSizeBytes(),
+          runtimeInfo.getMaxHeapSizeBytes(),
           directSizeBytes != null ? StringUtils.format(", directMemory [%,d]", directSizeBytes) : ""
       );
 

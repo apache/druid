@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,13 +64,14 @@ public class DruidProcessingConfig implements ColumnConfig
       @JsonProperty("fifo") @Nullable Boolean fifo,
       @JsonProperty("tmpDir") @Nullable String tmpDir,
       @JsonProperty("buffer") DruidProcessingBufferConfig buffer,
-      @JsonProperty("indexes") DruidProcessingIndexesConfig indexes
+      @JsonProperty("indexes") DruidProcessingIndexesConfig indexes,
+      @JacksonInject RuntimeInfo runtimeInfo
   )
   {
     this.formatString = Configs.valueOrDefault(formatString, "processing-%s");
     this.numThreads = Configs.valueOrDefault(
         numThreads,
-        Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1, 1)
+        Math.max(runtimeInfo.getAvailableProcessors() - 1, 1)
     );
     this.numMergeBuffers = Configs.valueOrDefault(numMergeBuffers, Math.max(2, this.numThreads / 4));
     this.fifo = fifo == null || fifo;
@@ -78,16 +81,16 @@ public class DruidProcessingConfig implements ColumnConfig
 
     this.numThreadsConfigured = numThreads != null;
     this.numMergeBuffersConfigured = numMergeBuffers != null;
-    initializeBufferSize();
+    initializeBufferSize(runtimeInfo);
   }
 
   @VisibleForTesting
   public DruidProcessingConfig()
   {
-    this(null, null, null, null, null, null, null);
+    this(null, null, null, null, null, null, null, JvmUtils.getRuntimeInfo());
   }
 
-  private void initializeBufferSize()
+  private void initializeBufferSize(RuntimeInfo runtimeInfo)
   {
     HumanReadableBytes sizeBytesConfigured = this.buffer.getBufferSize();
     if (!DruidProcessingBufferConfig.DEFAULT_PROCESSING_BUFFER_SIZE_BYTES.equals(sizeBytesConfigured)) {
@@ -99,7 +102,7 @@ public class DruidProcessingConfig implements ColumnConfig
 
     long directSizeBytes;
     try {
-      directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      directSizeBytes = runtimeInfo.getDirectMemorySizeBytes();
       log.info(
           "Detected max direct memory size of [%,d] bytes",
           directSizeBytes

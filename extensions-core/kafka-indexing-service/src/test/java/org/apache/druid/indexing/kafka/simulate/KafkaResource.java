@@ -133,6 +133,12 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return Admin.create(commonClientProperties());
   }
 
+  @Override
+  public String toString()
+  {
+    return "KafkaResource";
+  }
+
   private KafkaProducer<byte[], byte[]> newProducer()
   {
     return new KafkaProducer<>(producerProperties());

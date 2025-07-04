@@ -38,6 +38,7 @@ import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheMa
 import org.apache.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -241,7 +242,7 @@ public class UriCacheGeneratorTest
     this.cacheManager = cacheManagerCreator.apply(lifecycle);
     this.scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
-        ImmutableMap.of(UriExtractionNamespace.class, new UriCacheGenerator(FINDERS)),
+        ImmutableMap.of(UriExtractionNamespace.class, new UriCacheGenerator(FINDERS, JvmUtils.getRuntimeInfo())),
         cacheManager
     );
   }
@@ -268,7 +269,7 @@ public class UriCacheGeneratorTest
           ""
       )));
     }
-    generator = new UriCacheGenerator(FINDERS);
+    generator = new UriCacheGenerator(FINDERS, JvmUtils.getRuntimeInfo());
     namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
