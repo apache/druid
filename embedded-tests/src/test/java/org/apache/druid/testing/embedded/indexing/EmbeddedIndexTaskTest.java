@@ -140,14 +140,14 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
   private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
-    return CreateTask.ofType("index")
-                     .dataSource(dataSource)
-                     .csvInputFormatWithColumns("time", "item", "value")
-                     .isoTimestampColumn("time")
-                     .inlineInputSourceWithData(inlineDataCsv)
-                     .segmentGranularity("DAY")
-                     .dimensions()
-                     .build(taskId);
+    return TaskPayload.ofType("index")
+                      .dataSource(dataSource)
+                      .isoTimestampColumn("time")
+                      .csvInputFormatWithColumns("time", "item", "value")
+                      .inlineInputSourceWithData(inlineDataCsv)
+                      .segmentGranularity("DAY")
+                      .dimensions()
+                      .withId(taskId);
   }
 
   /**

@@ -21,8 +21,8 @@ package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Interval;
+import org.junit.platform.commons.util.Preconditions;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ import java.util.Map;
  *
  * @see #ofType(String) to create a builder
  */
-public class CreateTask
+public class TaskPayload
 {
   private final String type;
 
@@ -57,7 +57,7 @@ public class CreateTask
   private Boolean forceGuaranteedRollup = null;
   private Long awaitSegmentAvailabilityTimeoutMillis = null;
 
-  private CreateTask(String type)
+  private TaskPayload(String type)
   {
     this.type = type;
   }
@@ -65,19 +65,28 @@ public class CreateTask
   /**
    * Initializes builder for a new {@code Task} for the given datasource.
    */
-  public static CreateTask ofType(String type)
+  public static TaskPayload ofType(String type)
   {
-    return new CreateTask(type);
+    return new TaskPayload(type);
   }
 
-  public CreateTask dataSource(String dataSource)
+  public TaskPayload dataSource(String dataSource)
   {
     this.dataSource = dataSource;
     return this;
   }
 
-  public Object build(String taskId)
+  /**
+   * Creates a raw Map-based payload for a {@code Task} that may be submitted to
+   * the Overlord using {@code OverlordClient.runTask()}.
+   */
+  public Object withId(String taskId)
   {
+    Preconditions.notNull(taskId, "Task ID must not be null");
+    Preconditions.notNull(type, "Task type must be specified");
+    Preconditions.notNull(inputSource, "'inputSource' must be specified");
+    Preconditions.notNull(dataSource, "'dataSource' must be specified");
+
     return mapOf(
         "id", taskId,
         "type", type,
@@ -110,23 +119,18 @@ public class CreateTask
     );
   }
 
-  public CreateTask inputSource(Map<String, Object> jsonMap)
+  public TaskPayload inputSource(Map<String, Object> jsonMap)
   {
     this.inputSource = jsonMap;
     return this;
   }
 
-  public CreateTask inlineInputSourceWithData(String data)
+  public TaskPayload inlineInputSourceWithData(String data)
   {
     return inputSource(Map.of("type", "inline", "data", data));
   }
 
-  public CreateTask localInputSourceFromDirWithFilter(String directory, String filter)
-  {
-    return inputSource(Map.of("type", "local", "baseDir", directory, "filter", filter));
-  }
-
-  public CreateTask druidInputSource(String dataSource, Interval interval)
+  public TaskPayload druidInputSource(String dataSource, Interval interval)
   {
     return inputSource(Map.of("type", "druid", "interval", interval, "dataSource", dataSource));
   }
@@ -140,7 +144,7 @@ public class CreateTask
    * }
    * </pre>
    */
-  public CreateTask localInputSourceWithFiles(String... files)
+  public TaskPayload localInputSourceWithFiles(String... files)
   {
     try {
       final List<String> filePaths = new ArrayList<>();
@@ -160,31 +164,26 @@ public class CreateTask
     }
   }
 
-  public CreateTask inputFormat(Map<String, Object> jsonMap)
+  public TaskPayload inputFormat(Map<String, Object> jsonMap)
   {
     this.inputFormat = jsonMap;
     return this;
   }
 
-  public CreateTask csvInputFormatWithColumns(String... columns)
+  public TaskPayload csvInputFormatWithColumns(String... columns)
   {
     return inputFormat(
         Map.of("type", "csv", "findColumnsFromHeader", "false", "columns", List.of(columns))
     );
   }
 
-  public CreateTask partitionsSpec(Map<String, Object> jsonMap)
+  public TaskPayload partitionsSpec(Map<String, Object> jsonMap)
   {
     this.partitionsSpec = jsonMap;
     return this;
   }
 
-  public CreateTask dynamicPartitionsWithMaxRows(int maxRowsPerSegment)
-  {
-    return partitionsSpec(Map.of("type", "dynamic", "maxRowsPerSegment", maxRowsPerSegment));
-  }
-
-  public CreateTask granularitySpec(Map<String, Object> jsonMap)
+  public TaskPayload granularitySpec(Map<String, Object> jsonMap)
   {
     this.granularitySpec = jsonMap;
     return this;
@@ -193,28 +192,28 @@ public class CreateTask
   /**
    * Sets {@code "granularitySpec": {"segmentGranularity": <arg>}}.
    */
-  public CreateTask segmentGranularity(String granularity)
+  public TaskPayload segmentGranularity(String granularity)
   {
     return granularitySpec(Map.of("segmentGranularity", granularity));
   }
 
-  public CreateTask timestampSpec(Map<String, Object> jsonMap)
+  public TaskPayload timestampSpec(Map<String, Object> jsonMap)
   {
     this.timestampSpec = jsonMap;
     return this;
   }
 
-  public CreateTask isoTimestampColumn(String timestampColumn)
+  public TaskPayload isoTimestampColumn(String timestampColumn)
   {
     return timestampSpec(Map.of("format", "iso", "column", timestampColumn));
   }
 
-  public CreateTask timestampColumn(String timestampColumn)
+  public TaskPayload timestampColumn(String timestampColumn)
   {
     return timestampSpec(Map.of("column", timestampColumn));
   }
 
-  public CreateTask dimensionsSpec(Map<String, Object> jsonMap)
+  public TaskPayload dimensionsSpec(Map<String, Object> jsonMap)
   {
     this.dimensionsSpec = jsonMap;
     return this;
@@ -223,36 +222,36 @@ public class CreateTask
   /**
    * Sets {@code "dimensionSpec": {"dimensions": [<arg>]}}.
    */
-  public CreateTask dimensions(String... dimensions)
+  public TaskPayload dimensions(String... dimensions)
   {
     return dimensionsSpec(Map.of("dimensions", List.of(dimensions)));
   }
 
-  public CreateTask metricAggregate(String column, String type)
+  public TaskPayload metricAggregate(String column, String type)
   {
     this.metricsSpec.add(mapOf("type", type, "name", column, "fieldName", column));
     return this;
   }
 
-  public CreateTask maxConcurrentSubTasks(int maxNumConcurrentSubTasks)
+  public TaskPayload maxConcurrentSubTasks(int maxNumConcurrentSubTasks)
   {
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
     return this;
   }
 
-  public CreateTask forceGuaranteedRollup(boolean rollup)
+  public TaskPayload forceGuaranteedRollup(boolean rollup)
   {
     this.forceGuaranteedRollup = rollup;
     return this;
   }
 
-  public CreateTask splitHintSpec(Map<String, Object> jsonMap)
+  public TaskPayload splitHintSpec(Map<String, Object> jsonMap)
   {
     this.splitHintSpec = jsonMap;
     return this;
   }
 
-  public CreateTask awaitSegmentAvailabilityTimeoutMillis(long millis)
+  public TaskPayload awaitSegmentAvailabilityTimeoutMillis(long millis)
   {
     this.awaitSegmentAvailabilityTimeoutMillis = millis;
     return this;
@@ -264,7 +263,6 @@ public class CreateTask
    * @param kvPairs key1, value1, key2, value2, ...
    * @return null if none of the key-value pairs are non-null.
    */
-  @Nullable
   private static Map<Object, Object> mapOf(Object... kvPairs)
   {
     if (kvPairs.length % 2 > 0) {

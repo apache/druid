@@ -38,8 +38,8 @@ import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.indexing.CreateTask;
 import org.apache.druid.testing.embedded.indexing.Resources;
+import org.apache.druid.testing.embedded.indexing.TaskPayload;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -106,15 +106,15 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   {
     // Ingest some data so that we can query sys tables later
     final String taskId = dataSource + "_" + IdUtils.getRandomId();
-    final CreateTask taskPayload =
-        CreateTask.ofType("index")
-                  .dataSource(dataSource)
-                  .csvInputFormatWithColumns("time", "item", "value")
-                  .isoTimestampColumn("time")
-                  .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
-                  .dimensions();
+    final TaskPayload taskPayload =
+        TaskPayload.ofType("index")
+                   .dataSource(dataSource)
+                   .csvInputFormatWithColumns("time", "item", "value")
+                   .isoTimestampColumn("time")
+                   .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+                   .dimensions();
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskPayload.build(taskId))
+        o -> o.runTask(taskId, taskPayload.withId(taskId))
     );
     cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
 
