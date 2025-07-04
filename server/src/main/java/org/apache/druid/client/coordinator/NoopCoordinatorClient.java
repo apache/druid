@@ -142,4 +142,10 @@ public class NoopCoordinatorClient implements CoordinatorClient
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules)
+  {
+    throw new UnsupportedOperationException();
+  }
 }

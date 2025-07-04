@@ -148,4 +148,11 @@ public interface CoordinatorClient
    * API: {@code GET /druid/coordinator/v1/leader}
    */
   ListenableFuture<URI> findCurrentLeader();
+
+  /**
+   * Posts load rules to the coordinator.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/rules}
+   */
+  ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules);
 }

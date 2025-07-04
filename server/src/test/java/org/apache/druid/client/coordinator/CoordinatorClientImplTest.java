@@ -735,4 +735,26 @@ public class CoordinatorClientImplTest
       Assert.assertTrue(throwable instanceof HttpResponseException);
     }
   }
+
+  @Test
+  public void test_postLoadRules() throws Exception
+  {
+    final List<Rule> rules = ImmutableList.of(
+        new IntervalLoadRule(
+            Intervals.of("2025-01-01/2025-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/rules/xyz")
+            .jsonContent(jsonMapper, rules),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(null)
+    );
+
+    Assert.assertNull(coordinatorClient.postLoadRules("xyz", rules).get());
+  }
 }

@@ -353,6 +353,17 @@ public class CoordinatorClientImpl implements CoordinatorClient
     );
   }
 
+  @Override
+  public ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules)
+  {
+    final String path = StringUtils.format("/druid/coordinator/v1/rules/%s", StringUtils.urlEncode(dataSource));
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, rules),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
   private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
   {
     Map<String, Object> lookupNameToGenericConfig = JacksonUtils.readValue(
