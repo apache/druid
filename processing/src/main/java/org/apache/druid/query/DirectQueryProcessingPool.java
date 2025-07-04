@@ -51,6 +51,8 @@ public class DirectQueryProcessingPool extends ForwardingListeningExecutorServic
       TimeUnit unit
   )
   {
+    // As the thread that will call .get() on this future will be the one doing the execution, having
+    // a supported timeout here will not work since the executing thread will not receive the timeout interrupt.
     return submitRunnerTask(task);
   }
 
