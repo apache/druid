@@ -43,5 +43,8 @@
     <Root level="info">
       <AppenderRef ref="RoutingAppender"/>
     </Root>
+    <Logger level="info" name="org.apache.druid" additivity="false">
+      <AppenderRef ref="RoutingAppender"/>
+    </Logger>
   </Loggers>
 </Configuration>
