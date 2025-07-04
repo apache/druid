@@ -66,7 +66,7 @@ public class ChainedExecutionQueryRunnerTest
   {
     neverRelease.lock();
   }
-  
+
   @Test(timeout = 60_000L)
   public void testQueryCancellation() throws Exception
   {
@@ -342,6 +342,99 @@ public class ChainedExecutionQueryRunnerTest
     Mockito.verify(queryProcessingPool, Mockito.times(2)).submitRunnerTask(captor.capture());
     List<QueryRunner> actual = captor.getAllValues().stream().map(PrioritizedQueryRunnerCallable::getRunner).collect(Collectors.toList());
     Assert.assertEquals(runners, actual);
+  }
+
+  @Test(timeout = 10_000L)
+  public void testPerSegmentTimeout()
+  {
+    ExecutorService exec = PrioritizedExecutorService.create(
+        new Lifecycle(), new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return "test";
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return 2;
+          }
+        }
+    );
+
+    QueryRunner<Integer> slowRunner = new TimeoutQueryRunner(500);
+    QueryRunner<Integer> fastRunner = new TimeoutQueryRunner(0);
+
+    QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
+    watcher.registerQueryFuture(
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
+    );
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(watcher);
+
+    ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
+        new ForwardingQueryProcessingPool(exec),
+        watcher,
+        Arrays.asList(slowRunner, fastRunner)
+    );
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .intervals("2014/2015")
+                                  .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+                                  .context(
+                                      ImmutableMap.of(
+                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 100L,
+                                          QueryContexts.TIMEOUT_KEY, 5_000L
+                                      )
+                                  )
+                                  .build();
+    Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
+
+    List<Integer> results = null;
+    Exception thrown = null;
+    try {
+      results = seq.toList();
+    }
+    catch (Exception e) {
+      thrown = e;
+    }
+
+    Assert.assertNull("No results expected due to timeout", results);
+    Assert.assertNotNull("Exception should be thrown", thrown);
+    Assert.assertTrue(
+        "Should be QueryTimeoutException or caused by it",
+        thrown instanceof QueryTimeoutException
+        || (thrown.getCause() != null && thrown.getCause() instanceof QueryTimeoutException)
+    );
+
+    EasyMock.verify(watcher);
+  }
+
+  private static class TimeoutQueryRunner implements QueryRunner<Integer>
+  {
+    private final long delayMs;
+
+    TimeoutQueryRunner(long delayMs)
+    {
+      this.delayMs = delayMs;
+    }
+
+    @Override
+    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, ResponseContext responseContext)
+    {
+      try {
+        if (delayMs > 0) {
+          Thread.sleep(delayMs);
+        }
+      }
+      catch (InterruptedException e) {
+        throw new QueryInterruptedException(e);
+      }
+      return Sequences.simple(Collections.singletonList((int) delayMs));
+    }
   }
 
   private class DyingQueryRunner implements QueryRunner<Integer>
