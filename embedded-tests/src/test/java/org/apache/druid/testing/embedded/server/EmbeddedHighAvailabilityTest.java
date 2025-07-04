@@ -106,15 +106,15 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   {
     // Ingest some data so that we can query sys tables later
     final String taskId = dataSource + "_" + IdUtils.getRandomId();
-    final Object taskPayload = CreateTask.ofType("index")
-                                         .dataSource(dataSource)
-                                         .csvInputFormatWithColumns("time", "item", "value")
-                                         .isoTimestampColumn("time")
-                                         .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
-                                         .dimensions()
-                                         .build(taskId);
+    final CreateTask taskPayload =
+        CreateTask.ofType("index")
+                  .dataSource(dataSource)
+                  .csvInputFormatWithColumns("time", "item", "value")
+                  .isoTimestampColumn("time")
+                  .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+                  .dimensions();
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskPayload)
+        o -> o.runTask(taskId, taskPayload.build(taskId))
     );
     cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
 

@@ -34,7 +34,6 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -44,7 +43,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Makes assertions similar to {@code ITPerfectRollupParallelIndexTest}.
+ * Makes assertions similar to {@code ITPerfectRollupParallelIndexTest} and
+ * {@code ITBestEffortRollupParallelIndexTest}.
  */
 public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 {
@@ -52,7 +52,8 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .addProperty("druid.worker.capacity", "20")
       .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-      .addProperty("druid.indexer.task.ignoreTimestampSpecForDruidInputSource", "true");
+      .addProperty("druid.indexer.task.ignoreTimestampSpecForDruidInputSource", "true")
+      .addProperty("druid.processing.intermediaryData.storage.type", "deepstore");
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
@@ -77,22 +78,6 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
         Map.of("type", "hashed", "numShards", 2),
         Map.of("type", "range", "targetRowsPerSegment", 2, "partitionDimensions", List.of("namespace"))
     );
-  }
-
-  @Test
-  public void test_theNewSyntax()
-  {
-    final String taskId = dataSource + "_" + IdUtils.getRandomId();
-    Object task = CreateTask.ofType("index")
-                            .dataSource(dataSource)
-                            .csvInputFormatWithColumns("time", "item", "value")
-                            .isoTimestampColumn("time")
-                            .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
-                            .segmentGranularity("DAY")
-                            .dynamicPartitionsWithMaxRows(1000)
-                            .build(taskId);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
 
   @CsvSource({"true, 5000", "false, 1"})
