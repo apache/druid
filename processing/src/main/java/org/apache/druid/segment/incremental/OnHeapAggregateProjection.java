@@ -379,6 +379,14 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
       }
       final IncrementalIndex.DimensionDesc parent = getBaseTableDimensionDesc.apply(dimension.getName());
       if (parent == null) {
+        // ensure that this dimension refers to a virtual column, otherwise it is invalid
+        if (!projectionSpec.getVirtualColumns().exists(dimension.getName())) {
+          throw InvalidInput.exception(
+              "projection[%s] contains dimension[%s] that is not present on the base table or a virtual column",
+              projectionSpec.getName(),
+              dimension.getName()
+          );
+        }
         // this dimension only exists in the child, it needs its own handler
         final IncrementalIndex.DimensionDesc childOnly = new IncrementalIndex.DimensionDesc(
             i++,
