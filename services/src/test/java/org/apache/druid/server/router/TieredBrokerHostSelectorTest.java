@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.router;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -33,7 +32,6 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Druids;
@@ -116,7 +114,7 @@ public class TieredBrokerHostSelectorTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     brokerSelector = new TieredBrokerHostSelector(
-        new TestRuleManager(null, null),
+        new TestRuleManager(null),
         new TieredBrokerConfig()
         {
           @Override
@@ -401,11 +399,10 @@ public class TieredBrokerHostSelectorTest
   private static class TestRuleManager extends CoordinatorRuleManager
   {
     public TestRuleManager(
-        @Json ObjectMapper jsonMapper,
         Supplier<TieredBrokerConfig> config
     )
     {
-      super(jsonMapper, config, null);
+      super(config, null);
     }
 
     @Override

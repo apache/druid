@@ -64,6 +64,11 @@ public class EmbeddedClusterApis
     return getResult(coordinatorApi.apply(cluster.leaderCoordinator()));
   }
 
+  public <T> T onLeaderCoordinatorSync(Function<CoordinatorClient, T> coordinatorApi)
+  {
+    return coordinatorApi.apply(cluster.leaderCoordinator());
+  }
+
   public <T> T onLeaderOverlord(Function<OverlordClient, ListenableFuture<T>> overlordApi)
   {
     return getResult(overlordApi.apply(cluster.leaderOverlord()));
@@ -180,7 +185,9 @@ public class EmbeddedClusterApis
     try {
       return TestHelper.JSON_MAPPER.readValue(
           payload,
-          new TypeReference<>() {}
+          new TypeReference<>()
+          {
+          }
       );
     }
     catch (Exception e) {

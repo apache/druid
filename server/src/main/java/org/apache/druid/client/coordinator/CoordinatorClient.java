@@ -22,16 +22,20 @@ package org.apache.druid.client.coordinator;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -119,4 +123,36 @@ public interface CoordinatorClient
    * @param tier The name of the tier for which the lookup configuration is to be fetched.
    */
   Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier);
+
+  /**
+   * Returns an iterator over the metadata segments in the cluster.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments}
+   *
+   * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
+   */
+  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
+      @Nullable Set<String> watchedDataSources
+  );
+
+  /**
+   * Returns the current snapshot of the rules.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/rules}
+   */
+  ListenableFuture<Map<String, List<Rule>>> getRules();
+
+  /**
+   * Returns the current coordinator leader's URI.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/leader}
+   */
+  ListenableFuture<URI> findCurrentLeader();
+
+  /**
+   * Posts load rules to the coordinator.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/rules}
+   */
+  ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules);
 }
