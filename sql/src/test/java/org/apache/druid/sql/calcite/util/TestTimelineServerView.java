@@ -176,7 +176,7 @@ public class TestTimelineServerView implements TimelineServerView
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
     // Do nothing
   }

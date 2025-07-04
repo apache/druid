@@ -28,8 +28,6 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.common.utils.UUIDUtils;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.zookeeper.CreateMode;
@@ -44,8 +42,6 @@ public class CuratorTestBase
   protected TestingServer server;
   protected Timing timing;
   protected CuratorFramework curator;
-
-  private int batchCtr = 0;
 
   public void setupServerAndCurator() throws Exception
   {
@@ -127,47 +123,6 @@ public class CuratorTestBase
     }
   }
 
-  protected String announceBatchSegmentsForServer(
-      DruidServer druidServer,
-      ImmutableSet<DataSegment> segments,
-      ZkPathsConfig zkPathsConfig,
-      ObjectMapper jsonMapper
-  )
-  {
-    final String segmentAnnouncementPath = ZKPaths.makePath(
-        zkPathsConfig.getLiveSegmentsPath(),
-        druidServer.getHost(),
-        UUIDUtils.generateUuid(
-          druidServer.getHost(),
-          druidServer.getType().toString(),
-          druidServer.getTier(),
-          DateTimes.nowUtc().toString()
-        ) + (batchCtr++)
-    );
-
-
-    try {
-      curator.create()
-             .compressed()
-             .withMode(CreateMode.EPHEMERAL)
-             .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
-    }
-    catch (KeeperException.NodeExistsException e) {
-      try {
-        curator.setData()
-               .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
-      }
-      catch (Exception e1) {
-        throw new RuntimeException(e1);
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-
-    return segmentAnnouncementPath;
-  }
-
   protected void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment, ZkPathsConfig zkPathsConfig)
       throws Exception
   {
@@ -177,12 +132,6 @@ public class CuratorTestBase
         segment.getId().toString()
     );
     curator.delete().guaranteed().forPath(path);
-  }
-
-  protected void unannounceSegmentFromBatchForServer(DruidServer druidServer, DataSegment segment, String batchPath, ZkPathsConfig zkPathsConfig)
-      throws Exception
-  {
-    curator.delete().guaranteed().forPath(batchPath);
   }
 
   public void tearDownServerAndCurator()

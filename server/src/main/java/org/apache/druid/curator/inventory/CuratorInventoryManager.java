@@ -259,8 +259,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
               containers.put(containerKey, new ContainerHolder(container, inventoryCache));
 
               log.debug("Starting inventory cache for %s, inventoryPath %s", containerKey, inventoryPath);
-              inventoryCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
               strategy.newContainer(container);
+              inventoryCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
             }
           }
           break;

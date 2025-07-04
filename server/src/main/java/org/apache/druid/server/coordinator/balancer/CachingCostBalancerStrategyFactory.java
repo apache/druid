@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.balancer;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -106,13 +107,23 @@ public class CachingCostBalancerStrategyFactory extends BalancerStrategyFactory
         }
     );
 
-    serverInventoryView.registerServerRemovedCallback(
+    serverInventoryView.registerServerCallback(
         executor,
-        server -> {
-          if (server.isSegmentReplicationTarget()) {
-            clusterCostCacheBuilder.removeServer(server.getName());
+        new ServerView.ServerCallback() {
+          @Override
+          public ServerView.CallbackAction serverAdded(DruidServer server)
+          {
+            return ServerView.CallbackAction.CONTINUE;
           }
-          return ServerView.CallbackAction.CONTINUE;
+
+          @Override
+          public ServerView.CallbackAction serverRemoved(DruidServer server)
+          {
+            if (server.isSegmentReplicationTarget()) {
+              clusterCostCacheBuilder.removeServer(server.getName());
+            }
+            return ServerView.CallbackAction.CONTINUE;
+          }
         }
     );
   }

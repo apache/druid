@@ -76,6 +76,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   private final ZkPathsConfig zkPathsConfig;
 
   private CountDownLatch segmentViewInitLatch;
+  private CountDownLatch serverAddedLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
@@ -158,7 +159,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         hostname -> setupHistoricalServer("default_tier", hostname, 0)
     );
 
@@ -237,6 +238,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public void testMultipleServerAndBroker() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
+    serverAddedLatch = new CountDownLatch(6);
     segmentAddedLatch = new CountDownLatch(6);
 
     // temporarily set latch count to 1
@@ -254,12 +256,25 @@ public class BrokerServerViewTest extends CuratorTestBase
         0
     );
 
-    final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        hostname -> setupHistoricalServer("default_tier", hostname, 0)
-    );
+    // Materialize this list so all servers are set up
+    final List<DruidServer> druidServers =
+        ImmutableList.copyOf(
+            Lists.transform(
+                ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+                hostname -> setupHistoricalServer("default_tier", hostname, 0)
+            )
+        );
 
     setupZNodeForServer(druidBroker, zkPathsConfig, jsonMapper);
+
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(serverAddedLatch));
+
+    // check server metadatas
+    Assert.assertEquals(
+        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
+        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
+    );
 
     final List<DataSegment> segments = Lists.transform(
         ImmutableList.of(
@@ -277,7 +292,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
@@ -295,12 +309,6 @@ public class BrokerServerViewTest extends CuratorTestBase
                 "2011-04-01/2011-04-09"
             )
         )
-    );
-
-    // check server metadatas
-    Assert.assertEquals(
-        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
-        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
     );
 
     // unannounce the broker segment should do nothing to announcements
@@ -617,6 +625,29 @@ public class BrokerServerViewTest extends CuratorTestBase
         "test"
     )
     {
+      @Override
+      public void registerServerCallback(Executor exec, ServerCallback callback)
+      {
+        super.registerServerCallback(
+            exec,
+            new ServerCallback() {
+              @Override
+              public CallbackAction serverAdded(DruidServer server)
+              {
+                final CallbackAction res = callback.serverAdded(server);
+                serverAddedLatch.countDown();
+                return res;
+              }
+
+              @Override
+              public CallbackAction serverRemoved(DruidServer server)
+              {
+                return callback.serverRemoved(server);
+              }
+            }
+        );
+      }
+
       @Override
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
