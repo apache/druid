@@ -726,6 +726,7 @@ public class CoordinatorClientImplTest
             )
         )
     );
+    // try and assert that the root cause is an HttpResponseException
     try {
       FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true);
     }

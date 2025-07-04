@@ -23,8 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
+import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.FileUtils;
@@ -36,6 +37,9 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
@@ -46,6 +50,8 @@ import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleM
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -73,7 +79,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private final CoordinatorClient coordinatorClient;
+  private final DruidLeaderClient druidLeaderClient;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ScheduledExecutorService exec;
 
@@ -82,7 +88,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       Injector injector,
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
-      CoordinatorClient coordinatorClient
+      @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
     this.exec = Execs.scheduledSingleThreaded("CoordinatorPollingBasicAuthorizerCacheManager-Exec--%d");
@@ -94,7 +100,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     this.cachedGroupMappingMaps = new ConcurrentHashMap<>();
     this.cachedGroupMappingRoleMaps = new ConcurrentHashMap<>();
     this.authorizerPrefixes = new HashSet<>();
-    this.coordinatorClient = coordinatorClient;
+    this.druidLeaderClient = druidLeaderClient;
   }
 
   @LifecycleStart
@@ -391,7 +397,15 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    byte[] userRoleMapBytes = coordinatorClient.getCachedSerializedUserMapSync(prefix);
+    Request req = druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap", prefix)
+    );
+    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
+        req,
+        new BytesFullResponseHandler()
+    );
+    byte[] userRoleMapBytes = responseHolder.getContent();
 
     UserAndRoleMap userAndRoleMap = objectMapper.readValue(
         userRoleMapBytes,
@@ -407,7 +421,30 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    byte[] groupRoleMapBytes = coordinatorClient.getCachedSerializedGroupMappingMapSync(prefix);
+    Request req = druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap", prefix)
+    );
+    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
+        req,
+        new BytesFullResponseHandler()
+    );
+
+    final HttpResponseStatus status = responseHolder.getStatus();
+
+    // cachedSerializedGroupMappingMap is a new endpoint introduced in Druid 0.17.0. For backwards compatibility, if we
+    // get a 404 from the coordinator we stop retrying. This can happen during a rolling upgrade when a process
+    // running 0.17.0+ tries to access this endpoint on an older coordinator.
+    if (HttpResponseStatus.NOT_FOUND.equals(status)) {
+      LOG.warn("cachedSerializedGroupMappingMap is not available from the coordinator, skipping fetch of group mappings for now.");
+      return null;
+    }
+
+    if (!HttpResponseStatus.OK.equals(status)) {
+      LOG.warn("Got an unexpected response status[%s] when loading group mappings.", status);
+    }
+
+    byte[] groupRoleMapBytes = responseHolder.getContent();
 
     GroupMappingAndRoleMap groupMappingAndRoleMap = objectMapper.readValue(
         groupRoleMapBytes,
