@@ -653,6 +653,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return mockFactory;
   }
 
+  protected List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
+  {
+    return indexingServiceClient.getEmittedMetrics(metricName, dimensionFilters);
+  }
+
   @Nonnull
   protected Supplier<ResourceHolder<CompleteSegment>> getSupplierForSegment(
       Function<String, File> tempFolderProducer,
@@ -939,6 +944,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
+    protected Map<String, Object> expectedMetricDimensions = null;
 
     private boolean hasRun = false;
 
@@ -1088,6 +1094,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedMetricDimensions(Map<String, Object> expectedMetricDimensions)
+    {
+      this.expectedMetricDimensions = expectedMetricDimensions;
+      return asBuilder();
+    }
+
     @SuppressWarnings("unchecked")
     private Builder asBuilder()
     {
@@ -1106,6 +1118,31 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyMetrics()
+    {
+      if (expectedMetricDimensions != null) {
+        Map<String, Object> controllerDims = new HashMap<>(expectedMetricDimensions);
+        controllerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE);
+
+        Map<String, Object> workerDims = new HashMap<>(expectedMetricDimensions);
+        workerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE);
+
+        // Since the time could vary, it can't be asserted, but the dimensions are asserted by using them as a filter.
+        // The value should be greater than 0 as a basic sanity check.
+        List<Number> metric = getEmittedMetrics("query/time", controllerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/cpu/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+      }
     }
 
     protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
@@ -1291,6 +1328,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
+        verifyMetrics();
 
         MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
         LegacyMSQSpec foundSpec = msqControllerTask.getQuerySpec();
@@ -1499,6 +1537,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             expectedExecutionErrorMatcher
         );
       }
+      verifyMetrics();
     }
   }
 
@@ -1641,6 +1680,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Assert.assertEquals(expectedRowSignature, specAndResults.rhs.lhs);
       assertResultsEquals(sql != null ? sql : taskSpec.toString(), expectedResultRows, specAndResults.rhs.rhs);
       assertMSQSpec(expectedMSQSpec, specAndResults.lhs);
+      verifyMetrics();
     }
 
     public void verifyExecutionError()
@@ -1649,6 +1689,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql != null ? sql : taskSpec);
       }
+      verifyMetrics();
     }
   }
 

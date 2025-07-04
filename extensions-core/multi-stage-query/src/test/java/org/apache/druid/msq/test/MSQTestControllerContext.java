@@ -44,10 +44,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -107,26 +109,32 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       false
   );
   private final Injector injector;
+  private final String queryId;
   private final ObjectMapper mapper;
 
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final TaskLockType taskLockType;
-  private final QueryContext queryContext;
+  private final ServiceEmitter serviceEmitter;
+  private QueryContext queryContext;
 
   public MSQTestControllerContext(
+      String queryId,
       ObjectMapper mapper,
       Injector injector,
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
       TaskLockType taskLockType,
-      QueryContext queryContext
+      QueryContext queryContext,
+      ServiceEmitter serviceEmitter
   )
   {
+    this.queryId = queryId;
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
+    this.serviceEmitter = serviceEmitter;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
 
     Mockito.when(coordinatorClient.fetchServerViewSegments(
@@ -172,7 +180,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
               mapper,
               injector,
               workerMemoryParameters,
-              workerStorageParameters
+              workerStorageParameters,
+              serviceEmitter
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();
@@ -272,14 +281,26 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   };
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+  public String queryId()
+  {
+    return queryId;
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
   }
 
   @Override
-  public void emitMetric(String metric, Number value)
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
   {
+    serviceEmitter.emit(
+        metricBuilder.setDimension(
+            MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
+            MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE
+        )
+    );
   }
 
   @Override
@@ -346,6 +367,11 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     );
   }
 
+  public QueryContext getQueryContext()
+  {
+    return queryContext;
+  }
+
   @Override
   public File taskTempDir()
   {
@@ -367,6 +393,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   @Override
   public ControllerContext newContext(QueryContext context)
   {
+    this.queryContext = this.queryContext.override(context);
     return this;
   }
 }

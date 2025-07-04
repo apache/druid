@@ -41,6 +41,7 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,6 +59,7 @@ import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
@@ -72,18 +74,24 @@ import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DecoratedExecutorService;
+import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +145,11 @@ public class WorkerImpl implements Worker
    */
   private volatile WorkerClient workerClient;
 
+  /**
+   * Stores dimensions for metric emissions.
+   */
+  private final Map<String, Object> queryMetricDimensions = new HashMap<>();
+
   public WorkerImpl(@Nullable final MSQWorkerTask task, final WorkerContext context)
   {
     this.task = task;
@@ -154,6 +167,7 @@ public class WorkerImpl implements Worker
   public void run()
   {
     try (final Closer closer = Closer.create()) {
+      final Stopwatch stopwatch = Stopwatch.createStarted();
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
       final ControllerClient controllerClient = kernelHolders.getControllerClient();
 
@@ -174,6 +188,9 @@ public class WorkerImpl implements Worker
             )
         );
       }
+
+      // Report query metrics
+      reportQueryMetrics(maybeErrorReport.isEmpty(), stopwatch.millisElapsed());
 
       if (maybeErrorReport.isPresent()) {
         final MSQErrorReport errorReport = maybeErrorReport.get();
@@ -202,6 +219,30 @@ public class WorkerImpl implements Worker
     finally {
       runFuture.set(null);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void reportQueryMetrics(boolean success, long time)
+  {
+    long cpuTimeNs = 0L;
+    for (final CounterTracker tracker : stageCounters.values()) {
+      cpuTimeNs += tracker.totalCpu();
+    }
+
+    final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
+    final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
+
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
+                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
+                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
+                 .setDimension(DruidMetrics.SUCCESS, success)
+                 .setMetric("query/time", time);
+
+    context.emitMetric(metricBuilder);
+
+    metricBuilder.setMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(cpuTimeNs));
+    context.emitMetric(metricBuilder);
   }
 
   /**
@@ -349,6 +390,7 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
+    updateMetricDimensions(workOrder.getQueryDefinition());
     final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
@@ -392,6 +434,17 @@ public class WorkerImpl implements Worker
     kernel.startReading();
     runWorkOrder.startAsync();
     kernelHolder.partitionBoundariesFuture = runWorkOrder.getStagePartitionBoundariesFuture();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateMetricDimensions(QueryDefinition queryDef)
+  {
+    Set<String> datasourceDim = (Set<String>) queryMetricDimensions.computeIfAbsent(DruidMetrics.DATASOURCE, s -> new HashSet<>());
+    Set<Interval> intervalDim = (Set<Interval>) queryMetricDimensions.computeIfAbsent(DruidMetrics.INTERVAL, s -> new HashSet<>());
+    for (StageDefinition stageDef : queryDef.getStageDefinitions()) {
+      datasourceDim.addAll(stageDef.getDatasources());
+      intervalDim.addAll(MSQMetricUtils.getIntervals(stageDef));
+    }
   }
 
   /**
