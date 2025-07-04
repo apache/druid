@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
@@ -181,7 +180,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
   private String runTask(TaskPayload taskBuilder, String dataSource)
   {
-    final String taskId = dataSource + "_" + IdUtils.getRandomId();
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
 

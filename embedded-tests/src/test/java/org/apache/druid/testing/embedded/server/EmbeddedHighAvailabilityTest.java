@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.server;
 
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedDruidServer;
@@ -85,10 +85,10 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   @Test
   public void test_allNodesHaveDiscoveredEachOther()
   {
-    final List<EmbeddedDruidServer> allServers
+    final List<EmbeddedDruidServer<?>> allServers
         = List.of(coordinator1, coordinator2, overlord1, overlord2, indexer, broker, router);
 
-    for (EmbeddedDruidServer server : allServers) {
+    for (EmbeddedDruidServer<?> server : allServers) {
       final DruidNodeDiscoveryProvider discoveryProvider = server.bindings().nodeDiscovery();
       final HttpClient httpClient = server.bindings().escalatedHttpClient();
 
@@ -105,7 +105,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   public void test_switchLeader_andVerifyUsingSysTables()
   {
     // Ingest some data so that we can query sys tables later
-    final String taskId = dataSource + "_" + IdUtils.getRandomId();
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     final TaskPayload taskPayload =
         TaskPayload.ofType("index")
                    .dataSource(dataSource)
@@ -184,7 +184,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
    * Restarts the current leader in the server pair to force the other server to
    * gain leadership. Returns the updated server pair.
    */
-  private <S extends EmbeddedDruidServer> ServerPair<S> switchAndVerifyLeader(ServerPair<S> serverPair)
+  private <S extends EmbeddedDruidServer<?>> ServerPair<S> switchAndVerifyLeader(ServerPair<S> serverPair)
   {
     try {
       // Restart the current leader
@@ -206,7 +206,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
-  private <S extends EmbeddedDruidServer> ServerPair<S> createServerPair(S serverA, S serverB)
+  private <S extends EmbeddedDruidServer<?>> ServerPair<S> createServerPair(S serverA, S serverB)
   {
     final boolean aIsLeader;
     if (serverA instanceof EmbeddedOverlord) {
@@ -222,9 +222,9 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
    * Verifies that exactly one of the servers in the pair is a leader and that
    * other servers know it to be the leader.
    */
-  private <S extends EmbeddedDruidServer> void verifyOnlyOneInPairIsLeader(
+  private <S extends EmbeddedDruidServer<?>> void verifyOnlyOneInPairIsLeader(
       ServerPair<S> serverPair,
-      Function<EmbeddedDruidServer, DruidLeaderSelector> getLeaderSelector
+      Function<EmbeddedDruidServer<?>, DruidLeaderSelector> getLeaderSelector
   )
   {
     final String leaderUri = serverPair.leader.bindings().selfNode().getUriToUse().toString();
@@ -271,7 +271,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   /**
    * A pair of highly available Coordinator or Overlord nodes where one is leader.
    */
-  private static class ServerPair<S extends EmbeddedDruidServer>
+  private static class ServerPair<S extends EmbeddedDruidServer<?>>
   {
     private final S leader;
     private final S notLeader;

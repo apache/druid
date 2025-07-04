@@ -178,15 +178,11 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Deserializes the given String payload into a Map-based object that may be
-   * submitted directly to the Overlord using
-   * {@code cluster.callApi().onLeaderOverlord(o -> o.runTask(...))}.
+   * Creates a random task ID prefixed with the {@code dataSource}.
    */
-  public static Object createTaskFromPayload(String taskId, String payload)
+  public static String newTaskId(String dataSource)
   {
-    final Map<String, Object> task = deserializeJsonToMap(payload);
-    task.put("id", taskId);
-    return task;
+    return dataSource + "_" + IdUtils.getRandomId();
   }
 
   /**

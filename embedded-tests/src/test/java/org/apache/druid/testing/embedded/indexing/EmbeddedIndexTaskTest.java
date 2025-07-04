@@ -19,13 +19,13 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -74,7 +74,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_runIndexTask_forInlineDatasource()
   {
-    final String taskId = IdUtils.getRandomId();
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     final Object task = createIndexTaskForInlineData(
         taskId,
         Resources.CSV_DATA_10_DAYS
@@ -104,7 +104,10 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
+    Assertions.assertEquals(
+        Resources.CSV_DATA_10_DAYS,
+        cluster.runSql("SELECT * FROM %s", dataSource)
+    );
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
@@ -159,7 +162,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     final DateTime jan1 = DateTimes.of("2025-01-01");
 
     final List<String> taskIds = IntStream.range(0, count).mapToObj(
-        i -> dataSource + "_" + IdUtils.getRandomId()
+        i -> EmbeddedClusterApis.newTaskId(dataSource)
     ).collect(Collectors.toList());
 
     int index = 0;
