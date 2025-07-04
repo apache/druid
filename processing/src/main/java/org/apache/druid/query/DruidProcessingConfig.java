@@ -50,6 +50,9 @@ public class DruidProcessingConfig implements ColumnConfig
   private final DruidProcessingBufferConfig buffer;
   @JsonProperty
   private final DruidProcessingIndexesConfig indexes;
+  @JsonProperty
+  private final int numTimeoutThreads;
+
   private final AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
   private final boolean numThreadsConfigured;
   private final boolean numMergeBuffersConfigured;
@@ -58,6 +61,7 @@ public class DruidProcessingConfig implements ColumnConfig
   public DruidProcessingConfig(
       @JsonProperty("formatString") @Nullable String formatString,
       @JsonProperty("numThreads") @Nullable Integer numThreads,
+      @JsonProperty("numTimeoutThreads") @Nullable Integer numTimeoutThreads,
       @JsonProperty("numMergeBuffers") @Nullable Integer numMergeBuffers,
       @JsonProperty("fifo") @Nullable Boolean fifo,
       @JsonProperty("tmpDir") @Nullable String tmpDir,
@@ -69,6 +73,10 @@ public class DruidProcessingConfig implements ColumnConfig
     this.numThreads = Configs.valueOrDefault(
         numThreads,
         Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1, 1)
+    );
+    this.numTimeoutThreads = Configs.valueOrDefault(
+        numTimeoutThreads,
+        1
     );
     this.numMergeBuffers = Configs.valueOrDefault(numMergeBuffers, Math.max(2, this.numThreads / 4));
     this.fifo = fifo == null || fifo;
@@ -84,7 +92,7 @@ public class DruidProcessingConfig implements ColumnConfig
   @VisibleForTesting
   public DruidProcessingConfig()
   {
-    this(null, null, null, null, null, null, null);
+    this(null, null, null, null, null, null, null, null);
   }
 
   private void initializeBufferSize()
@@ -138,6 +146,11 @@ public class DruidProcessingConfig implements ColumnConfig
   public int getNumThreads()
   {
     return numThreads;
+  }
+
+  public int getNumTimeoutThreads()
+  {
+    return numTimeoutThreads;
   }
 
   public int getNumMergeBuffers()
