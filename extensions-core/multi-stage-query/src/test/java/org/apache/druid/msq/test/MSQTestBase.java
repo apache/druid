@@ -55,6 +55,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -429,8 +430,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             new ExpressionModule(),
-            (Module) binder ->
-                binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
+            (Module) binder -> {
+              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+              binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+            }
         )
     );
 
@@ -1359,6 +1362,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
+          segmentCacheManager.load(dataSegment);
           final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
           final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 

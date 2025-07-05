@@ -23,24 +23,22 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * Functional interface that captures the process of acquiring a {@link Segment} from a
- * {@link ReferenceCountedObjectProvider<Segment>} and performing any transformations done on top of this leaf {@link Segment}
- * before it is available to query processing engines.
+ * Functional interface that captures the process of transforming a {@link Segment} to another {@link Segment} if
+ * possible.
  * <p>
- * The {@link Segment} returned by this method, if present, must always be closed to return the reference to the base
- * {@link ReferenceCountedObjectProvider<Segment>} that it came from.
+ * The {@link Segment} returned by this method, if present, must always be closed by the caller.
  */
 @FunctionalInterface
-public interface SegmentMapFunction extends Function<ReferenceCountedObjectProvider<Segment>, Optional<Segment>>
+public interface SegmentMapFunction extends Function<Optional<Segment>, Optional<Segment>>
 {
   /**
-   * {@link SegmentMapFunction} that acquires a {@link Segment} from the {@link ReferenceCountedObjectProvider<Segment>}
+   * The identity function - returns the same segment
    */
-  SegmentMapFunction IDENTITY = ReferenceCountedObjectProvider::acquireReference;
+  SegmentMapFunction IDENTITY = segment -> segment;
 
   /**
    * Returns a {@link SegmentMapFunction} which first applies this {@link SegmentMapFunction} and then applies
-   * the function to the resulting {@link Segment}, if present
+   * the supplied transformation function to the resulting {@link Segment}, if present.
    */
   default SegmentMapFunction thenMap(Function<Segment, Segment> mapFn)
   {
