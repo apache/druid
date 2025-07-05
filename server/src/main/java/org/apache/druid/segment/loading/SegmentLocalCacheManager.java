@@ -580,7 +580,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
       }
     }
-    catch (IOException | SegmentLoadingException e) {
+    catch (SegmentLoadingException e) {
       log.warn(e, "Failed to load segment[%s] in existing location, trying new location", cacheEntry.id);
     }
     final Iterator<StorageLocation> locationsIterator = strategy.getLocations();
@@ -593,7 +593,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           entry.mount(location.getPath());
           return entry;
         }
-        catch (IOException | SegmentLoadingException e) {
+        catch (SegmentLoadingException e) {
           log.warn(e, "Failed to load segment[%s] in location[%s], trying next location", cacheEntry.id, location.getPath());
         }
       }
@@ -716,7 +716,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
 
     @Override
-    public void mount(final File location) throws IOException, SegmentLoadingException
+    public void mount(final File location) throws SegmentLoadingException
     {
       if (locationRoot != null) {
         log.debug(

@@ -231,6 +231,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more
         Assertions.assertTrue(success >= 8);
         Assertions.assertTrue(exceptions.size() <= 2);
+        Assertions.assertTrue(rows >= 9672);
         for (Throwable t : exceptions) {
           Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
           Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
