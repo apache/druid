@@ -19,9 +19,9 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Interval;
-import org.junit.platform.commons.util.Preconditions;
 
 import java.io.File;
 import java.net.URL;
@@ -82,10 +82,10 @@ public class TaskPayload
    */
   public Object withId(String taskId)
   {
-    Preconditions.notNull(taskId, "Task ID must not be null");
-    Preconditions.notNull(type, "Task type must be specified");
-    Preconditions.notNull(inputSource, "'inputSource' must be specified");
-    Preconditions.notNull(dataSource, "'dataSource' must be specified");
+    Preconditions.checkNotNull(taskId, "Task ID must not be null");
+    Preconditions.checkNotNull(type, "Task type must be specified");
+    Preconditions.checkNotNull(inputSource, "'inputSource' must be specified");
+    Preconditions.checkNotNull(dataSource, "'dataSource' must be specified");
 
     return mapOf(
         "id", taskId,
