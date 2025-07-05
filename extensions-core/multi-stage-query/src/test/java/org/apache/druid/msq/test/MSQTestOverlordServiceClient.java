@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
@@ -69,12 +70,16 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private final TaskActionClient taskActionClient;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final List<ImmutableSegmentLoadInfo> loadedSegmentMetadata;
+  private final StubServiceEmitter emitter;
 
   private final Map<String, MSQTestTaskDetails> taskDetailsByTaskId = new HashMap<>();
   private final Map<String, MSQTestTaskDetails> taskDetailsByQueryId = new HashMap<>();
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   public static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
+  public static final String TEST_METRIC_DIMENSION = "testTaskType";
+  public static final String METRIC_CONTROLLER_TASK_TYPE = "controller";
+  public static final String METRIC_WORKER_TASK_TYPE = "worker";
 
   public static final long DURATION = 100L;
 
@@ -130,6 +135,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     this.taskActionClient = taskActionClient;
     this.workerMemoryParameters = workerMemoryParameters;
     this.loadedSegmentMetadata = loadedSegmentMetadata;
+    this.emitter = new StubServiceEmitter();
   }
 
   @Override
@@ -143,20 +149,21 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
 
       msqTestControllerContext = new MSQTestControllerContext(
+          cTask.getId(),
           objectMapper,
           injector,
           taskActionClient,
           workerMemoryParameters,
           loadedSegmentMetadata,
           cTask.getTaskLockType(),
-          cTask.getQuerySpec().getContext()
+          cTask.getQuerySpec().getContext(),
+          emitter
       );
 
       assertEquals(taskId, cTask.getId());
       testTaskDetails.controllerTask = cTask;
 
       controller = new ControllerImpl(
-          cTask.getId(),
           cTask.getQuerySpec(),
           new ResultsContext(cTask.getSqlTypeNames(), cTask.getSqlResultsContext()),
           msqTestControllerContext,
@@ -378,5 +385,13 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
 
     taskDetailsByTaskId.get(taskId).close();
+  }
+
+  /**
+   * Returns a list of emitted metrics matching the name and user dimensions.
+   */
+  public List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
+  {
+    return emitter.getMetricValues(metricName, dimensionFilters);
   }
 }

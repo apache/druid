@@ -19,46 +19,39 @@
 @import '../../variables';
 @import '../../blueprint-overrides/common/colors';
 
-.header-bar {
+.druid-logo {
+  position: relative;
+  width: 100px;
+  height: $header-bar-height;
   overflow: hidden;
 
-  * {
-    white-space: nowrap;
+  &.compact {
+    width: $header-bar-height;
   }
 
-  .#{$bp-ns}-navbar-divider {
-    margin: 0 11px;
-  }
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 48px;
 
-  .header-entry {
-    .#{$bp-ns}-icon {
-      svg {
-        fill: $blue3;
-
-        .#{$bp-ns}-dark & {
-          fill: $druid-brand;
-        }
-      }
+    .letter {
+      fill: $dark-gray2;
     }
-  }
 
-  .#{$bp-ns}-button.#{$bp-ns}-minimal {
-    border-radius: 20px;
-    margin: 0 1px;
+    .swirl {
+      fill: $druid-brand2;
+    }
 
     .#{$bp-ns}-dark & {
-      &:hover {
-        background: rgba($dark-gray5, 0.5);
+      .letter {
+        fill: $white;
       }
 
-      &.#{$bp-ns}-active {
-        background: rgba($dark-gray5, 0.9);
+      .swirl {
+        fill: $druid-brand;
       }
     }
-  }
-
-  .#{$bp-ns}-navbar-group.#{$bp-ns}-align-right {
-    position: absolute;
-    right: 15px;
   }
 }

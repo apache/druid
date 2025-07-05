@@ -45,12 +45,14 @@ import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
+import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -299,6 +301,21 @@ public class StageDefinition
   public int getStageNumber()
   {
     return id.getStageNumber();
+  }
+
+  /**
+   * Returns a set of all datasources used by all {@link TableInputSpec} in the stageDefinition.
+   */
+  public Set<String> getDatasources()
+  {
+    final Set<String> datasources = new HashSet<>();
+    for (InputSpec inputSpec : getInputSpecs()) {
+      if (inputSpec instanceof TableInputSpec) {
+        TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
+        datasources.add(tableInputSpec.getDataSource());
+      }
+    }
+    return datasources;
   }
 
   /**
