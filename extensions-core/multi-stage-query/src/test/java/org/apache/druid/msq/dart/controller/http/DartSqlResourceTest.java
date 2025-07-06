@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
@@ -147,6 +148,7 @@ public class DartSqlResourceTest extends MSQTestBase
   private DartControllerRegistry controllerRegistry;
   private ExecutorService controllerExecutor;
   private AutoCloseable mockCloser;
+  private final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
 
   // Mocks below this line.
 
@@ -220,19 +222,26 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final DartSqlEngine engine = new DartSqlEngine(
         new MSQTestControllerContext(
+            "did2",
             objectMapper,
             injector,
             null /* not used in this test */,
             workerMemoryParameters,
             loadedSegmentsMetadata,
             TaskLockType.APPEND,
-            QueryContext.empty()
+            QueryContext.empty(),
+            serviceEmitter
         ) {
           @Override
-          public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
+          public String queryId()
           {
-            return super.queryKernelConfig(queryId, querySpec).toBuilder()
-                        .workerIds(ImmutableList.of("some")).build();
+            return getQueryContext().getString(QueryContexts.CTX_DART_QUERY_ID);
+          }
+
+          @Override
+          public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec)
+          {
+            return super.queryKernelConfig(querySpec).toBuilder().workerIds(ImmutableList.of("some")).build();
           }
         },
         controllerRegistry = new DartControllerRegistry()
@@ -569,6 +578,7 @@ public class DartSqlResourceTest extends MSQTestBase
     assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
   }
 
+  @Test
   public void test_doPost_regularUser_fullReport() throws Exception
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();

@@ -44,7 +44,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     super();
   }
 
-  private static final String KAFKA_IMAGE = "apache/kafka-native:4.0.0";
+  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
 
   @Override
   protected KafkaContainer createContainer()

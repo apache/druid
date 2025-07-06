@@ -161,7 +161,11 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
+import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -186,6 +190,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -220,7 +225,6 @@ public class ControllerImpl implements Controller
   private static final Logger log = new Logger(ControllerImpl.class);
   private static final String RESULT_READER_CANCELLATION_ID = "result-reader";
 
-  private final String queryId;
   private final MSQSpec querySpec;
   private final Query<?> legacyQuery;
   private final ResultsContext resultsContext;
@@ -297,14 +301,12 @@ public class ControllerImpl implements Controller
   private MSQSegmentReport segmentReport;
 
   public ControllerImpl(
-      final String queryId,
       final LegacyMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = querySpec.getQuery();
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -314,14 +316,12 @@ public class ControllerImpl implements Controller
 
 
   public ControllerImpl(
-      final String queryId,
       final QueryDefMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = null;
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -333,7 +333,7 @@ public class ControllerImpl implements Controller
   @Override
   public String queryId()
   {
-    return queryId;
+    return context.queryId();
   }
 
   @Override
@@ -554,9 +554,32 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-    // Emit summary metrics
+    // Emit metrics
+    emitQueryMetrics(queryDef, taskStateForReport.isSuccess());
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
+  }
+
+  private void emitQueryMetrics(@Nullable final QueryDefinition queryDef, final boolean success)
+  {
+    final Set<String> datasources = new HashSet<>();
+    final Set<Interval> intervals = new HashSet<>();
+    if (queryDef != null) {
+      for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
+        datasources.addAll(stageDefinition.getDatasources());
+        intervals.addAll(MSQMetricUtils.getIntervals(stageDefinition));
+      }
+    }
+
+    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
+
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
+                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
+                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
+                 .setDimension(DruidMetrics.SUCCESS, success)
+                 .setMetric("query/time", System.currentTimeMillis() - startTime);
+    context.emitMetric(metricBuilder);
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -594,7 +617,10 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
-    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
+
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
+    context.emitMetric(metricBuilder);
   }
 
   /**
@@ -661,7 +687,7 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState()
   {
     this.selfDruidNode = context.selfNode();
-    this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
+    this.queryKernelConfig = context.queryKernelConfig(querySpec);
 
     final QueryContext queryContext = querySpec.getContext();
 
@@ -674,7 +700,7 @@ public class ControllerImpl implements Controller
           context.jsonMapper(),
           queryKitSpecFactory.makeQueryKitSpec(
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
-              queryId,
+              context.queryId(),
               querySpec.getTuningConfig(),
               querySpec.getContext()
           )
@@ -703,7 +729,7 @@ public class ControllerImpl implements Controller
     queryDefRef.set(queryDef);
 
     workerManager = context.newWorkerManager(
-        queryId,
+        context.queryId(),
         querySpec,
         queryKernelConfig,
         (failedTask, fault) -> {
@@ -1486,7 +1512,7 @@ public class ControllerImpl implements Controller
           segmentLoadWaiter = new SegmentLoadStatusFetcher(
               context.injector().getInstance(BrokerClient.class),
               context.jsonMapper(),
-              queryId,
+              context.queryId(),
               destination.getDataSource(),
               segmentsWithTombstones,
               true
@@ -1502,7 +1528,7 @@ public class ControllerImpl implements Controller
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
-            queryId,
+            context.queryId(),
             destination.getDataSource(),
             segments,
             true
@@ -1515,9 +1541,14 @@ public class ControllerImpl implements Controller
       );
     }
 
-    context.emitMetric("ingest/tombstones/count", numTombstones);
+    MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+
+    metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
+    context.emitMetric(metricBuilder);
+
     // Include tombstones in the reported segments count
-    context.emitMetric("ingest/segments/count", segmentsWithTombstones.size());
+    metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric(metricBuilder);
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(
