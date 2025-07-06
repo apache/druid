@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
+import { ColorAssigner } from '../../../../singletons';
 import { formatEmpty, formatNumber } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
@@ -199,11 +200,20 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
       myChart.off('click');
 
+      const dataWithColors = data.map((item: any) => ({
+        ...item,
+        itemStyle: {
+          color: splitColumn
+            ? ColorAssigner.getColorForDimensionValue(splitColumn.name, item.name)
+            : '#1890ff',
+        },
+      }));
+
       myChart.setOption({
         series: [
           {
             id: 'hello',
-            data,
+            data: dataWithColors,
           },
         ],
       });

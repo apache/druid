@@ -38,6 +38,7 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
+import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   STANDARD_TABLE_PAGE_SIZE,
@@ -801,7 +802,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />

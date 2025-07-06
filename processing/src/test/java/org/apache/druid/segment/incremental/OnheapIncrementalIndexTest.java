@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
@@ -95,6 +96,54 @@ public class OnheapIncrementalIndexTest
     );
     Assert.assertEquals(
         "projection[mismatched dims] contains dimension[string] with different type[LONG] than type[STRING] in base table",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testBadProjectionDimensionNoVirtualColumnOrBaseTable()
+  {
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () ->
+            IndexBuilder.create()
+                        .schema(
+                            IncrementalIndexSchema.builder()
+                                                  .withDimensionsSpec(
+                                                      DimensionsSpec.builder()
+                                                                    .setDimensions(
+                                                                        ImmutableList.of(
+                                                                            new StringDimensionSchema("string"),
+                                                                            new LongDimensionSchema("long")
+                                                                        )
+                                                                    )
+                                                                    .build()
+                                                  )
+                                                  .withProjections(
+                                                      ImmutableList.of(
+                                                          new AggregateProjectionSpec(
+                                                              "sad grouping column",
+                                                              VirtualColumns.create(
+                                                                  new ExpressionVirtualColumn(
+                                                                      "v0",
+                                                                      "cast(long, 'double')",
+                                                                      ColumnType.DOUBLE,
+                                                                      TestExprMacroTable.INSTANCE
+                                                                  )
+                                                              ),
+                                                              ImmutableList.of(
+                                                                  new DoubleDimensionSchema("v0"),
+                                                                  new StringDimensionSchema("missing")
+                                                              ),
+                                                              null
+                                                          )
+                                                      )
+                                                  )
+                                                  .build()
+                        ).buildIncrementalIndex()
+    );
+    Assert.assertEquals(
+        "projection[sad grouping column] contains dimension[missing] that is not present on the base table or a virtual column",
         t.getMessage()
     );
   }

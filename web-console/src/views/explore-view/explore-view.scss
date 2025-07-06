@@ -24,6 +24,14 @@ $resources-width: 240px;
   height: 100%;
   position: relative;
 
+  .explore-main {
+    position: absolute;
+    top: $header-bar-height + 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
   .splitter-layout {
     height: 100%;
   }
@@ -77,10 +85,6 @@ $resources-width: 240px;
 
       .filter-pane {
         flex: 1;
-        padding: 8px 0;
-      }
-
-      .action-buttons {
         padding: 8px 0;
       }
     }

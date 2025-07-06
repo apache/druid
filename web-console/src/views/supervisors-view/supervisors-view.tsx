@@ -54,7 +54,7 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import { getTotalSupervisorStats } from '../../druid-models';
+import { getConsoleViewIcon, getTotalSupervisorStats } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -549,7 +549,7 @@ export class SupervisorsView extends React.PureComponent<
             : this.setState({ suspendSupervisorId: supervisor_id }),
       },
       {
-        icon: IconNames.GANTT_CHART,
+        icon: getConsoleViewIcon('tasks'),
         title: 'Go to tasks',
         onAction: () => this.goToTasksForSupervisor(supervisor),
       },
@@ -1134,7 +1134,7 @@ export class SupervisorsView extends React.PureComponent<
         <MoreButton>
           {capabilities.hasSql() && (
             <MenuItem
-              icon={IconNames.APPLICATION}
+              icon={getConsoleViewIcon('workbench')}
               text="View SQL query for table"
               disabled={typeof lastSupervisorQuery !== 'string'}
               onClick={() => {

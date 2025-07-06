@@ -23,7 +23,7 @@ import { day, Duration, minute, second } from 'chronoshift';
 import classNames from 'classnames';
 import { max, sort, sum } from 'd3-array';
 import { axisBottom, axisLeft, axisRight } from 'd3-axis';
-import { scaleLinear, scaleOrdinal, scaleUtc } from 'd3-scale';
+import { scaleLinear, scaleUtc } from 'd3-scale';
 import { select } from 'd3-selection';
 import type { Area, Line } from 'd3-shape';
 import { area, curveLinear, curveMonotoneX, curveStep, line } from 'd3-shape';
@@ -61,10 +61,6 @@ function getDefaultChartMargin(yAxis: undefined | 'left' | 'right') {
 }
 
 const EXTEND_X_SCALE_DOMAIN_BY = 1;
-
-export const OTHER_VALUE = 'Other';
-const OTHER_COLOR = '#666666';
-const COLORS = ['#00BD84', '#F78228', '#8A81F3', '#EB57A3', '#7CCE21', '#FFC213', '#B97800'];
 
 // ---------------------------------------
 
@@ -128,6 +124,7 @@ export interface ContinuousChartRenderProps {
    */
   data: RangeDatum[];
   facets: string[] | undefined;
+  facetColorizer: (facet: string) => string;
 
   /**
    * The granularity that was used for bucketing.
@@ -163,6 +160,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const {
     data,
     facets,
+    facetColorizer,
     granularity,
 
     markType,
@@ -249,11 +247,6 @@ export const ContinuousChartRender = function ContinuousChartRender(
       return minBy(dataInRange, r => Math.abs(r.measure - measure));
     }
   }
-
-  const facetColorizer = useMemo(() => {
-    const s = scaleOrdinal(COLORS);
-    return (v: string) => (v === OTHER_VALUE ? OTHER_COLOR : s(v));
-  }, []);
 
   const chartMargin = { ...margin, ...getDefaultChartMargin(yAxisPosition) };
   const innerStage = stage.applyMargin(chartMargin);
