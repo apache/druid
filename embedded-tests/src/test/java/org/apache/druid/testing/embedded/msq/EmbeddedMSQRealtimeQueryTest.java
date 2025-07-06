@@ -247,10 +247,8 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     );
   }
 
-
   @Test
   @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18199
   public void test_selectCount_dart_default()
   {
     final String sql = StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource);
@@ -262,7 +260,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18199
   public void test_selectCount_dart_noRealtime()
   {
     final String sql = StringUtils.format(
