@@ -163,6 +163,7 @@ public class BrokerServerView implements TimelineServerView
           @Override
           public CallbackAction serverAdded(DruidServer server)
           {
+            // We don't track brokers in this view.
             if (!server.getType().equals(ServerType.BROKER)) {
               addServer(server);
             }
