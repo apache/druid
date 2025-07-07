@@ -50,4 +50,10 @@ public class EmbeddedZookeeper implements EmbeddedResource
   {
     return zk.getConnectString();
   }
+
+  @Override
+  public String toString()
+  {
+    return "EmbeddedZookeeper";
+  }
 }

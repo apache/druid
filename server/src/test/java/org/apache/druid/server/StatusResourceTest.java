@@ -28,6 +28,7 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,7 +47,8 @@ public class StatusResourceTest
   {
 
     Collection<DruidModule> modules = ImmutableList.of(new TestDruidModule());
-    List<StatusResource.ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
+    List<StatusResource.ModuleVersion> statusResourceModuleList =
+        new StatusResource.Status(modules, JvmUtils.getRuntimeInfo()).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
 

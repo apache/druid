@@ -55,4 +55,10 @@ public class InMemoryDerbyResource implements EmbeddedResource
     cluster.addCommonProperty("druid.metadata.storage.tables.base", connector.getMetadataTablesConfig().getBase());
     cluster.addCommonProperty("druid.metadata.storage.connector.connectURI", connector.getJdbcUri());
   }
+
+  @Override
+  public String toString()
+  {
+    return "InMemoryDerbyResource";
+  }
 }

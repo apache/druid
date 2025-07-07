@@ -41,20 +41,23 @@ public class DruidProcessingModuleTest
     }
 
     DruidProcessingModule module = new DruidProcessingModule();
-    module.getIntermediateResultsPool(new DruidProcessingConfig()
-    {
-      @Override
-      public String getFormatString()
-      {
-        return "test";
-      }
+    module.getIntermediateResultsPool(
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return "test";
+          }
 
-      @Override
-      public int intermediateComputeSizeBytes()
-      {
-        return Integer.MAX_VALUE;
-      }
-    });
+          @Override
+          public int intermediateComputeSizeBytes()
+          {
+            return Integer.MAX_VALUE;
+          }
+        },
+        JvmUtils.getRuntimeInfo()
+    );
   }
 
   @Test
@@ -71,7 +74,7 @@ public class DruidProcessingModuleTest
 
     DruidProcessingModule module = new DruidProcessingModule();
     config.getNumInitalBuffersForIntermediatePool();
-    module.getIntermediateResultsPool(config);
+    module.getIntermediateResultsPool(config, JvmUtils.getRuntimeInfo());
   }
 }
 
