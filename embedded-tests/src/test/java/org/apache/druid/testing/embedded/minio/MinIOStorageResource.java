@@ -24,6 +24,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
@@ -71,6 +72,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     s3Client.createBucket(bucket);
 
     cluster.addExtension(S3StorageDruidModule.class);
+    cluster.addExtension(AWSModule.class);
 
     // Configure storage bucket and base key
     cluster.addCommonProperty("druid.storage.type", "s3");
