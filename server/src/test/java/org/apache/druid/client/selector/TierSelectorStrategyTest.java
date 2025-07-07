@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.selector;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
@@ -37,12 +38,12 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class TierSelectorStrategyTest
 {
@@ -272,7 +273,7 @@ public class TierSelectorStrategyTest
     {
       @Override
       public <T> List<QueryableDruidServer> pick(
-          @Nullable Query<T> query, Collection<QueryableDruidServer> servers, DataSegment segment,
+          @Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
           int numServersToPick
       )
       {
@@ -334,7 +335,11 @@ public class TierSelectorStrategyTest
     // Verify that when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
     List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
     allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
-    Assert.assertEquals(allServers, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
+    // verify the priority only because values with same priority may return in different order
+    Assert.assertEquals(
+        allServers.stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList()),
+        serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES).stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList())
+    );
 
     // Verify that when getting a limited number of candidates, returns the top N servers with preferred tier first
     Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
@@ -344,6 +349,8 @@ public class TierSelectorStrategyTest
   public void testPreferredTierSelectorStrategyHighestPriority()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+
+    // Two servers that have same tier and priority
     QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
         new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
         client
@@ -352,17 +359,99 @@ public class TierSelectorStrategyTest
         new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
         client
     );
-    QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+
+    QueryableDruidServer preferredTierHighPriority2 = new QueryableDruidServer(
+        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
         client
     );
 
-    testPreferredTierSelectorStrategy(
-        new PreferredTierSelectorStrategy(
-            new ConnectionCountServerSelectorStrategy(),
-            new PreferredTierSelectorStrategyConfig("preferred", "highest")
+    QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
+        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        client
+    );
+
+    PreferredTierSelectorStrategy tierSelectorStrategy = new PreferredTierSelectorStrategy(
+        // Use a customized strategy that return the 2nd server
+        new ServerSelectorStrategy()
+        {
+          @Override
+          public List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
+          {
+            if (servers.size() <= numServersToPick) {
+              return ImmutableList.copyOf(servers);
+            }
+            List<QueryableDruidServer> list = new ArrayList<>(servers);
+            if (numServersToPick == 1) {
+              // return the server whose name is greater
+              return list.stream()
+                         .sorted((o1, o2) -> o1.getServer().getName().compareTo(o2.getServer().getName()))
+                         .skip(1)
+                         .limit(1)
+                         .collect(Collectors.toList());
+            } else {
+              return list.stream().limit(numServersToPick).collect(Collectors.toList());
+            }
+          }
+        },
+        new PreferredTierSelectorStrategyConfig("preferred", "highest")
+    );
+
+    final ServerSelector serverSelector = new ServerSelector(
+        new DataSegment(
+            "test",
+            Intervals.of("2013-01-01/2013-01-02"),
+            DateTimes.of("2013-01-01").toString(),
+            new HashMap<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            NoneShardSpec.instance(),
+            0,
+            0L
         ),
-        preferredTierHighPriority, preferredTierLowPriority, nonPreferredTierHighestPriority
+        tierSelectorStrategy,
+        HistoricalFilter.IDENTITY_FILTER
+    );
+
+    List<QueryableDruidServer> servers = new ArrayList<>(Arrays.asList(
+        preferredTierLowPriority,
+        preferredTierHighPriority,
+        preferredTierHighPriority2,
+        nonPreferredTierHighestPriority
+    ));
+
+    List<DruidServerMetadata> expectedCandidates = new ArrayList<>();
+    for (QueryableDruidServer server : servers) {
+      expectedCandidates.add(server.getServer().getMetadata());
+    }
+    for (QueryableDruidServer server : servers) {
+      serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
+    }
+
+    // Verify that the 2nd server is selected
+    Assert.assertEquals(preferredTierHighPriority2, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertEquals(preferredTierHighPriority2, serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+
+    // Verify that when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
+    List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
+    allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
+    // verify the priority only because values with same priority may return in different order
+    Assert.assertEquals(
+        allServers.stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList()),
+        serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES).stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList())
+    );
+
+    // Verify that when getting 2 candidates, returns the top N servers with preferred tier first
+    Assert.assertEquals(
+        Arrays.asList(
+            preferredTierHighPriority.getServer().getMetadata(),
+            preferredTierHighPriority2.getServer().getMetadata()
+        ),
+
+        serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES)
+                      .stream()
+                      // sort the name to make sure the test is stable
+                      .sorted((o1, o2) -> o1.getName().compareTo(o2.getName()))
+                      .collect(Collectors.toList())
     );
   }
 

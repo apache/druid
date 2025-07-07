@@ -26,22 +26,22 @@ import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomServerSelectorStrategy implements ServerSelectorStrategy
 {
   @Nullable
   @Override
-  public QueryableDruidServer pick(Collection<QueryableDruidServer> servers, DataSegment segment)
+  public QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment)
   {
     return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
   }
 
   @Override
-  public List<QueryableDruidServer> pick(Collection<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
+  public List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick)
   {
     if (servers.size() <= numServersToPick) {
       return ImmutableList.copyOf(servers);

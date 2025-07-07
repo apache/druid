@@ -30,6 +30,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -82,29 +83,32 @@ public class PreferredTierSelectorStrategy extends AbstractTierSelectorStrategy
       );
     }
 
-    List<QueryableDruidServer> preferred = new ArrayList<>(numServersToPick);
-    List<QueryableDruidServer> nonPreferred = new ArrayList<>(numServersToPick);
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> preferred = new Int2ObjectRBTreeMap<>(priorityStrategy.getComparator());
+    Int2ObjectRBTreeMap<Set<QueryableDruidServer>> nonPreferred = new Int2ObjectRBTreeMap<>(priorityStrategy.getComparator());
     for (Set<QueryableDruidServer> priorityServers : prioritizedServers.values()) {
       for (QueryableDruidServer server : priorityServers) {
         if (preferredTier.equals(server.getServer().getMetadata().getTier())) {
-          preferred.add(server);
-          if (preferred.size() == numServersToPick) {
-            return this.serverSelectorStrategy.pick(query, preferred, segment, numServersToPick);
-          }
+          preferred.computeIfAbsent(server.getServer().getPriority(), k -> new HashSet<>())
+                   .add(server);
         } else {
-          // We have to iterate through all servers even the numbers of the non-preferred servers reach the limit
-          // This is because we don't know whether there're preferred servers left in the next priority set
-          nonPreferred.add(server);
+          nonPreferred.computeIfAbsent(server.getServer().getPriority(), k -> new HashSet<>())
+                      .add(server);
         }
       }
     }
 
-    // Fill with non-preferred servers if we don't have enough preferred servers
-    int fillSize = numServersToPick - preferred.size();
-    for (int i = 0; i < fillSize && i < nonPreferred.size(); i++) {
-      preferred.add(nonPreferred.get(i));
+    List<QueryableDruidServer> picks = new ArrayList<>(numServersToPick);
+    if (!preferred.isEmpty()) {
+      // If we have preferred servers, pick them first
+      picks.addAll(priorityStrategy.pick(query, preferred, segment, numServersToPick));
     }
 
-    return this.serverSelectorStrategy.pick(query, preferred, segment, numServersToPick);
+    if (picks.size() < numServersToPick && !nonPreferred.isEmpty()) {
+      // If we don't have enough preferred servers, pick from the non-preferred ones
+      int remaining = numServersToPick - picks.size();
+      picks.addAll(priorityStrategy.pick(query, nonPreferred, segment, remaining));
+    }
+
+    return picks;
   }
 }
