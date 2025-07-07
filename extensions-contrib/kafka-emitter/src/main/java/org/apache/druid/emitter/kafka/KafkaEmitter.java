@@ -159,7 +159,6 @@ public class KafkaEmitter implements Emitter
     log.info("Starting Kafka Emitter.");
   }
 
-  // package-private method for testing
   @VisibleForTesting
   protected void logLostMessagesStatus()
   {
