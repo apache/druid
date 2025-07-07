@@ -80,6 +80,8 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.shim.ShimCursor;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -287,9 +289,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
       final Cursor nextCursor;
 
-      // If asCursor() fails, we need to close nextCursorHolder immediately.
+      // If asCursor() or asVectorCursor() fails, we need to close nextCursorHolder immediately.
       try {
-        nextCursor = nextCursorHolder.asCursor();
+        if (nextCursorHolder.canVectorize()) {
+          final VectorCursor vectorCursor = nextCursorHolder.asVectorCursor();
+          nextCursor = vectorCursor == null ? null : new ShimCursor(vectorCursor);
+        } else {
+          nextCursor = nextCursorHolder.asCursor();
+        }
       }
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);
