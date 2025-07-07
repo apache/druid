@@ -77,7 +77,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
-  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+  private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
@@ -98,7 +98,7 @@ public class IndexerWorkerContext implements WorkerContext
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
-      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
+      final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
     this.task = task;
@@ -158,7 +158,7 @@ public class IndexerWorkerContext implements WorkerContext
         serviceClientFactory,
         memoryIntrospector,
         processingBuffersProvider,
-        new DataServerQueryHandlerFactory(
+        new IndexerDataServerQueryHandlerFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
             smileMapper,
