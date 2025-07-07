@@ -159,7 +159,12 @@ fi
 
 # take the ${TASK_JSON} environment variable and base64 decode, unzip and throw it in ${TASK_DIR}/task.json.
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
-mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
+if [ -n "$TASK_ID" ]; then
+    # In the case of running with Kubernetes, see https://github.com/apache/druid/pull/18206 for more information.
+    mkdir -p ${TASK_DIR}/${TASK_ID}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/${TASK_ID}/task.json;
+else
+    mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
+fi
 
 if [ -n "$TASK_ID" ]; then
     exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon --taskId "${TASK_ID}" "$@"
