@@ -35,12 +35,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * {@link EmbeddedResource} for an {@link EmbeddedDruidServer}.
- * Handles the lifecycle of the server.
+ * Lifecycle of an {@link EmbeddedDruidServer}.
  */
-class DruidServerResource implements EmbeddedResource
+class EmbeddedServerLifecycle
 {
-  private static final Logger log = new Logger(DruidServerResource.class);
+  private static final Logger log = new Logger(EmbeddedServerLifecycle.class);
 
   private final EmbeddedDruidServer server;
 
@@ -51,7 +50,7 @@ class DruidServerResource implements EmbeddedResource
   private ExecutorService executorService;
   private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>();
 
-  DruidServerResource(
+  EmbeddedServerLifecycle(
       EmbeddedDruidServer server,
       TestFolder testFolder,
       EmbeddedZookeeper zookeeper,
@@ -64,7 +63,6 @@ class DruidServerResource implements EmbeddedResource
     this.commonProperties = commonProperties;
   }
 
-  @Override
   public void start() throws Exception
   {
     if (lifecycle.get() != null) {
@@ -79,7 +77,7 @@ class DruidServerResource implements EmbeddedResource
     final ServerRunnable serverRunnable = server.createRunnable(
         lifecycle -> {
           lifecycleCreated.countDown();
-          DruidServerResource.this.lifecycle.set(lifecycle);
+          EmbeddedServerLifecycle.this.lifecycle.set(lifecycle);
         }
     );
 
@@ -94,7 +92,6 @@ class DruidServerResource implements EmbeddedResource
     }
   }
 
-  @Override
   public void stop()
   {
     log.info("Stopping server[%s] ...", server.getName());

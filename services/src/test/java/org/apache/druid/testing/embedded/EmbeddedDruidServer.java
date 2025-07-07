@@ -52,7 +52,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private static final AtomicInteger SERVER_ID = new AtomicInteger(0);
 
   private final String name;
-  private final AtomicReference<DruidServerResource> lifecycle = new AtomicReference<>();
+  private final AtomicReference<EmbeddedServerLifecycle> lifecycle = new AtomicReference<>();
 
   private long serverMemory = MEM_100_MB;
   private long serverDirectMemory = MEM_100_MB;
@@ -71,7 +71,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   @Override
   public void start() throws Exception
   {
-    final DruidServerResource lifecycle = this.lifecycle.get();
+    final EmbeddedServerLifecycle lifecycle = this.lifecycle.get();
     if (lifecycle == null) {
       throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
     } else {
@@ -82,7 +82,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   @Override
   public void stop() throws Exception
   {
-    final DruidServerResource lifecycle = this.lifecycle.get();
+    final EmbeddedServerLifecycle lifecycle = this.lifecycle.get();
     if (lifecycle == null) {
       throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
     } else {
@@ -135,7 +135,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   final void onAddedToCluster(EmbeddedDruidCluster cluster, Properties commonProperties)
   {
     this.lifecycle.set(
-        new DruidServerResource(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
+        new EmbeddedServerLifecycle(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
     );
   }
 
