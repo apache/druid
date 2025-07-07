@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import { Timezone } from 'chronoshift';
 import type { Column } from 'druid-query-toolkit';
 import {
@@ -56,6 +58,23 @@ export type ExploreModuleLayout =
   | 'bottom-row-three-tiles'
   | 'left-column-three-tiles'
   | 'right-column-three-tiles';
+
+export const LAYOUT_TO_ICON: Record<ExploreModuleLayout, IconName> = {
+  'single': IconNames.SYMBOL_RECTANGLE,
+  'two-by-two': IconNames.GRID_VIEW,
+  'two-rows': IconNames.LAYOUT_TWO_ROWS,
+  'two-columns': IconNames.LAYOUT_TWO_COLUMNS,
+  'three-rows': IconNames.LAYOUT_THREE_ROWS,
+  'three-columns': IconNames.LAYOUT_THREE_COLUMNS,
+  'top-row-two-tiles': IconNames.LAYOUT_TOP_ROW_TWO_TILES,
+  'bottom-row-two-tiles': IconNames.LAYOUT_BOTTOM_ROW_TWO_TILES,
+  'left-column-two-tiles': IconNames.LAYOUT_LEFT_COLUMN_TWO_TILES,
+  'right-column-two-tiles': IconNames.LAYOUT_RIGHT_COLUMN_TWO_TILES,
+  'top-row-three-tiles': IconNames.LAYOUT_TOP_ROW_THREE_TILES,
+  'bottom-row-three-tiles': IconNames.LAYOUT_BOTTOM_ROW_THREE_TILES,
+  'left-column-three-tiles': IconNames.LAYOUT_LEFT_COLUMN_THREE_TILES,
+  'right-column-three-tiles': IconNames.LAYOUT_RIGHT_COLUMN_THREE_TILES,
+};
 
 interface ExploreStateValue {
   source: string;
@@ -205,7 +224,7 @@ export class ExploreState {
     const { moduleStates } = this;
     return this.change({
       source: SqlQuery.selectStarFrom(tableName).toString(),
-      moduleStates: isEmpty(moduleStates) ? { '0': ModuleState.INIT_STATE } : moduleStates,
+      moduleStates: isEmpty(moduleStates) ? {} : moduleStates,
     });
   }
 

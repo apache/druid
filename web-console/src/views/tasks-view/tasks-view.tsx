@@ -37,7 +37,11 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
-import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
+import {
+  getConsoleViewIcon,
+  TASK_CANCELED_ERROR_MESSAGES,
+  TASK_CANCELED_PREDICATE,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -580,7 +584,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: TasksView.TASK_SQL })}
           />

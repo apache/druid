@@ -31,6 +31,7 @@ import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,8 @@ import java.util.stream.Collectors;
  * <li>Other {@link EmbeddedResource} to be used in the cluster. For example,
  * an {@link InMemoryDerbyResource}.</li>
  * <li>List of {@link DruidModule} to load specific extensions, e.g. {@link InMemoryDerbyModule}.</li>
+ * <li>{@link RuntimeInfoModule} supplying a {@link RuntimeInfo} with values matching
+ * {@link EmbeddedDruidServer#setServerMemory} and {@link EmbeddedDruidServer#setServerDirectMemory}</li>
  * <li>{@link #addCommonProperty Common properties} that are applied to all Druid
  * services in the cluster.</li>
  * </ul>
@@ -86,6 +89,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
+    addExtension(RuntimeInfoModule.class);
   }
 
   /**
@@ -242,6 +246,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
           startedFirstDruidServer = true;
         }
 
+        log.info("Starting resource[%s].", resource);
         resource.start();
         resource.onStarted(this);
       }
@@ -263,6 +268,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     // Stop the resources in reverse order
     for (EmbeddedResource resource : Lists.reverse(resources)) {
       try {
+        log.info("Stopping resource[%s].", resource);
         resource.stop();
       }
       catch (Exception e) {

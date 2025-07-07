@@ -23,6 +23,7 @@ import com.github.rvesse.airline.annotations.Command;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.server.StatusResource;
+import org.apache.druid.utils.RuntimeInfo;
 
 import javax.inject.Inject;
 
@@ -35,6 +36,9 @@ public class Version implements Runnable
   @Inject
   private ExtensionsLoader extnLoader;
 
+  @Inject
+  private RuntimeInfo runtimeInfo;
+
   @Override
   @SuppressForbidden(reason = "System#out")
   public void run()
@@ -42,6 +46,6 @@ public class Version implements Runnable
     // Since Version is a command, we don't go through the server
     // process to load modules and they are thus not already loaded.
     // Explicitly load them here.
-    System.out.println(new StatusResource.Status(extnLoader.getModules()));
+    System.out.println(new StatusResource.Status(extnLoader.getModules(), runtimeInfo));
   }
 }

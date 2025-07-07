@@ -2643,7 +2643,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+          public void registerServerCallback(Executor exec, ServerCallback callback)
           {
 
           }

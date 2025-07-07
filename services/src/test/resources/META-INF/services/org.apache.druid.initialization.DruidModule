@@ -19,3 +19,4 @@
 
 org.apache.druid.testing.embedded.derby.InMemoryDerbyModule
 org.apache.druid.testing.embedded.emitter.LatchableEmitterModule
+org.apache.druid.testing.embedded.RuntimeInfoModule

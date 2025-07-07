@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import type { IngestionSpec } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { getApiArray, partition, pluralIfNeeded, queryDruidSql } from '../../../utils';
@@ -75,7 +75,7 @@ FROM sys.supervisors`,
     <HomeViewCard
       className="supervisors-card"
       href="#supervisors"
-      icon={IconNames.EYE_OPEN}
+      icon={getConsoleViewIcon('supervisors')}
       title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}

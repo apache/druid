@@ -189,6 +189,15 @@ public interface OverlordClient
   ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor);
 
   /**
+   * Shuts down a supervisor.
+   * <p>
+   * API: {@code /druid/indexer/v1/supervisor/<id>/terminate}
+   *
+   * @return Map containing a single entry "id"
+   */
+  ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId);
+
+  /**
    * Returns all current supervisor statuses.
    */
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
