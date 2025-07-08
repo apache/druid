@@ -113,7 +113,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Sets the amount of heap memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer setServerMemory(long serverMemory)
+  public final EmbeddedDruidServer<T> setServerMemory(long serverMemory)
   {
     this.serverMemory = serverMemory;
     return this;
@@ -122,7 +122,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Sets the amount of direct (off-heap) memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer setServerDirectMemory(long serverDirectMemory)
+  public final EmbeddedDruidServer<T> setServerDirectMemory(long serverDirectMemory)
   {
     this.serverDirectMemory = serverDirectMemory;
     return this;
@@ -230,6 +230,14 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   public final LatchableEmitter latchableEmitter()
   {
     return referenceHolder.latchableEmitter();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "EmbeddedDruidServer{" +
+           "name='" + name + '\'' +
+           '}';
   }
 
   /**

@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -27,6 +28,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -80,6 +82,10 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   @Self
   @Inject
   private DruidNode selfNode;
+
+  @Inject
+  @Json
+  private ObjectMapper jsonMapper;
 
   @Override
   public DruidNode selfNode()
@@ -145,5 +151,11 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   public HttpClient escalatedHttpClient()
   {
     return httpClient;
+  }
+
+  @Override
+  public ObjectMapper jsonMapper()
+  {
+    return jsonMapper;
   }
 }
