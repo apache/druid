@@ -1119,6 +1119,38 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(JAN_23, segmentV10, segmentV11, segmentV12);
   }
 
+  @Test
+  public void test_concurrentAppend_toIntervalWithUnusedSegments()
+  {
+    // Allocate and commit an APPEND segment
+    final SegmentIdWithShardSpec pendingSegment
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
+    Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
+    Assert.assertEquals(0, pendingSegment.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    appendTask.commitAppendSegments(segmentV01);
+
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV01);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV01);
+
+    // Mark it as unused
+    getStorageCoordinator().markAllSegmentsAsUnused(appendTask.getDataSource());
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23);
+
+    // Allocate and commit another APPEND segment
+    final SegmentIdWithShardSpec pendingSegment2
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
+    Assert.assertEquals(SEGMENT_V0, pendingSegment2.getVersion());
+    Assert.assertEquals(1, pendingSegment2.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV02 = asSegment(pendingSegment2);
+    appendTask.commitAppendSegments(segmentV02);
+    Assert.assertNotEquals(segmentV01, segmentV02);
+
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV02);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV02);
+  }
 
   @Nullable
   private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
