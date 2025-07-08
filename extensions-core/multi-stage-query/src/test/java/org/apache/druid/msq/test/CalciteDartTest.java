@@ -112,7 +112,7 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.RESTRICTED_DATASOURCE_SUPPORT)
+  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT)
   @Test
   public void testSelectFromRestricted()
   {
@@ -145,7 +145,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_SORT)
   @Test
   public void testSelectFromFooLimit2()
   {
@@ -160,7 +159,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testCount()
   {
@@ -245,7 +243,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testGroupBy()
   {
@@ -262,7 +259,6 @@ public class CalciteDartTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.SUPPORT_AGGREGATE)
   @Test
   public void testSubQuery()
   {
