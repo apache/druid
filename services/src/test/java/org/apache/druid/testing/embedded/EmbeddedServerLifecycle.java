@@ -27,8 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.JvmUtils;
-import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -37,12 +35,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * {@link EmbeddedResource} for an {@link EmbeddedDruidServer}.
- * Handles the lifecycle of the server.
+ * Lifecycle of an {@link EmbeddedDruidServer}.
  */
-class DruidServerResource implements EmbeddedResource
+class EmbeddedServerLifecycle
 {
-  private static final Logger log = new Logger(DruidServerResource.class);
+  private static final Logger log = new Logger(EmbeddedServerLifecycle.class);
 
   private final EmbeddedDruidServer server;
 
@@ -53,7 +50,7 @@ class DruidServerResource implements EmbeddedResource
   private ExecutorService executorService;
   private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>();
 
-  DruidServerResource(
+  EmbeddedServerLifecycle(
       EmbeddedDruidServer server,
       TestFolder testFolder,
       EmbeddedZookeeper zookeeper,
@@ -66,7 +63,6 @@ class DruidServerResource implements EmbeddedResource
     this.commonProperties = commonProperties;
   }
 
-  @Override
   public void start() throws Exception
   {
     if (lifecycle.get() != null) {
@@ -81,7 +77,7 @@ class DruidServerResource implements EmbeddedResource
     final ServerRunnable serverRunnable = server.createRunnable(
         lifecycle -> {
           lifecycleCreated.countDown();
-          DruidServerResource.this.lifecycle.set(lifecycle);
+          EmbeddedServerLifecycle.this.lifecycle.set(lifecycle);
         }
     );
 
@@ -96,7 +92,6 @@ class DruidServerResource implements EmbeddedResource
     }
   }
 
-  @Override
   public void stop()
   {
     log.info("Stopping server[%s] ...", server.getName());
@@ -161,10 +156,6 @@ class DruidServerResource implements EmbeddedResource
       final Injector injector = new StartupInjectorBuilder()
           .withProperties(serverProperties)
           .withExtensions()
-          .add(binder -> {
-            binder.bind(RuntimeInfo.class).toInstance(server.getRuntimeInfo());
-            binder.requestStaticInjection(JvmUtils.class);
-          })
           .build();
 
       injector.injectMembers(runnable);
@@ -181,5 +172,13 @@ class DruidServerResource implements EmbeddedResource
     finally {
       log.info("Stopped server[%s].", server.getName());
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidServerResource{" +
+           "server=" + server.getName() +
+           '}';
   }
 }

@@ -35,6 +35,11 @@ import java.util.Map;
 public class MSQMetriceEventBuilder extends ServiceMetricEvent.Builder
 {
   /**
+   * Value to emit for {@link DruidMetrics#TYPE} in query metrics.
+   */
+  private static final String QUERY_METRIC_TYPE = "msq";
+
+  /**
    * Sets dimensions for Dart queries, as well as some common dimensions. Sets the following dimensions:
    * <ul>
    * <li>queryId</li>
@@ -84,8 +89,8 @@ public class MSQMetriceEventBuilder extends ServiceMetricEvent.Builder
 
   private void setQueryIdDimensions(final QueryContext queryContext)
   {
-    setDimension(BaseQuery.QUERY_ID, queryContext.get(BaseQuery.QUERY_ID));
-    setDimension(BaseQuery.SQL_QUERY_ID, queryContext.get(BaseQuery.SQL_QUERY_ID));
-    setDimension(DruidMetrics.TYPE, "msq");
+    setDimensionIfNotNull(BaseQuery.QUERY_ID, queryContext.getString(BaseQuery.QUERY_ID));
+    setDimensionIfNotNull(BaseQuery.SQL_QUERY_ID, queryContext.getString(BaseQuery.SQL_QUERY_ID));
+    setDimension(DruidMetrics.TYPE, QUERY_METRIC_TYPE);
   }
 }
