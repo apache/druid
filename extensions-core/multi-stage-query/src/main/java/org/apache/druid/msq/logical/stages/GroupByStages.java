@@ -27,6 +27,7 @@ import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleStageProcessor;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleStageProcessor;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -42,14 +43,22 @@ import java.util.List;
 
 public class GroupByStages
 {
+  /**
+   * An input datasource is needed to construct a valid {@link GroupByQuery}.
+   *
+   * During staged execution the data is coming in thru channels - so this is
+   * just a placeholder.
+   */
+  private static final DataSource DUMMY_INPUT_DATASOURCE = new TableDataSource("__input__");
+
   public static class PreShuffleStage extends ProjectStage
   {
-    private GroupByQuery gby;
+    private GroupByQuery groupByQuery;
 
     public PreShuffleStage(ProjectStage projectStage, GroupByQuery gby)
     {
       super(projectStage, gby.getResultRowSignature(Finalization.NO));
-      this.gby = gby;
+      this.groupByQuery = gby;
     }
 
     @Override
@@ -61,18 +70,18 @@ public class GroupByStages
     @Override
     public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
     {
-      return new GroupByPreShuffleStageProcessor(gby);
+      return new GroupByPreShuffleStageProcessor(groupByQuery);
     }
   }
 
   static class PostShuffleStage extends AbstractFrameProcessorStage
   {
-    private GroupByQuery gby;
+    private GroupByQuery groupByQuery;
 
-    public PostShuffleStage(LogicalStage inputStage, GroupByQuery gby, RowSignature outputSignature)
+    public PostShuffleStage(LogicalStage inputStage, GroupByQuery groupByQuery, RowSignature outputSignature)
     {
       super(outputSignature, LogicalInputSpec.of(inputStage));
-      this.gby = gby;
+      this.groupByQuery = groupByQuery;
     }
 
     @Override
@@ -84,7 +93,7 @@ public class GroupByStages
     @Override
     public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
     {
-      return new GroupByPostShuffleStageProcessor(gby);
+      return new GroupByPostShuffleStageProcessor(groupByQuery);
     }
   }
 
@@ -107,7 +116,7 @@ public class GroupByStages
     builder.setDimFilter(projectStage.getDimFilter());
     builder.setVirtualColumns(projectStage.getVirtualColumns());
     builder.setPostAggregatorSpecs(grouping.getPostAggregators());
-    builder.setDataSource(new TableDataSource("DUMMY"));
+    builder.setDataSource(DUMMY_INPUT_DATASOURCE);
     return builder.build();
   }
 
