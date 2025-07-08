@@ -51,6 +51,7 @@ public class TaskPayload
   private Map<String, Object> dimensionsSpec = null;
   private Map<String, Object> splitHintSpec = null;
 
+  private final Map<String, Object> context = new HashMap<>();
   private final List<Map<Object, Object>> metricsSpec = new ArrayList<>();
 
   private Integer maxNumConcurrentSubTasks = null;
@@ -91,6 +92,7 @@ public class TaskPayload
     return mapOf(
         "id", taskId,
         "type", type,
+        "context", context,
         "spec",
         mapOf(
             "ioConfig",
@@ -295,6 +297,12 @@ public class TaskPayload
   public TaskPayload awaitSegmentAvailabilityTimeoutMillis(long millis)
   {
     this.awaitSegmentAvailabilityTimeoutMillis = millis;
+    return this;
+  }
+
+  public TaskPayload context(String key, Object value)
+  {
+    this.context.put(key, value);
     return this;
   }
 
