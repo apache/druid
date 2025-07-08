@@ -44,7 +44,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -70,7 +69,7 @@ public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
   private QueryableIndex queryableIndex;
 
   @Before
-  public void setUp() throws IndexSizeExceededException
+  public void setUp()
   {
     final SerializablePairLongStringComplexMetricSerde serde = new SerializablePairLongStringComplexMetricSerde();
     ComplexMetrics.registerSerde(serde.getTypeName(), serde);
