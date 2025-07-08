@@ -19,14 +19,16 @@
 
 package org.apache.druid.msq.test;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.NotYetSupported;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class DecoupledCalciteDartTest extends CalciteDartTest
+@SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
+public class DecoupledDartCalciteQueryTest extends CalciteQueryTest
 {
   @RegisterExtension
   NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.DECOUPLED_DART);
@@ -37,13 +39,12 @@ public class DecoupledCalciteDartTest extends CalciteDartTest
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    return decoupledExtension.testBuilder()
-        .queryContext(
-            ImmutableMap.<String, Object>builder()
-                .put(QueryContexts.CTX_PREPLANNED, true)
-                .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-                .put(QueryContexts.ENABLE_DEBUG, true)
-                .build()
-        );
+    return decoupledExtension.testBuilder();
+  }
+
+  @Override
+  protected void msqIncompatible()
+  {
+    throw new AssumptionViolatedException("Case marked as msqIncompatible; not trying dart right now");
   }
 }
