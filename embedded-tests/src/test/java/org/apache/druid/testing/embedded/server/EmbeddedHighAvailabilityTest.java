@@ -117,6 +117,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
         o -> o.runTask(taskId, taskPayload.withId(taskId))
     );
     cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator1);
 
     // Run sys queries, switch leaders, repeat
     ServerPair<EmbeddedOverlord> overlordPair = createServerPair(overlord1, overlord2);
