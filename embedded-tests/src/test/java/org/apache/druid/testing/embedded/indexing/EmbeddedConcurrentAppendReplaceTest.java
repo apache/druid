@@ -53,7 +53,7 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_concurrentAppend_toIntervalWithUnusedSegment()
+  public void test_concurrentAppend_toIntervalWithUnusedSegment_usesNewSegmentId()
   {
     // Run an APPEND task to ingest data into an interval
     final String data1Row = "2013-01-01T00:00:00.000Z,shirt,100";
