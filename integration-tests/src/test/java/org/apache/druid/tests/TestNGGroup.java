@@ -43,8 +43,6 @@ public class TestNGGroup
 
   public static final String COMPACTION = "compaction";
 
-  public static final String UPGRADE = "upgrade";
-
   public static final String APPEND_INGESTION = "append-ingestion";
 
   /**
