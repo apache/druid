@@ -31,7 +31,6 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -54,7 +53,6 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Disabled("Enable when concurrent append to interval with unused segment is fixed")
   public void test_concurrentAppend_toIntervalWithUnusedSegment()
   {
     // Run an APPEND task to ingest data into an interval
