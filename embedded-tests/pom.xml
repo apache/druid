@@ -144,6 +144,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-datasketches</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-aws-common</artifactId>
       <version>${project.parent.version}</version>
@@ -243,6 +249,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+<<<<<<< HEAD
       <groupId>org.testcontainers</groupId>
       <artifactId>minio</artifactId>
       <version>${testcontainers.version}</version>
@@ -261,6 +268,10 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
+=======
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
+>>>>>>> 627963072b050c5891bade81fc75b0415c061aab
       <scope>test</scope>
     </dependency>
   </dependencies>

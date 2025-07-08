@@ -39,6 +39,29 @@ public class Resources
       + "\n2025-06-09T00:00:00.000Z,shirt,99"
       + "\n2025-06-10T00:00:00.000Z,toys,101";
 
+  public static final String JSON_DATA_2_ROWS =
+      "{\"isRobot\":true,\"language\":\"en\",\"timestamp\":\"2013-08-31T00:00:11.080Z\","
+      + "\"flags\":\"NB\",\"isUnpatrolled\":false,\"page\":\"Salo Toraut\","
+      + "\"diffUrl\":\"https://sv.wikipedia.org/w/index.php?oldid=36099284&rcid=89369918\","
+      + "\"added\":31,\"comment\":\"Botskapande Indonesien omdirigering\","
+      + "\"commentLength\":35,\"isNew\":true,\"isMinor\":false,\"delta\":31,"
+      + "\"isAnonymous\":false,\"user\":\"maytas1\",\"deltaBucket\":0.0,\"deleted\":0,"
+      + "\"namespace\":\"Main\"}"
+      + "\n{\"isRobot\":true,\"language\":\"en\",\"timestamp\":\"2013-08-31T00:00:11.080Z\","
+      + "\"flags\":\"NB\",\"isUnpatrolled\":false,\"page\":\"Salo Toraut\","
+      + "\"diffUrl\":\"https://sv.wikipedia.org/w/index.php?oldid=36099284&rcid=89369918\","
+      + "\"added\":31,\"comment\":\"Botskapande Indonesien omdirigering\",\"commentLength\":35,"
+      + "\"isNew\":true,\"isMinor\":false,\"delta\":11,\"isAnonymous\":false,\"user\":\"maytas2\","
+      + "\"deltaBucket\":0.0,\"deleted\":0,\"namespace\":\"Main\"}\n";
+
+  public static final String JSON_DATA_1_ROW =
+      "{\"isRobot\":true,\"language\":\"en\",\"timestamp\":\"2013-08-31T00:00:11.080Z\","
+      + "\"flags\":\"NB\",\"isUnpatrolled\":false,\"page\":\"Salo Toraut\","
+      + "\"diffUrl\":\"https://sv.wikipedia.org/w/index.php?oldid=36099284&rcid=89369918\","
+      + "\"added\":31,\"comment\":\"Botskapande Indonesien omdirigering\","
+      + "\"commentLength\":35,\"isNew\":true,\"isMinor\":false,\"delta\":31,"
+      + "\"isAnonymous\":false,\"user\":\"maytas3\",\"deltaBucket\":0.0,\"deleted\":0,\"namespace\":\"Main\"}\n";
+
   public static final String WIKIPEDIA_1_JSON = "data/json/wikipedia_1.json";
   public static final String WIKIPEDIA_2_JSON = "data/json/wikipedia_2.json";
   public static final String WIKIPEDIA_3_JSON = "data/json/wikipedia_3.json";
