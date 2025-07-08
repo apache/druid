@@ -1103,6 +1103,61 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testQueryGranularityLargerProjectionGranularity()
+  {
+    final GroupByQuery.Builder queryBuilder =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.ETERNITY)
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
+    if (sortByDim) {
+      queryBuilder.setGranularity(Granularities.ALL)
+                  .setDimensions(
+                      DefaultDimensionSpec.of("__gran", ColumnType.LONG),
+                      DefaultDimensionSpec.of("a")
+                  )
+                  .setVirtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"));
+    } else {
+      queryBuilder.addDimension("a")
+                  .setGranularity(Granularities.DAY);
+    }
+    final GroupByQuery query = queryBuilder.build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(3, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
+      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
+          new Object[]{TIMESTAMP.getMillis(), "a", 7L},
+          new Object[]{TIMESTAMP.getMillis(), "b", 12L}
+      );
+      for (ResultRow row : results) {
+        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
+      }
+    } else {
+      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 7L}, results.get(0).getArray());
+      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(1).getArray());
+    }
+  }
+
+  @Test
   public void testProjectionSelectionMissingAggregatorButHasAggregatorInput()
   {
     // e is present as a column on the projection, but since its an aggregate projection we cannot use it
