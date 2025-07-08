@@ -438,7 +438,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
       const effectiveMaxNumTasks = effectiveQuery.getMaxNumTasks() ?? 2;
       if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
-        console.log(capacityInfo, effectiveMaxNumTasks);
         setAlertElement(
           <CapacityAlert
             maxNumTasks={effectiveMaxNumTasks}
