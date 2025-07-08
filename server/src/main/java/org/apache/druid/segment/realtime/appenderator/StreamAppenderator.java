@@ -580,7 +580,6 @@ public class StreamAppenderator implements Appenderator
               }
               finally {
                 commitLock.unlock();
-                clearTaskThreadContext();
               }
               return null;
             }
@@ -758,7 +757,6 @@ public class StreamAppenderator implements Appenderator
               metrics.incrementNumPersists();
               metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
               persistStopwatch.stop();
-              clearTaskThreadContext();
             }
           }
         }
@@ -854,7 +852,6 @@ public class StreamAppenderator implements Appenderator
           }
 
           log.info("Push complete...");
-          clearTaskThreadContext();
 
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
         },
@@ -1799,7 +1796,6 @@ public class StreamAppenderator implements Appenderator
               segmentsSchema,
               sinksSchemaChange.orElse(null)
           ));
-      clearTaskThreadContext();
     }
   }
 }

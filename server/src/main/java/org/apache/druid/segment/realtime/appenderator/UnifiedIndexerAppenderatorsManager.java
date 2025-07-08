@@ -202,12 +202,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         {
           Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
         }
-
-        @Override
-        public void clearTaskThreadContext()
-        {
-          Appenderators.clearTaskThreadContextForIndexers();
-        }
       };
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -255,12 +249,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         public void setTaskThreadContext()
         {
           Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
-        }
-
-        @Override
-        public void clearTaskThreadContext()
-        {
-          Appenderators.clearTaskThreadContextForIndexers();
         }
       };
       datasourceBundle.addAppenderator(taskId, appenderator);

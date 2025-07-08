@@ -634,7 +634,6 @@ public class BatchAppenderator implements Appenderator
                      numPersistedRows, bytesPersisted, persistMillis
             );
             log.info("Persist is done.");
-            clearTaskThreadContext();
           }
           return null;
         }
@@ -740,7 +739,6 @@ public class BatchAppenderator implements Appenderator
                    identifiers.size(), totalHydrantsMerged
           );
 
-          clearTaskThreadContext();
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
         },
         pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees

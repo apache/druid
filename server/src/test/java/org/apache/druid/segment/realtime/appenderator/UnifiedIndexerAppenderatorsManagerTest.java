@@ -301,7 +301,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         Map.of("task.log.id", "taskId", "task.log.file", "/mnt/var/taskId"),
         threadContext
     );
-    appenderator.clearTaskThreadContext();
+    Appenderators.clearTaskThreadContextForIndexers();
   }
 
   /**
