@@ -121,7 +121,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
@@ -1244,7 +1243,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         new ForwardingQueryProcessingPool(exec),
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new WorkerConfig(),
         MapCache.create(2048),
         new CacheConfig(),
