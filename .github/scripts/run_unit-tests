@@ -20,7 +20,7 @@ set -x
 
 OPTS+="-pl !integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases"
 OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
-OPTS+=" -Djunit.jupiter.execution.timeout.test.method.default=10m"
+OPTS+=" -Djunit.jupiter.execution.timeout.default=3m"
 OPTS+=" -Djunit.jupiter.execution.timeout.threaddump.enabled=true"
 OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 
