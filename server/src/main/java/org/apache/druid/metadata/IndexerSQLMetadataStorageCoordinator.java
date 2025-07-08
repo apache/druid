@@ -1419,6 +1419,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           version,
           partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
+      pendingSegmentId = getTrueAllocatedId(transaction, pendingSegmentId);
       return PendingSegmentRecord.create(
           pendingSegmentId,
           request.getSequenceName(),
@@ -1555,12 +1556,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                  ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
                                  : PartitionIds.ROOT_GEN_START_PARTITION_ID;
       String version = newSegmentVersion == null ? existingVersion : newSegmentVersion;
-      return new SegmentIdWithShardSpec(
+      SegmentIdWithShardSpec allocatedId = new SegmentIdWithShardSpec(
           dataSource,
           interval,
           version,
           partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
+      return getTrueAllocatedId(transaction, allocatedId);
     } else if (!overallMaxId.getInterval().equals(interval)) {
       log.warn(
           "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
