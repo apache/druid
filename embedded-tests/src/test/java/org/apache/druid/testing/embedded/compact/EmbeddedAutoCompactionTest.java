@@ -1683,7 +1683,7 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
       // Verify all task succeed
       List<TaskStatusPlus> compactTasksBefore = getCompleteTasksForDataSource(fullDatasourceName);
       for (TaskStatusPlus taskResponseObject : compactTasksBefore) {
-        Assertions.assertEquals(TaskState.SUCCESS, taskResponseObject.getStatus());
+        Assertions.assertEquals(TaskState.SUCCESS, taskResponseObject.getStatusCode());
       }
 
       // Verify compacted segments does not get compacted again
