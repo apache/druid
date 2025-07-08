@@ -68,8 +68,7 @@ public class QueryResultStageProcessor extends BasicStandardStageProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   )
   {
     // Expecting a single input slice from some prior stage.

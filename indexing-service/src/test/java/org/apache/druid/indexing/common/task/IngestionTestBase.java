@@ -96,6 +96,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -314,6 +315,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .taskLogPusher(null)
         .attemptId("1")
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+        .runtimeInfo(JvmUtils.getRuntimeInfo())
         .build();
   }
 
@@ -532,6 +534,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .taskLogPusher(null)
             .attemptId("1")
             .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+            .runtimeInfo(JvmUtils.getRuntimeInfo())
             .build();
 
 

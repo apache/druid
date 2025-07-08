@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -172,7 +173,7 @@ public class QuantilesSketchKeyCollectorTest
         new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0).getColumns(),
         RowSignature.builder().add("x", ColumnType.LONG).build()
     );
-    RowKey smallKey = KeyTestUtils.createKey(smallKeySignature, 1L);
+    RowKey smallKey = KeyTestUtils.createKey(smallKeySignature, FrameType.latestRowBased(), 1L);
 
     RowSignature largeKeySignature = KeyTestUtils.createKeySignature(
         new ClusterBy(
@@ -189,7 +190,7 @@ public class QuantilesSketchKeyCollectorTest
                     .add("z", ColumnType.LONG)
                     .build()
     );
-    RowKey largeKey = KeyTestUtils.createKey(largeKeySignature, 1L, 2L, 3L);
+    RowKey largeKey = KeyTestUtils.createKey(largeKeySignature, FrameType.latestRowBased(), 1L, 2L, 3L);
 
 
     collector.add(smallKey, 3);

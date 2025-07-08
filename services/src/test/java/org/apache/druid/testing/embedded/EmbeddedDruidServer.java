@@ -22,15 +22,10 @@ package org.apache.druid.testing.embedded;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import org.apache.druid.cli.ServerRunnable;
-import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -38,13 +33,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An embedded Druid server used in embedded tests.
  * This class and most of its methods are kept package protected as they are used
  * only by the specific server implementations in the same package.
  */
-public abstract class EmbeddedDruidServer implements ServerReferencesProvider
+public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = 100_000_000;
@@ -56,9 +52,12 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
   private static final AtomicInteger SERVER_ID = new AtomicInteger(0);
 
   private final String name;
+  private final AtomicReference<EmbeddedServerLifecycle> lifecycle = new AtomicReference<>();
 
+  private long serverMemory = MEM_100_MB;
+  private long serverDirectMemory = MEM_100_MB;
   private final Map<String, String> serverProperties = new HashMap<>();
-  private final ServerReferenceHolder clientHolder = new ServerReferenceHolder();
+  private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
   EmbeddedDruidServer()
   {
@@ -67,6 +66,28 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
         this.getClass().getSimpleName(),
         SERVER_ID.incrementAndGet()
     );
+  }
+
+  @Override
+  public void start() throws Exception
+  {
+    final EmbeddedServerLifecycle lifecycle = this.lifecycle.get();
+    if (lifecycle == null) {
+      throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
+    } else {
+      lifecycle.start();
+    }
+  }
+
+  @Override
+  public void stop() throws Exception
+  {
+    final EmbeddedServerLifecycle lifecycle = this.lifecycle.get();
+    if (lifecycle == null) {
+      throw new ISE("Server[%s] can be run only after it has been added to a cluster.", name);
+    } else {
+      lifecycle.stop();
+    }
   }
 
   /**
@@ -82,10 +103,40 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
    * {@code runtime.properties} file in a real Druid cluster, and override the
    * common properties specified via {@link EmbeddedDruidCluster#addCommonProperty}.
    */
-  public final EmbeddedDruidServer addProperty(String key, String value)
+  @SuppressWarnings("unchecked")
+  public final T addProperty(String key, String value)
   {
     serverProperties.put(key, value);
+    return (T) this;
+  }
+
+  /**
+   * Sets the amount of heap memory visible to the server through {@link RuntimeInfo}.
+   */
+  public final EmbeddedDruidServer setServerMemory(long serverMemory)
+  {
+    this.serverMemory = serverMemory;
     return this;
+  }
+
+  /**
+   * Sets the amount of direct (off-heap) memory visible to the server through {@link RuntimeInfo}.
+   */
+  public final EmbeddedDruidServer setServerDirectMemory(long serverDirectMemory)
+  {
+    this.serverDirectMemory = serverDirectMemory;
+    return this;
+  }
+
+  /**
+   * Called from {@link EmbeddedDruidCluster#addServer(EmbeddedDruidServer)} to
+   * tie the lifecycle of this server to the cluster.
+   */
+  final void onAddedToCluster(EmbeddedDruidCluster cluster, Properties commonProperties)
+  {
+    this.lifecycle.set(
+        new EmbeddedServerLifecycle(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
+    );
   }
 
   /**
@@ -103,16 +154,6 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
   abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
   );
-
-  /**
-   * {@link RuntimeInfo} to use for this server.
-   *
-   * @return {@link RuntimeInfo} with 2 processors and 100MB memory by default.
-   */
-  RuntimeInfo getRuntimeInfo()
-  {
-    return new DruidProcessingConfigTest.MockRuntimeInfo(2, MEM_100_MB, MEM_100_MB);
-  }
 
   /**
    * Properties to be used in the {@code StartupInjectorBuilder} while launching
@@ -154,6 +195,10 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
       );
     }
 
+    // Add properties for RuntimeInfoModule
+    serverProperties.setProperty(RuntimeInfoModule.SERVER_MEMORY_PROPERTY, String.valueOf(serverMemory));
+    serverProperties.setProperty(RuntimeInfoModule.SERVER_DIRECT_MEMORY_PROPERTY, String.valueOf(serverDirectMemory));
+
     serverProperties.putAll(this.serverProperties);
     return serverProperties;
   }
@@ -165,43 +210,26 @@ public abstract class EmbeddedDruidServer implements ServerReferencesProvider
    */
   final void bindReferenceHolder(Binder binder)
   {
-    binder.bind(ServerReferenceHolder.class).toInstance(clientHolder);
+    binder.bind(ServerReferenceHolder.class).toInstance(referenceHolder);
   }
 
-  @Override
-  public DruidNode selfNode()
+  /**
+   * Provides access to the various dependencies bound by Guice on this server.
+   * The bindings should be used for read-only purposes and should not mutate
+   * the state of this server or the cluster, so that the embedded cluster can
+   * mirror the behaviour of a real production cluster.
+   */
+  public final ServerReferencesProvider bindings()
   {
-    return clientHolder.selfNode();
+    return referenceHolder;
   }
 
-  @Override
-  public CoordinatorClient leaderCoordinator()
+  /**
+   * {@link LatchableEmitter} used by this server, if bound.
+   */
+  public final LatchableEmitter latchableEmitter()
   {
-    return clientHolder.leaderCoordinator();
-  }
-
-  @Override
-  public OverlordClient leaderOverlord()
-  {
-    return clientHolder.leaderOverlord();
-  }
-
-  @Override
-  public BrokerClient anyBroker()
-  {
-    return clientHolder.anyBroker();
-  }
-
-  @Override
-  public LatchableEmitter latchableEmitter()
-  {
-    return clientHolder.latchableEmitter();
-  }
-
-  @Override
-  public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
-  {
-    return clientHolder.segmentsMetadataStorage();
+    return referenceHolder.latchableEmitter();
   }
 
   /**

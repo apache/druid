@@ -88,8 +88,7 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher,
-      final boolean removeNullBytes
+      Consumer<Throwable> warningPublisher
   ) throws IOException
   {
     // BaseLeafStageProcessor is used for native Druid queries, where the following input cases can happen:
@@ -127,9 +126,13 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
       final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
       outputChannels.add(outputChannel);
       channelQueue.add(outputChannel.getWritableChannel());
-      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes));
+      frameWriterFactoryQueue.add(
+          stageDefinition.createFrameWriterFactory(
+              frameContext.frameWriterSpec(),
+              outputChannel.getFrameMemoryAllocator()
+          )
+      );
     }
-
 
     // SegmentMapFn processor, if needed. May be null.
     final FrameProcessor<SegmentMapFunction> segmentMapFnProcessor =
@@ -166,7 +169,10 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
       final SegmentMapFunction segmentMapFn = ExecutionVertex.of(query).createSegmentMapFunction(frameContext.policyEnforcer());
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
-      processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);
+      processorManager = new ChainedProcessorManager<>(
+          ProcessorManagers.of(() -> segmentMapFnProcessor),
+          processorManagerFn
+      );
     }
 
     //noinspection unchecked,rawtypes

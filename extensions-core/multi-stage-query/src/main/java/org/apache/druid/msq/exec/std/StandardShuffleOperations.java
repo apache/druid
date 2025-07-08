@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -57,7 +58,6 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -218,12 +218,13 @@ public class StandardShuffleOperations
               },
               outputChannelFactory,
               executionContext.makeIntermediateOutputChannelFactory("super-sort"),
+              executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
               memoryParameters.getSuperSorterConcurrentProcessors(),
               memoryParameters.getSuperSorterMaxChannelsPerMerger(),
               stageDefinition.getShuffleSpec().limitHint(),
               executionContext.cancellationId(),
               executionContext.counters().sortProgress(),
-              isRemoveNullBytes()
+              executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
           );
 
           return FutureUtils.transform(
@@ -266,11 +267,12 @@ public class StandardShuffleOperations
               outputChannels.stream().map(OutputChannel::getWritableChannel).collect(Collectors.toList()),
               workOrder.getStageDefinition().getFrameReader(),
               workOrder.getStageDefinition().getClusterBy().getColumns().size(),
-              FrameWriters.makeRowBasedFrameWriterFactory(
+              FrameWriters.makeFrameWriterFactory(
+                  executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
                   new ArenaMemoryAllocatorFactory(executionContext.frameContext().memoryParameters().getFrameSize()),
                   workOrder.getStageDefinition().getSignature(),
                   workOrder.getStageDefinition().getSortKey(),
-                  isRemoveNullBytes()
+                  executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
               )
           );
 
@@ -379,6 +381,7 @@ public class StandardShuffleOperations
                       partitionOverrideOutputChannelFactory,
                       executionContext.makeIntermediateOutputChannelFactory(
                           StringUtils.format("hash-parts-super-sort-%06d", channel.getPartitionNumber())),
+                      executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
                       1,
                       2,
                       ShuffleSpec.UNLIMITED,
@@ -388,7 +391,7 @@ public class StandardShuffleOperations
                       // There's a single SuperSorterProgressTrackerCounter per worker, but workers that do local
                       // sorting have a SuperSorter per partition.
                       new SuperSorterProgressTracker(),
-                      isRemoveNullBytes()
+                      executionContext.frameContext().frameWriterSpec().getRemoveNullBytes()
                   );
 
                   return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));
@@ -425,6 +428,9 @@ public class StandardShuffleOperations
     final int numOutputChannels = channels.getAllChannels().size();
     final List<KeyStatisticsCollectionProcessor> processors = new ArrayList<>(numOutputChannels);
 
+    // Input/output frame type.
+    final FrameType frameType = executionContext.frameContext().frameWriterSpec().getRowBasedFrameType();
+
     // Max retained bytes total.
     final int maxRetainedBytes =
         executionContext.frameContext().memoryParameters().getPartitionStatisticsMaxRetainedBytes();
@@ -443,7 +449,7 @@ public class StandardShuffleOperations
               channel.writable(),
               stageDefinition.getFrameReader(),
               stageDefinition.getClusterBy(),
-              stageDefinition.createResultKeyStatisticsCollector(maxRetainedBytesPerChannel)
+              stageDefinition.createResultKeyStatisticsCollector(frameType, maxRetainedBytesPerChannel)
           )
       );
     }
@@ -454,6 +460,7 @@ public class StandardShuffleOperations
                 ProcessorManagers.of(processors)
                                  .withAccumulation(
                                      stageDefinition.createResultKeyStatisticsCollector(
+                                         frameType,
                                          // Divide by two: half for the per-processor collectors, half for the
                                          // combined collector.
                                          maxRetainedBytes / 2
@@ -491,11 +498,6 @@ public class StandardShuffleOperations
         clusterByStatisticsCollectorFuture,
         OutputChannels.wrap(retVal)
     );
-  }
-
-  private boolean isRemoveNullBytes()
-  {
-    return MultiStageQueryContext.removeNullBytes(workOrder.getWorkerContext());
   }
 
   private static <T, R> ListenableFuture<ResultAndChannels<Object>> transform(

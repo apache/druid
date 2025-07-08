@@ -28,6 +28,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React from 'react';
 
+import type { JsonCompletionRule } from '../../utils';
 import { deepDelete, deepGet, deepSet, durationSanitizer, EXPERIMENTAL_ICON } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FancyNumericInput } from '../fancy-numeric-input/fancy-numeric-input';
@@ -75,6 +76,7 @@ export interface Field<M> {
   valueAdjustment?: (value: any) => any;
   adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
+  jsonCompletions?: JsonCompletionRule[];
 
   customSummary?: (v: any) => string;
   customDialog?: (o: {
@@ -409,6 +411,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         height={field.height}
         issueWithValue={field.issueWithValue}
+        jsonCompletions={field.jsonCompletions}
       />
     );
   }

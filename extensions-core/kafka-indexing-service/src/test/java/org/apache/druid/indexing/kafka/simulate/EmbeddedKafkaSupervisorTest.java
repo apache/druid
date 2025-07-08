@@ -57,14 +57,14 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private EmbeddedKafkaServer kafkaServer;
+  private KafkaResource kafkaServer;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
 
-    kafkaServer = new EmbeddedKafkaServer(cluster.getZookeeper(), cluster.getTestFolder(), Map.of());
+    kafkaServer = new KafkaResource();
 
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)

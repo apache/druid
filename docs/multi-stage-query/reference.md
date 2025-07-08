@@ -129,7 +129,7 @@ SELECT
 FROM <table>
 ```
 
-For details on applying context parameters using SET, see [SET statements](../querying/sql.md#set-statements).
+For details on applying context parameters using SET, see [SET](../querying/sql.md#set).
 
 
 ##### S3 - Amazon S3
@@ -386,21 +386,11 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it.
+The multi-stage query task engine supports the [SQL context parameters](../querying/sql-query-context.md), as well as its own context parameters described in this section. Use these parameters to tailor how Druid executes your query.
 
-Use context parameters alongside your queries to customize the behavior of the query. If you're using the API, include the context parameters in the query context when you submit a query:
+You can specify the context parameters in SELECT, INSERT, or REPLACE statements.
 
-```json
-{
-  "query": "SELECT 1 + 1",
-  "context": {
-    "<key>": "<value>",
-    "maxNumTasks": 3
-  }
-}
-```
-
-If you're using the web console, you can specify the context parameters through various UI options.
+For detailed instructions on configuring query context parameters, refer to [Query context](../querying/query-context.md).
 
 The following table lists the context parameters for the MSQ task engine:
 

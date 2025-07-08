@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.IAE;
@@ -41,6 +42,8 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 
@@ -244,6 +247,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           controllerQueryKernel.createAndGetNewStageIds(
               inputSlicerFactory,
               WorkerAssignmentStrategy.MAX,
+              MultiStageQueryContext.getRowBasedFrameType(QueryContext.of(config.getWorkerContextMap())),
               Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
           )
       );
@@ -459,10 +463,12 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     private ClusterByStatisticsCollector getMockCollector(int stageNumber)
     {
       final ClusterByStatisticsCollector keyStatsCollector =
-          queryDefinition.getStageDefinition(stageNumber).createResultKeyStatisticsCollector(10_000_000);
+          queryDefinition.getStageDefinition(stageNumber)
+                         .createResultKeyStatisticsCollector(FrameType.latestRowBased(), 10_000_000);
       for (int i = 0; i < 1000; i++) {
         final RowKey key = KeyTestUtils.createKey(
             MockQueryDefinitionBuilder.STAGE_SIGNATURE,
+            FrameType.latestRowBased(),
             String.valueOf(i)
         );
         keyStatsCollector.add(key, 1);

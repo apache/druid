@@ -22,7 +22,7 @@ package org.apache.druid.frame.allocation;
 /**
  * Factory for {@link MemoryAllocator}.
  *
- * Used by {@link org.apache.druid.frame.write.FrameWriters#makeRowBasedFrameWriterFactory} to create
+ * Used by {@link org.apache.druid.frame.write.FrameWriters#makeFrameWriterFactory} to create
  * {@link org.apache.druid.frame.write.FrameWriterFactory}.
  */
 public interface MemoryAllocatorFactory

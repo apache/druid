@@ -33,7 +33,7 @@ import java.util.List;
  * Add this to your {@link EmbeddedDruidCluster} if you want to run queries
  * against it.
  */
-public class EmbeddedBroker extends EmbeddedDruidServer
+public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
 {
 
   @Override

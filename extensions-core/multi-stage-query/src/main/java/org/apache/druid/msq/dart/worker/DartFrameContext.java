@@ -24,6 +24,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
@@ -47,6 +48,7 @@ import java.io.File;
 public class DartFrameContext implements FrameContext
 {
   private final StageId stageId;
+  private final FrameWriterSpec frameWriterSpec;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
   private final DataSegmentProvider dataSegmentProvider;
@@ -59,6 +61,7 @@ public class DartFrameContext implements FrameContext
   public DartFrameContext(
       final StageId stageId,
       final WorkerContext workerContext,
+      final FrameWriterSpec frameWriterSpec,
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
       final DataSegmentProvider dataSegmentProvider,
@@ -70,6 +73,7 @@ public class DartFrameContext implements FrameContext
   {
     this.stageId = stageId;
     this.segmentWrangler = segmentWrangler;
+    this.frameWriterSpec = frameWriterSpec;
     this.groupingEngine = groupingEngine;
     this.dataSegmentProvider = dataSegmentProvider;
     this.workerContext = workerContext;
@@ -167,6 +171,12 @@ public class DartFrameContext implements FrameContext
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
     return dataServerQueryHandlerFactory;
+  }
+
+  @Override
+  public FrameWriterSpec frameWriterSpec()
+  {
+    return frameWriterSpec;
   }
 
   @Override

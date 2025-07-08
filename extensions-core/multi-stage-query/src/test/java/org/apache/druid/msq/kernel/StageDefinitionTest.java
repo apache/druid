@@ -22,6 +22,7 @@ package org.apache.druid.msq.kernel;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -105,10 +106,19 @@ public class StageDefinitionTest
 
     Assert.assertThrows(
         ISE.class,
-        () -> stageDefinition.generatePartitionBoundariesForShuffle(ClusterByStatisticsCollectorImpl.create(new ClusterBy(
-            ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)),
-            1
-        ), RowSignature.builder().add("test", ColumnType.STRING).build(), 1000, 100, false, false))
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(
+            ClusterByStatisticsCollectorImpl.create(
+                new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 1),
+                RowSignature.builder()
+                            .add("test", ColumnType.STRING)
+                            .build(),
+                FrameType.latestRowBased(),
+                1000,
+                100,
+                false,
+                false
+            )
+        )
     );
   }
 }

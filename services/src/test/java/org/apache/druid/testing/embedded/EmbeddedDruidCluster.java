@@ -31,6 +31,7 @@ import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,8 @@ import java.util.stream.Collectors;
  * <li>Other {@link EmbeddedResource} to be used in the cluster. For example,
  * an {@link InMemoryDerbyResource}.</li>
  * <li>List of {@link DruidModule} to load specific extensions, e.g. {@link InMemoryDerbyModule}.</li>
+ * <li>{@link RuntimeInfoModule} supplying a {@link RuntimeInfo} with values matching
+ * {@link EmbeddedDruidServer#setServerMemory} and {@link EmbeddedDruidServer#setServerDirectMemory}</li>
  * <li>{@link #addCommonProperty Common properties} that are applied to all Druid
  * services in the cluster.</li>
  * </ul>
@@ -79,13 +82,27 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
-  private boolean started = false;
+  private boolean startedFirstDruidServer = false;
   private EmbeddedZookeeper zookeeper;
 
   private EmbeddedDruidCluster()
   {
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
+    addExtension(RuntimeInfoModule.class);
+  }
+
+  /**
+   * Creates a cluster with an embedded Zookeeper server, but no particular
+   * metadata store configured.
+   *
+   * @see EmbeddedZookeeper
+   */
+  public static EmbeddedDruidCluster withZookeeper()
+  {
+    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
+    cluster.addEmbeddedZookeeper();
+    return cluster;
   }
 
   /**
@@ -97,10 +114,9 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public static EmbeddedDruidCluster withEmbeddedDerbyAndZookeeper()
   {
-    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
-    cluster.resources.add(new InMemoryDerbyResource(cluster));
+    final EmbeddedDruidCluster cluster = withZookeeper();
+    cluster.resources.add(new InMemoryDerbyResource());
     cluster.extensionModules.add(InMemoryDerbyModule.class);
-    cluster.addEmbeddedZookeeper();
 
     return cluster;
   }
@@ -142,26 +158,24 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   /**
    * Adds an extension to this cluster. The list of extensions is populated in
    * the common property {@code druid.extensions.modulesForSimulation}.
-   * All extensions must be added before any server has been added to the cluster.
    */
   public EmbeddedDruidCluster addExtension(Class<? extends DruidModule> moduleClass)
   {
     validateNotStarted();
-    if (!servers.isEmpty()) {
-      throw new ISE("All extensions must be added to the cluster before adding any Druid server");
-    }
     extensionModules.add(moduleClass);
     return this;
   }
 
   /**
-   * Adds a Druid service to this cluster.
+   * Adds a Druid server to this cluster. A server added to the cluster after the
+   * cluster has started must be started explicitly by calling
+   * {@link EmbeddedDruidServer#start()}.
    */
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
-    validateNotStarted();
+    server.onAddedToCluster(this, commonProperties);
     servers.add(server);
-    resources.add(new DruidServerResource(server, testFolder, zookeeper, commonProperties));
+    resources.add(server);
     return this;
   }
 
@@ -217,15 +231,24 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public void start() throws Exception
   {
-    Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have atleast one embedded Druid server");
-
-    addCommonProperty("druid.extensions.modulesForEmbeddedTest", getExtensionModuleProperty());
-    log.info("Starting cluster with common properties[%s].", commonProperties);
+    Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have at least one embedded Druid server");
 
     // Start the resources in order
     for (EmbeddedResource resource : resources) {
       try {
+        if (resource instanceof EmbeddedDruidServer<?> && !startedFirstDruidServer) {
+          // Defer setting the extensions property until the first Druid server starts, so configureCluster calls for
+          // earlier resources can add extensions.
+          addCommonProperty("druid.extensions.modulesForEmbeddedTest", getExtensionModuleProperty());
+          log.info("Starting Druid services with common properties[%s].", commonProperties);
+
+          // Mark the cluster as started so that no new resource, server or property is added
+          startedFirstDruidServer = true;
+        }
+
+        log.info("Starting resource[%s].", resource);
         resource.start();
+        resource.onStarted(this);
       }
       catch (Exception e) {
         // Clean up the resources that have already been started
@@ -233,9 +256,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         throw e;
       }
     }
-
-    // Mark the cluster as added so that no new resource, server or property is added
-    started = true;
   }
 
   /**
@@ -248,6 +268,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     // Stop the resources in reverse order
     for (EmbeddedResource resource : Lists.reverse(resources)) {
       try {
+        log.info("Stopping resource[%s].", resource);
         resource.stop();
       }
       catch (Exception e) {
@@ -277,25 +298,25 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public CoordinatorClient leaderCoordinator()
   {
-    return servers.get(0).leaderCoordinator();
+    return servers.get(0).bindings().leaderCoordinator();
   }
 
   @Override
   public OverlordClient leaderOverlord()
   {
-    return servers.get(0).leaderOverlord();
+    return servers.get(0).bindings().leaderOverlord();
   }
 
   @Override
   public BrokerClient anyBroker()
   {
-    return servers.get(0).anyBroker();
+    return servers.get(0).bindings().anyBroker();
   }
 
   private void validateNotStarted()
   {
-    if (started) {
-      throw new ISE("Cluster has already started");
+    if (startedFirstDruidServer) {
+      throw new ISE("Cluster has already begun starting up");
     }
   }
 

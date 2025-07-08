@@ -22,39 +22,6 @@
 .header-bar {
   overflow: hidden;
 
-  .druid-logo {
-    position: relative;
-    width: 100px;
-    height: $header-bar-height;
-    overflow: hidden;
-
-    svg {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      height: 48px;
-
-      .letter {
-        fill: $dark-gray2;
-      }
-
-      .swirl {
-        fill: $druid-brand2;
-      }
-
-      .#{$bp-ns}-dark & {
-        .letter {
-          fill: $white;
-        }
-
-        .swirl {
-          fill: $druid-brand;
-        }
-      }
-    }
-  }
-
   * {
     white-space: nowrap;
   }

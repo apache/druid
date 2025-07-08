@@ -69,7 +69,6 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Interval;
 
@@ -141,6 +140,7 @@ public class TaskToolbox
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final RuntimeInfo runtimeInfo;
 
   public TaskToolbox(
       SegmentLoaderConfig segmentLoaderConfig,
@@ -185,7 +185,8 @@ public class TaskToolbox
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       String attemptId,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      RuntimeInfo runtimeInfo
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -232,6 +233,7 @@ public class TaskToolbox
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.runtimeInfo = runtimeInfo;
   }
 
   public SegmentLoaderConfig getSegmentLoaderConfig()
@@ -516,7 +518,7 @@ public class TaskToolbox
    */
   public RuntimeInfo getAdjustedRuntimeInfo()
   {
-    return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
+    return createAdjustedRuntimeInfo(runtimeInfo, appenderatorsManager);
   }
 
   public CentralizedDatasourceSchemaConfig getCentralizedTableSchemaConfig()
@@ -593,6 +595,7 @@ public class TaskToolbox
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+    private RuntimeInfo runtimeInfo;
 
     public Builder()
     {
@@ -641,6 +644,7 @@ public class TaskToolbox
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
       this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
+      this.runtimeInfo = other.runtimeInfo;
     }
 
     public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
@@ -901,6 +905,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder runtimeInfo(final RuntimeInfo runtimeInfo)
+    {
+      this.runtimeInfo = runtimeInfo;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -946,7 +956,8 @@ public class TaskToolbox
           shuffleClient,
           taskLogPusher,
           attemptId,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          runtimeInfo
       );
     }
   }

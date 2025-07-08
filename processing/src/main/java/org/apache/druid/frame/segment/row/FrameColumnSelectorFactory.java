@@ -46,6 +46,15 @@ import java.util.List;
 public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   /**
+   * Name of the virtual column that contains the type of frames from this {@link ColumnSelectorFactory}. This is
+   * necessary because callers need it to verify that {@link #ROW_MEMORY_COLUMN} is usable, but the interface does
+   * not provide a natural way to retrieve the underlying frame type.
+   *
+   * Guaranteed not to appear in the frame itself due to {@link FrameWriterUtils#findDisallowedFieldNames} checks.
+   */
+  public static final String FRAME_TYPE_COLUMN = FrameWriterUtils.RESERVED_FIELD_PREFIX + "_frame_type";
+
+  /**
    * Name of the virtual column that contains the {@link RowSignature} of frames from this
    * {@link ColumnSelectorFactory}. This is necessary because callers need it to verify that {@link #ROW_MEMORY_COLUMN}
    * is usable, but the interface does not provide a natural way to retrieve the underlying signature.
@@ -61,6 +70,7 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
    */
   public static final String ROW_MEMORY_COLUMN = FrameWriterUtils.RESERVED_FIELD_PREFIX + "_frame_row_mem";
 
+  private final Frame frame;
   private final Memory dataRegion;
   private final RowSignature frameSignature;
   private final List<FieldReader> fieldReaders;
@@ -73,7 +83,8 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
       final ReadableFrameRowPointer rowPointer
   )
   {
-    this.dataRegion = FrameType.ROW_BASED.ensureType(frame).region(RowBasedFrameWriter.ROW_DATA_REGION);
+    this.frame = frame;
+    this.dataRegion = frame.ensureRowBased().region(RowBasedFrameWriter.ROW_DATA_REGION);
     this.frameSignature = frameSignature;
     this.fieldReaders = fieldReaders;
     this.rowPointer = rowPointer;
@@ -88,20 +99,23 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
   @Override
   public ColumnValueSelector makeColumnValueSelector(final String columnName)
   {
-    if (ROW_SIGNATURE_COLUMN.equals(columnName)) {
-      return new RowSignatureSelector(frameSignature);
-    } else if (ROW_MEMORY_COLUMN.equals(columnName)) {
-      return new RowMemorySelector(dataRegion, rowPointer);
-    } else {
-      final int columnNumber = frameSignature.indexOf(columnName);
+    switch (columnName) {
+      case FRAME_TYPE_COLUMN:
+        return new FrameTypeSelector(frame.type());
+      case ROW_SIGNATURE_COLUMN:
+        return new RowSignatureSelector(frameSignature);
+      case ROW_MEMORY_COLUMN:
+        return new RowMemorySelector(dataRegion, rowPointer);
+      default:
+        final int columnNumber = frameSignature.indexOf(columnName);
 
-      if (columnNumber < 0) {
-        return NilColumnValueSelector.instance();
-      } else {
-        final RowMemoryFieldPointer fieldPointer =
-            new RowMemoryFieldPointer(dataRegion, rowPointer, columnNumber, fieldReaders.size());
-        return fieldReaders.get(columnNumber).makeColumnValueSelector(dataRegion, fieldPointer);
-      }
+        if (columnNumber < 0) {
+          return NilColumnValueSelector.instance();
+        } else {
+          final RowMemoryFieldPointer fieldPointer =
+              new RowMemoryFieldPointer(dataRegion, rowPointer, columnNumber, fieldReaders.size());
+          return fieldReaders.get(columnNumber).makeColumnValueSelector(dataRegion, fieldPointer);
+        }
     }
   }
 
@@ -122,7 +136,7 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
   @Nullable
   public ColumnCapabilities getColumnCapabilities(final String column)
   {
-    if (ROW_SIGNATURE_COLUMN.equals(column) || ROW_MEMORY_COLUMN.equals(column)) {
+    if (FRAME_TYPE_COLUMN.equals(column) || ROW_SIGNATURE_COLUMN.equals(column) || ROW_MEMORY_COLUMN.equals(column)) {
       // OK to use UNKNOWN_COMPLEX because we are not serializing these columns.
       return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX);
     } else {
@@ -173,6 +187,34 @@ public class FrameColumnSelectorFactory implements ColumnSelectorFactory, RowIdS
     public Class classOfObject()
     {
       return MemoryRange.class;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // Do nothing.
+    }
+  }
+
+  private static class FrameTypeSelector extends ObjectColumnSelector<FrameType>
+  {
+    private final FrameType frameType;
+
+    public FrameTypeSelector(final FrameType frameType)
+    {
+      this.frameType = frameType;
+    }
+
+    @Override
+    public FrameType getObject()
+    {
+      return frameType;
+    }
+
+    @Override
+    public Class<? extends FrameType> classOfObject()
+    {
+      return FrameType.class;
     }
 
     @Override

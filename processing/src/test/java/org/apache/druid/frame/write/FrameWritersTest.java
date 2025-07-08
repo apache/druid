@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -36,7 +37,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.Collections;
 
 /**
- * Tests {@link FrameWriters#makeRowBasedFrameWriterFactory} and {@link FrameWriters#makeColumnBasedFrameWriterFactory} ability to create factories.
+ * Tests {@link FrameWriters#makeFrameWriterFactory} and {@link FrameWriters#makeColumnBasedFrameWriterFactory} ability to create factories.
  * Largely doesn't test actual frame generation via the factories, since that is exercised well enough in other test suites.
  */
 public class FrameWritersTest extends InitializedNullHandlingTest
@@ -44,9 +45,25 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   private static final int ALLOCATOR_CAPACITY = 1000;
 
   @Test
-  public void test_rowBased()
+  public void test_rowBasedV1()
   {
-    final FrameWriterFactory factory = FrameWriters.makeRowBasedFrameWriterFactory(
+    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED_V1,
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
+        RowSignature.builder().add("x", ColumnType.LONG).build(),
+        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING)),
+        false
+    );
+
+    MatcherAssert.assertThat(factory, CoreMatchers.instanceOf(RowBasedFrameWriterFactory.class));
+    Assert.assertEquals(ALLOCATOR_CAPACITY, factory.allocatorCapacity());
+  }
+
+  @Test
+  public void test_rowBasedV2()
+  {
+    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED_V2,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.LONG).build(),
         Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING)),
@@ -103,7 +120,8 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeRowBasedFrameWriterFactory(
+            FrameWriters.makeFrameWriterFactory(
+                FrameType.latestRowBased(),
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build(),
                 Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING)),

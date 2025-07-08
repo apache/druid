@@ -21,9 +21,16 @@ package org.apache.druid.testing.embedded;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -41,7 +48,15 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   private CoordinatorClient coordinator;
 
   @Inject
+  @Coordinator
+  private DruidLeaderSelector coordinatorLeaderSelector;
+
+  @Inject
   private OverlordClient overlord;
+
+  @Inject
+  @IndexingService
+  private DruidLeaderSelector overlordLeaderSelector;
 
   @Inject
   private BrokerClient broker;
@@ -51,6 +66,16 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
 
   @Inject(optional = true)
   private IndexerMetadataStorageCoordinator segmentsMetadataStorage;
+
+  @Inject(optional = true)
+  private SQLMetadataConnector sqlMetadataConnector;
+
+  @Inject
+  private DruidNodeDiscoveryProvider nodeDiscoveryProvider;
+
+  @Inject
+  @EscalatedGlobal
+  private HttpClient httpClient;
 
   @Self
   @Inject
@@ -69,9 +94,21 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   }
 
   @Override
+  public DruidLeaderSelector coordinatorLeaderSelector()
+  {
+    return coordinatorLeaderSelector;
+  }
+
+  @Override
   public OverlordClient leaderOverlord()
   {
     return overlord;
+  }
+
+  @Override
+  public DruidLeaderSelector overlordLeaderSelector()
+  {
+    return overlordLeaderSelector;
   }
 
   @Override
@@ -90,5 +127,23 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   public IndexerMetadataStorageCoordinator segmentsMetadataStorage()
   {
     return Objects.requireNonNull(segmentsMetadataStorage, "Segment metadata storage is not bound");
+  }
+
+  @Override
+  public SQLMetadataConnector sqlMetadataConnector()
+  {
+    return Objects.requireNonNull(sqlMetadataConnector, "SQLMetadataConnector is not bound");
+  }
+
+  @Override
+  public DruidNodeDiscoveryProvider nodeDiscovery()
+  {
+    return nodeDiscoveryProvider;
+  }
+
+  @Override
+  public HttpClient escalatedHttpClient()
+  {
+    return httpClient;
   }
 }

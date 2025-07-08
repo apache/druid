@@ -375,6 +375,11 @@ public class DruidException extends RuntimeException
      */
     NOT_FOUND(404),
     /**
+     * Indicates that the request could not be completed due to a conflict with
+     * the current state of the target resource.
+     */
+    CONFLICT(409),
+    /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */
     CAPACITY_EXCEEDED(429),

@@ -73,6 +73,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -131,6 +132,7 @@ public class SuperSorterTest
           FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          FrameType.latestRowBased(),
           2,
           2,
           SuperSorter.UNLIMITED,
@@ -167,6 +169,7 @@ public class SuperSorterTest
           FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          FrameType.latestRowBased(),
           2,
           2,
           -1,
@@ -202,6 +205,7 @@ public class SuperSorterTest
           FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          FrameType.latestRowBased(),
           2,
           2,
           3,
@@ -239,6 +243,7 @@ public class SuperSorterTest
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+    private final FrameType outputFrameType;
     private final int maxRowsPerFrame;
     private final int maxBytesPerFrame;
     private final int numChannels;
@@ -255,6 +260,7 @@ public class SuperSorterTest
     private FrameReader frameReader;
 
     public ParameterizedCasesTest(
+        FrameType outputFrameType,
         int maxRowsPerFrame,
         int maxBytesPerFrame,
         int numChannels,
@@ -266,6 +272,7 @@ public class SuperSorterTest
         long limitHint
     )
     {
+      this.outputFrameType = outputFrameType;
       this.maxRowsPerFrame = maxRowsPerFrame;
       this.maxBytesPerFrame = maxBytesPerFrame;
       this.numChannels = numChannels;
@@ -278,43 +285,50 @@ public class SuperSorterTest
     }
 
     @Parameterized.Parameters(
-        name = "maxRowsPerFrame = {0}, "
-               + "maxBytesPerFrame = {1}, "
-               + "numChannels = {2}, "
-               + "maxActiveProcessors = {3}, "
-               + "maxChannelsPerProcessor= {4}, "
-               + "numThreads = {5}, "
-               + "isComposedStorage = {6}, "
-               + "partitionsDeferred = {7}, "
-               + "limitHint = {8}"
+        name = "outputFrameType = {0}, "
+               + "maxRowsPerFrame = {1}, "
+               + "maxBytesPerFrame = {2}, "
+               + "numChannels = {3}, "
+               + "maxActiveProcessors = {4}, "
+               + "maxChannelsPerProcessor= {5}, "
+               + "numThreads = {6}, "
+               + "isComposedStorage = {7}, "
+               + "partitionsDeferred = {8}, "
+               + "limitHint = {9}"
     )
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
 
+      final FrameType[] rowBasedFrameTypes =
+          Arrays.stream(FrameType.values()).filter(FrameType::isRowBased).toArray(FrameType[]::new);
+
       // Add some constructors for testing maxRowsPerFrame > 1. Later on, we'll add some for maxRowsPerFrame = 1.
-      for (int maxRowsPerFrame : new int[]{Integer.MAX_VALUE, 50}) {
-        for (int maxBytesPerFrame : new int[]{20_000, 2_000_000}) {
-          for (int numChannels : new int[]{1, 3}) {
-            for (int maxActiveProcessors : new int[]{1, 3}) {
-              for (int maxChannelsPerProcessor : new int[]{2, 7}) {
-                for (int numThreads : new int[]{1, 3}) {
-                  for (boolean isComposedStorage : new boolean[]{true, false}) {
-                    for (boolean partitionsDeferred : new boolean[]{true, false}) {
-                      for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
-                        constructors.add(
-                            new Object[]{
-                                maxRowsPerFrame,
-                                maxBytesPerFrame,
-                                numChannels,
-                                maxActiveProcessors,
-                                maxChannelsPerProcessor,
-                                numThreads,
-                                isComposedStorage,
-                                partitionsDeferred,
-                                limitHint
-                            }
-                        );
+      for (FrameType outputFrameType : rowBasedFrameTypes) {
+        for (int maxRowsPerFrame : new int[]{Integer.MAX_VALUE, 50}) {
+          for (int maxBytesPerFrame : new int[]{20_000, 2_000_000}) {
+            for (int numChannels : new int[]{1, 3}) {
+              for (int maxActiveProcessors : new int[]{1, 3}) {
+                for (int maxChannelsPerProcessor : new int[]{2, 7}) {
+                  for (int numThreads : new int[]{1, 3}) {
+                    for (boolean isComposedStorage : new boolean[]{true, false}) {
+                      for (boolean partitionsDeferred : new boolean[]{true, false}) {
+                        for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
+                          constructors.add(
+                              new Object[]{
+                                  outputFrameType,
+                                  maxRowsPerFrame,
+                                  maxBytesPerFrame,
+                                  numChannels,
+                                  maxActiveProcessors,
+                                  maxChannelsPerProcessor,
+                                  numThreads,
+                                  isComposedStorage,
+                                  partitionsDeferred,
+                                  limitHint
+                              }
+                          );
+                        }
                       }
                     }
                   }
@@ -331,6 +345,7 @@ public class SuperSorterTest
         for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
           constructors.add(
               new Object[]{
+                  FrameType.latestRowBased(),
                   1 /* maxRowsPerFrame */,
                   20_000 /* maxBytesPerFrame */,
                   3 /* numChannels */,
@@ -399,7 +414,7 @@ public class SuperSorterTest
                               .maxRowsPerFrame(maxRowsPerFrame)
                               .sortBy(clusterBy.getColumns())
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(maxBytesPerFrame)))
-                              .frameType(FrameType.ROW_BASED)
+                              .frameType(FrameType.latestRowBased())
                               .populateRowNumber();
 
       inputChannels = makeRoundRobinChannels(frameSequenceBuilder.frames(), numChannels);
@@ -420,7 +435,7 @@ public class SuperSorterTest
           ),
           maxBytesPerFrame
       ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
-      final RowKeyReader keyReader = clusterBy.keyReader(signature);
+      final RowKeyReader keyReader = clusterBy.keyReader(signature, outputFrameType);
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
@@ -438,6 +453,7 @@ public class SuperSorterTest
           FrameProcessorDecorator.NONE,
           makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null)),
           makeOutputChannelFactory(outputChannelFactory),
+          outputFrameType,
           maxActiveProcessors,
           maxChannelsPerProcessor,
           limitHint,
@@ -756,7 +772,7 @@ public class SuperSorterTest
     private RowKey createKey(final ClusterBy clusterBy, final Object... objects)
     {
       final RowSignature keySignature = KeyTestUtils.createKeySignature(clusterBy.getColumns(), signature);
-      return KeyTestUtils.createKey(keySignature, objects);
+      return KeyTestUtils.createKey(keySignature, outputFrameType, objects);
     }
 
     /**
@@ -795,7 +811,7 @@ public class SuperSorterTest
                   array[i] = row.get(clusterByColumns[i]);
                 }
 
-                return KeyTestUtils.createKey(keySignature, array);
+                return KeyTestUtils.createKey(keySignature, FrameType.latestRowBased(), array);
               },
               keyComparator
           )

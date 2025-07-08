@@ -28,12 +28,10 @@ import org.apache.druid.testing.embedded.EmbeddedResource;
  */
 public class InMemoryDerbyResource implements EmbeddedResource
 {
-  private final EmbeddedDruidCluster cluster;
   private final TestDerbyConnector.DerbyConnectorRule dbRule;
 
-  public InMemoryDerbyResource(EmbeddedDruidCluster cluster)
+  public InMemoryDerbyResource()
   {
-    this.cluster = cluster;
     this.dbRule = new TestDerbyConnector.DerbyConnectorRule();
   }
 
@@ -41,7 +39,17 @@ public class InMemoryDerbyResource implements EmbeddedResource
   public void start()
   {
     dbRule.before();
+  }
 
+  @Override
+  public void stop()
+  {
+    dbRule.after();
+  }
+
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
     final TestDerbyConnector connector = dbRule.getConnector();
     cluster.addCommonProperty("druid.metadata.storage.type", InMemoryDerbyModule.TYPE);
     cluster.addCommonProperty("druid.metadata.storage.tables.base", connector.getMetadataTablesConfig().getBase());
@@ -49,8 +57,8 @@ public class InMemoryDerbyResource implements EmbeddedResource
   }
 
   @Override
-  public void stop()
+  public String toString()
   {
-    dbRule.after();
+    return "InMemoryDerbyResource";
   }
 }

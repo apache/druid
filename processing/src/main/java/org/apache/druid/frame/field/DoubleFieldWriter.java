@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
@@ -31,20 +32,27 @@ public class DoubleFieldWriter extends NumericFieldWriter
 {
   private final BaseDoubleColumnValueSelector selector;
 
-  public static DoubleFieldWriter forPrimitive(final BaseDoubleColumnValueSelector selector)
+  public static DoubleFieldWriter forPrimitive(final BaseDoubleColumnValueSelector selector, final FrameType frameType)
   {
-    return new DoubleFieldWriter(selector, false);
+    return new DoubleFieldWriter(selector, false, frameType);
   }
 
-  public static DoubleFieldWriter forArray(final BaseDoubleColumnValueSelector selector)
+  public static DoubleFieldWriter forArray(final BaseDoubleColumnValueSelector selector, final FrameType frameType)
   {
-    return new DoubleFieldWriter(selector, true);
+    return new DoubleFieldWriter(selector, true, frameType);
   }
 
-  private DoubleFieldWriter(final BaseDoubleColumnValueSelector selector, final boolean forArray)
+  private final FrameType frameType;
+
+  private DoubleFieldWriter(
+      final BaseDoubleColumnValueSelector selector,
+      final boolean forArray,
+      final FrameType frameType
+  )
   {
     super(selector, forArray);
     this.selector = selector;
+    this.frameType = frameType;
   }
 
   @Override
@@ -67,7 +75,7 @@ public class DoubleFieldWriter extends NumericFieldWriter
 
   private void writeToMemory(WritableMemory memory, long position, double value)
   {
-    memory.putLong(position, TransformUtils.transformFromDouble(value));
+    memory.putLong(position, TransformUtils.transformFromDouble(value, frameType));
   }
 
 }

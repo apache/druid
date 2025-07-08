@@ -28,7 +28,7 @@ import org.apache.druid.emitter.kafka.KafkaEmitterModule;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.simulate.EmbeddedKafkaServer;
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
@@ -38,6 +38,7 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -57,7 +58,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,17 +77,17 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-  private EmbeddedKafkaServer kafkaServer;
+  private KafkaResource kafkaServer;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
 
-    kafkaServer = new EmbeddedKafkaServer(cluster.getZookeeper(), cluster.getTestFolder(), Map.of())
+    kafkaServer = new KafkaResource()
     {
       @Override
-      public void start() throws IOException
+      public void start()
       {
         super.start();
         createTopicWithPartitions(TOPIC, 10);
@@ -252,12 +252,14 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
 
     // Verify that some segments have been upgraded due to Concurrent Append and Replace
     final Set<String> allUsedSegmentsIds = overlord
+        .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
         .stream()
         .map(s -> s.getId().toString())
         .collect(Collectors.toSet());
     final Map<String, String> upgradedFromSegmentIds = overlord
+        .bindings()
         .segmentsMetadataStorage()
         .retrieveUpgradedFromSegmentIds(dataSource, allUsedSegmentsIds);
     Assertions.assertFalse(upgradedFromSegmentIds.isEmpty());
@@ -312,10 +314,11 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private void verifyIngestedMetricCountMatchesEmittedCount(String metricName, EmbeddedDruidServer server)
   {
     // Get the value of the metric from the datasource
+    final DruidNode selfNode = server.bindings().selfNode();
     final int expectedValueForSegmentsAssigned = (int) Double.parseDouble(
         cluster.runSql(
             "SELECT COUNT(*) FROM %s WHERE metric = '%s' AND host = '%s' AND service = '%s'",
-            dataSource, metricName, server.selfNode().getHostAndPort(), server.selfNode().getServiceName()
+            dataSource, metricName, selfNode.getHostAndPort(), selfNode.getServiceName()
         )
     );
     Assertions.assertTrue(expectedValueForSegmentsAssigned > 0);

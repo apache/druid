@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -80,7 +81,7 @@ import java.util.List;
  * 2) Conditions are all simple equalities. Validated by {@link SortMergeJoinStageProcessor#validateCondition}
  * and then transformed to lists of key columns by {@link SortMergeJoinStageProcessor#toKeyColumns}.
  *
- * 3) Both inputs are comprised of {@link org.apache.druid.frame.FrameType#ROW_BASED} frames, are sorted by the same
+ * 3) Both inputs are comprised of {@link FrameType#isRowBased()} frames, are sorted by the same
  * key, and that key can be used to check the provided condition. Validated by
  * {@link SortMergeJoinStageProcessor#validateInputFrameSignatures}.
  *
@@ -612,7 +613,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
       holders.add(
           new FrameHolder(
               frame,
-              RowKeyReader.create(keySignatureBuilder.build()),
+              RowKeyReader.create(keySignatureBuilder.build(), frame.type()),
               cursor,
               comparisonWidget
           )

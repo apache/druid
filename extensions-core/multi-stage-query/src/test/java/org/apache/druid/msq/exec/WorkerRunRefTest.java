@@ -93,7 +93,7 @@ public class WorkerRunRefTest
     // Cancel the worker
     runRef.cancel();
 
-    // Wait for worker to finish
+    // Wait for worker future to complete
     try {
       future.get();
     }
@@ -101,9 +101,12 @@ public class WorkerRunRefTest
       // ignore
     }
 
+    // Wait for worker to actually finish. May happen after the future completes, because when the future is canceled,
+    // it returns immediately (even when the worker is still running).
+    workerFinished.await();
+
     Assert.assertTrue("Future should be done", future.isDone());
     Assert.assertTrue("Future should be canceled", future.isCancelled());
-    Assert.assertEquals("Latch should have counted down", 0, workerFinished.getCount());
     Assert.assertTrue("Worker should have been interrupted", wasInterrupted.get());
 
     // awaitStop should return immediately since the worker is done

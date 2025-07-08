@@ -137,7 +137,7 @@ public class FrameCursorFactoryTest
             actualCapabilities.toColumnType()
         );
 
-        if (frameType == FrameType.COLUMNAR) {
+        if (frameType == FrameType.latestColumnar()) {
           // Columnar frames retain fine-grained hasMultipleValues information
           Assert.assertEquals(
               StringUtils.format("column [%s] hasMultipleValues", columnName),
@@ -320,7 +320,7 @@ public class FrameCursorFactoryTest
     public void test_makeVectorCursor()
     {
       // Conditions for frames to be vectorizable.
-      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.COLUMNAR));
+      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.latestColumnar()));
       Assume.assumeFalse(descending);
       assertVectorCursorsMatch(cursorFactory -> cursorFactory.makeCursorHolder(buildSpec));
     }

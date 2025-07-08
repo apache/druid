@@ -74,6 +74,11 @@ public interface FrameContext extends Closeable
 
   WorkerStorageParameters storageParameters();
 
+  /**
+   * Configuration for writing frames.
+   */
+  FrameWriterSpec frameWriterSpec();
+
   default File tempDir(String name)
   {
     return new File(tempDir(), name);

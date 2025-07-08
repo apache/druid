@@ -21,7 +21,11 @@ package org.apache.druid.testing.embedded;
 
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -44,9 +48,19 @@ public interface ServerReferencesProvider
   CoordinatorClient leaderCoordinator();
 
   /**
+   * Leader selector to elect and find the Coordinator leader.
+   */
+  DruidLeaderSelector coordinatorLeaderSelector();
+
+  /**
    * Client to make API calls to the leader Overlord in the cluster.
    */
   OverlordClient leaderOverlord();
+
+  /**
+   * Leader selector to elect and find the Coordinator leader.
+   */
+  DruidLeaderSelector overlordLeaderSelector();
 
   /**
    * Client to submit queries to any Broker in the cluster.
@@ -63,4 +77,19 @@ public interface ServerReferencesProvider
    * in the metadata store.
    */
   IndexerMetadataStorageCoordinator segmentsMetadataStorage();
+
+  /**
+   * Connector to the SQL-based metadata store.
+   */
+  SQLMetadataConnector sqlMetadataConnector();
+
+  /**
+   * Provider for {@code DruidNodeDiscovery} for any node type.
+   */
+  DruidNodeDiscoveryProvider nodeDiscovery();
+
+  /**
+   * {@link HttpClient} used by this server to communicate with other Druid servers.
+   */
+  HttpClient escalatedHttpClient();
 }

@@ -45,7 +45,7 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
-import { computeSegmentTimeSpan, getDatasourceColor } from '../../druid-models';
+import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
@@ -1057,7 +1057,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             disabled={typeof lastSegmentsQuery !== 'string'}
             onClick={() => {

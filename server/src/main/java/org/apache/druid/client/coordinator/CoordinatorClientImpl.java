@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -256,22 +257,34 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Map<String, LookupExtractorFactoryContainer>> fetchLookupsForTier(
-      String tier
-  )
+  public ListenableFuture<Void> updateAllLookups(Object lookups)
+  {
+    final String path = "/druid/coordinator/v1/lookups/config";
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, lookups),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier)
   {
     final String path = StringUtils.format(
         "/druid/coordinator/v1/lookups/config/%s?detailed=true",
         StringUtils.urlEncode(tier)
     );
 
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
-        this::extractLookupFactory
-    );
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+      return extractLookupFactory(responseHolder);
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
