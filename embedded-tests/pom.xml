@@ -249,7 +249,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-<<<<<<< HEAD
       <groupId>org.testcontainers</groupId>
       <artifactId>minio</artifactId>
       <version>${testcontainers.version}</version>
@@ -268,10 +267,11 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
-=======
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
->>>>>>> 627963072b050c5891bade81fc75b0415c061aab
       <scope>test</scope>
     </dependency>
   </dependencies>
