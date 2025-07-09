@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -77,8 +76,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
- * ingest them back into the cluster with a {@code KafkaSupervisor}.
+ * Embedded test to ingest {@link TestIndex#getMMappedWikipediaIndex()} into Kafka tasks, then query
+ * those tasks with MSQ.
  */
 public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 {

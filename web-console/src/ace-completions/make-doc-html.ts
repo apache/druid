@@ -23,13 +23,13 @@ import { assemble } from '../utils';
 export interface ItemDescription {
   name: string;
   syntax?: string;
-  description: string;
+  description?: string;
 }
 
 export function makeDocHtml(item: ItemDescription) {
   return assemble(
     `<div class="doc-name">${item.name}</div>`,
     item.syntax ? `<div class="doc-syntax">${escape(item.syntax)}</div>` : undefined,
-    `<div class="doc-description">${item.description}</div>`,
+    item.description ? `<div class="doc-description">${item.description}</div>` : undefined,
   ).join('\n');
 }

@@ -85,6 +85,7 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
               editorHeight={400}
               autoFocus
               showGutter={false}
+              includeAggregates
             />
           </FormGroup>
         </div>
