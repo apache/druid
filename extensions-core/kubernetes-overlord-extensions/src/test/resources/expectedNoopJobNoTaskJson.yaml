@@ -4,11 +4,11 @@ metadata:
   name: "id-3e70afe5cd823dfc7dd308eea616426b"
   labels:
     druid.k8s.peons: "true"
+    druid.overlord.namespace: "namespace"
     druid.task.id: "id"
     druid.task.type: "noop"
     druid.task.group.id: "id"
     druid.task.datasource: "datasource"
-    druid.overlord.namespace: "namespace"
   annotations:
     task.id: "id"
     task.type: "noop"
@@ -23,11 +23,11 @@ spec:
     metadata:
       labels:
         druid.k8s.peons: "true"
+        druid.overlord.namespace: "namespace"
         druid.task.id: "id"
         druid.task.type: "noop"
         druid.task.group.id: "id"
         druid.task.datasource: "datasource"
-        druid.overlord.namespace: "namespace"
       annotations:
         tls.enabled: "false"
         task.id: "id"
@@ -42,7 +42,7 @@ spec:
             - "3600"
           env:
             - name: "TASK_DIR"
-              value: "/tmp"
+              value: "/tmp/persistent/task/id"
             - name: "TASK_ID"
               value: "id"
             - name: "LOAD_BROADCAST_DATASOURCE_MODE"
