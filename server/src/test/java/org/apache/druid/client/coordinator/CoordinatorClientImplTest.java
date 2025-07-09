@@ -555,7 +555,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getAllUsedSegments() throws JsonProcessingException
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_includeRealtime() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -570,7 +570,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getAllUsedSegments(null, true, true),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, true),
         true
     );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -586,38 +586,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getAllUsedSegments_noParams() throws JsonProcessingException
-  {
-    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
-
-    serviceClient.expectAndRespond(
-        new RequestBuilder(
-            HttpMethod.GET,
-            "/druid/coordinator/v1/metadata/segments"
-        ),
-        HttpResponseStatus.OK,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(segments)
-    );
-
-    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getAllUsedSegments(null, false, false),
-        true
-    );
-    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
-    while (iterator.hasNext()) {
-      actualSegments.add(iterator.next());
-    }
-    Assert.assertEquals(
-        segments,
-        actualSegments.stream()
-                      .map(SegmentStatusInCluster::getDataSegment)
-                      .collect(ImmutableList.toImmutableList())
-    );
-  }
-
-  @Test
-  public void test_getAllUsedSegments_excludeRealtimeSegments() throws JsonProcessingException
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_noParams() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -632,7 +601,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getAllUsedSegments(null, true, false),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
         true
     );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -648,7 +617,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getAllUsedSegments_filterByDataSource() throws Exception
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSource() throws Exception
   {
     serviceClient.expectAndRespond(
         new RequestBuilder(
@@ -661,7 +630,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getAllUsedSegments(Collections.singleton("abc"), true, true),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Collections.singleton("abc"), true),
         true
     );
 
@@ -678,12 +647,42 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getAllUsedSegments_filterByDataSourceOnly() throws Exception
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSources() throws Exception
   {
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/coordinator/v1/metadata/segments?datasources=abc"
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources=abc&datasources=xyz"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3))
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc", "xyz"), true),
+        true
+    );
+
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3),
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSourceOnly() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources=abc"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -691,7 +690,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getAllUsedSegments(Collections.singleton("abc"), false, false),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Collections.singleton("abc"), false),
         true
     );
 
@@ -737,26 +736,6 @@ public class CoordinatorClientImplTest
         rules,
         coordinatorClient.getRulesForAllDatasources().get()
     );
-  }
-
-  @Test
-  public void test_getRules_ForAllDatasources_HttpException_throwsError()
-  {
-    serviceClient.expectAndThrow(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/rules"),
-        new HttpResponseException(
-            new StringFullResponseHolder(
-                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
-                StandardCharsets.UTF_8
-            )
-        )
-    );
-
-    RuntimeException thrown = Assert.assertThrows(
-        RuntimeException.class,
-        () -> FutureUtils.getUnchecked(coordinatorClient.getRulesForAllDatasources(), true)
-    );
-    Assert.assertTrue(Throwables.getRootCause(thrown) instanceof HttpResponseException);
   }
 
   @Test
@@ -829,7 +808,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_postLoadRules() throws Exception
+  public void test_updateRulesForDatasource() throws Exception
   {
     final List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(

@@ -295,33 +295,24 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getAllUsedSegments(
+  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
       @Nullable Set<String> watchedDataSources,
-      Boolean includeOvershadowedStatus,
-      Boolean includeRealtimeSegments
+      boolean includeRealtimeSegments
   )
   {
-    final StringBuilder pathBuilder = new StringBuilder(
-        "/druid/coordinator/v1/metadata/segments");
+    final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus");
 
-    List<String> params = new ArrayList<>();
-    if (includeOvershadowedStatus != null && includeOvershadowedStatus) {
-      params.add("includeOvershadowedStatus");
-    }
-    if (includeRealtimeSegments != null && includeRealtimeSegments) {
+    final List<String> params = new ArrayList<>();
+
+    if (includeRealtimeSegments) {
       params.add("includeRealtimeSegments");
     }
+
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
-      StringBuilder datasourceParam = new StringBuilder("datasources=");
-      for (String dataSource : watchedDataSources) {
-        datasourceParam.append(StringUtils.urlEncode(dataSource));
-      }
-      params.add(datasourceParam.toString());
+      watchedDataSources.forEach(dataSource -> params.add("datasources=" + StringUtils.urlEncode(dataSource)));
     }
 
-    if (!params.isEmpty()) {
-      pathBuilder.append("?").append(String.join("&", params));
-    }
+    params.forEach(param -> pathBuilder.append("&").append(param));
 
     return FutureUtils.transform(
         client.asyncRequest(

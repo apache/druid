@@ -88,7 +88,7 @@ public class CoordinatorRuleManagerTest
   }
 
   @Test
-  public void testThrowingExceptionOnHTTPException()
+  public void test_poll_throwsException_ifCoordinatorApiReturnsNotOk()
   {
     final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
     EasyMock.expect(client.getRulesForAllDatasources()).andThrow(

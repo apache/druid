@@ -125,18 +125,16 @@ public interface CoordinatorClient
   Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier);
 
   /**
-   * Returns an iterator over the metadata segments in the cluster.
+   * Returns an iterator over the metadata segments of multiple datasources in the cluster, fetching them in one go.
    * <p>
-   * API: {@code GET /druid/coordinator/v1/metadata/segments}
+   * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus}
    *
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
-   * @param includeOvershadowedStatus If true, includes the overshadowed status of each segment.
    * @param includeRealtimeSegments If true, includes realtime segments in the result.
    */
-  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getAllUsedSegments(
+  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
       @Nullable Set<String> watchedDataSources,
-      Boolean includeOvershadowedStatus,
-      Boolean includeRealtimeSegments
+      boolean includeRealtimeSegments
   );
 
   /**

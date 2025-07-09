@@ -66,7 +66,6 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   protected EmbeddedDruidCluster createCluster()
   {
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
@@ -88,7 +87,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_isHandoffComplete()
   {
-    batchIngest();
+    runIndexTask();
     coordinator.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
@@ -111,7 +110,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_fetchSegment()
   {
-    batchIngest();
+    runIndexTask();
     final List<DataSegment> segments = new ArrayList<>(
         overlord.bindings().segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
     );
@@ -130,7 +129,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_fetchServerViewSegments()
   {
-    batchIngest();
+    runIndexTask();
     coordinator.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
@@ -153,7 +152,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_fetchUsedSegments()
   {
-    batchIngest();
+    runIndexTask();
     coordinator.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
@@ -172,9 +171,9 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(20)
-  public void test_getAllUsedSegments() throws IOException
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus() throws IOException
   {
-    batchIngest();
+    runIndexTask();
     coordinator.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
@@ -182,7 +181,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
     );
 
     try (CloseableIterator<SegmentStatusInCluster> iterator = cluster.callApi().onLeaderCoordinator(
-        c -> c.getAllUsedSegments(Set.of(dataSource), true, true))
+        c -> c.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of(dataSource), true))
     ) {
       Assertions.assertTrue(iterator.hasNext());
       SegmentStatusInCluster segmentStatus = iterator.next();
@@ -203,7 +202,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(List.of(broadcastRule), rules.get(dataSource));
   }
 
-  private void batchIngest()
+  private void runIndexTask()
   {
     final String taskId = IdUtils.getRandomId();
     final Object task = EmbeddedClusterApis.createTaskFromPayload(

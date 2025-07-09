@@ -124,10 +124,9 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getAllUsedSegments(
+  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
       @Nullable Set<String> watchedDataSources,
-      Boolean includeUnused,
-      Boolean includeOvershadowed
+      boolean includeOvershadowed
   )
   {
     throw new UnsupportedOperationException();

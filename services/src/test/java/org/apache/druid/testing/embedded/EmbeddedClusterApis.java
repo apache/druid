@@ -183,11 +183,7 @@ public class EmbeddedClusterApis
   public static Map<String, Object> deserializeJsonToMap(String payload)
   {
     try {
-      return TestHelper.JSON_MAPPER.readValue(
-          payload,
-          new TypeReference<>()
-          {}
-      );
+      return TestHelper.JSON_MAPPER.readValue(payload, new TypeReference<>() {});
     }
     catch (Exception e) {
       throw new ISE(e, "Could not deserialize payload[%s]", payload);
