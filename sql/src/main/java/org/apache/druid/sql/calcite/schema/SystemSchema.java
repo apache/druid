@@ -156,6 +156,7 @@ public class SystemSchema extends AbstractSchema
       .add("shard_spec", ColumnType.STRING)
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
+      .add("projections", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
       .add("replication_factor", ColumnType.LONG)
       .build();
@@ -372,6 +373,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
+                segment.getProjections(),
                 segment.getLastCompactionState(),
                 // If the segment is unpublished, we won't have this information yet.
                 // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
@@ -411,6 +413,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
+                segment.getProjections(),
                 null, // unpublished segments from realtime tasks will not be compacted yet
                 REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
             };

@@ -547,7 +547,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(19, fields.size());
+    Assert.assertEquals(20, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -818,11 +818,11 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(isRealtime, row[12]);
     Assert.assertEquals(isOvershadowed, row[13]);
     if (compactionState == null) {
-      Assert.assertNull(row[17]);
+      Assert.assertNull(row[18]);
     } else {
-      Assert.assertEquals(MAPPER.writeValueAsString(compactionState), row[17]);
+      Assert.assertEquals(MAPPER.writeValueAsString(compactionState), row[18]);
     }
-    Assert.assertEquals(replicationFactor, row[18]);
+    Assert.assertEquals(replicationFactor, row[19]);
   }
 
   @Test
