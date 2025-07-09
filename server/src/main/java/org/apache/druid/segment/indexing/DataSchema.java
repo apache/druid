@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.common.utils.IdUtils;
@@ -123,7 +124,7 @@ public class DataSchema
       this.granularitySpec = granularitySpec;
     }
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
-    this.projections = projections;
+    this.projections = projections == null ? ImmutableList.of() : projections;
     this.parserMap = parserMap;
     this.objectMapper = objectMapper;
 
@@ -186,7 +187,7 @@ public class DataSchema
 
   /**
    * Computes the set of field names that are specified by the provided dimensions and aggregator lists.
-   *
+   * <p>
    * If either list is null, it is ignored.
    *
    * @throws IllegalArgumentException if there are duplicate field names, or if any dimension or aggregator

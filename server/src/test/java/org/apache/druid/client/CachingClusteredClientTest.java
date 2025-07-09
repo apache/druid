@@ -19,9 +19,7 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -1732,24 +1730,18 @@ public class CachingClusteredClientTest
       int partitions
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new HashBasedNumberedShardSpec(
-            partitionNum,
-            partitions,
-            partitionNum,
-            partitions,
-            partitionDimensions,
-            partitionFunction,
-            TestHelper.makeJsonMapper()
-        ),
-        null,
-        9,
-        0L
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new HashBasedNumberedShardSpec(
+                                               partitionNum,
+                                               partitions,
+                                               partitionNum,
+                                               partitions,
+                                               partitionDimensions,
+                                               partitionFunction,
+                                               TestHelper.makeJsonMapper()
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
 
     ServerSelector selector = new ServerSelector(
         segment,
@@ -1768,22 +1760,16 @@ public class CachingClusteredClientTest
       int partitionNum
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new SingleDimensionShardSpec(
-            dimension,
-            start,
-            end,
-            partitionNum,
-            SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
-        ),
-        null,
-        9,
-        0L
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new SingleDimensionShardSpec(
+                                               dimension,
+                                               start,
+                                               end,
+                                               partitionNum,
+                                               SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
 
     ServerSelector selector = new ServerSelector(
         segment,
@@ -2457,13 +2443,13 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.<String, Object>builder()
-                      .put("rows", objects[i + 1])
-                      .put("imps", objects[i + 2])
-                      .put("impers", objects[i + 2])
-                      .put("avg_imps_per_row", avg_impr)
-                      .put("avg_imps_per_row_half", avg_impr / 2)
-                      .put("avg_imps_per_row_double", avg_impr * 2)
-                      .build()
+                              .put("rows", objects[i + 1])
+                              .put("imps", objects[i + 2])
+                              .put("impers", objects[i + 2])
+                              .put("avg_imps_per_row", avg_impr)
+                              .put("avg_imps_per_row_half", avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .build()
               )
           )
       );
@@ -2530,14 +2516,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                .put(names.get(0), objects[index])
-                .put(names.get(1), rows)
-                .put(names.get(2), imps)
-                .put(names.get(3), imps)
-                .put(names.get(4), imps / rows)
-                .put(names.get(5), ((imps * 2) / rows))
-                .put(names.get(6), (imps / (rows * 2)))
-                .build()
+                        .put(names.get(0), objects[index])
+                        .put(names.get(1), rows)
+                        .put(names.get(2), imps)
+                        .put(names.get(3), imps)
+                        .put(names.get(4), imps / rows)
+                        .put(names.get(5), ((imps * 2) / rows))
+                        .put(names.get(6), (imps / (rows * 2)))
+                        .build()
         );
         index += 3;
       }
@@ -2753,171 +2739,17 @@ public class CachingClusteredClientTest
 
     public DataSegment getSegment()
     {
-      return new MyDataSegment();
+      return DataSegment.builder(segment)
+                        .shardSpec(shardSpec)
+                        .dataSource("")
+                        .interval(Intervals.utc(0, 1))
+                        .version("version")
+                        .build();
     }
 
     public Iterable<Result<T>> getResults()
     {
       return results;
-    }
-
-    private class MyDataSegment extends DataSegment
-    {
-      private final DataSegment baseSegment = segment;
-
-      private MyDataSegment()
-      {
-        super(
-            "",
-            Intervals.utc(0, 1),
-            "",
-            null,
-            null,
-            null,
-            NoneShardSpec.instance(),
-            null,
-            0
-        );
-      }
-
-      @Override
-      @JsonProperty
-      public String getDataSource()
-      {
-        return baseSegment.getDataSource();
-      }
-
-      @Override
-      @JsonProperty
-      public Interval getInterval()
-      {
-        return baseSegment.getInterval();
-      }
-
-      @Override
-      @JsonProperty
-      public Map<String, Object> getLoadSpec()
-      {
-        return baseSegment.getLoadSpec();
-      }
-
-      @Override
-      @JsonProperty
-      public String getVersion()
-      {
-        return "version";
-      }
-
-      @Override
-      @JsonSerialize
-      @JsonProperty
-      public List<String> getDimensions()
-      {
-        return baseSegment.getDimensions();
-      }
-
-      @Override
-      @JsonSerialize
-      @JsonProperty
-      public List<String> getMetrics()
-      {
-        return baseSegment.getMetrics();
-      }
-
-      @Override
-      @JsonProperty
-      public ShardSpec getShardSpec()
-      {
-        try {
-          return baseSegment.getShardSpec();
-        }
-        catch (IllegalStateException e) {
-          return NoneShardSpec.instance();
-        }
-      }
-
-      @Override
-      @JsonProperty
-      public long getSize()
-      {
-        return baseSegment.getSize();
-      }
-
-      @Override
-      public SegmentId getId()
-      {
-        return segmentId;
-      }
-
-      @Override
-      public SegmentDescriptor toDescriptor()
-      {
-        return baseSegment.toDescriptor();
-      }
-
-      @Override
-      public int compareTo(DataSegment dataSegment)
-      {
-        return baseSegment.compareTo(dataSegment);
-      }
-
-      @Override
-      public boolean equals(Object o)
-      {
-        if (!(o instanceof DataSegment)) {
-          return false;
-        }
-        return baseSegment.equals(o);
-      }
-
-      @Override
-      public int hashCode()
-      {
-        return baseSegment.hashCode();
-      }
-
-      @Override
-      public String toString()
-      {
-        return baseSegment.toString();
-      }
-
-      @Override
-      public int getStartRootPartitionId()
-      {
-        return shardSpec.getStartRootPartitionId();
-      }
-
-      @Override
-      public int getEndRootPartitionId()
-      {
-        return shardSpec.getEndRootPartitionId();
-      }
-
-      @Override
-      public short getMinorVersion()
-      {
-        return shardSpec.getMinorVersion();
-      }
-
-      @Override
-      public short getAtomicUpdateGroupSize()
-      {
-        return shardSpec.getAtomicUpdateGroupSize();
-      }
-
-      @Override
-      public boolean overshadows(DataSegment other)
-      {
-        if (getDataSource().equals(other.getDataSource())
-            && getInterval().overlaps(other.getInterval())
-            && getVersion().equals(other.getVersion())) {
-          return getStartRootPartitionId() <= other.getStartRootPartitionId()
-                 && getEndRootPartitionId() >= other.getEndRootPartitionId()
-                 && getMinorVersion() > other.getMinorVersion();
-        }
-        return false;
-      }
     }
   }
 

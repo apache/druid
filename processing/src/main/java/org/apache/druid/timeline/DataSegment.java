@@ -45,11 +45,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
 
 /**
  * Metadata of Druid's data segment. An immutable object.
- *
+ * <p>
  * DataSegment's equality ({@link #equals}/{@link #hashCode}) and {@link #compareTo} methods consider only the
  * {@link SegmentId} of the segment.
  */
@@ -86,6 +86,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> DIMENSIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<List<String>> METRICS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<List<String>> PROJECTIONS_INTERNER = Interners.newWeakInterner();
   private static final Interner<CompactionState> COMPACTION_STATE_INTERNER = Interners.newWeakInterner();
   private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
       "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
@@ -98,6 +99,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final Map<String, Object> loadSpec;
   private final List<String> dimensions;
   private final List<String> metrics;
+  private final List<String> projections;
   private final ShardSpec shardSpec;
 
   /**
@@ -111,32 +113,10 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final CompactionState lastCompactionState;
   private final long size;
 
-  @VisibleForTesting
-  public DataSegment(
-      SegmentId segmentId,
-      Map<String, Object> loadSpec,
-      List<String> dimensions,
-      List<String> metrics,
-      ShardSpec shardSpec,
-      CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size
-  )
-  {
-    this(
-        segmentId.getDataSource(),
-        segmentId.getInterval(),
-        segmentId.getVersion(),
-        loadSpec,
-        dimensions,
-        metrics,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size
-    );
-  }
-
+  /**
+   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
+   */
+  @Deprecated
   public DataSegment(
       String dataSource,
       Interval interval,
@@ -156,13 +136,19 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         loadSpec,
         dimensions,
         metrics,
+        null,
         shardSpec,
         null,
         binaryVersion,
-        size
+        size,
+        PruneSpecsHolder.DEFAULT
     );
   }
 
+  /**
+   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
+   */
+  @Deprecated
   public DataSegment(
       String dataSource,
       Interval interval,
@@ -183,6 +169,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         loadSpec,
         dimensions,
         metrics,
+        null,
         shardSpec,
         lastCompactionState,
         binaryVersion,
@@ -198,14 +185,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
-      @JsonProperty("dimensions")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
-          List<String> dimensions,
-      @JsonProperty("metrics")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
-          List<String> metrics,
+      @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
+      List<String> dimensions,
+      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
+      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
+      List<String> projections,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -218,8 +202,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
     // dataSource
-    this.dimensions = prepareDimensionsOrMetrics(dimensions, DIMENSIONS_INTERNER);
-    this.metrics = prepareDimensionsOrMetrics(metrics, METRICS_INTERNER);
+    this.dimensions = prepareWithStringInterner(dimensions, DIMENSIONS_INTERNER);
+    this.metrics = prepareWithStringInterner(metrics, METRICS_INTERNER);
+    this.projections = prepareWithStringInterner(projections, PROJECTIONS_INTERNER);
     this.shardSpec = (shardSpec == null) ? new NumberedShardSpec(0, 1) : shardSpec;
     this.lastCompactionState = pruneSpecsHolder.pruneLastCompactionState
                                ? null
@@ -230,7 +215,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @Nullable
-  private Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
+  private static Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
   {
     if (loadSpec == null) {
       return null;
@@ -244,7 +229,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @Nullable
-  private CompactionState prepareCompactionState(@Nullable CompactionState lastCompactionState)
+  private static CompactionState prepareCompactionState(@Nullable CompactionState lastCompactionState)
   {
     if (lastCompactionState == null) {
       return null;
@@ -252,7 +237,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return COMPACTION_STATE_INTERNER.intern(lastCompactionState);
   }
 
-  private List<String> prepareDimensionsOrMetrics(@Nullable List<String> list, Interner<List<String>> interner)
+  private static List<String> prepareWithStringInterner(@Nullable List<String> list, Interner<List<String>> interner)
   {
     if (list == null) {
       return ImmutableList.of();
@@ -263,8 +248,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           // dimensions & metrics are stored as canonical string values to decrease memory required for storing
           // large numbers of segments.
           .map(STRING_INTERNER::intern)
-          // TODO replace with ImmutableList.toImmutableList() when updated to Guava 21+
-          .collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
+          .collect(ImmutableList.toImmutableList());
       return interner.intern(result);
     }
   }
@@ -312,6 +296,14 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public List<String> getMetrics()
   {
     return metrics;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  @JsonSerialize(using = CommaListJoinSerializer.class)
+  public List<String> getProjections()
+  {
+    return projections;
   }
 
   @JsonProperty
@@ -416,6 +408,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).metrics(metrics).build();
   }
 
+  public DataSegment withProjections(List<String> projections)
+  {
+    return builder(this).projections(projections).build();
+  }
+
   public DataSegment withShardSpec(ShardSpec newSpec)
   {
     return builder(this).shardSpec(newSpec).build();
@@ -471,15 +468,25 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", loadSpec=" + loadSpec +
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
+           ", projections=" + projections +
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
            '}';
   }
 
+  /**
+   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
+   */
+  @Deprecated
   public static Builder builder()
   {
     return new Builder();
+  }
+
+  public static Builder builder(SegmentId segmentId)
+  {
+    return new Builder(segmentId);
   }
 
   public static Builder builder(DataSegment segment)
@@ -495,18 +502,34 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private Map<String, Object> loadSpec;
     private List<String> dimensions;
     private List<String> metrics;
+    private List<String> projections;
     private ShardSpec shardSpec;
     private CompactionState lastCompactionState;
     private Integer binaryVersion;
     private long size;
 
+    /**
+     * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
+     */
+    @Deprecated
     public Builder()
     {
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
       this.metrics = ImmutableList.of();
+      this.projections = ImmutableList.of();
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.size = -1;
+    }
+
+    public Builder(SegmentId segmentId)
+    {
+      this.dataSource = segmentId.getDataSource();
+      this.interval = segmentId.getInterval();
+      this.version = segmentId.getVersion();
+      this.shardSpec = new NumberedShardSpec(0, 1);
+      this.binaryVersion = 0;
+      this.size = 0;
     }
 
     public Builder(DataSegment segment)
@@ -517,6 +540,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.loadSpec = segment.getLoadSpec();
       this.dimensions = segment.getDimensions();
       this.metrics = segment.getMetrics();
+      this.projections = segment.getProjections();
       this.shardSpec = segment.getShardSpec();
       this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
@@ -559,6 +583,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
+    public Builder projections(List<String> projections)
+    {
+      this.projections = projections;
+      return this;
+    }
+
     public Builder shardSpec(ShardSpec shardSpec)
     {
       this.shardSpec = shardSpec;
@@ -598,10 +628,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           loadSpec,
           dimensions,
           metrics,
+          projections,
           shardSpec,
           lastCompactionState,
           binaryVersion,
-          size
+          size,
+          PruneSpecsHolder.DEFAULT
       );
     }
   }

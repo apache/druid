@@ -35,26 +35,12 @@ public class DataSegmentAndIndexZipFilePathTest
 {
   private static final SegmentId SEGMENT_ID = SegmentId.dummy("data-source", 1);
   private static final SegmentId OTHER_SEGMENT_ID = SegmentId.dummy("data-source2", 1);
-  private static final DataSegment SEGMENT = new DataSegment(
-      SEGMENT_ID,
-      null,
-      null,
-      null,
-      new NumberedShardSpec(1, 10),
-      null,
-      0,
-      0
-  );
-  private static final DataSegment OTHER_SEGMENT = new DataSegment(
-      OTHER_SEGMENT_ID,
-      null,
-      null,
-      null,
-      new NumberedShardSpec(1, 10),
-      null,
-      0,
-      0
-  );
+  private static final DataSegment SEGMENT = DataSegment.builder(SEGMENT_ID)
+                                                        .shardSpec(new NumberedShardSpec(1, 10))
+                                                        .build();
+  private static final DataSegment OTHER_SEGMENT = DataSegment.builder(OTHER_SEGMENT_ID)
+                                                              .shardSpec(new NumberedShardSpec(1, 10))
+                                                              .build();
 
   private DataSegmentAndIndexZipFilePath target;
 

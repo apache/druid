@@ -1168,16 +1168,10 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
-    return new DataSegment(
-        id,
-        Collections.singletonMap(id.toString(), id.toString()),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        pendingSegment.getShardSpec(),
-        null,
-        0,
-        0
-    );
+    return DataSegment.builder(id)
+                      .loadSpec(Collections.singletonMap(id.toString(), id.toString()))
+                      .shardSpec(pendingSegment.getShardSpec())
+                      .build();
   }
 
   private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments)

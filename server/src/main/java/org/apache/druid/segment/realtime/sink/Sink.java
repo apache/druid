@@ -22,11 +22,11 @@ package org.apache.druid.segment.realtime.sink;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,6 +48,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -65,6 +66,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
@@ -250,17 +252,14 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   public DataSegment getSegment()
   {
-    return new DataSegment(
-        schema.getDataSource(),
-        interval,
-        version,
-        ImmutableMap.of(),
-        Collections.emptyList(),
-        Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
-        shardSpec,
-        null,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(schema.getDataSource(), interval, version, shardSpec))
+                      .shardSpec(shardSpec)
+                      .metrics(Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName))
+                      .projections(schema.getProjections()
+                                         .stream()
+                                         .map(AggregateProjectionSpec::getName)
+                                         .collect(Collectors.toList()))
+                      .build();
   }
 
   public int getNumRows()
