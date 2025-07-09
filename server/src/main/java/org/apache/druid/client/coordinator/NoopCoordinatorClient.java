@@ -125,14 +125,16 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
-      @Nullable Set<String> watchedDataSources
+      @Nullable Set<String> watchedDataSources,
+      Boolean includeUnused,
+      Boolean includeOvershadowed
   )
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Rule>>> getRules()
+  public ListenableFuture<Map<String, List<Rule>>> getRulesForAllDatasources()
   {
     throw new UnsupportedOperationException();
   }
@@ -144,7 +146,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules)
+  public ListenableFuture<Void> updateRulesForDatasource(String dataSource, List<Rule> rules)
   {
     throw new UnsupportedOperationException();
   }

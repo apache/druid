@@ -123,7 +123,7 @@ public class CoordinatorRuleManager
   public void poll()
   {
     try {
-      final Map<String, List<Rule>> map = FutureUtils.getUnchecked(coordinatorClient.getRules(), true);
+      final Map<String, List<Rule>> map = FutureUtils.getUnchecked(coordinatorClient.getRulesForAllDatasources(), true);
       final Map<String, List<Rule>> immutableMapBuilder = Maps.newHashMapWithExpectedSize(map.size());
       map.forEach((k, list) -> immutableMapBuilder.put(k, Collections.unmodifiableList(list)));
       rules.set(Collections.unmodifiableMap(immutableMapBuilder));

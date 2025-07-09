@@ -127,12 +127,16 @@ public interface CoordinatorClient
   /**
    * Returns an iterator over the metadata segments in the cluster.
    * <p>
-   * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments}
+   * API: {@code GET /druid/coordinator/v1/metadata/segments}
    *
    * @param watchedDataSources Optional datasources to filter the segments by. If null or empty, all segments are returned.
+   * @param includeOvershadowedStatus If true, includes the overshadowed status of each segment.
+   * @param includeRealtimeSegments If true, includes realtime segments in the result.
    */
   ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
-      @Nullable Set<String> watchedDataSources
+      @Nullable Set<String> watchedDataSources,
+      Boolean includeOvershadowedStatus,
+      Boolean includeRealtimeSegments
   );
 
   /**
@@ -140,7 +144,7 @@ public interface CoordinatorClient
    * <p>
    * API: {@code GET /druid/coordinator/v1/rules}
    */
-  ListenableFuture<Map<String, List<Rule>>> getRules();
+  ListenableFuture<Map<String, List<Rule>>> getRulesForAllDatasources();
 
   /**
    * Returns the current coordinator leader's URI.
@@ -154,5 +158,5 @@ public interface CoordinatorClient
    * <p>
    * API: {@code POST /druid/coordinator/v1/rules}
    */
-  ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules);
+  ListenableFuture<Void> updateRulesForDatasource(String dataSource, List<Rule> rules);
 }

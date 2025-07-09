@@ -186,8 +186,7 @@ public class EmbeddedClusterApis
       return TestHelper.JSON_MAPPER.readValue(
           payload,
           new TypeReference<>()
-          {
-          }
+          {}
       );
     }
     catch (Exception e) {

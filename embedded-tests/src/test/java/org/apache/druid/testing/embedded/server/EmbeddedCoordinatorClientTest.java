@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.server;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidMetrics;
@@ -51,7 +52,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
 {
@@ -65,16 +65,8 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-           .addProperty("druid.worker.capacity", "25");
-
+    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
     overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-    coordinator.addProperty("druid.coordinator.period.metadataStoreManagementPeriod", "PT0.1S")
-               .addProperty("druid.coordinator.period.indexingPeriod", "PT0.1S")
-               .addProperty("druid.coordinator.segmentMetadataCache.enabled", "true")
-               .addProperty("druid.coordinator.segmentMetadataCache.awaitInitializationOnStart", "true")
-               .addProperty("druid.coordinator.segmentMetadataCache.metadataRefreshPeriod", "PT0.1S");
-
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
@@ -171,11 +163,8 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
     final List<DataSegment> segments = new ArrayList<>(
         overlord.bindings().segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
     );
-    List<Interval> intervals = segments.stream()
-                                       .map(DataSegment::getInterval)
-                                       .collect(Collectors.toList());
     List<DataSegment> result = cluster.callApi().onLeaderCoordinator(
-        c -> c.fetchUsedSegments(dataSource, intervals)
+        c -> c.fetchUsedSegments(dataSource, List.of(Intervals.ETERNITY))
     );
 
     Assertions.assertEquals(segments.size(), result.size());
@@ -193,7 +182,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
     );
 
     try (CloseableIterator<SegmentStatusInCluster> iterator = cluster.callApi().onLeaderCoordinator(
-        c -> c.getMetadataSegments(Set.of(dataSource)))
+        c -> c.getMetadataSegments(Set.of(dataSource), true, true))
     ) {
       Assertions.assertTrue(iterator.hasNext());
       SegmentStatusInCluster segmentStatus = iterator.next();
@@ -207,11 +196,9 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   {
     Rule broadcastRule = new ForeverBroadcastDistributionRule();
     cluster.callApi().onLeaderCoordinator(
-        c -> c.postLoadRules(dataSource, List.of(broadcastRule))
+        c -> c.updateRulesForDatasource(dataSource, List.of(broadcastRule))
     );
-    Map<String, List<Rule>> rules = cluster.callApi().onLeaderCoordinator(
-        c -> c.getRules()
-    );
+    Map<String, List<Rule>> rules = cluster.callApi().onLeaderCoordinator(CoordinatorClient::getRulesForAllDatasources);
     Assertions.assertTrue(!rules.isEmpty());
     Assertions.assertEquals(List.of(broadcastRule), rules.get(dataSource));
   }

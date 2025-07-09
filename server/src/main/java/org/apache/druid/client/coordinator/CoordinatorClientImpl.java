@@ -221,7 +221,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   {
     final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/compaction/status");
     if (dataSource != null && !dataSource.isEmpty()) {
-      pathBuilder.append("?").append("datasources=").append(StringUtils.urlEncode(dataSource));
+      pathBuilder.append("?").append("dataSource=").append(StringUtils.urlEncode(dataSource));
     }
 
     return FutureUtils.transform(
@@ -296,15 +296,31 @@ public class CoordinatorClientImpl implements CoordinatorClient
 
   @Override
   public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
-      @Nullable Set<String> watchedDataSources
+      @Nullable Set<String> watchedDataSources,
+      Boolean includeOvershadowedStatus,
+      Boolean includeRealtimeSegments
   )
   {
     final StringBuilder pathBuilder = new StringBuilder(
-        "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
+        "/druid/coordinator/v1/metadata/segments");
+
+    List<String> params = new ArrayList<>();
+    if (includeOvershadowedStatus != null && includeOvershadowedStatus) {
+      params.add("includeOvershadowedStatus");
+    }
+    if (includeRealtimeSegments != null && includeRealtimeSegments) {
+      params.add("includeRealtimeSegments");
+    }
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      StringBuilder datasourceParam = new StringBuilder("datasources=");
       for (String dataSource : watchedDataSources) {
-        pathBuilder.append("&dataSource=").append(StringUtils.urlEncode(dataSource));
+        datasourceParam.append(StringUtils.urlEncode(dataSource));
       }
+      params.add(datasourceParam.toString());
+    }
+
+    if (!params.isEmpty()) {
+      pathBuilder.append("?").append(String.join("&", params));
     }
 
     return FutureUtils.transform(
@@ -323,14 +339,15 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Rule>>> getRules()
+  public ListenableFuture<Map<String, List<Rule>>> getRulesForAllDatasources()
   {
     final String path = "/druid/coordinator/v1/rules";
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
-        ), holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -354,7 +371,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<Void> postLoadRules(String dataSource, List<Rule> rules)
+  public ListenableFuture<Void> updateRulesForDatasource(String dataSource, List<Rule> rules)
   {
     final String path = StringUtils.format("/druid/coordinator/v1/rules/%s", StringUtils.urlEncode(dataSource));
     return client.asyncRequest(

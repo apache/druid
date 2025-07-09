@@ -183,7 +183,10 @@ public class MetadataSegmentView
   {
     // includeRealtimeSegments flag would additionally request realtime segments
     // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
-    return FutureUtils.getUnchecked(coordinatorClient.getMetadataSegments(watchedDataSources), true);
+    return FutureUtils.getUnchecked(
+        coordinatorClient.getMetadataSegments(watchedDataSources, true, true),
+        true
+    );
   }
 
   private class PollTask implements Runnable

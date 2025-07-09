@@ -35,7 +35,7 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.coordinator.CoordinatorClientImpl;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -58,7 +58,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.RowFilterPolicy;
-import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
@@ -143,11 +142,9 @@ public class CalciteTests
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
-  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.equality(
-      "m1",
-      6,
-      ColumnType.LONG
-  ));
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(
+      BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG)
+  );
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
@@ -424,10 +421,7 @@ public class CalciteTests
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 
-    final CoordinatorClient coordinatorClient = new CoordinatorClientImpl(
-        new MockServiceClient(),
-        getJsonMapper()
-    )
+    final CoordinatorClient coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
       public ListenableFuture<URI> findCurrentLeader()

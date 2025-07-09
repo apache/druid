@@ -22,7 +22,9 @@ package org.apache.druid.server.router;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
@@ -89,7 +91,7 @@ public class CoordinatorRuleManagerTest
   public void testThrowingExceptionOnHTTPException()
   {
     final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
-    EasyMock.expect(client.getRules()).andThrow(
+    EasyMock.expect(client.getRulesForAllDatasources()).andThrow(
         new RuntimeException(
             new HttpResponseException(
                 new StringFullResponseHolder(
@@ -106,8 +108,7 @@ public class CoordinatorRuleManagerTest
         client
     );
 
-    expectedException.expect(ISE.class);
-    manager.poll();
+    Assert.assertThrows(ISE.class, manager::poll);
   }
 
 
@@ -154,10 +155,13 @@ public class CoordinatorRuleManagerTest
         TieredBrokerConfig.DEFAULT_RULE_NAME,
         ImmutableList.of(new ForeverLoadRule(ImmutableMap.of("__default", 2), null))
     );
-    final CoordinatorClient client = EasyMock.niceMock(CoordinatorClient.class);
-    EasyMock.expect(client.getRules())
-            .andReturn(Futures.immediateFuture(rules));
-    EasyMock.replay(client);
-    return client;
+    return new NoopCoordinatorClient()
+    {
+      @Override
+      public ListenableFuture<Map<String, List<Rule>>> getRulesForAllDatasources()
+      {
+        return Futures.immediateFuture(rules);
+      }
+    };
   }
 }
