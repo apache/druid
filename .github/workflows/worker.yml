@@ -72,7 +72,7 @@ jobs:
 
       - name: Prepare GITHUB_ENV
         run: |
-          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} ${{ github.run_id }} ${{ github.run_number }} ${{ github.run_attempt }} ${{ inputs.module }} >> $GITHUB_ENV
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} ${{ github.run_id }} ${{ github.run_number }} ${{ github.run_attempt }} ${{ inputs.key }} >> $GITHUB_ENV
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
 
       - name: 'Execute: ${{ inputs.script }}'
