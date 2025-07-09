@@ -2089,7 +2089,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @param recordSupplier
    * @param toolbox
    * @return list of records polled, can be empty but cannot be null
-   * @throws Exception
+   * @throws TaskStatusException all ingested message will be persisted and published.
+   * while for other thrown exceptions, ingested message will be discarded.
    */
   @NotNull
   protected abstract List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> getRecords(
