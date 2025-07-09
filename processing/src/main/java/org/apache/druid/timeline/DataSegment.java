@@ -200,11 +200,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);
     // prune loadspec if needed
     this.loadSpec = pruneSpecsHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
-    // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
-    // dataSource
-    this.dimensions = prepareWithStringInterner(dimensions, DIMENSIONS_INTERNER);
-    this.metrics = prepareWithStringInterner(metrics, METRICS_INTERNER);
-    this.projections = prepareWithStringInterner(projections, PROJECTIONS_INTERNER);
+    this.dimensions = dimensions == null ? ImmutableList.of() : prepareWithInterner(dimensions, DIMENSIONS_INTERNER);
+    this.metrics = metrics == null ? ImmutableList.of() : prepareWithInterner(metrics, METRICS_INTERNER);
+    // A null value for projections means that this segment is not aware of projections (launched in druid 32).
+    // An empty list means that this segment is projection-aware, but has no projections.
+    this.projections = projections == null ? null : prepareWithInterner(projections, PROJECTIONS_INTERNER);
     this.shardSpec = (shardSpec == null) ? new NumberedShardSpec(0, 1) : shardSpec;
     this.lastCompactionState = pruneSpecsHolder.pruneLastCompactionState
                                ? null
@@ -237,20 +237,18 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return COMPACTION_STATE_INTERNER.intern(lastCompactionState);
   }
 
-  private static List<String> prepareWithStringInterner(@Nullable List<String> list, Interner<List<String>> interner)
+  /**
+   * Returns a list of strings with all empty strings removed and all strings interned.
+   * <p>
+   * The dimensions, metrics, and projections are stored as canonical string values to decrease memory required for
+   * storing large numbers of segments.
+   */
+  private static List<String> prepareWithInterner(List<String> list, Interner<List<String>> interner)
   {
-    if (list == null) {
-      return ImmutableList.of();
-    } else {
-      List<String> result = list
-          .stream()
-          .filter(s -> !Strings.isNullOrEmpty(s))
-          // dimensions & metrics are stored as canonical string values to decrease memory required for storing
-          // large numbers of segments.
-          .map(STRING_INTERNER::intern)
-          .collect(ImmutableList.toImmutableList());
-      return interner.intern(result);
-    }
+    return interner.intern(list.stream()
+                               .filter(s -> !Strings.isNullOrEmpty(s))
+                               .map(STRING_INTERNER::intern)
+                               .collect(ImmutableList.toImmutableList()));
   }
 
   /**
@@ -299,8 +297,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonSerialize(using = CommaListJoinSerializer.class)
+  @Nullable
   public List<String> getProjections()
   {
     return projections;

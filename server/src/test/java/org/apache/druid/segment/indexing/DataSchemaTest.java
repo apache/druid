@@ -606,7 +606,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ),
         actual.getGranularitySpec()
     );
-    Assert.assertEquals(ImmutableList.of(), actual.getProjections());
+    Assert.assertNull(actual.getProjections());
   }
 
   @Test
