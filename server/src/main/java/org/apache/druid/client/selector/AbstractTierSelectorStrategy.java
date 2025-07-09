@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public abstract class AbstractTierSelectorStrategy implements TierSelectorStrategy
 {
-  protected final ServerSelectorStrategy serverSelectorStrategy;
+  private final ServerSelectorStrategy serverSelectorStrategy;
 
   public AbstractTierSelectorStrategy(ServerSelectorStrategy serverSelectorStrategy)
   {
