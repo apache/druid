@@ -41,6 +41,11 @@ on:
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  INPUTS_JDK: ${{ inputs.jdk }}
+  INPUTS_KEY: ${{ inputs.key }}
+  GITHUB_RUN_ID: ${{ github.run_id }}
+  GITHUB_RUN_NUMBER: ${{ github.run_number }}
+  GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
 
 jobs:
   execute:
@@ -66,6 +71,8 @@ jobs:
           merge-multiple: true
 
       - name: Calculate hash for artifact name
+        run: |
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} ${{ github.run_id }} ${{ github.run_number }} ${{ github.run_attempt }} ${{ inputs.module }} >> $GITHUB_ENV
         run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
 
       - name: 'Execute: ${{ inputs.script }}'
