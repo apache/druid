@@ -172,7 +172,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(20)
-  public void test_getMetadataSegments() throws IOException
+  public void test_getAllUsedSegments() throws IOException
   {
     batchIngest();
     coordinator.latchableEmitter().waitForEventAggregate(
@@ -182,7 +182,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
     );
 
     try (CloseableIterator<SegmentStatusInCluster> iterator = cluster.callApi().onLeaderCoordinator(
-        c -> c.getMetadataSegments(Set.of(dataSource), true, true))
+        c -> c.getAllUsedSegments(Set.of(dataSource), true, true))
     ) {
       Assertions.assertTrue(iterator.hasNext());
       SegmentStatusInCluster segmentStatus = iterator.next();

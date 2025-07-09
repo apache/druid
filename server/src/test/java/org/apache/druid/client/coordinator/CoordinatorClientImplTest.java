@@ -555,7 +555,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegments() throws JsonProcessingException
+  public void test_getAllUsedSegments() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -570,7 +570,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getMetadataSegments(null, true, true),
+        coordinatorClient.getAllUsedSegments(null, true, true),
         true
     );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -586,7 +586,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegments_noParams() throws JsonProcessingException
+  public void test_getAllUsedSegments_noParams() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -601,7 +601,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getMetadataSegments(null, false, false),
+        coordinatorClient.getAllUsedSegments(null, false, false),
         true
     );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -617,7 +617,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegments_excludeRealtimeSegments() throws JsonProcessingException
+  public void test_getAllUsedSegments_excludeRealtimeSegments() throws JsonProcessingException
   {
     final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
 
@@ -632,7 +632,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getMetadataSegments(null, true, false),
+        coordinatorClient.getAllUsedSegments(null, true, false),
         true
     );
     List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
@@ -648,7 +648,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegments_filterByDataSource() throws Exception
+  public void test_getAllUsedSegments_filterByDataSource() throws Exception
   {
     serviceClient.expectAndRespond(
         new RequestBuilder(
@@ -661,7 +661,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getMetadataSegments(Collections.singleton("abc"), true, true),
+        coordinatorClient.getAllUsedSegments(Collections.singleton("abc"), true, true),
         true
     );
 
@@ -678,7 +678,7 @@ public class CoordinatorClientImplTest
   }
 
   @Test
-  public void test_getMetadataSegments_filterByDataSourceOnly() throws Exception
+  public void test_getAllUsedSegments_filterByDataSourceOnly() throws Exception
   {
     serviceClient.expectAndRespond(
         new RequestBuilder(
@@ -691,7 +691,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.getMetadataSegments(Collections.singleton("abc"), false, false),
+        coordinatorClient.getAllUsedSegments(Collections.singleton("abc"), false, false),
         true
     );
 

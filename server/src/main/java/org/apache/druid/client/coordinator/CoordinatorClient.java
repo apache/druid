@@ -133,7 +133,7 @@ public interface CoordinatorClient
    * @param includeOvershadowedStatus If true, includes the overshadowed status of each segment.
    * @param includeRealtimeSegments If true, includes realtime segments in the result.
    */
-  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
+  ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getAllUsedSegments(
       @Nullable Set<String> watchedDataSources,
       Boolean includeOvershadowedStatus,
       Boolean includeRealtimeSegments

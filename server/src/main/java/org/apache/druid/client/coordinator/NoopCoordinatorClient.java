@@ -124,7 +124,7 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getMetadataSegments(
+  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> getAllUsedSegments(
       @Nullable Set<String> watchedDataSources,
       Boolean includeUnused,
       Boolean includeOvershadowed
