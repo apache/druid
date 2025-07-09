@@ -19,10 +19,12 @@
 
 package org.apache.druid.testing.embedded;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -92,4 +94,9 @@ public interface ServerReferencesProvider
    * {@link HttpClient} used by this server to communicate with other Druid servers.
    */
   HttpClient escalatedHttpClient();
+
+  /**
+   * {@link ObjectMapper} annotated with {@link Json}.
+   */
+  ObjectMapper jsonMapper();
 }
