@@ -530,6 +530,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.binaryVersion = 0;
       this.size = 0;
+      this.lastCompactionState = null;
     }
 
     public Builder(DataSegment segment)

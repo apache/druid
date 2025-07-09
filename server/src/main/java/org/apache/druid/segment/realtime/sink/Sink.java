@@ -254,6 +254,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     return DataSegment.builder(SegmentId.of(schema.getDataSource(), interval, version, shardSpec))
                       .shardSpec(shardSpec)
+                      .dimensions(null)
                       .metrics(Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName))
                       .projections(schema.getProjections() == null
                                    ? null

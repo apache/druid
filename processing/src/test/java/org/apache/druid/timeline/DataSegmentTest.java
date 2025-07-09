@@ -524,6 +524,7 @@ public class DataSegmentTest
     Assert.assertEquals(segment1.getProjections(), segment2.getProjections());
     Assert.assertEquals(segment1.getShardSpec(), segment2.getShardSpec());
     Assert.assertEquals(segment1.getSize(), segment2.getSize());
+    Assert.assertEquals(segment1.getBinaryVersion(), segment2.getBinaryVersion());
     Assert.assertEquals(segment1.getId(), segment2.getId());
     Assert.assertEquals(segment1.getLastCompactionState(), segment2.getLastCompactionState());
   }
