@@ -516,7 +516,8 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
       this.metrics = ImmutableList.of();
-      this.projections = ImmutableList.of();
+      // By default, segment is not projection-aware.
+      this.projections = null;
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.size = -1;
     }
