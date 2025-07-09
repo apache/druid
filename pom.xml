@@ -1862,7 +1862,7 @@
               <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.5.3</version>
+                    <version>3.2.5</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
@@ -1895,11 +1895,10 @@
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                         <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                         <!-- Surefire default is to exclude static inner classes; which may lead to the ignore of static inner classes
-                             https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->                        
+                             https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->
                         <excludes>
                            <exclude/>
                         </excludes>
-<!--                        <promoteUserPropertiesToSystemProperties>true</promoteUserPropertiesToSystemProperties>-->
                     </configuration>
                 </plugin>
                 <plugin>
