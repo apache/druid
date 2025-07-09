@@ -29,7 +29,9 @@ import java.util.Optional;
 
 /**
  * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
- * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}.
+ * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}. Closing this object closes
+ * both the {@link #segmentReference} and any closeables attached from the process of creating this object, such as
+ * from {@link AcquireSegmentAction}
  */
 public class SegmentReference implements Closeable
 {
@@ -42,7 +44,11 @@ public class SegmentReference implements Closeable
   private final Optional<Segment> segmentReference;
   private final Closer closer = Closer.create();
 
-  public SegmentReference(SegmentDescriptor segmentDescriptor, Optional<Segment> segmentReference, Closeable cleanupHold)
+  public SegmentReference(
+      SegmentDescriptor segmentDescriptor,
+      Optional<Segment> segmentReference,
+      Closeable cleanupHold
+  )
   {
     this.segmentDescriptor = segmentDescriptor;
     this.segmentReference = segmentReference.map(closer::register);

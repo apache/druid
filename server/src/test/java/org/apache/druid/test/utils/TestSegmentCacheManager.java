@@ -21,6 +21,7 @@ package org.apache.druid.test.utils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
@@ -140,9 +141,10 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
       return AcquireSegmentAction.missingSegment(descriptor);
     }
-    return AcquireSegmentAction.alreadyLoaded(
+    return new AcquireSegmentAction(
         descriptor,
-        getSegmentInternal(dataSegment).acquireReference()
+        () -> Futures.immediateFuture(getSegmentInternal(dataSegment).acquireReference()),
+        AcquireSegmentAction.NOOP_CLEANUP
     );
   }
 

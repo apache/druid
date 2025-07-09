@@ -169,8 +169,10 @@ public class SegmentManager
    * things.
    * <p>
    * Calling this method is treated as an intent to acquire and use the segments via resolving the futures, and cache
-   * manager implementations will place a hold on all segments specified until the {@link AcquireSegmentAction} which
-   * produced each segment- typically after resolving all the futures to acquire the references to the actual {@link Segment} objects.
+   * manager implementations will place a hold on all segments specified until the {@link AcquireSegmentAction} is
+   * closed. Callers will typically wait until after resolving all the futures to acquire the references to the actual
+   * {@link Segment} objects, but may do so earlier to cancel the hold. {@link Segment} objects returned by the future
+   * must also be closed separately by the caller.
    */
   public List<AcquireSegmentAction> acquireSegments(
       Iterable<DataSegmentAndDescriptor> segments

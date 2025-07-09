@@ -43,8 +43,8 @@ import java.util.function.Supplier;
  * will return the segment if already cached, or attempt to download from deep storage to load into the cache if not.
  * The {@link Segment} returned by the future places a separate hold on the cache until the segment itself is closed,
  * and MUST be closed when the caller is finished doing segment things with it. The caller must also call
- * {@link #close()} to clean up the hold that exists while possibly loading the segment, and may do so as soon as
- * the {@link Segment} is acquired (or can do so earlier to abort the load and release the hold).
+ * {@link #close()} on this object to clean up the hold that exists while possibly loading the segment, and may do so
+ * as soon as the {@link Segment} is acquired (or can do so earlier to abort the load and release the hold).
  */
 public class AcquireSegmentAction implements Closeable
 {
@@ -56,22 +56,29 @@ public class AcquireSegmentAction implements Closeable
       long timeoutAt
   )
   {
-    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
-    final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
-
     final Closer safetyNet = Closer.create();
-    try {
-      for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
-        safetyNet.register(acquireSegmentAction);
-        // getting the future kicks off any background action, so materialize them all to a list to get things started
-        futures.add(acquireSegmentAction.getSegmentFuture());
+    Throwable failure = null;
+
+    // getting the future kicks off any background action, so materialize them all to a list to get things started
+    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
+    for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
+      safetyNet.register(acquireSegmentAction);
+      // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
+      // to close
+      if (failure == null) {
+        try {
+          futures.add(acquireSegmentAction.getSegmentFuture());
+        }
+        catch (Throwable t) {
+          failure = t;
+        }
+      } else {
+        futures.add(Futures.immediateFuture(Optional.empty()));
       }
     }
-    catch (Throwable t) {
-      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
-    }
 
-    Throwable failure = null;
+
+    final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
     for (int i = 0; i < acquireSegmentActions.size(); i++) {
       // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
       // all references before rethrowing the error
@@ -100,14 +107,6 @@ public class AcquireSegmentAction implements Closeable
       throw CloseableUtils.closeAndWrapInCatch(failure, safetyNet);
     }
     return segmentReferences;
-  }
-
-  public static AcquireSegmentAction alreadyLoaded(
-      final SegmentDescriptor descriptor,
-      final Optional<Segment> segment
-  )
-  {
-    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(segment), NOOP_CLEANUP);
   }
 
   public static AcquireSegmentAction missingSegment(final SegmentDescriptor descriptor)
