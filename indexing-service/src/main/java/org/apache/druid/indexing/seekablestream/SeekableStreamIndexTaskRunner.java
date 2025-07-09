@@ -646,13 +646,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses.
-          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records = getRecords(
-              recordSupplier,
-              toolbox
-          );
+          List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> records;
+          try {
+            records = getRecords(recordSupplier, toolbox);
 
-          // note: getRecords() also updates assignment
-          stillReading = !assignment.isEmpty();
+            // note: getRecords() also updates assignment
+            stillReading = !assignment.isEmpty();
+          }
+          catch (TaskStatusException e) {
+            caughtExceptionOuter = e;
+            records = Collections.emptyList();
+            stillReading = false;
+          }
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
           AppenderatorDriverAddResult pushTriggeringAddResult = null;
@@ -972,8 +977,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
 
     ingestionState = IngestionState.COMPLETED;
-    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
-    return TaskStatus.success(task.getId());
+
+    if (caughtExceptionOuter instanceof TaskStatusException) {
+      String errorMsg = caughtExceptionOuter.getMessage();
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, handoffWaitMs));
+      return new TaskStatus(task.getId(), ((TaskStatusException) caughtExceptionOuter).getTaskState(), -1, errorMsg, null);
+    } else {
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
+      return TaskStatus.success(task.getId());
+    }
   }
 
   private TaskLockType getTaskLockType()
