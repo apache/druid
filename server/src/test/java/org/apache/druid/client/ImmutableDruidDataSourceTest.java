@@ -42,6 +42,7 @@ public class ImmutableDruidDataSourceTest
   DataSegment TEST_SEGMENT = DataSegment.builder(SegmentId.of("test", Intervals.of("2017/2018"), "version", null))
                                         .dimensions(ImmutableList.of("dim1", "dim2"))
                                         .metrics(ImmutableList.of("met1", "met2"))
+                                        .projections(ImmutableList.of("proj1", "proj2"))
                                         .binaryVersion(1)
                                         .size(100L)
                                         .build();

@@ -260,6 +260,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                                   .shardSpec(new NumberedShardSpec(2, 3))
                                   .dimensions(ImmutableList.of("dim1", "dim2"))
                                   .metrics(ImmutableList.of("met1", "met2"))
+                                  .projections(ImmutableList.of("proj1", "proj2"))
                                   .binaryVersion(1)
                                   .size(100L)
                                   .build();
@@ -301,6 +302,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                       .shardSpec(new NumberedShardSpec(partitionId, 0))
                       .dimensions(ImmutableList.of("dim1", "dim2"))
                       .metrics(ImmutableList.of("met1", "met2"))
+                      .projections(ImmutableList.of("proj1", "proj2"))
                       .binaryVersion(1)
                       .size(100L)
                       .build();
