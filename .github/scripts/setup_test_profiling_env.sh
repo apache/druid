@@ -49,4 +49,3 @@ else
   echo $ENV_VAR=\"\"
 fi
 
-

@@ -24,4 +24,4 @@ OPTS+=" -Djunit.jupiter.execution.timeout.default=3m"
 OPTS+=" -Djunit.jupiter.execution.timeout.threaddump.enabled=true"
 OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 
-mvn -B $OPTS test "$@"
+mvn -B $OPTS test "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
