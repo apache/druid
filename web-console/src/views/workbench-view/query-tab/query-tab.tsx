@@ -189,7 +189,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     return Boolean(queryDuration && queryDuration < 10000);
   }
 
-  const queryInputRef = useRef<FlexibleQueryInput | null>(null);
+  const queryInputRef = useRef<{ goToPosition: (rowColumn: RowColumn) => void } | null>(null);
 
   const cachedExecutionState = ExecutionStateCache.getState(id);
   const currentRunningPromise = WorkbenchRunningPromises.getPromise(id);
