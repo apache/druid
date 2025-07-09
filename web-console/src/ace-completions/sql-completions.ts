@@ -22,6 +22,7 @@ import { C, filterMap, N, T } from 'druid-query-toolkit';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
+import type { AvailableFunctions } from '../helpers';
 import type { ColumnMetadata } from '../utils';
 import { lookupBy, uniq } from '../utils';
 
@@ -158,8 +159,8 @@ const KNOWN_SQL_PARTS: Record<string, boolean> = {
   ),
   ...lookupBy(SQL_CONSTANTS, String, () => true),
   ...lookupBy(SQL_DYNAMICS, String, () => true),
-  ...lookupBy(Object.values(SQL_DATA_TYPES), String, () => true),
-  ...lookupBy(Object.values(SQL_FUNCTIONS), String, () => true),
+  ...lookupBy(Array.from(SQL_DATA_TYPES.keys()), String, () => true),
+  ...lookupBy(Array.from(SQL_FUNCTIONS.keys()), String, () => true),
 };
 
 export interface GetSqlCompletionsOptions {
@@ -169,6 +170,8 @@ export interface GetSqlCompletionsOptions {
   prefix: string;
   columnMetadata?: readonly ColumnMetadata[];
   columns?: readonly string[];
+  availableSqlFunctions?: AvailableFunctions;
+  skipAggregates?: boolean;
 }
 
 export function getSqlCompletions({
@@ -178,6 +181,8 @@ export function getSqlCompletions({
   prefix,
   columnMetadata,
   columns,
+  availableSqlFunctions,
+  skipAggregates,
 }: GetSqlCompletionsOptions): Ace.Completion[] {
   // We are in a single line comment
   if (lineBeforePrefix.startsWith('--') || lineBeforePrefix.includes(' --')) {
@@ -219,7 +224,7 @@ export function getSqlCompletions({
         meta: 'keyword',
       })),
       SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 11, meta: 'constant' })),
-      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => {
+      Array.from(SQL_DATA_TYPES.entries()).map(([name, [runtime, description]]) => {
         return {
           name,
           value: name,
@@ -241,11 +246,38 @@ export function getSqlCompletions({
     ) {
       completions = completions.concat(
         SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 20, meta: 'dynamic' })),
-        Object.entries(SQL_FUNCTIONS).flatMap(([name, versions]) => {
-          return versions.map(([args, description]) => {
+      );
+
+      // If availableSqlFunctions map is provided, use it; otherwise fall back to static SQL_FUNCTIONS
+      if (availableSqlFunctions) {
+        completions = completions.concat(
+          Array.from(availableSqlFunctions.entries()).flatMap(([name, funcDef]) => {
+            if (skipAggregates && funcDef.isAggregate) return [];
+            const description = SQL_FUNCTIONS.get(name)?.[1];
+            return funcDef.args.map(args => {
+              return {
+                name,
+                value: funcDef.args.length > 1 ? `${name}(${args})` : name,
+                score: 30,
+                meta: funcDef.isAggregate ? 'aggregate' : 'function',
+                docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
+                docText: description,
+                completer: {
+                  insertMatch: (editor: any, data: any) => {
+                    editor.completer.insertMatch({ value: data.name });
+                  },
+                },
+              } as Ace.Completion;
+            });
+          }),
+        );
+      } else {
+        completions = completions.concat(
+          Array.from(SQL_FUNCTIONS.entries()).map(([name, argDesc]) => {
+            const [args, description] = argDesc;
             return {
               name,
-              value: versions.length > 1 ? `${name}(${args})` : name,
+              value: name,
               score: 30,
               meta: 'function',
               docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
@@ -256,9 +288,9 @@ export function getSqlCompletions({
                 },
               },
             } as Ace.Completion;
-          });
-        }),
-      );
+          }),
+        );
+      }
     }
   }
 
