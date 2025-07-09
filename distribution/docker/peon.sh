@@ -39,11 +39,12 @@
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
 # This script is very similar to druid.sh, used exclusively for the kubernetes-overlord-extension.
+# Specifically, it is used by K8sTaskAdapter and PodTemplateTaskAdapter to start up Peon tasks.
 
 set -e
 SERVICE="overlord"
 
-echo "$(date -Is) startup service $SERVICE"
+echo "$(date -Is) startup service peon"
 
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
@@ -159,15 +160,12 @@ fi
 
 # take the ${TASK_JSON} environment variable and base64 decode, unzip and throw it in ${TASK_DIR}/task.json.
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
-if [ -n "$TASK_ID" ]; then
-    # In the case of running with Kubernetes, see https://github.com/apache/druid/pull/18206 for more information.
-    mkdir -p ${TASK_DIR}/${TASK_ID}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/${TASK_ID}/task.json;
-else
-    mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
-fi
+mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
 
+# Start peon using CliPeon, with variables `Main internal peon TASK_ID ATTEMPT_ID`
 if [ -n "$TASK_ID" ]; then
-    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon --taskId "${TASK_ID}" "$@"
+    # TASK_ID is only set from PodTemplateTaskAdapter
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 --taskId "${TASK_ID}" "$@"
 else
-    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "$@"
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 "$@"
 fi

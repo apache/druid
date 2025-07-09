@@ -235,12 +235,6 @@ public class CliPeon extends GuiceRunnable
 
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
-            boolean isK8sMode = properties.getProperty("druid.indexer.runner.type", "").contains("k8s");
-            if (isK8sMode) {
-              // Need to connect task directory to include taskId.
-              // This is to ensure task reports, status files will be written and read from the correct path.
-              taskDirPath = Paths.get(taskDirPath, taskId).toString();
-            }
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -263,11 +257,10 @@ public class CliPeon extends GuiceRunnable
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
             binder.bind(Properties.class).toInstance(properties);
-            if (isK8sMode) {
+            if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
               log.info("Running peon in k8s mode");
               executorLifecycleConfig.setParentStreamDefined(false);
             }
-            log.info("Attempt[%s] at Running peon task in taskDirPath[%s]", attemptId, taskDirPath);
 
             binder.bind(ExecutorLifecycleConfig.class).toInstance(executorLifecycleConfig);
 

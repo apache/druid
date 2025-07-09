@@ -217,7 +217,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
-            .withValue(taskConfig.getBaseDir())
+            .withValue(taskConfig.getTaskDir(task.getId()).getAbsolutePath())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_ID_ENV)
