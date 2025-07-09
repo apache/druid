@@ -582,30 +582,31 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         DataSchema.class
     );
 
-    Assert.assertEquals(actual.getDataSource(), IdUtilsTest.VALID_ID_CHARS);
+    Assert.assertEquals(IdUtilsTest.VALID_ID_CHARS, actual.getDataSource());
     Assert.assertEquals(
-        actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
             DimensionsSpec.builder().setDimensionExclusions(Arrays.asList("__time", "metric1", "xXx", "col1")).build(),
             null,
             null,
             null
-        )
+        ),
+        actual.getParser().getParseSpec()
     );
     Assert.assertArrayEquals(
-        actual.getAggregators(),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1")
-        }
+        },
+        actual.getAggregators()
     );
     Assert.assertEquals(
-        actual.getGranularitySpec(),
         new ArbitraryGranularitySpec(
             new DurationGranularity(86400000, null),
             ImmutableList.of(Intervals.of("2014/2015"))
-        )
+        ),
+        actual.getGranularitySpec()
     );
+    Assert.assertEquals(ImmutableList.of(), actual.getProjections());
   }
 
   @Test

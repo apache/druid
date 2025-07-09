@@ -446,7 +446,7 @@ public class DataSegmentTest
             transformSpec,
             indexSpec,
             granularitySpec,
-            null
+            ImmutableList.of()
         );
 
     final DataSegment segment1 = DataSegment.builder()

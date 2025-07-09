@@ -424,6 +424,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       int id = 0;
       for (DataSegment segment : segmentsToPublish) {
         DataSegment upgradedSegment = DataSegment.builder(segment)
+                                                 .shardSpec(new NumberedShardSpec(id, 0))
                                                  .dataSource(DATA_SOURCE)
                                                  .interval(Intervals.ETERNITY)
                                                  .version(UPGRADED_VERSION)

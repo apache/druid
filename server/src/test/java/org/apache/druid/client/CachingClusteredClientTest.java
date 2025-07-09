@@ -19,7 +19,9 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -1742,7 +1744,6 @@ public class CachingClusteredClientTest
                                            ))
                                            .binaryVersion(9)
                                            .build();
-
     ServerSelector selector = new ServerSelector(
         segment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -1761,12 +1762,11 @@ public class CachingClusteredClientTest
   )
   {
     final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
-                                           .shardSpec(new SingleDimensionShardSpec(
-                                               dimension,
-                                               start,
-                                               end,
-                                               partitionNum,
-                                               SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+                                           .shardSpec(new SingleDimensionShardSpec(dimension,
+                                                                                   start,
+                                                                                   end,
+                                                                                   partitionNum,
+                                                                                   SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
                                            ))
                                            .binaryVersion(9)
                                            .build();
@@ -2739,17 +2739,171 @@ public class CachingClusteredClientTest
 
     public DataSegment getSegment()
     {
-      return DataSegment.builder(segment)
-                        .shardSpec(shardSpec)
-                        .dataSource("")
-                        .interval(Intervals.utc(0, 1))
-                        .version("version")
-                        .build();
+      return new MyDataSegment();
     }
 
     public Iterable<Result<T>> getResults()
     {
       return results;
+    }
+
+    private class MyDataSegment extends DataSegment
+    {
+      private final DataSegment baseSegment = segment;
+
+      private MyDataSegment()
+      {
+        super(
+            "",
+            Intervals.utc(0, 1),
+            "",
+            null,
+            null,
+            null,
+            NoneShardSpec.instance(),
+            null,
+            0
+        );
+      }
+
+      @Override
+      @JsonProperty
+      public String getDataSource()
+      {
+        return baseSegment.getDataSource();
+      }
+
+      @Override
+      @JsonProperty
+      public Interval getInterval()
+      {
+        return baseSegment.getInterval();
+      }
+
+      @Override
+      @JsonProperty
+      public Map<String, Object> getLoadSpec()
+      {
+        return baseSegment.getLoadSpec();
+      }
+
+      @Override
+      @JsonProperty
+      public String getVersion()
+      {
+        return "version";
+      }
+
+      @Override
+      @JsonSerialize
+      @JsonProperty
+      public List<String> getDimensions()
+      {
+        return baseSegment.getDimensions();
+      }
+
+      @Override
+      @JsonSerialize
+      @JsonProperty
+      public List<String> getMetrics()
+      {
+        return baseSegment.getMetrics();
+      }
+
+      @Override
+      @JsonProperty
+      public ShardSpec getShardSpec()
+      {
+        try {
+          return baseSegment.getShardSpec();
+        }
+        catch (IllegalStateException e) {
+          return NoneShardSpec.instance();
+        }
+      }
+
+      @Override
+      @JsonProperty
+      public long getSize()
+      {
+        return baseSegment.getSize();
+      }
+
+      @Override
+      public SegmentId getId()
+      {
+        return segmentId;
+      }
+
+      @Override
+      public SegmentDescriptor toDescriptor()
+      {
+        return baseSegment.toDescriptor();
+      }
+
+      @Override
+      public int compareTo(DataSegment dataSegment)
+      {
+        return baseSegment.compareTo(dataSegment);
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (!(o instanceof DataSegment)) {
+          return false;
+        }
+        return baseSegment.equals(o);
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return baseSegment.hashCode();
+      }
+
+      @Override
+      public String toString()
+      {
+        return baseSegment.toString();
+      }
+
+      @Override
+      public int getStartRootPartitionId()
+      {
+        return shardSpec.getStartRootPartitionId();
+      }
+
+      @Override
+      public int getEndRootPartitionId()
+      {
+        return shardSpec.getEndRootPartitionId();
+      }
+
+      @Override
+      public short getMinorVersion()
+      {
+        return shardSpec.getMinorVersion();
+      }
+
+      @Override
+      public short getAtomicUpdateGroupSize()
+      {
+        return shardSpec.getAtomicUpdateGroupSize();
+      }
+
+      @Override
+      public boolean overshadows(DataSegment other)
+      {
+        if (getDataSource().equals(other.getDataSource())
+            && getInterval().overlaps(other.getInterval())
+            && getVersion().equals(other.getVersion())) {
+          return getStartRootPartitionId() <= other.getStartRootPartitionId()
+                 && getEndRootPartitionId() >= other.getEndRootPartitionId()
+                 && getMinorVersion() > other.getMinorVersion();
+        }
+        return false;
+      }
     }
   }
 

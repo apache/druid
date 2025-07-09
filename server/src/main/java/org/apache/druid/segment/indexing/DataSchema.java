@@ -357,7 +357,7 @@ public class DataSchema
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude(Include.NON_EMPTY)
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;

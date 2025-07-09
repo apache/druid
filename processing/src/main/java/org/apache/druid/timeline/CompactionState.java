@@ -22,6 +22,7 @@ package org.apache.druid.timeline;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -56,7 +57,6 @@ public class CompactionState
   private final IndexSpec indexSpec;
   private final GranularitySpec granularitySpec;
   private final List<AggregatorFactory> metricsSpec;
-  @Nullable
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
@@ -76,7 +76,7 @@ public class CompactionState
     this.transformSpec = transformSpec;
     this.indexSpec = indexSpec;
     this.granularitySpec = granularitySpec;
-    this.projections = projections;
+    this.projections = projections == null ? ImmutableList.of() : projections;
   }
 
   @JsonProperty
@@ -116,8 +116,7 @@ public class CompactionState
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
@@ -177,7 +176,7 @@ public class CompactionState
       CompactionTransformSpec transformSpec,
       IndexSpec indexSpec,
       GranularitySpec granularitySpec,
-      @Nullable List<AggregateProjectionSpec> projections
+      List<AggregateProjectionSpec> projections
   )
   {
     CompactionState compactionState = new CompactionState(

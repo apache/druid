@@ -57,7 +57,6 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final Map<String, DimensionSchema> dimensionSchemas;
 
-  @Nullable
   private final List<AggregateProjectionSpec> projections;
 
   @JsonCreator
@@ -76,7 +75,7 @@ public class DataSourceMSQDestination implements MSQDestination
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
     this.dimensionSchemas = dimensionSchemas;
-    this.projections = projections;
+    this.projections = projections == null ? Collections.emptyList() : projections;
     this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
 
     if (replaceTimeChunks != null) {
@@ -164,9 +163,8 @@ public class DataSourceMSQDestination implements MSQDestination
     return dimensionSchemas;
   }
 
-  @Nullable
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
