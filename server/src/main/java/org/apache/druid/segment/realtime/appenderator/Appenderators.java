@@ -39,9 +39,15 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.logging.log4j.ThreadContext;
+
+import java.io.File;
 
 public class Appenderators
 {
+  private static final String THREAD_CONTEXT_TASK_LOG_FILE = "task.log.file";
+  private static final String THREAD_CONTEXT_TASK_ID = "task.log.id";
+
   public static Appenderator createRealtime(
       SegmentLoaderConfig segmentLoaderConfig,
       String id,
@@ -127,5 +133,25 @@ public class Appenderators
         parseExceptionHandler,
         centralizedDatasourceSchemaConfig
     );
+  }
+
+  /**
+   * Sets the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void setTaskThreadContextForIndexers(String taskId, File logFile)
+  {
+    ThreadContext.put(THREAD_CONTEXT_TASK_ID, taskId);
+    ThreadContext.put(THREAD_CONTEXT_TASK_LOG_FILE, logFile.getAbsolutePath());
+  }
+
+  /**
+   * Clears the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void clearTaskThreadContextForIndexers()
+  {
+    ThreadContext.remove(THREAD_CONTEXT_TASK_LOG_FILE);
+    ThreadContext.remove(THREAD_CONTEXT_TASK_ID);
   }
 }

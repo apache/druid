@@ -236,7 +236,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     // Start the resources in order
     for (EmbeddedResource resource : resources) {
       try {
-        if (resource instanceof DruidServerResource && !startedFirstDruidServer) {
+        if (resource instanceof EmbeddedDruidServer<?> && !startedFirstDruidServer) {
           // Defer setting the extensions property until the first Druid server starts, so configureCluster calls for
           // earlier resources can add extensions.
           addCommonProperty("druid.extensions.modulesForEmbeddedTest", getExtensionModuleProperty());
