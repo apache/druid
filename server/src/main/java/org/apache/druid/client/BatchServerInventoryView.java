@@ -65,7 +65,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
   private final CuratorInventoryManager<DruidServer, Set<DataSegment>> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
-  private final ConcurrentMap<ServerRemovedCallback, Executor> serverRemovedCallbacks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new ConcurrentHashMap<>();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
   private final ConcurrentMap<String, Set<DataSegment>> zNodes = new ConcurrentHashMap<>();
@@ -127,13 +127,14 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           public void newContainer(DruidServer container)
           {
             log.info("New Server[%s]", container);
+            runServerCallbacks(callback -> callback.serverAdded(container));
           }
 
           @Override
           public void deadContainer(DruidServer deadContainer)
           {
             log.info("Server Disappeared[%s]", deadContainer);
-            runServerRemovedCallbacks(deadContainer);
+            runServerCallbacks(callback -> callback.serverRemoved(deadContainer));
           }
 
           @Override
@@ -216,9 +217,9 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
-    serverRemovedCallbacks.put(callback, exec);
+    serverCallbacks.put(callback, exec);
   }
 
   @Override
@@ -243,13 +244,13 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
     }
   }
 
-  private void runServerRemovedCallbacks(final DruidServer server)
+  private void runServerCallbacks(final Function<ServerCallback, CallbackAction> fn)
   {
-    for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverRemovedCallbacks.entrySet()) {
+    for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
       entry.getValue().execute(
           () -> {
-            if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-              serverRemovedCallbacks.remove(entry.getKey());
+            if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
+              serverCallbacks.remove(entry.getKey());
             }
           }
       );

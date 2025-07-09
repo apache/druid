@@ -17,17 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.utils.RuntimeInfo;
+import java.io.File;
 
-public class RuntimeInfoModule implements Module
+/**
+ * Contains the paths for various directories used by a task for logs, reports,
+ * and persisting intermediate data.
+ */
+public interface TaskDirectory
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    binder.requestStaticInjection(RuntimeInfo.class);
-  }
+  /**
+   * @return {@code {baseTaskDir}/{taskId}}
+   */
+  File getTaskDir(String taskId);
+
+  /**
+   * @return {@code {baseTaskDir}/{taskId}/work}
+   */
+  File getTaskWorkDir(String taskId);
+
+  /**
+   * @return {@code {baseTaskDir}/{taskId}/log}
+   */
+  File getTaskLogFile(String taskId);
+
+  /**
+   * @return {@code {baseTaskDir}/{taskId}/temp}
+   */
+  File getTaskTempDir(String taskId);
+
+  /**
+   * @return {@code {baseTaskDir}/{taskId}/lock}
+   */
+  File getTaskLockFile(String taskId);
 }

@@ -33,7 +33,7 @@ import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.utils.CompressionUtils;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
@@ -50,15 +50,17 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
   private static final Logger log = new Logger(UriCacheGenerator.class);
-  private static final long MAX_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes();
   private final Map<String, SearchableVersionedDataFinder> pullers;
+  private final long maxMemory;
 
   @Inject
   public UriCacheGenerator(
-      Map<String, SearchableVersionedDataFinder> pullers
+      Map<String, SearchableVersionedDataFinder> pullers,
+      RuntimeInfo runtimeInfo
   )
   {
     this.pullers = pullers;
+    this.maxMemory = runtimeInfo.getMaxHeapSizeBytes();
   }
 
   @Override
@@ -151,7 +153,7 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
             ).populateAndWarnAtByteLimit(
                 source,
                 cache.getCache(),
-                (long) (MAX_MEMORY * extractionNamespace.getMaxHeapPercentage() / 100.0),
+                (long) (maxMemory * extractionNamespace.getMaxHeapPercentage() / 100.0),
                 null == entryId ? null : entryId.toString()
             );
             final long duration = System.nanoTime() - startNs;

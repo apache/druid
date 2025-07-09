@@ -65,6 +65,14 @@ public class TestFolder implements EmbeddedResource
     }
   }
 
+  @Override
+  public String toString()
+  {
+    return "TestFolder{" +
+           "rootFolder=" + rootFolder +
+           '}';
+  }
+
   private void validateRootFolderInitialized()
   {
     if (rootFolder == null) {

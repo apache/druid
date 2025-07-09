@@ -94,10 +94,7 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
   public StartupInjectorBuilder forServer()
   {
     withExtensions();
-    add(
-        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
-        new RuntimeInfoModule()
-    );
+    add(new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")));
     return this;
   }
 

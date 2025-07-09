@@ -651,9 +651,9 @@ public class CalciteTests
     }
 
     @Override
-    public void registerServerRemovedCallback(
+    public void registerServerCallback(
         Executor exec,
-        ServerView.ServerRemovedCallback callback
+        ServerView.ServerCallback callback
     )
     {
       throw new UnsupportedOperationException();

@@ -574,6 +574,7 @@ public class StreamAppenderator implements Appenderator
         final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
             () -> {
               try {
+                setTaskThreadContext();
                 commitLock.lock();
                 objectMapper.writeValue(computeCommitFile(), Committed.nil());
               }
@@ -689,6 +690,7 @@ public class StreamAppenderator implements Appenderator
           public Object call() throws IOException
           {
             try {
+              setTaskThreadContext();
               for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
               }
@@ -803,7 +805,8 @@ public class StreamAppenderator implements Appenderator
         // We should always persist all segments regardless of the input because metadata should be committed for all
         // segments.
         persistAll(committer),
-        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
+        commitMetadata -> {
+          setTaskThreadContext();
           final List<DataSegment> dataSegments = new ArrayList<>();
           final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
@@ -1772,6 +1775,7 @@ public class StreamAppenderator implements Appenderator
     @VisibleForTesting
     void computeAndAnnounce()
     {
+      setTaskThreadContext();
       Map<SegmentId, Pair<RowSignature, Integer>> currentSinkSignatureMap = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
