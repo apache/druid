@@ -212,7 +212,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           }
       ),
       new AggregateProjectionSpec(
-          "ab_daily",
+          "ab",
           null,
           Arrays.asList(
               new StringDimensionSchema("a"),
@@ -221,7 +221,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           null
       ),
       new AggregateProjectionSpec(
-          "abfoo_daily",
+          "abfoo",
           VirtualColumns.create(
               new ExpressionVirtualColumn(
                   "bfoo",
@@ -278,7 +278,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           }
       ),
       new AggregateProjectionSpec(
-          "afoo_daily",
+          "afoo",
           VirtualColumns.create(
               new ExpressionVirtualColumn(
                   "afoo",
@@ -322,7 +322,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                         ))
                         .collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, sortByDim: {5}, autoSchema: {6}")
+  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -405,7 +405,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new IncrementalIndexTimeBoundaryInspector(index),
                   new IncrementalIndexCursorFactory(rollupIndex),
                   new IncrementalIndexTimeBoundaryInspector(rollupIndex),
-                  sortByDim,
+                  !sortByDim,
                   autoSchema
               });
             } else {
@@ -419,7 +419,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   QueryableIndexTimeBoundaryInspector.create(index),
                   new QueryableIndexCursorFactory(rollupIndex),
                   QueryableIndexTimeBoundaryInspector.create(rollupIndex),
-                  sortByDim,
+                  !sortByDim,
                   autoSchema
               });
             }
@@ -446,7 +446,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private final TimeseriesQueryEngine timeseriesEngine;
 
   private final NonBlockingPool<ByteBuffer> nonBlockingPool;
-  public final boolean sortByDim;
+  public final boolean segmentSortedByTime;
   public final boolean autoSchema;
 
   @Rule
@@ -458,7 +458,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       TimeBoundaryInspector projectionsTimeBoundaryInspector,
       CursorFactory rollupProjectionsCursorFactory,
       TimeBoundaryInspector rollupProjectionsTimeBoundaryInspector,
-      boolean sortByDim,
+      boolean segmentSortedByTime,
       boolean autoSchema
   )
   {
@@ -466,7 +466,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     this.projectionsTimeBoundaryInspector = projectionsTimeBoundaryInspector;
     this.rollupProjectionsCursorFactory = rollupProjectionsCursorFactory;
     this.rollupProjectionsTimeBoundaryInspector = rollupProjectionsTimeBoundaryInspector;
-    this.sortByDim = sortByDim;
+    this.segmentSortedByTime = segmentSortedByTime;
     this.autoSchema = autoSchema;
     this.nonBlockingPool = closer.closeLater(
         new CloseableStupidPool<>(
@@ -584,7 +584,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                             10
                         )
                     )
-                    .setContext(ImmutableMap.of(QueryContexts.USE_PROJECTION, "abfoo_daily"))
+                    .setContext(ImmutableMap.of(QueryContexts.USE_PROJECTION, "abfoo"))
                     .build();
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -964,16 +964,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setDataSource("test")
                     .setInterval(Intervals.ETERNITY)
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
-    if (sortByDim) {
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("a")
+                  .setGranularity(Granularities.MINUTE);
+    } else {
       queryBuilder.setVirtualColumns(Granularities.toVirtualColumn(Granularities.MINUTE, "__gran"))
                   .setDimensions(
                       DefaultDimensionSpec.of("__gran", ColumnType.LONG),
                       DefaultDimensionSpec.of("a")
                   )
                   .setGranularity(Granularities.ALL);
-    } else {
-      queryBuilder.addDimension("a")
-                  .setGranularity(Granularities.MINUTE);
     }
     final GroupByQuery query = queryBuilder.build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -998,7 +998,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(8, results.size());
 
-    if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
+    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
       // this sorts funny when not time ordered
       Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet();
       resultsInNoParticularOrder.addAll(
@@ -1053,16 +1053,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setDataSource("test")
                     .setInterval(Intervals.ETERNITY)
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
-    if (sortByDim) {
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("a")
+                  .setGranularity(Granularities.HOUR);
+    } else {
       queryBuilder.setGranularity(Granularities.ALL)
                   .setDimensions(
                       DefaultDimensionSpec.of("__gran", ColumnType.LONG),
                       DefaultDimensionSpec.of("a")
                   )
                   .setVirtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"));
-    } else {
-      queryBuilder.addDimension("a")
-                  .setGranularity(Granularities.HOUR);
     }
     final GroupByQuery query = queryBuilder.build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -1086,7 +1086,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(3, results.size());
-    if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
+    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
       Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
           new Object[]{TIMESTAMP.getMillis(), "a", 4L},
           new Object[]{TIMESTAMP.getMillis(), "b", 12L},
@@ -1110,16 +1110,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setDataSource("test")
                     .setInterval(Intervals.ETERNITY)
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
-    if (sortByDim) {
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("a")
+                  .setGranularity(Granularities.DAY);
+    } else {
       queryBuilder.setGranularity(Granularities.ALL)
                   .setDimensions(
                       DefaultDimensionSpec.of("__gran", ColumnType.LONG),
                       DefaultDimensionSpec.of("a")
                   )
                   .setVirtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"));
-    } else {
-      queryBuilder.addDimension("a")
-                  .setGranularity(Granularities.DAY);
     }
     final GroupByQuery query = queryBuilder.build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -1143,7 +1143,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
-    if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
+    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
       Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
           new Object[]{TIMESTAMP.getMillis(), "a", 7L},
           new Object[]{TIMESTAMP.getMillis(), "b", 12L}
@@ -1382,7 +1382,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesQueryGranularityFinerThanProjectionGranularity()
   {
-    Assume.assumeFalse(sortByDim);
+    Assume.assumeTrue(segmentSortedByTime);
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("test")
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
