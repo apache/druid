@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.test.utils.ImmutableDruidDataSourceTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,6 +39,12 @@ import java.io.IOException;
 
 public class ImmutableDruidDataSourceTest
 {
+  DataSegment TEST_SEGMENT = DataSegment.builder(SegmentId.of("test", Intervals.of("2017/2018"), "version", null))
+                                        .dimensions(ImmutableList.of("dim1", "dim2"))
+                                        .metrics(ImmutableList.of("met1", "met2"))
+                                        .binaryVersion(1)
+                                        .size(100L)
+                                        .build();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -45,8 +52,7 @@ public class ImmutableDruidDataSourceTest
   @Test
   public void testSerde() throws IOException
   {
-    final DataSegment segment = getTestSegment();
-    final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
+    final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(TEST_SEGMENT);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()
         .setInjectableValues(new Std().addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT));
@@ -59,13 +65,10 @@ public class ImmutableDruidDataSourceTest
   @Test
   public void testEqualsMethodThrowsUnsupportedOperationException()
   {
-    final DataSegment segment1 = getTestSegment();
+    final ImmutableDruidDataSource dataSource1 = getImmutableDruidDataSource(TEST_SEGMENT);
 
-    final ImmutableDruidDataSource dataSource1 = getImmutableDruidDataSource(segment1);
 
-    final DataSegment segment2 = getTestSegment();
-
-    final ImmutableDruidDataSource dataSource2 = getImmutableDruidDataSource(segment2);
+    final ImmutableDruidDataSource dataSource2 = getImmutableDruidDataSource(TEST_SEGMENT);
 
     Assert.assertThrows(
         "ImmutableDruidDataSource shouldn't be used as the key in containers",
@@ -74,37 +77,20 @@ public class ImmutableDruidDataSourceTest
     );
   }
 
-  private ImmutableDruidDataSource getImmutableDruidDataSource(DataSegment segment1)
+  private static ImmutableDruidDataSource getImmutableDruidDataSource(DataSegment segment1)
   {
     return new ImmutableDruidDataSource(
-      "test",
-      ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-      ImmutableSortedMap.of(segment1.getId(), segment1)
+        "test",
+        ImmutableMap.of("prop1", "val1", "prop2", "val2"),
+        ImmutableSortedMap.of(segment1.getId(), segment1)
     );
   }
 
-  private DataSegment getTestSegment()
-  {
-    return new DataSegment(
-        "test",
-        Intervals.of("2017/2018"),
-        "version",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        null,
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
-  }
 
   @Test
   public void testHashCodeMethodThrowsUnsupportedOperationException()
   {
-    final DataSegment segment = getTestSegment();
-    final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(segment);
+    final ImmutableDruidDataSource dataSource = getImmutableDruidDataSource(TEST_SEGMENT);
 
     Assert.assertThrows(
         "ImmutableDruidDataSource shouldn't be used as the key in containers",
