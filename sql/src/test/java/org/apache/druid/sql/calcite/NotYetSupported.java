@@ -27,6 +27,8 @@ import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.opentest4j.IncompleteExecutionException;
 
+import javax.annotation.Nullable;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -73,7 +75,7 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface NotYetSupported
 {
-  Modes value();
+  Modes[] value();
 
   enum Scope
   {
@@ -105,11 +107,18 @@ public @interface NotYetSupported
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
 
     DD_RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "ForbiddenException: Unauthorized"),
+    DD_RESTRICTED_DATASOURCE_SUPPORT2(Scope.DECOUPLED_DART, AssertionError.class, "Unauthorized"),
     DD_INCORRECT_RESULTS_EMPTY_STRING(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch at"),
     NO_INFORMATION_SCHEMA_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "INFORMATION_SCHEMA"),
-    DD_JOIN(Scope.DECOUPLED_DART, DruidException.class, "DruidJoin.DRUID_LOGICAL"),
     DD_NULL_COLUMN_ORDER(Scope.DECOUPLED_DART, DruidException.class, "sort: \\[\\] -> \\[1\\]"),
-    DD_UNION(Scope.DECOUPLED_DART, DruidException.class, "DruidUnion.DRUID_LOGICAL");
+    DD_UNION(Scope.DECOUPLED_DART, DruidException.class, "DruidUnion.DRUID_LOGICAL"),
+    DD_WINDOW(Scope.DECOUPLED_DART, DruidException.class, "DruidWindow.DRUID_LOGICAL"),
+    DD_UNNEST_RESULT_MISMATCH(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
+    DD_SORT_REMOVE_TROUBLE(Scope.DECOUPLED_DART, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
+    DART_SECOND_SEGMENT_NOT_SCANNED(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)");
     // @formatter:on
 
     public Scope scope;
@@ -162,14 +171,15 @@ public @interface NotYetSupported
     {
       Method method = extensionContext.getTestMethod().get();
       NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
+      Modes ignoreMode = getModeForScope(annotation);
 
-      if (annotation == null || annotation.value().scope != scope) {
+
+      if (ignoreMode == null) {
         invocation.proceed();
         return;
       }
       {
         {
-          Modes ignoreMode = annotation.value();
           Throwable e = null;
           try {
             invocation.proceed();
@@ -197,14 +207,28 @@ public @interface NotYetSupported
           );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.value().getPattern().matcher(trace);
+          Matcher m = ignoreMode.getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stacktrace doesn't match regex: " + annotation.value().regex, e);
+            throw new AssertionError("Exception stacktrace doesn't match regex: " + ignoreMode.regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
       }
+    }
+
+    private Modes getModeForScope(@Nullable NotYetSupported annotation)
+    {
+      if (annotation == null) {
+        return null;
+      }
+      for (Modes mode : annotation.value()) {
+        if (mode.scope == scope) {
+          return mode;
+        }
+
+      }
+      return null;
     }
 
     @Override

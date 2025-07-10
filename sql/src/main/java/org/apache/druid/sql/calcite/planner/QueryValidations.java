@@ -54,7 +54,8 @@ public class QueryValidations
       final RelNode relNode
   ) throws ValidationException
   {
-    if (plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST
+    if (
+        plannerContext.getJoinAlgorithm() == JoinAlgorithm.BROADCAST
         && !plannerContext.featureAvailable(EngineFeature.ALLOW_BROADCAST_RIGHTY_JOIN)) {
       class FindRightyJoin extends RelShuttleImpl
       {
