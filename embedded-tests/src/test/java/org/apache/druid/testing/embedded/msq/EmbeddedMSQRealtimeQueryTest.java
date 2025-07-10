@@ -73,6 +73,7 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -84,6 +85,25 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 {
   private static final Period TASK_DURATION = Period.hours(1);
   private static final int TASK_COUNT = 2;
+  private static final String LOOKUP_TABLE = "test_lookup";
+  private static final String BULK_UPDATE_LOOKUP_PAYLOAD
+      = "{\n"
+        + "  \"__default\": {\n"
+        + "    \"%s\": {\n"
+        + "      \"version\": \"v1\",\n"
+        + "      \"lookupExtractorFactory\": {\n"
+        + "        \"type\": \"map\",\n"
+        + "        \"map\": {\n"
+        + "          \"#en.wikipedia\": \"A\",\n"
+        + "          \"#fr.wikipedia\": \"B\",\n"
+        + "          \"#eu.wikipedia\": \"C\",\n"
+        + "          \"#ar.wikipedia\": \"D\",\n"
+        + "          \"#cs.wikipedia\": \"E\"\n"
+        + "        }\n"
+        + "      }\n"
+        + "    }\n"
+        + "  }\n"
+        + "}";
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -113,14 +133,16 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
 
     historical.addProperty("druid.msq.dart.worker.heapFraction", "0.9")
-              .addProperty("druid.msq.dart.worker.concurrentQueries", "1");
+              .addProperty("druid.msq.dart.worker.concurrentQueries", "1")
+              .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
     indexer.setServerMemory(300_000_000) // to run 2x realtime and 2x MSQ tasks
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            // druid.processing.numThreads must be higher than # of MSQ tasks to avoid contention, because the realtime
            // server is contacted in such a way that the processing thread is blocked
            .addProperty("druid.processing.numThreads", "3")
-           .addProperty("druid.worker.capacity", "4");
+           .addProperty("druid.worker.capacity", "4")
+           .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(DartControllerModule.class)
@@ -137,22 +159,45 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addCommonProperty("druid.msq.dart.enabled", "true")
            .useLatchableEmitter()
-           .addResource(kafka)
-           .addServer(coordinator)
+           .addResource(kafka);
+
+    // Initialize the indexers and brokers later.
+    cluster.addServer(coordinator)
            .addServer(overlord)
-           .addServer(indexer)
-           .addServer(broker)
-           .addServer(historical)
+//           .addServer(indexer)
+//           .addServer(broker)
+//           .addServer(historical)
            .addServer(router);
 
     return cluster;
   }
 
   @BeforeEach
-  void setUpEach()
+  void setUpEach() throws Exception
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     topic = dataSource = EmbeddedClusterApis.createTestDatasourceName();
+
+    // Initialize lookups
+    cluster.callApi().onLeaderCoordinator(
+        c -> c.updateAllLookups(Map.of())
+    );
+
+    final String lookupPayload = StringUtils.format(
+        BULK_UPDATE_LOOKUP_PAYLOAD,
+        LOOKUP_TABLE
+    );
+    cluster.callApi().onLeaderCoordinator(
+        c -> c.updateAllLookups(EmbeddedClusterApis.deserializeJsonToMap(lookupPayload))
+    );
+
+    // Initialize the broker/data-servers later so that lookups are already loaded.
+    cluster.addServer(broker);
+    broker.start();
+    cluster.addServer(indexer);
+    indexer.start();
+    cluster.addServer(historical);
+    indexer.start();
 
     // Create Kafka topic.
     kafka.createTopicWithPartitions(topic, 2);
@@ -275,7 +320,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Test
   @Timeout(60)
   @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
-  public void test_selectJoin_dart()
+  public void test_selectBroadcastJoin_dart()
   {
     final long selectedCount = Long.parseLong(
         msqApis.runDartSql(
@@ -299,7 +344,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Test
   @Timeout(60)
   @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
-  public void test_selectJoin_task_withRealtime()
+  public void test_selectBroadcastJoin_task_withRealtime()
   {
     final String sql = StringUtils.format(
         "SET includeSegmentSource = 'REALTIME';\n"
@@ -321,6 +366,91 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         Collections.singletonList(new Object[]{528}),
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_selectSortMergeJoin_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';"
+        + "SET sqlJoinAlgorithm = 'sortMerge';\n"
+        + "SELECT COUNT(*) FROM \"%s\"\n"
+        + "WHERE countryName IN (\n"
+        + "  SELECT countryName\n"
+        + "  FROM \"%s\"\n"
+        + "  WHERE countryName IS NOT NULL\n"
+        + "  GROUP BY 1\n"
+        + "  ORDER BY COUNT(*) DESC\n"
+        + "  LIMIT 1\n"
+        + ")",
+        dataSource,
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        Collections.singletonList(new Object[]{528}),
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_selectJoinwithLookup_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \n"
+        + " l.v AS newName, \n"
+        + " SUM(w.\"added\") AS total\n"
+        + "FROM \"%s\" w INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 2 DESC\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"A", 3045299},
+            new Object[]{"B", 642555},
+            new Object[]{"D", 153605},
+            new Object[]{"E", 132768},
+            new Object[]{"C", 6690}
+        ),
+        payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_selectJoinWithUnnest_task_withRealtime()
+  {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT *\n"
+        + "FROM \"%s\"\n",
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia", 3045299},
+            new Object[]{"#fr.wikipedia", 642555}
+        ),
         payload.getResults().getResults()
     );
   }
