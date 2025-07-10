@@ -22,22 +22,28 @@ package org.apache.druid.client.coordinator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import org.apache.druid.client.BootstrapSegmentsResponse;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.column.ColumnType;
@@ -48,11 +54,16 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,11 +72,14 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class CoordinatorClientImplTest
 {
@@ -84,6 +98,15 @@ public class CoordinatorClientImplTest
 
   private static final DataSegment SEGMENT2 = DataSegment.builder()
                                                          .dataSource("xyz")
+                                                         .interval(Intervals.of("2000/3000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
+
+  private static final DataSegment SEGMENT3 = DataSegment.builder()
+                                                         .dataSource("abc")
                                                          .interval(Intervals.of("2000/3000"))
                                                          .version("1")
                                                          .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
@@ -530,5 +553,280 @@ public class CoordinatorClientImplTest
         lookups,
         coordinatorClient.fetchLookupsForTierSync("default_tier")
     );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_includeRealtime() throws JsonProcessingException
+  {
+    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, true),
+        true
+    );
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        segments,
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_noParams() throws JsonProcessingException
+  {
+    final List<DataSegment> segments = ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(null, false),
+        true
+    );
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        segments,
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSource() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources=abc"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), true),
+        true
+    );
+
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        List.of(SEGMENT3),
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSources() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources=xyz&datasources=abc"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3))
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc", "xyz"), true),
+        true
+    );
+
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3),
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+  @Test
+  public void test_fetchAllUsedSegmentsWithOvershadowedStatus_filterByDataSourceOnly() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources=abc"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(List.of(SEGMENT3))
+    );
+
+    CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), false),
+        true
+    );
+
+    List<SegmentStatusInCluster> actualSegments = new ArrayList<>();
+    while (iterator.hasNext()) {
+      actualSegments.add(iterator.next());
+    }
+    Assert.assertEquals(
+        List.of(SEGMENT3),
+        actualSegments.stream()
+                      .map(SegmentStatusInCluster::getDataSegment)
+                      .collect(ImmutableList.toImmutableList())
+    );
+  }
+
+
+  @Test
+  public void test_getRulesForAllDatasources() throws Exception
+  {
+    final Map<String, List<Rule>> rules = ImmutableMap.of(
+        "xyz", List.of(
+            new IntervalLoadRule(
+                Intervals.of("2025-01-01/2025-02-01"),
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+                null
+            ),
+            new IntervalLoadRule(
+                Intervals.of("2025-02-01/2025-03-01"),
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+                null
+            )
+        )
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/rules"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(rules)
+    );
+
+    Assert.assertEquals(
+        rules,
+        coordinatorClient.getRulesForAllDatasources().get()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader() throws Exception
+  {
+    String leaderUrl = "http://localhost:8081";
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
+        StringUtils.toUtf8(leaderUrl)
+    );
+
+    Assert.assertEquals(
+        leaderUrl,
+        FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString()
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_invalidUrl()
+  {
+    String invalidLeaderUrl = "{{1234invalidUrl";
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
+        StringUtils.toUtf8(invalidLeaderUrl)
+    );
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_runtimeException()
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        new RuntimeException("Simulated runtime error")
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
+    );
+  }
+
+  @Test
+  public void test_findCurrentLeader_httpResponseException()
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+        new HttpResponseException(
+            new StringFullResponseHolder(
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                StandardCharsets.UTF_8
+            )
+        )
+    );
+    // try and assert that the root cause is an HttpResponseException
+    try {
+      FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true);
+    }
+    catch (Exception e) {
+      Throwable throwable = Throwables.getRootCause(e);
+      Assert.assertTrue(throwable instanceof HttpResponseException);
+    }
+  }
+
+  @Test
+  public void test_updateRulesForDatasource() throws Exception
+  {
+    final List<Rule> rules = List.of(
+        new IntervalLoadRule(
+            Intervals.of("2025-01-01/2025-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/rules/xyz")
+            .jsonContent(jsonMapper, rules),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(null)
+    );
+
+    Assert.assertNull(coordinatorClient.updateRulesForDatasource("xyz", rules).get());
   }
 }
