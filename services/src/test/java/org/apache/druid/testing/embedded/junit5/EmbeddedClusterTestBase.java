@@ -62,7 +62,7 @@ public abstract class EmbeddedClusterTestBase
   protected abstract EmbeddedDruidCluster createCluster();
 
   @BeforeAll
-  protected final void setup() throws Exception
+  protected void setup() throws Exception
   {
     cluster = createCluster();
     cluster.start();
