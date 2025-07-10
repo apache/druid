@@ -616,16 +616,6 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   public void testSerdeWithProjections() throws Exception
   {
     // serialize, then deserialize of DataSchema with projections.
-    JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("time", "auto", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-            "dimB",
-            "dimA"
-        ))).withDimensionExclusions(ImmutableSet.of("__time", "time")),
-        null,
-        null,
-        null
-    );
     AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
         "ab_count_projection",
         null,
@@ -639,19 +629,19 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     );
     DataSchema original = DataSchema.builder()
                                     .withDataSource("datasource")
-                                    .withObjectMapper(jsonMapper)
-                                    .withParserMap(jsonMapper.convertValue(
-                                        new StringInputRowParser(parseSpec, null),
-                                        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-                                    ))
+                                    .withTimestamp(new TimestampSpec(null, null, null))
+                                    .withDimensions(DimensionsSpec.EMPTY)
+                                    .withAggregators(new CountAggregatorFactory("rows"))
                                     .withProjections(ImmutableList.of(projectionSpec))
+                                    .withGranularity(ARBITRARY_GRANULARITY)
                                     .build();
-
     DataSchema serdeResult = jsonMapper.readValue(jsonMapper.writeValueAsString(original), DataSchema.class);
 
     Assert.assertEquals("datasource", serdeResult.getDataSource());
-    Assert.assertEquals(parseSpec, serdeResult.getParser().getParseSpec());
+    Assert.assertArrayEquals(new AggregatorFactory[]{new CountAggregatorFactory("rows")}, serdeResult.getAggregators());
     Assert.assertEquals(ImmutableList.of(projectionSpec), serdeResult.getProjections());
+    Assert.assertEquals(ImmutableList.of("ab_count_projection"), serdeResult.getProjectionNames());
+    Assert.assertEquals(jsonMapper.writeValueAsString(original), jsonMapper.writeValueAsString(serdeResult));
   }
 
   @Test
