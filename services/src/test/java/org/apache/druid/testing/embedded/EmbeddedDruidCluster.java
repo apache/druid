@@ -189,6 +189,9 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     server.onAddedToCluster(commonProperties);
     servers.add(server);
     resources.add(server);
+    if (startedFirstDruidServer) {
+      server.beforeStart(this);
+    }
     return this;
   }
 
