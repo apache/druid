@@ -28,9 +28,6 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-/**
- * Runs {@link CalciteNestedDataQueryTest} but with MSQ engine
- */
 @SqlTestFrameworkConfig.ComponentSupplier(DecoupledDartNestedDataQueryTest.NestedDataQueryMSQComponentSupplier.class)
 public class DecoupledDartNestedDataQueryTest extends CalciteNestedDataQueryTest
 {
