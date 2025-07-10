@@ -38,6 +38,7 @@ import java.util.Objects;
  */
 public abstract class Bitmap64ExactCountAggregatorFactory extends AggregatorFactory
 {
+  // 1KiB is large enough for bookkeeping plus some future head-room & small enough that we don’t waste direct memory.
   static final int MAX_INTERMEDIATE_SIZE = 1024; // 1 KiB
   static final Comparator<Bitmap64> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingLong(Bitmap64::getCardinality));
