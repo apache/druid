@@ -108,7 +108,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Disabled
+  @Disabled("This test is flaky due to Coordinator not refreshing its metadata")
   @Timeout(20)
   public void test_fetchSegment()
   {
