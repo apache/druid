@@ -1141,8 +1141,10 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Allocate and commit another APPEND segment
     final SegmentIdWithShardSpec pendingSegment2
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
-    Assert.assertEquals(SEGMENT_V0, pendingSegment2.getVersion());
-    Assert.assertEquals(1, pendingSegment2.getShardSpec().getPartitionNum());
+
+    // Verify that the new segment gets a different version
+    Assert.assertEquals(SEGMENT_V0 + "S", pendingSegment2.getVersion());
+    Assert.assertEquals(0, pendingSegment2.getShardSpec().getPartitionNum());
 
     final DataSegment segmentV02 = asSegment(pendingSegment2);
     appendTask.commitAppendSegments(segmentV02);

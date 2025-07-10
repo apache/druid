@@ -33,6 +33,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -1419,7 +1420,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           version,
           partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
-      pendingSegmentId = getTrueAllocatedId(transaction, pendingSegmentId);
+      pendingSegmentId = getUniqueIdForPrimaryAllocation(transaction, pendingSegmentId);
       return PendingSegmentRecord.create(
           pendingSegmentId,
           request.getSequenceName(),
@@ -1457,7 +1458,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           )
       );
       return PendingSegmentRecord.create(
-          getTrueAllocatedId(transaction, pendingSegmentId),
+          getUniqueIdForSecondaryAllocation(transaction, pendingSegmentId),
           request.getSequenceName(),
           request.getPreviousSegmentId(),
           null,
@@ -1562,7 +1563,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           version,
           partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
-      return getTrueAllocatedId(transaction, allocatedId);
+      return getUniqueIdForPrimaryAllocation(transaction, allocatedId);
     } else if (!overallMaxId.getInterval().equals(interval)) {
       log.warn(
           "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
@@ -1590,18 +1591,86 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               committedMaxId == null ? 0 : committedMaxId.getShardSpec().getNumCorePartitions()
           )
       );
-      return getTrueAllocatedId(transaction, allocatedId);
+      return getUniqueIdForSecondaryAllocation(transaction, allocatedId);
     }
   }
 
   /**
-   * Verifies that the allocated id doesn't already exist in the druid_segments table.
-   * If yes, try to get the max unallocated id considering the unused segments for the datasource, version and interval
-   * Otherwise, use the same id.
-   * @param allocatedId The segment allcoted on the basis of used and pending segments
-   * @return a segment id that isn't already used by other unused segments
+   * Returns a unique {@link SegmentIdWithShardSpec} which does not clash with
+   * any existing unused segment. If an unused segment already exists that matches
+   * the interval and version of the given {@code allocatedId}, a fresh version
+   * is created by suffixing one or more {@link PendingSegmentRecord#CONCURRENT_APPEND_VERSION_SUFFIX}.
+   * Such a conflict can happen only if all the segments in this interval created
+   * by a prior APPEND task were marked as unused.
+   * <p>
+   * This method should be called only when allocating the first segment in an interval.
    */
-  private SegmentIdWithShardSpec getTrueAllocatedId(
+  private SegmentIdWithShardSpec getUniqueIdForPrimaryAllocation(
+      SegmentMetadataTransaction transaction,
+      SegmentIdWithShardSpec allocatedId
+  )
+  {
+    // Get all the unused segment versions for this datasource and interval
+    final Set<String> unusedSegmentVersions = transaction.noCacheSql().retrieveUnusedSegmentVersionsWithInterval(
+        allocatedId.getDataSource(),
+        allocatedId.getInterval()
+    );
+
+    final String allocatedVersion = allocatedId.getVersion();
+    if (!unusedSegmentVersions.contains(allocatedVersion)) {
+      // Nothing to do, this version is new
+      return allocatedId;
+    } else if (!PendingSegmentRecord.DEFAULT_VERSION_FOR_CONCURRENT_APPEND.equals(allocatedVersion)) {
+      // Version clash should never happen for non-APPEND locks
+      throw DruidException.defensive(
+          "Cannot allocate segment[%s] as there are already some unused segments"
+          + " for version[%s] in this interval.",
+          allocatedId, allocatedVersion
+      );
+    }
+
+    // Iterate until a new non-clashing version is found
+    boolean foundFreshVersion = false;
+    StringBuilder candidateVersion = new StringBuilder(
+        allocatedId.getVersion() + PendingSegmentRecord.CONCURRENT_APPEND_VERSION_SUFFIX
+    );
+    for (int i = 0; i < 10; ++i) {
+      if (unusedSegmentVersions.contains(candidateVersion.toString())) {
+        candidateVersion.append(PendingSegmentRecord.CONCURRENT_APPEND_VERSION_SUFFIX);
+      } else {
+        foundFreshVersion = true;
+        break;
+      }
+    }
+
+    if (foundFreshVersion) {
+      return new SegmentIdWithShardSpec(
+          allocatedId.getDataSource(),
+          allocatedId.getInterval(),
+          candidateVersion.toString(),
+          allocatedId.getShardSpec()
+      );
+    } else {
+      throw InternalServerError.exception(
+          "Could not allocate segment[%s] as there are too many unused"
+          + " versions(upto [%s]) in the interval. Kill the old unused versions to proceed.",
+          allocatedId, candidateVersion.toString()
+      );
+    }
+  }
+
+  /**
+   * Returns a unique {@link SegmentIdWithShardSpec} which does not clash with
+   * any existing unused segment. If an unused segment already exists that matches
+   * the interval, version and partition number of the given {@code allocatedId},
+   * a higher partition number is used. Such a conflict can happen only if some
+   * segments of the underlying version have been marked as unused while others
+   * are still used.
+   * <p>
+   * This method should not be called when allocating the first segment in an
+   * interval.
+   */
+  private SegmentIdWithShardSpec getUniqueIdForSecondaryAllocation(
       SegmentMetadataTransaction transaction,
       SegmentIdWithShardSpec allocatedId
   )
