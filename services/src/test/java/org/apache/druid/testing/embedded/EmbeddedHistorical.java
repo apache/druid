@@ -38,8 +38,7 @@ public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
 {
   public EmbeddedHistorical()
   {
-    super();
-    addBeforeStart((cluster, self) -> {
+    addBeforeStartHook((cluster, self) -> {
         self.addProperty(
             "druid.segmentCache.locations",
             StringUtils.format(

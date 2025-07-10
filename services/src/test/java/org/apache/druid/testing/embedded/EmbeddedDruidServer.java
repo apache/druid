@@ -150,7 +150,11 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
     return (T) this;
   }
 
-  public final T addBeforeStart(BeforeStart hook)
+  /**
+   * Adds a {@link BeforeStart} to run as part of {@link #beforeStart(EmbeddedDruidCluster)}
+   */
+  @SuppressWarnings("UnusedReturnValue")
+  public final T addBeforeStartHook(BeforeStart hook)
   {
     beforeStartHooks.add(hook);
     return (T) this;
@@ -178,11 +182,9 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
    * Called from {@link EmbeddedDruidCluster#addServer(EmbeddedDruidServer)} to
    * tie the lifecycle of this server to the cluster.
    */
-  final void onAddedToCluster(EmbeddedDruidCluster cluster, Properties commonProperties)
+  final void onAddedToCluster(Properties commonProperties)
   {
-    this.lifecycle.set(
-        new EmbeddedServerLifecycle(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
-    );
+    this.lifecycle.set(new EmbeddedServerLifecycle(this, commonProperties));
   }
 
   /**
@@ -266,6 +268,12 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   @FunctionalInterface
   public interface BeforeStart
   {
-    void run(EmbeddedDruidCluster cluster, EmbeddedDruidServer self);
+    /**
+     * Allows a {@link EmbeddedDruidServer} to perform additional initialization before starting
+     *
+     * @param cluster - the {@link EmbeddedDruidCluster} the {@link EmbeddedDruidServer} is part of
+     * @param self    - the {@link EmbeddedDruidServer} to perform initialization on
+     */
+    void run(EmbeddedDruidCluster cluster, EmbeddedDruidServer<?> self);
   }
 }

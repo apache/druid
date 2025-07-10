@@ -125,7 +125,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
   }
 
   @BeforeAll
-  void setupData() throws IOException
+  final void setupData() throws IOException
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     dataSource = EmbeddedClusterApis.createTestDatasourceName();

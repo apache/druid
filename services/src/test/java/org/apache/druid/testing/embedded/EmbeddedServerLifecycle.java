@@ -43,23 +43,14 @@ class EmbeddedServerLifecycle
 
   private final EmbeddedDruidServer server;
 
-  private final TestFolder testFolder;
-  private final EmbeddedZookeeper zookeeper;
   private final Properties commonProperties;
 
   private ExecutorService executorService;
   private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>();
 
-  EmbeddedServerLifecycle(
-      EmbeddedDruidServer server,
-      TestFolder testFolder,
-      EmbeddedZookeeper zookeeper,
-      Properties commonProperties
-  )
+  EmbeddedServerLifecycle(EmbeddedDruidServer server, Properties commonProperties)
   {
     this.server = server;
-    this.zookeeper = zookeeper;
-    this.testFolder = testFolder;
     this.commonProperties = commonProperties;
   }
 
