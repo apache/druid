@@ -34,8 +34,9 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -141,7 +142,9 @@ public class CalciteTests
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
-  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG));
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(
+      BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG)
+  );
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
@@ -294,7 +297,11 @@ public class CalciteTests
       final SqlStatementFactory sqlStatementFactory
   )
   {
-    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper(), sqlStatementFactory);
+    return new NativeSqlEngine(
+        createMockQueryLifecycleFactory(walker, conglomerate),
+        getJsonMapper(),
+        sqlStatementFactory
+    );
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
@@ -414,17 +421,17 @@ public class CalciteTests
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        provider,
-        NodeRole.COORDINATOR,
-        "/simple/leader"
-    )
+    final CoordinatorClient coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return coordinatorNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(coordinatorNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
 
@@ -477,15 +484,14 @@ public class CalciteTests
     return new SystemSchema(
         druidSchema,
         new MetadataSegmentView(
-            druidLeaderClient,
-            getJsonMapper(),
+            coordinatorClient,
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
         timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
-        druidLeaderClient,
+        coordinatorClient,
         overlordClient,
         provider,
         getJsonMapper()

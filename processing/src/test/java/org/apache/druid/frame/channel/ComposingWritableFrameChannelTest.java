@@ -71,6 +71,7 @@ public class ComposingWritableFrameChannelTest
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
 
     ComposingWritableFrameChannel composingWritableFrameChannel = new ComposingWritableFrameChannel(
+        null,
         ImmutableList.of(
             () -> outputChannel1,
             () -> outputChannel2
