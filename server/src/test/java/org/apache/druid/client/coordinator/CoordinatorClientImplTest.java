@@ -79,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class CoordinatorClientImplTest
 {
@@ -630,7 +631,7 @@ public class CoordinatorClientImplTest
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Collections.singleton("abc"), true),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), true),
         true
     );
 
@@ -639,10 +640,10 @@ public class CoordinatorClientImplTest
       actualSegments.add(iterator.next());
     }
     Assert.assertEquals(
-        ImmutableList.of(SEGMENT3),
+        List.of(SEGMENT3),
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
-                      .collect(ImmutableList.toImmutableList())
+                      .collect(Collectors.toList())
     );
   }
 
@@ -652,7 +653,7 @@ public class CoordinatorClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources=abc&datasources=xyz"
+            "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources=xyz&datasources=abc"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -686,11 +687,11 @@ public class CoordinatorClientImplTest
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT3))
+        jsonMapper.writeValueAsBytes(List.of(SEGMENT3))
     );
 
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Collections.singleton("abc"), false),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc"), false),
         true
     );
 
@@ -699,7 +700,7 @@ public class CoordinatorClientImplTest
       actualSegments.add(iterator.next());
     }
     Assert.assertEquals(
-        ImmutableList.of(SEGMENT3),
+        List.of(SEGMENT3),
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
                       .collect(ImmutableList.toImmutableList())
@@ -810,7 +811,7 @@ public class CoordinatorClientImplTest
   @Test
   public void test_updateRulesForDatasource() throws Exception
   {
-    final List<Rule> rules = ImmutableList.of(
+    final List<Rule> rules = List.of(
         new IntervalLoadRule(
             Intervals.of("2025-01-01/2025-02-01"),
             ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
