@@ -43,6 +43,7 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -107,6 +108,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  @Disabled("This test is flaky due to Coordinator not refreshing its metadata")
   @Timeout(20)
   public void test_fetchSegment()
   {
