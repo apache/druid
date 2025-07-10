@@ -152,7 +152,6 @@ public class KafkaEmitter implements Emitter
     if (eventTypes.contains(EventType.SEGMENT_METADATA)) {
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
-
     scheduler.scheduleWithFixedDelay(
         this::logLostMessagesStatus,
         DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
@@ -162,14 +161,12 @@ public class KafkaEmitter implements Emitter
   @VisibleForTesting
   protected void logLostMessagesStatus()
   {
-    // Get current counts
     long currentMetricLost = metricLost.get();
     long currentAlertLost = alertLost.get();
     long currentRequestLost = requestLost.get();
     long currentSegmentMetadataLost = segmentMetadataLost.get();
     long currentInvalidLost = invalidLost.get();
 
-    // Calculate delta (newly lost messages since last check)
     long deltaMetricLost = currentMetricLost - previousMetricLost.getAndSet(currentMetricLost);
     long deltaAlertLost = currentAlertLost - previousAlertLost.getAndSet(currentAlertLost);
     long deltaRequestLost = currentRequestLost - previousRequestLost.getAndSet(currentRequestLost);
@@ -182,21 +179,10 @@ public class KafkaEmitter implements Emitter
       log.info(
           "Messages lost for past %d minutes: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
           DEFAULT_SEND_LOST_INTERVAL_MINUTES,
-          deltaMetricLost,
-          deltaAlertLost,
-          deltaRequestLost,
-          deltaSegmentMetadataLost,
-          deltaInvalidLost
-      );
-
+          deltaMetricLost, deltaAlertLost, deltaRequestLost, deltaSegmentMetadataLost, deltaInvalidLost);
       log.info(
           "Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
-          currentMetricLost,
-          currentAlertLost,
-          currentRequestLost,
-          currentSegmentMetadataLost,
-          currentInvalidLost
-      );
+          currentMetricLost, currentAlertLost, currentRequestLost, currentSegmentMetadataLost, currentInvalidLost);
     }
   }
 
