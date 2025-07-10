@@ -95,11 +95,11 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         + "      \"lookupExtractorFactory\": {\n"
         + "        \"type\": \"map\",\n"
         + "        \"map\": {\n"
-        + "          \"#en.wikipedia\": \"A\",\n"
-        + "          \"#fr.wikipedia\": \"B\",\n"
-        + "          \"#eu.wikipedia\": \"C\",\n"
-        + "          \"#ar.wikipedia\": \"D\",\n"
-        + "          \"#cs.wikipedia\": \"E\"\n"
+        + "          \"#en.wikipedia\": \"English\",\n"
+        + "          \"#fr.wikipedia\": \"French\",\n"
+        + "          \"#eu.wikipedia\": \"European\",\n"
+        + "          \"#ar.wikipedia\": \"Arabic\",\n"
+        + "          \"#cs.wikipedia\": \"Czech\"\n"
         + "        }\n"
         + "      }\n"
         + "    }\n"
@@ -427,11 +427,11 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         List.of(
-            new Object[]{"A", 3045299},
-            new Object[]{"B", 642555},
-            new Object[]{"D", 153605},
-            new Object[]{"E", 132768},
-            new Object[]{"C", 6690}
+            new Object[]{"English", 3045299},
+            new Object[]{"French", 642555},
+            new Object[]{"Arabic", 153605},
+            new Object[]{"Czech", 132768},
+            new Object[]{"European", 6690}
         ),
         payload.getResults().getResults()
     );
@@ -442,23 +442,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Disabled
   public void test_selectJoinWithUnnest_task_withRealtime()
   {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT *\n"
-        + "FROM \"%s\"\n",
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"#en.wikipedia", 3045299},
-            new Object[]{"#fr.wikipedia", 642555}
-        ),
-        payload.getResults().getResults()
-    );
   }
 
   @Test
@@ -470,24 +453,84 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  @Disabled
   public void test_scanWithFilter_task_withRealtime()
   {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", \"page\", \"user\", \"deleted\"\n"
+        + "FROM \"%s\"\n"
+        + "WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10",
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia","Coca-Cola formula","124.169.17.234", 0},
+            new Object[]{"#en.wikipedia","List of Harry Potter characters","121.211.82.121", 0}
+        ),
+        payload.getResults().getResults()
+    );
   }
 
   @Test
   @Timeout(60)
-  @Disabled
   public void test_groupByWithFilter_task_withRealtime()
   {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \"channel\", COUNT(*)\n"
+        + "FROM \"%s\"\n"
+        + "WHERE \"countryName\" = 'Australia'\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia", 63},
+            new Object[]{"#de.wikipedia", 2}
+        ),
+        payload.getResults().getResults()
+    );
   }
 
   @Test
   @Timeout(60)
-  @Disabled
   public void test_scanWithFilterAfterJoin_task_withRealtime()
   {
     // SELECT * FROM wikipedia INNER JOIN lookup.xyz ON wikipedia.foo = xyz.k WHERE CONCAT(wikipedia.foo, ': ', xyz.v) = 'something: something'
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT \n"
+        + "  \"page\", \n"
+        + "  \"user\", \n"
+        + "  \"added\"\n"
+        + "FROM %s w\n"
+        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "WHERE CONCAT(w.\"cityName\", ': ', l.v) = 'London: English' AND \"comment\" IN ('/* Works */', '/* Early life */')\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"Andy Wilman", "109.156.217.121", 0},
+            new Object[]{"Angharad Rees", "89.240.46.182", 578},
+            new Object[]{"Chazz Palminteri", "81.178.229.60", 10}
+        ),
+        payload.getResults().getResults()
+    );
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor()
