@@ -20,7 +20,6 @@
 package org.apache.druid.frame.segment.row;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
@@ -62,7 +61,7 @@ public class RowFrameCursorFactory implements CursorFactory
       final List<FieldReader> fieldReaders
   )
   {
-    this.frame = FrameType.ROW_BASED.ensureType(frame);
+    this.frame = frame.ensureRowBased();
     this.frameReader = frameReader;
     this.fieldReaders = fieldReaders;
   }

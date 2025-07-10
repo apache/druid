@@ -35,6 +35,7 @@ import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -71,9 +72,10 @@ public class NamespacedExtractorModuleTest
                 ImmutableMap.of(
                     "file",
                     new LocalFileTimestampVersionFinder()
-                )
+                ),
+                JvmUtils.getRuntimeInfo()
             ),
-            JdbcExtractionNamespace.class, new JdbcCacheGenerator()
+            JdbcExtractionNamespace.class, new JdbcCacheGenerator(JvmUtils.getRuntimeInfo())
         );
     lifecycle = new Lifecycle();
     lifecycle.start();
@@ -104,7 +106,8 @@ public class NamespacedExtractorModuleTest
       out.write(MAPPER.writeValueAsString(ImmutableMap.of("foo", "bar")));
     }
     final UriCacheGenerator factory = new UriCacheGenerator(
-        ImmutableMap.of("file", new LocalFileTimestampVersionFinder())
+        ImmutableMap.of("file", new LocalFileTimestampVersionFinder()),
+        JvmUtils.getRuntimeInfo()
     );
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),

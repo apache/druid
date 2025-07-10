@@ -36,6 +36,8 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -112,6 +114,10 @@ public abstract class AbstractAuthConfigurationTest
       new ResourceAction(
           new Resource("auth_test", ResourceType.DATASOURCE),
           Action.READ
+      ),
+      new ResourceAction(
+          new Resource(QueryContexts.ENGINE, ResourceType.QUERY_CONTEXT),
+          Action.WRITE
       ),
       new ResourceAction(
           new Resource("auth_test_ctx", ResourceType.QUERY_CONTEXT),
@@ -815,7 +821,9 @@ public abstract class AbstractAuthConfigurationTest
       HttpResponseStatus expectedStatus
   ) throws Exception
   {
-    return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql/dart", context, expectedStatus);
+    final Map<String, Object> dartContext = new HashMap<>(context);
+    dartContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+    return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", dartContext, expectedStatus);
   }
 
   protected StatusResponseHolder makeSQLQueryRequest(

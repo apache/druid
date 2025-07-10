@@ -44,6 +44,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -217,7 +218,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -278,6 +278,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
                   .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
+                  .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
                   .build();
 
   public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
@@ -581,7 +582,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class),
+        null
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -649,6 +651,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .when(mockFactory)
         .createDataServerQueryHandler(anyString(), any(), any());
     return mockFactory;
+  }
+
+  protected List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
+  {
+    return indexingServiceClient.getEmittedMetrics(metricName, dimensionFilters);
   }
 
   @Nonnull
@@ -810,12 +817,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
   )
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
-        new SqlQueryPlus(
-            query,
-            context,
-            parameters,
-            authenticationResult
-        )
+        SqlQueryPlus.builder()
+                    .sql(query)
+                    .context(context)
+                    .parameters(parameters)
+                    .auth(authenticationResult)
+                    .build()
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
@@ -937,6 +944,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
+    protected Map<String, Object> expectedMetricDimensions = null;
 
     private boolean hasRun = false;
 
@@ -1086,6 +1094,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedMetricDimensions(Map<String, Object> expectedMetricDimensions)
+    {
+      this.expectedMetricDimensions = expectedMetricDimensions;
+      return asBuilder();
+    }
+
     @SuppressWarnings("unchecked")
     private Builder asBuilder()
     {
@@ -1104,6 +1118,31 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyMetrics()
+    {
+      if (expectedMetricDimensions != null) {
+        Map<String, Object> controllerDims = new HashMap<>(expectedMetricDimensions);
+        controllerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE);
+
+        Map<String, Object> workerDims = new HashMap<>(expectedMetricDimensions);
+        workerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE);
+
+        // Since the time could vary, it can't be asserted, but the dimensions are asserted by using them as a filter.
+        // The value should be greater than 0 as a basic sanity check.
+        List<Number> metric = getEmittedMetrics("query/time", controllerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/cpu/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+      }
     }
 
     protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
@@ -1289,6 +1328,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
+        verifyMetrics();
 
         MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
         LegacyMSQSpec foundSpec = msqControllerTask.getQuerySpec();
@@ -1414,8 +1454,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         // Assert on the tombstone intervals
         // Tombstone segments are only published, but since they do not have any data, they are not pushed by the
-        // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
-        // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
+        // SegmentGeneratorStageProcessor. We can get the tombstone segment ids published by taking a set
+        // difference of all the segments published with the segments that are created by the SegmentGeneratorStageProcessor
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
           if (expectedLastCompactionState != null) {
             CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
@@ -1497,6 +1537,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             expectedExecutionErrorMatcher
         );
       }
+      verifyMetrics();
     }
   }
 
@@ -1639,6 +1680,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Assert.assertEquals(expectedRowSignature, specAndResults.rhs.lhs);
       assertResultsEquals(sql != null ? sql : taskSpec.toString(), expectedResultRows, specAndResults.rhs.rhs);
       assertMSQSpec(expectedMSQSpec, specAndResults.lhs);
+      verifyMetrics();
     }
 
     public void verifyExecutionError()
@@ -1647,6 +1689,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql != null ? sql : taskSpec);
       }
+      verifyMetrics();
     }
   }
 

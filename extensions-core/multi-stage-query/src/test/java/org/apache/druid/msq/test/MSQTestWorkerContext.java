@@ -22,21 +22,27 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
@@ -55,23 +61,27 @@ import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private static final StupidPool<ByteBuffer> BUFFER_POOL = new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000));
+
   private final String workerId;
   private final Controller controller;
   private final ObjectMapper mapper;
   private final Injector injector;
-  private final Map<String, Worker> inMemoryWorkers;
+  private final Map<String, WorkerRunRef> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
+  private final ServiceEmitter serviceEmitter;
 
   public MSQTestWorkerContext(
       String workerId,
-      Map<String, Worker> inMemoryWorkers,
+      Map<String, WorkerRunRef> inMemoryWorkers,
       Controller controller,
       ObjectMapper mapper,
       Injector injector,
       WorkerMemoryParameters workerMemoryParameters,
-      WorkerStorageParameters workerStorageParameters
+      WorkerStorageParameters workerStorageParameters,
+      ServiceEmitter serviceEmitter
   )
   {
     this.workerId = workerId;
@@ -81,6 +91,7 @@ public class MSQTestWorkerContext implements WorkerContext
     this.injector = injector;
     this.workerMemoryParameters = workerMemoryParameters;
     this.workerStorageParameters = workerStorageParameters;
+    this.serviceEmitter = serviceEmitter;
   }
 
   @Override
@@ -105,6 +116,17 @@ public class MSQTestWorkerContext implements WorkerContext
   public Injector injector()
   {
     return injector;
+  }
+
+  @Override
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  {
+    serviceEmitter.emit(
+        metricBuilder.setDimension(
+            MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION,
+            MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE
+        )
+    );
   }
 
   @Override
@@ -140,7 +162,13 @@ public class MSQTestWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(WorkOrder workOrder)
   {
-    return new FrameContextImpl(new File(tempDir(), workOrder.getStageDefinition().getId().toString()));
+    return new FrameContextImpl(
+        new File(tempDir(), workOrder.getStageDefinition().getId().toString()),
+        new FrameWriterSpec(
+            FrameType.latestRowBased(),
+            MultiStageQueryContext.removeNullBytes(workOrder.getWorkerContext())
+        )
+    );
   }
 
   @Override
@@ -173,13 +201,20 @@ public class MSQTestWorkerContext implements WorkerContext
     return true;
   }
 
+  @Override
+  public void close()
+  {
+  }
+
   class FrameContextImpl implements FrameContext
   {
     private final File tempDir;
+    private final FrameWriterSpec frameWriterSpec;
 
-    public FrameContextImpl(File tempDir)
+    public FrameContextImpl(File tempDir, FrameWriterSpec frameWriterSpec)
     {
       this.tempDir = tempDir;
+      this.frameWriterSpec = frameWriterSpec;
     }
 
     @Override
@@ -263,7 +298,7 @@ public class MSQTestWorkerContext implements WorkerContext
     public ProcessingBuffers processingBuffers()
     {
       return new ProcessingBuffers(
-          new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000)),
+          BUFFER_POOL,
           new Bouncer(1)
       );
     }
@@ -278,6 +313,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public WorkerStorageParameters storageParameters()
     {
       return workerStorageParameters;
+    }
+
+    @Override
+    public FrameWriterSpec frameWriterSpec()
+    {
+      return frameWriterSpec;
     }
 
     @Override

@@ -20,9 +20,11 @@
 package org.apache.druid.msq.dart.worker;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -33,12 +35,20 @@ public class DartQueryableSegment
   private final DataSegment segment;
   private final Interval interval;
   private final int workerNumber;
+  @Nullable
+  private final DruidServerMetadata realtimeServer;
 
-  public DartQueryableSegment(final DataSegment segment, final Interval interval, final int workerNumber)
+  public DartQueryableSegment(
+      final DataSegment segment,
+      final Interval interval,
+      final int workerNumber,
+      @Nullable DruidServerMetadata realtimeServer
+  )
   {
     this.segment = Preconditions.checkNotNull(segment, "segment");
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.workerNumber = workerNumber;
+    this.realtimeServer = realtimeServer;
   }
 
   public DataSegment getSegment()
@@ -56,6 +66,12 @@ public class DartQueryableSegment
     return workerNumber;
   }
 
+  @Nullable
+  public DruidServerMetadata getRealtimeServer()
+  {
+    return realtimeServer;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -68,22 +84,15 @@ public class DartQueryableSegment
     DartQueryableSegment that = (DartQueryableSegment) o;
     return workerNumber == that.workerNumber
            && Objects.equals(segment, that.segment)
-           && Objects.equals(interval, that.interval);
+           && Objects.equals(interval, that.interval)
+           && Objects.equals(realtimeServer, that.realtimeServer);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segment, interval, workerNumber);
+    return Objects.hash(segment, interval, workerNumber, realtimeServer);
   }
 
-  @Override
-  public String toString()
-  {
-    return "QueryableDataSegment{" +
-           "segment=" + segment +
-           ", interval=" + interval +
-           ", workerNumber=" + workerNumber +
-           '}';
-  }
+
 }

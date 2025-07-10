@@ -20,14 +20,13 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.CursorFactoryRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SimpleTopNOptimizationInspector;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.TopNOptimizationInspector;
@@ -41,18 +40,19 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Represents a deep, left-heavy join of a left-hand side baseSegment onto a series of right-hand side clauses.
  * <p>
  * In other words, logically the operation is: join(join(join(baseSegment, clauses[0]), clauses[1]), clauses[2]) etc.
  */
-public class HashJoinSegment implements SegmentReference
+public class HashJoinSegment implements Segment
 {
   private static final Logger log = new Logger(HashJoinSegment.class);
 
-  private final SegmentReference baseSegment;
+  private final Segment baseSegment;
+  private final Closeable referenceCloseable;
+
   @Nullable
   private final Filter baseFilter;
   private final List<JoinableClause> clauses;
@@ -60,24 +60,29 @@ public class HashJoinSegment implements SegmentReference
 
   /**
    * @param baseSegment           The left-hand side base segment
+   * @param baseFilter            Filter for left-hand side base segment
    * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                              duplicate prefixes or prefixes that shadow each other across the clauses
    * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this segment
+   * @param referenceCloseable    Closeables for the right-hand side clauses
    */
   public HashJoinSegment(
-      SegmentReference baseSegment,
+      Segment baseSegment,
       @Nullable Filter baseFilter,
       List<JoinableClause> clauses,
-      JoinFilterPreAnalysis joinFilterPreAnalysis
+      JoinFilterPreAnalysis joinFilterPreAnalysis,
+      Closeable referenceCloseable
   )
   {
     this.baseSegment = baseSegment;
     this.baseFilter = baseFilter;
     this.clauses = clauses;
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
+    this.referenceCloseable = referenceCloseable;
 
     // Verify this virtual segment is doing something useful (otherwise it's a waste to create this object)
     if (clauses.isEmpty() && baseFilter == null) {
+      CloseableUtils.closeAndWrapExceptions(this);
       throw new IAE("'clauses' and 'baseFilter' are both empty, no need to create HashJoinSegment");
     }
   }
@@ -129,42 +134,15 @@ public class HashJoinSegment implements SegmentReference
   }
 
   @Override
-  public void close() throws IOException
+  public String getDebugString()
   {
-    baseSegment.close();
+    return "join->" + baseSegment.getDebugString();
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public void close() throws IOException
   {
-    Closer closer = Closer.create();
-    try {
-      boolean acquireFailed = baseSegment.acquireReferences().map(closeable -> {
-        closer.register(closeable);
-        return false;
-      }).orElse(true);
-
-      for (JoinableClause joinClause : clauses) {
-        if (acquireFailed) {
-          break;
-        }
-        acquireFailed = joinClause.acquireReferences().map(closeable -> {
-          closer.register(closeable);
-          return false;
-        }).orElse(true);
-      }
-      if (acquireFailed) {
-        CloseableUtils.closeAndWrapExceptions(closer);
-        return Optional.empty();
-      } else {
-        return Optional.of(closer);
-      }
-    }
-    catch (Throwable e) {
-      // acquireReferences is not permitted to throw exceptions.
-      CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
-      log.warn(e, "Exception encountered while trying to acquire reference");
-      return Optional.empty();
-    }
+    baseSegment.close();
+    referenceCloseable.close();
   }
 }

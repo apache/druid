@@ -196,47 +196,12 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
-
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
-    Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
-
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
-
-    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
-    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+    FunctionTest.assertExpr(expression, expectedResult, bindings, ExprMacroTable.nil());
   }
 
   private void assertExpr(final String expression, final Object[] expectedResult)
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    final Object[] result = expr.eval(bindings).asArray();
-    if (expectedResult.length != 0 || result == null || result.length != 0) {
-      Assert.assertArrayEquals(expression, expectedResult, result);
-    }
-
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
-    final Object[] resultRoundTrip = roundTrip.eval(bindings).asArray();
-    if (expectedResult.length != 0 || resultRoundTrip == null || resultRoundTrip.length != 0) {
-      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTrip);
-    }
-
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    final Object[] resultRoundTripFlatten = roundTripFlatten.eval(bindings).asArray();
-    if (expectedResult.length != 0 || resultRoundTripFlatten == null || resultRoundTripFlatten.length != 0) {
-      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTripFlatten);
-    }
-
-    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
-    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+    FunctionTest.assertArrayExpr(expression, expectedResult, bindings, ExprMacroTable.nil());
   }
 
   private void assertExpr(final String expression, final Double[] expectedResult)

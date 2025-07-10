@@ -27,13 +27,14 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
@@ -43,6 +44,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -77,13 +79,15 @@ public class DartControllerContext implements ControllerContext
    */
   public static final int DEFAULT_MAX_NON_LEAF_WORKER_COUNT = 1;
 
+  public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.REALTIME;
+
   private final Injector injector;
   private final ObjectMapper jsonMapper;
   private final DruidNode selfNode;
   private final DartWorkerClient workerClient;
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
-  private final ServiceMetricEvent.Builder metricBuilder;
+  private final QueryContext context;
   private final ServiceEmitter emitter;
 
   public DartControllerContext(
@@ -93,7 +97,8 @@ public class DartControllerContext implements ControllerContext
       final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final QueryContext context
   )
   {
     this.injector = injector;
@@ -102,15 +107,18 @@ public class DartControllerContext implements ControllerContext
     this.workerClient = workerClient;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.context = context;
     this.emitter = emitter;
   }
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(
-      final String queryId,
-      final MSQSpec querySpec
-  )
+  public String queryId()
+  {
+    return context.getString(QueryContexts.CTX_DART_QUERY_ID);
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(final MSQSpec querySpec)
   {
     final List<DruidServerMetadata> servers = serverView.getDruidServerMetadatas();
 
@@ -121,7 +129,7 @@ public class DartControllerContext implements ControllerContext
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
       if (server.getType() == ServerType.HISTORICAL) {
-        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId()).toString());
       }
     }
 
@@ -166,9 +174,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, final Number value)
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
   {
-    emitter.emit(metricBuilder.setMetric(metric, value));
+    metricBuilder.setDartDimensions(context);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));
+    emitter.emit(metricBuilder);
   }
 
   @Override
@@ -180,7 +190,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
   {
-    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView);
+    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView, context);
   }
 
   @Override

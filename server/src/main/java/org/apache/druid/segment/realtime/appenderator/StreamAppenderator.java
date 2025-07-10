@@ -62,9 +62,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -85,7 +85,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -575,6 +574,7 @@ public class StreamAppenderator implements Appenderator
         final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
             () -> {
               try {
+                setTaskThreadContext();
                 commitLock.lock();
                 objectMapper.writeValue(computeCommitFile(), Committed.nil());
               }
@@ -690,6 +690,7 @@ public class StreamAppenderator implements Appenderator
           public Object call() throws IOException
           {
             try {
+              setTaskThreadContext();
               for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
               }
@@ -804,7 +805,8 @@ public class StreamAppenderator implements Appenderator
         // We should always persist all segments regardless of the input because metadata should be committed for all
         // segments.
         persistAll(committer),
-        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
+        commitMetadata -> {
+          setTaskThreadContext();
           final List<DataSegment> dataSegments = new ArrayList<>();
           final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
@@ -947,11 +949,11 @@ public class StreamAppenderator implements Appenderator
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
-          Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
+          final Segment segment = fireHydrant.acquireSegment();
+          final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
-          closer.register(segmentAndCloseable.rhs);
+          closer.register(segment);
         }
 
         mergedFile = indexMerger.mergeQueryableIndex(
@@ -1773,6 +1775,7 @@ public class StreamAppenderator implements Appenderator
     @VisibleForTesting
     void computeAndAnnounce()
     {
+      setTaskThreadContext();
       Map<SegmentId, Pair<RowSignature, Integer>> currentSinkSignatureMap = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();

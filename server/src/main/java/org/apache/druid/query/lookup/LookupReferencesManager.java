@@ -20,34 +20,30 @@
 package org.apache.druid.query.lookup;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
@@ -78,7 +74,7 @@ import java.util.stream.Collectors;
  * This class provide a basic {@link LookupExtractorFactory} references manager. It allows basic operations fetching,
  * listing, adding and deleting of {@link LookupExtractor} objects, and can take periodic snap shot of the loaded lookup
  * extractor specifications in order to bootstrap nodes after restart.
- *
+ * <p>
  * It also implements {@link LookupExtractorFactoryContainerProvider}, to supply queries and indexing transformations
  * with a reference to a {@link LookupExtractorFactoryContainer}. This class is a companion of
  * {@link org.apache.druid.server.lookup.cache.LookupCoordinatorManager}, which communicates with
@@ -88,9 +84,6 @@ import java.util.stream.Collectors;
 public class LookupReferencesManager implements LookupExtractorFactoryContainerProvider
 {
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
-
-  private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<>() {};
 
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
@@ -111,9 +104,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   //for unit testing only
   private final boolean testMode;
 
-  private final DruidLeaderClient druidLeaderClient;
-
-  private final ObjectMapper jsonMapper;
+  private final CoordinatorClient coordinatorClient;
 
   private final LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig;
 
@@ -125,18 +116,18 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   public LookupReferencesManager(
       LookupConfig lookupConfig,
       @Json ObjectMapper objectMapper,
-      @Coordinator DruidLeaderClient druidLeaderClient,
+      CoordinatorClient coordinatorClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig
   )
   {
-    this(lookupConfig, objectMapper, druidLeaderClient, lookupListeningAnnouncerConfig, false);
+    this(lookupConfig, objectMapper, coordinatorClient, lookupListeningAnnouncerConfig, false);
   }
 
   @VisibleForTesting
   LookupReferencesManager(
       LookupConfig lookupConfig,
       ObjectMapper objectMapper,
-      DruidLeaderClient druidLeaderClient,
+      CoordinatorClient coordinatorClient,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       boolean testMode
   )
@@ -146,8 +137,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     } else {
       this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
     }
-    this.druidLeaderClient = druidLeaderClient;
-    this.jsonMapper = objectMapper;
+    this.coordinatorClient = coordinatorClient;
     this.lookupListeningAnnouncerConfig = lookupListeningAnnouncerConfig;
     this.lookupConfig = lookupConfig;
     this.testMode = testMode;
@@ -282,6 +272,17 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   public void add(String lookupName, LookupExtractorFactoryContainer lookupExtractorFactoryContainer)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    final LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
+    if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE ||
+        (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED
+         && !lookupLoadingSpec.getLookupsToLoad().contains(lookupName))) {
+      LOG.info(
+          "Skipping notice to add lookup[%s] since current lookup loading mode[%s] does not allow it.",
+          lookupName,
+          lookupLoadingSpec.getMode()
+      );
+      return;
+    }
     addNotice(new LoadNotice(lookupName, lookupExtractorFactoryContainer, lookupConfig.getLookupStartRetries()));
   }
 
@@ -394,7 +395,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       lookupBeanList = getLookupsList();
       if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED && lookupBeanList != null) {
         lookupBeanList = lookupBeanList.stream()
-                                       .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad().contains(lookupBean.getName()))
+                                       .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad()
+                                                                              .contains(lookupBean.getName()))
                                        .collect(Collectors.toList());
       }
     }
@@ -430,7 +432,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
    * Returns a list of lookups from the coordinator if the coordinator is available. If it's not available, returns null.
    *
    * @param tier lookup tier name
-   *
    * @return list of LookupBean objects, or null
    */
   @Nullable
@@ -469,37 +470,24 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 
   @Nullable
   private Map<String, LookupExtractorFactoryContainer> tryGetLookupListFromCoordinator(String tier)
-      throws IOException, InterruptedException
   {
-    final StringFullResponseHolder response = fetchLookupsForTier(tier);
-    if (response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-      LOG.warn("No lookups found for tier [%s], response [%s]", tier, response);
-      return null;
-    } else if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new IOE(
-          "Error while fetching lookup code from Coordinator with status[%s] and content[%s]",
-          response.getStatus(),
-          response.getContent()
-      );
+    try {
+      return coordinatorClient.fetchLookupsForTierSync(tier);
     }
-
-    // Older version of getSpecificTier returns a list of lookup names.
-    // Lookup loading is performed via snapshot if older version is present.
-    // This check is only for backward compatibility and should be removed in a future release
-    if (response.getContent().startsWith("[")) {
-      LOG.info(
-          "Failed to retrieve lookup information from coordinator, " +
-          "because coordinator appears to be running on older Druid version. " +
-          "Attempting to load lookups using snapshot instead"
-      );
-      return null;
-    } else {
-      Map<String, Object> lookupNameToGenericConfig =
-          jsonMapper.readValue(response.getContent(), LOOKUPS_ALL_GENERIC_REFERENCE);
-      return LookupUtils.tryConvertObjectMapToLookupConfigMap(
-          lookupNameToGenericConfig,
-          jsonMapper
-      );
+    catch (Exception e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        final HttpResponseException httpException = (HttpResponseException) rootCause;
+        if (httpException.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+          LOG.info(
+              "No lookups found for tier [%s], status [%s]",
+              tier,
+              httpException.getResponse().getStatus()
+          );
+          return null;
+        }
+      }
+      throw e;
     }
   }
 
@@ -621,15 +609,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private StringFullResponseHolder fetchLookupsForTier(String tier) throws InterruptedException, IOException
-  {
-    return druidLeaderClient.go(
-        druidLeaderClient.makeRequest(
-            HttpMethod.GET,
-            StringUtils.format("/druid/coordinator/v1/lookups/config/%s?detailed=true", tier)
-        )
-    );
-  }
   private void dropContainer(LookupExtractorFactoryContainer container, String lookupName)
   {
     if (container != null) {
@@ -644,10 +623,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       }
     }
   }
+
   @VisibleForTesting
   interface Notice
   {
-    void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager) throws Exception;
+    void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager)
+        throws Exception;
   }
 
   private static class LoadNotice implements Notice
@@ -734,6 +715,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         }
       });
     }
+
     @Override
     public String toString()
     {

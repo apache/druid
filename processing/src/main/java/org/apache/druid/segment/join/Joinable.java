@@ -22,10 +22,11 @@ package org.apache.druid.segment.join;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ReferenceCountedObject;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,7 +37,7 @@ import java.util.Set;
  * This class's most important method is {@link #makeJoinMatcher}. Its main user is
  * {@link HashJoinEngine#makeJoinCursor}.
  */
-public interface Joinable extends ReferenceCountedObject
+public interface Joinable extends ReferenceCountedObjectProvider<Closeable>
 {
   int CARDINALITY_UNKNOWN = -1;
 
@@ -130,7 +131,6 @@ public interface Joinable extends ReferenceCountedObject
       long maxCorrelationSetSize,
       boolean allowNonKeyColumnSearch
   );
-
 
   class ColumnValuesWithUniqueFlag
   {

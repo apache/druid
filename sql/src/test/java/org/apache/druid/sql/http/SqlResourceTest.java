@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
@@ -278,9 +279,8 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         stubServiceEmitter,
         testRequestLogger,
@@ -292,13 +292,13 @@ public class SqlResourceTest extends CalciteTestBase
     {
       @Override
       public HttpStatement httpStatement(
-          final SqlQuery sqlQuery,
+          final SqlQueryPlus sqlQueryPlus,
           final HttpServletRequest req
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            sqlToolbox,
-            sqlQuery,
+            sqlToolbox.withEngine(engine),
+            sqlQueryPlus,
             req,
             validateAndAuthorizeLatchSupplier,
             planLatchSupplier,
@@ -323,12 +323,13 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -403,6 +404,14 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void test_getEnabled()
+  {
+    Response response = resource.getSupportedEngines(req);
+    Set<EngineInfo> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getEngines();
+    Assert.assertTrue(supportedEngines.contains(new EngineInfo(NativeSqlEngine.NAME)));
+  }
+
+  @Test
   public void testCountStarWithMissingIntervalsContext() throws Exception
   {
     final SqlQuery sqlQuery = new SqlQuery(
@@ -425,16 +434,32 @@ public class SqlResourceTest extends CalciteTestBase
 
     final MockHttpServletResponse response = postForAsyncResponse(sqlQuery, makeRegularUserReq());
 
-    Assert.assertEquals(
+    // In tests, MockHttpServletResponse stores headers as a MultiMap.
+    // This allows the same header key to be set multiple times (e.g., once at the start and once at the end of query processing).
+    // As a result, we observe duplicate context entries for this test in the expected set.
+    // This differs from typical behavior for other headers, where a new value would overwrite any previously set value.
+    final Object expectedMissingHeaders = ImmutableList.of(
         ImmutableMap.of(
             "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
             "uncoveredIntervalsOverflowed", "true"
         ),
-        JSON_MAPPER.readValue(
-            Iterables.getOnlyElement(response.headers.get("X-Druid-Response-Context")),
-            Map.class
+        ImmutableMap.of(
+            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
+            "uncoveredIntervalsOverflowed", "true"
         )
     );
+    final Object observedMissingHeaders = response.headers.get("X-Druid-Response-Context").stream()
+                                                           .map(s -> {
+                                                             try {
+                                                               return JSON_MAPPER.readValue(s, new TypeReference<Map<String, String>>() {});
+                                                             }
+                                                             catch (JsonProcessingException e) {
+                                                               throw new RuntimeException(e);
+                                                             }
+                                                           })
+                                                           .collect(Collectors.toList());
+
+    Assert.assertEquals(expectedMissingHeaders, observedMissingHeaders);
 
     Object results = JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class);
 
@@ -1456,7 +1481,7 @@ public class SqlResourceTest extends CalciteTestBase
         errorResponse,
         "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
-    checkSqlRequestLog(false);
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1565,15 +1590,10 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
             null
         ),
-        501
+        DruidException.Category.INVALID_INPUT.getExpectedStatus()
     );
 
-    validateLegacyQueryExceptionErrorResponse(
-        exception,
-        QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
-        QueryUnsupportedException.class.getName(),
-        ""
-    );
+    validateInvalidSqlError(exception, "Incorrect syntax near the keyword 'TO'");
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1598,32 +1618,31 @@ public class SqlResourceTest extends CalciteTestBase
 
     // This is checked in the common method that returns the response, but checking it again just protects
     // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    assertStatusAndCommonHeaders(response, DruidException.Category.INVALID_INPUT.getExpectedStatus());
     Assert.assertEquals(queryId, getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(queryId, getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext()
+  public void testErrorResponseReturnNoQueryIdWhenNotSetInContext()
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = postForSyncResponse(
-        new SqlQuery(
-            "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
-            false,
-            false,
-            false,
-            ImmutableMap.of(),
-            null
-        ),
-        req
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT ANSWER TO LIFE",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of(),
+        null
     );
 
-    // This is checked in the common method that returns the response, but checking it again just protects
-    // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    final Response response = resource.doPost(sqlQuery, req);
+
+    // Query ID won't be set, but we can look for other aspects of the response that we expect.
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
+    Assert.assertEquals("application/json", getContentType(response));
   }
 
   @Test
@@ -1632,8 +1651,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1648,6 +1665,8 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
     );
@@ -1656,7 +1675,7 @@ public class SqlResourceTest extends CalciteTestBase
     failOnExecute(errorMessage);
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
-            "SELECT ANSWER TO LIFE",
+            "SELECT 1",
             ResultFormat.OBJECT,
             false,
             false,
@@ -2272,7 +2291,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     private TestHttpStatement(
         final SqlToolbox lifecycleContext,
-        final SqlQuery sqlQuery,
+        final SqlQueryPlus sqlQueryPlus,
         final HttpServletRequest req,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
@@ -2282,7 +2301,7 @@ public class SqlResourceTest extends CalciteTestBase
         final Consumer<DirectStatement> onAuthorize
     )
     {
-      super(lifecycleContext, sqlQuery, req);
+      super(lifecycleContext, sqlQueryPlus, req);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

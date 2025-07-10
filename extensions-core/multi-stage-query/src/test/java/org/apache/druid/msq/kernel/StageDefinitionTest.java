@@ -22,12 +22,13 @@ package org.apache.druid.msq.kernel;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -52,7 +53,7 @@ public class StageDefinitionTest
         new StageId("query", 1),
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
-        new OffsetLimitFrameProcessorFactory(0, 1L),
+        new OffsetLimitStageProcessor(0, 1L),
         RowSignature.empty(),
         null,
         0,
@@ -69,7 +70,7 @@ public class StageDefinitionTest
         new StageId("query", 1),
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
-        new OffsetLimitFrameProcessorFactory(0, 1L),
+        new OffsetLimitStageProcessor(0, 1L),
         RowSignature.empty(),
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
@@ -91,7 +92,7 @@ public class StageDefinitionTest
         new StageId("query", 1),
         ImmutableList.of(new StageInputSpec(0)),
         ImmutableSet.of(),
-        new OffsetLimitFrameProcessorFactory(0, 1L),
+        new OffsetLimitStageProcessor(0, 1L),
         RowSignature.empty(),
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
@@ -105,10 +106,19 @@ public class StageDefinitionTest
 
     Assert.assertThrows(
         ISE.class,
-        () -> stageDefinition.generatePartitionBoundariesForShuffle(ClusterByStatisticsCollectorImpl.create(new ClusterBy(
-            ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)),
-            1
-        ), RowSignature.builder().add("test", ColumnType.STRING).build(), 1000, 100, false, false))
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(
+            ClusterByStatisticsCollectorImpl.create(
+                new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 1),
+                RowSignature.builder()
+                            .add("test", ColumnType.STRING)
+                            .build(),
+                FrameType.latestRowBased(),
+                1000,
+                100,
+                false,
+                false
+            )
+        )
     );
   }
 }

@@ -20,10 +20,12 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.inject.Inject;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
+@LazySingleton
 public class DartDruidMeta extends DruidMeta
 {
   @Inject

@@ -82,6 +82,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -173,6 +174,17 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
+
+    // Sleep to allow all metrics to be emitted
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+    verifySuccessfulTaskCount(taskQueue, 2);
+    verifyFailedTaskCount(taskQueue, 0);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -387,6 +399,14 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -435,17 +455,20 @@ public class TaskQueueTest extends IngestionTestBase
     // Kill the task, send announcement and wait for TaskQueue to handle update
     taskQueue.shutdown(taskId, "shutdown");
     taskRunner.taskAddedOrUpdated(
-        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
+        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown on runner"), taskLocation),
         workerHolder
     );
     taskQueue.manageQueuedTasks();
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
-    serviceEmitter.verifyEmitted("task/run/time", 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
-    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -544,7 +567,7 @@ public class TaskQueueTest extends IngestionTestBase
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
         createActionClientFactory(),
-        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
         new StubServiceEmitter("druid/overlord", "testHost"),
         mapper,
         new NoopTaskContextEnricher()
@@ -620,6 +643,22 @@ public class TaskQueueTest extends IngestionTestBase
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
+    );
+  }
+
+  private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
+  {
+    Assert.assertEquals(
+        successCount,
+        taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static void verifyFailedTaskCount(final TaskQueue taskQueue, int failureCount)
+  {
+    Assert.assertEquals(
+        failureCount,
+        taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
   }
 

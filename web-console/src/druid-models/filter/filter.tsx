@@ -22,6 +22,8 @@ import { getLink } from '../../links';
 import { deepGet, EMPTY_ARRAY, oneOf, typeIsKnown } from '../../utils';
 import type { IngestionSpec } from '../ingestion-spec/ingestion-spec';
 
+import { FILTER_COMPLETIONS } from './filter-completions';
+
 export interface DruidFilter {
   readonly type: string;
   readonly [k: string]: any;
@@ -164,6 +166,7 @@ export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
     type: 'json',
     height: '350px',
     placeholder: '{ "type": "true" }',
+    jsonCompletions: FILTER_COMPLETIONS,
     info: (
       <>
         <p>

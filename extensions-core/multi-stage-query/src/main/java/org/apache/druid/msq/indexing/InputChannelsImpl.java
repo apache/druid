@@ -32,6 +32,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.CpuCounters;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
@@ -56,10 +57,10 @@ public class InputChannelsImpl implements InputChannels
 {
   private final QueryDefinition queryDefinition;
   private final InputChannelFactory channelFactory;
+  private final FrameWriterSpec frameWriterSpec;
   private final Supplier<MemoryAllocator> allocatorMaker;
   private final FrameProcessorExecutor exec;
   private final Map<StagePartition, ReadablePartition> readablePartitionMap;
-  private final boolean removeNullBytes;
 
   @Nullable
   private final String cancellationId;
@@ -71,21 +72,21 @@ public class InputChannelsImpl implements InputChannels
       final QueryDefinition queryDefinition,
       final ReadablePartitions readablePartitions,
       final InputChannelFactory channelFactory,
+      final FrameWriterSpec frameWriterSpec,
       final Supplier<MemoryAllocator> allocatorMaker,
       final FrameProcessorExecutor exec,
       @Nullable final String cancellationId,
-      @Nullable final CounterTracker counterTracker,
-      final boolean removeNullBytes
+      @Nullable final CounterTracker counterTracker
   )
   {
     this.queryDefinition = queryDefinition;
     this.readablePartitionMap = new HashMap<>();
     this.channelFactory = channelFactory;
+    this.frameWriterSpec = frameWriterSpec;
     this.allocatorMaker = allocatorMaker;
     this.exec = exec;
     this.cancellationId = cancellationId;
     this.counterTracker = counterTracker;
-    this.removeNullBytes = removeNullBytes;
 
     for (final ReadablePartition readablePartition : readablePartitions) {
       readablePartitionMap.put(
@@ -140,11 +141,12 @@ public class InputChannelsImpl implements InputChannels
           channels,
           stageDefinition.getFrameReader(),
           queueChannel.writable(),
-          FrameWriters.makeRowBasedFrameWriterFactory(
+          FrameWriters.makeFrameWriterFactory(
+              frameWriterSpec.getRowBasedFrameType(),
               new SingleMemoryAllocatorFactory(allocatorMaker.get()),
               stageDefinition.getFrameReader().signature(),
               Collections.emptyList(),
-              removeNullBytes
+              frameWriterSpec.getRemoveNullBytes()
           ),
           stageDefinition.getSortKey(),
           null,

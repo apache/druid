@@ -454,7 +454,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
     private final List<NonnullPair<ServerView.SegmentCallback, Executor>> segmentCallbacks = new ArrayList<>();
-    private final List<NonnullPair<ServerView.ServerRemovedCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
+    private final List<NonnullPair<ServerView.ServerCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
 
     private void init()
     {
@@ -493,7 +493,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback)
+    public void registerServerCallback(Executor exec, ServerView.ServerCallback callback)
     {
       serverRemovedCallbacks.add(new NonnullPair<>(callback, exec));
     }

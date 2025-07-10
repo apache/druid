@@ -66,7 +66,7 @@ public class SqlHttpModuleTest
         binder -> {
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMpper);
           binder.bind(AuthorizerMapper.class).toInstance(new AuthorizerMapper(Collections.emptyMap()));
-          binder.bind(NativeSqlEngine.class).toProvider(Providers.of(new NativeSqlEngine(null, null)));
+          binder.bind(NativeSqlEngine.class).toProvider(Providers.of(new NativeSqlEngine(null, null, (SqlStatementFactory) null)));
           binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(SqlResourceTest.DUMMY_DRUID_NODE);
           binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
           binder.bind(SqlStatementFactory.class)

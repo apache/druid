@@ -1,0 +1,835 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][1]' RETURNING bigint array), ARRAY[1]) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_float, ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_str, ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_null, ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_empty, ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_mixed, ARRAY[1]) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(a_nested, ARRAY[1]) AS col
+FROM test_array;
+Cannot apply 'MV_OVERLAP' to arguments of type 'MV_OVERLAP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B7_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_overlap(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY[1]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_bool, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_int, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_float, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_str, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_null, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_empty, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_mixed, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'MV_OFFSET_OF' to arguments of type 'MV_OFFSET_OF(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B8_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset_of(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(a_bool, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(a_int, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B9_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal_of(a_float, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+

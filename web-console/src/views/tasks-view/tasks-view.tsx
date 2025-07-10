@@ -37,7 +37,11 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
-import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
+import {
+  getConsoleViewIcon,
+  TASK_CANCELED_ERROR_MESSAGES,
+  TASK_CANCELED_PREDICATE,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -68,6 +72,7 @@ const taskTableColumns: string[] = [
   'Type',
   'Datasource',
   'Status',
+  'Error',
   'Created time',
   'Duration',
   'Location',
@@ -167,6 +172,7 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
+        ['Error'],
       ),
     };
 
@@ -477,6 +483,15 @@ ORDER BY
             show: visibleColumns.shown('Status'),
           },
           {
+            Header: 'Error',
+            id: 'error',
+            accessor: row => row.error_msg || '',
+            width: 300,
+            Cell: this.renderTaskFilterableCell('error'),
+            Aggregated: () => '',
+            show: visibleColumns.shown('Error'),
+          },
+          {
             Header: 'Created time',
             accessor: 'created_time',
             width: 190,
@@ -569,7 +584,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: TasksView.TASK_SQL })}
           />

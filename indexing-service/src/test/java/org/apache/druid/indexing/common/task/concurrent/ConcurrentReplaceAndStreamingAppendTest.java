@@ -610,8 +610,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     final Throwable throwable = Throwables.getRootCause(exception);
     Assert.assertEquals(
         StringUtils.format(
-            "Segments[[%s]] are not covered by locks[[]] for task[%s]",
-            segmentV10, replaceTask.getId()
+            "Segment IDs[[%s]] are not covered by locks[[]] for task[%s]",
+            segmentV10.getId(), replaceTask.getId()
         ),
         throwable.getMessage()
     );

@@ -28,14 +28,13 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Reperesents a TableDataSource with policy restriction.
@@ -123,10 +122,9 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
-    return baseSegment -> new RestrictedSegment(segmentMapFn.apply(baseSegment), policy);
+    return base.createSegmentMapFunction(query).thenMap(segment -> new RestrictedSegment(segment, policy));
   }
 
   @Override
@@ -137,14 +135,8 @@ public class RestrictedDataSource implements DataSource
     }
 
     Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
-    if (newPolicy.isEmpty()) {
-      throw new ISE(
-          "No restriction found on table [%s], but had policy [%s] before.",
-          base.getName(),
-          policy
-      );
-    }
-    if (newPolicy.get() instanceof NoRestrictionPolicy) {
+    if (newPolicy.isEmpty() || newPolicy.get() instanceof NoRestrictionPolicy) {
+      // allow empty policy, which means no restriction.
       // druid-internal calls with NoRestrictionPolicy: allow
     } else if (newPolicy.get().equals(policy)) {
       // same policy: allow

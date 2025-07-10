@@ -233,7 +233,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                             .signature(stageRowSignature)
                             .maxWorkerCount(maxNonLeafWorkerCount)
                             .shuffleSpec(shuffleSpec)
-                            .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
+                            .processor(new WindowOperatorQueryStageProcessor(
                                 query,
                                 operatorFactories,
                                 stageRowSignature,

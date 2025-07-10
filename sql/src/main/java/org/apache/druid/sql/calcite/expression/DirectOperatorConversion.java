@@ -42,9 +42,14 @@ public class DirectOperatorConversion implements SqlOperatorConversion
   }
 
   @Override
-  public SqlOperator calciteOperator()
+  public final SqlOperator calciteOperator()
   {
     return operator;
+  }
+
+  public final String getDruidFunctionName()
+  {
+    return druidFunctionName;
   }
 
   @Override
@@ -60,11 +65,6 @@ public class DirectOperatorConversion implements SqlOperatorConversion
         rexNode,
         druidFunctionName
     );
-  }
-
-  public String getDruidFunctionName()
-  {
-    return druidFunctionName;
   }
 
   @Nullable

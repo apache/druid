@@ -149,7 +149,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     final File file = FrameTestUtil.writeFrameFile(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .frames(),
         temporaryFolder.newFile()
     );
@@ -260,7 +260,10 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   {
     try {
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromCursorFactory(cursorFactory).maxRowsPerFrame(10).frameType(FrameType.ROW_BASED).frames(),
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                              .maxRowsPerFrame(10)
+                              .frameType(FrameType.latestRowBased())
+                              .frames(),
           temporaryFolder.newFile()
       );
       return Files.newInputStream(file.toPath());

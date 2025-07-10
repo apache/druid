@@ -73,7 +73,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       spec.getQueryMetrics().vectorized(false);
     }
 
-    IncrementalIndexRowHolder currentRow = new IncrementalIndexRowHolder();
+    final IncrementalIndexRowHolder currentRow = new IncrementalIndexRowHolder();
     return new IncrementalIndexCursor(
         rowSelector,
         currentRow,

@@ -271,12 +271,11 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidConnection druidConnection = getDruidConnection(ch.id);
-      final SqlQueryPlus sqlReq = new SqlQueryPlus(
-          sql,
-          druidConnection.sessionContext(),
-          null, // No parameters in this path
-          doAuthenticate(druidConnection)
-      );
+      final SqlQueryPlus sqlReq = SqlQueryPlus.builder()
+          .sql(sql)
+          .context(druidConnection.sessionContext())
+          .auth(doAuthenticate(druidConnection))
+          .buildJdbc();
       final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
           sqlStatementFactory,
           sqlReq,
@@ -351,7 +350,7 @@ public class DruidMeta extends MetaImpl
         final AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
         final SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
             .auth(authenticationResult)
-            .build();
+            .buildJdbc();
         druidStatement.execute(sqlRequest, maxRowCount);
         final ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
         LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());

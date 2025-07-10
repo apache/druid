@@ -24,7 +24,7 @@ title: "Logging"
 
 
 Apache Druid services emit logs that to help you debug. 
-The same services also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
+The same services also emit periodic [metrics](../configuration/index.md#metrics-monitors) about their state.
 To disable metric info logs set the following runtime property: `-Ddruid.emitter.logging.logLevel=debug`.
 
 Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging.

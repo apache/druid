@@ -535,7 +535,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
     private final List<NonnullPair<SegmentCallback, Executor>> segmentCallbacks = new ArrayList<>();
-    private final List<NonnullPair<ServerRemovedCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
+    private final List<NonnullPair<ServerCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
 
     private void init()
     {
@@ -573,7 +573,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    public void registerServerCallback(Executor exec, ServerCallback callback)
     {
       serverRemovedCallbacks.add(new NonnullPair<>(callback, exec));
     }

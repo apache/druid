@@ -82,9 +82,7 @@ import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublis
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -294,7 +292,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
-                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .map(AuthorizationUtils::createExternalResourceReadAction)
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -310,6 +308,13 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public String getBaseSubtaskSpecName()
+  {
+    return baseSubtaskSpecName;
   }
 
   @VisibleForTesting
@@ -353,12 +358,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   {
     return new SinglePhaseParallelIndexTaskRunner(
         toolbox,
-        getId(),
-        getGroupId(),
-        baseSubtaskSpecName,
-        ingestionSchema,
-        getContext(),
-        toolbox.getCentralizedTableSchemaConfig()
+        this
     );
   }
 

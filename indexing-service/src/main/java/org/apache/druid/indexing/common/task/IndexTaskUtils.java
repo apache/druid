@@ -64,6 +64,12 @@ public class IndexTaskUtils
   {
     metricBuilder.setDimension(DruidMetrics.TASK_ID, taskStatus.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_STATUS, taskStatus.getStatusCode().toString());
+
+    final String errorMsg = taskStatus.getErrorMsg();
+    if (errorMsg != null && !errorMsg.isEmpty()) {
+      final String statusDescription = errorMsg.length() > 100 ? errorMsg.substring(0, 100) : errorMsg;
+      metricBuilder.setDimension(DruidMetrics.DESCRIPTION, statusDescription);
+    }
   }
 
   public static void setSegmentDimensions(

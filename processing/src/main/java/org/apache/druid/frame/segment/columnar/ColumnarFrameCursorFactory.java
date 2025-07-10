@@ -20,7 +20,6 @@
 package org.apache.druid.frame.segment.columnar;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
@@ -73,7 +72,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       final List<FrameColumnReader> columnReaders
   )
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = frame.ensureColumnar();
     this.signature = signature;
     this.columnReaders = columnReaders;
   }

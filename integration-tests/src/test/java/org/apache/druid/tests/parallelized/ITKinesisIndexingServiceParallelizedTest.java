@@ -51,4 +51,17 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   {
     doTestTerminatedSupervisorAutoCleanup(false);
   }
+
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * with supervisor(s) maintained and scoped within this test only
+   */
+  @Test
+  public void testKinesisIndexMultiSupervisor() throws Exception
+  {
+    doTestMultiSupervisorIndexDataStableState(
+        null,
+        2
+    );
+  }
 }

@@ -74,7 +74,7 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
     // Create a single, sorted frame.
     final FrameSequenceBuilder singleFrameBuilder =
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(Integer.MAX_VALUE)
                             .sortBy(keyColumns);
 
@@ -88,7 +88,7 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
 
     final FrameSequenceBuilder frameSequenceBuilder =
         FrameSequenceBuilder.fromCursorFactory(frameReader.makeCursorFactory(frame))
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(rowsPerInputFrame);
 
     final Sequence<Frame> frames = frameSequenceBuilder.frames();

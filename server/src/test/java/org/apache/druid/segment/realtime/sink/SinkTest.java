@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -62,7 +63,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  *
@@ -210,7 +210,7 @@ public class SinkTest extends InitializedNullHandlingTest
   {
     Assert.assertEquals(
         Collections.emptyList(),
-        Sink.acquireSegmentReferences(Collections.emptyList(), Function.identity(), false)
+        Sink.acquireSegmentReferences(Collections.emptyList(), SegmentMapFunction.IDENTITY, false)
     );
   }
 
@@ -218,7 +218,7 @@ public class SinkTest extends InitializedNullHandlingTest
   public void testAcquireSegmentReferences_two() throws IOException
   {
     final List<FireHydrant> hydrants = twoHydrants();
-    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), false);
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, false);
     Assert.assertNotNull(references);
     Assert.assertEquals(2, references.size());
     Assert.assertEquals(0, references.get(0).getHydrantNumber());
@@ -232,7 +232,7 @@ public class SinkTest extends InitializedNullHandlingTest
   public void testAcquireSegmentReferences_two_skipIncremental() throws IOException
   {
     final List<FireHydrant> hydrants = twoHydrants();
-    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), true);
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, true);
     Assert.assertNotNull(references);
     Assert.assertEquals(1, references.size());
     Assert.assertEquals(1, references.get(0).getHydrantNumber());
@@ -247,7 +247,7 @@ public class SinkTest extends InitializedNullHandlingTest
     final List<FireHydrant> hydrants = twoHydrants();
     hydrants.get(1).swapSegment(null);
 
-    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), false);
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, false);
     Assert.assertNull(references);
   }
 

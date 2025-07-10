@@ -1,6 +1,5 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_hashed_rollup_false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_hashed_rollup_false
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_schmdisc_hashed_rollup_false TEST_ID: SEL_DATASOURCE

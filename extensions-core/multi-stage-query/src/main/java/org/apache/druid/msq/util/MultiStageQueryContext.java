@@ -27,6 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,6 +43,7 @@ import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.rpc.ControllerResource;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
+import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
@@ -122,7 +124,6 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
-  public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
@@ -195,6 +196,15 @@ public class MultiStageQueryContext
 
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
+
+  /**
+   * The {@link FrameType} to use for row-based frames. This context parameter exists to support rolling updates from
+   * older Druid versions. The latest type is given by {@link FrameType#latestRowBased()}, which is set in
+   * {@link MSQTaskQueryMaker#buildOverrideContext} starting in Druid 34. Once all servers are on Druid 34 or newer,
+   * the current-latest type {@link FrameType#ROW_BASED_V2} is used.
+   */
+  public static final String CTX_ROW_BASED_FRAME_TYPE = "rowBasedFrameType";
+  private static final FrameType DEFAULT_ROW_BASED_FRAME_TYPE = FrameType.ROW_BASED_V1;
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
@@ -320,12 +330,12 @@ public class MultiStageQueryContext
     );
   }
 
-  public static SegmentSource getSegmentSources(final QueryContext queryContext)
+  public static SegmentSource getSegmentSources(final QueryContext queryContext, final SegmentSource defaultSource)
   {
     return queryContext.getEnum(
         CTX_INCLUDE_SEGMENT_SOURCE,
         SegmentSource.class,
-        DEFAULT_INCLUDE_SEGMENT_SOURCE
+        defaultSource
     );
   }
 
@@ -436,6 +446,21 @@ public class MultiStageQueryContext
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
+  }
+
+  /**
+   * Returns the value of {@link #CTX_ROW_BASED_FRAME_TYPE}, or {@link #DEFAULT_ROW_BASED_FRAME_TYPE}.
+   *
+   * @see #CTX_ROW_BASED_FRAME_TYPE for more details
+   */
+  public static FrameType getRowBasedFrameType(final QueryContext queryContext)
+  {
+    return FrameType.forVersion(
+        (byte) queryContext.getInt(
+            CTX_ROW_BASED_FRAME_TYPE,
+            DEFAULT_ROW_BASED_FRAME_TYPE.version()
+        )
+    );
   }
 
   public static DateTime getStartTime(final QueryContext queryContext)

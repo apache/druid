@@ -54,7 +54,7 @@ See [Overriding default query context values](../configuration#overriding-defaul
 
 Make sure you enable the Broker monitor `SubqueryCountStatsMonitor` so that Druid emits metrics for subquery statistics.
 To do this, add `org.apache.druid.server.metrics.SubqueryCountStatsMonitor` to the `druid.monitoring.monitors` property in your Broker's `runtime.properties` configuration file.
-See [Metrics monitors](../configuration/index.md#metrics-monitors) for more information.
+See [Metrics monitors](../configuration/index.md#metrics-monitors-for-each-service) for more information.
 
 ## Learn more
 

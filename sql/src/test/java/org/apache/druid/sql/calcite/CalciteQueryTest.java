@@ -190,6 +190,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
@@ -233,6 +234,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
@@ -385,6 +387,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.NO_INFORMATION_SCHEMA_SUPPORT)
   @Test
   public void testAggregatorsOnInformationSchemaColumns()
   {
@@ -455,13 +458,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testTopNLimitWrapping()
   {
     msqIncompatible();
-    List<Object[]> expected = ImmutableList.of(
+    final Map<String, Object> context =
+        QueryContexts.override(OUTER_LIMIT_CONTEXT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    final List<Object[]> expected = ImmutableList.of(
         new Object[]{"def", 1L},
         new Object[]{"abc", 1L}
     );
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY dim1 ORDER BY dim1 DESC",
-        OUTER_LIMIT_CONTEXT,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -474,7 +479,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)
                     )
                 )
-                .context(OUTER_LIMIT_CONTEXT)
+                .context(context)
                 .build()
         ),
         expected
@@ -2579,6 +2584,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctWithFilter2()
@@ -2849,6 +2855,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM druid.foo\n"
         + "GROUP BY dim1\n"
         + "LIMIT 10",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -2858,7 +2865,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .postAggregators(expressionPostAgg("s0", "substring(\"d0\", 1, -1)", ColumnType.STRING))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(
@@ -3322,6 +3329,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testUnionAllSameTableThreeTimes()
@@ -3366,6 +3374,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
@@ -3428,7 +3437,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT dbl1, COUNT(*) FROM druid.numfoo GROUP BY dbl1 ORDER BY dbl1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3441,7 +3450,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         expected
@@ -3461,7 +3470,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT f1, COUNT(*) FROM druid.numfoo GROUP BY f1 ORDER BY f1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3474,7 +3483,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         expected
@@ -3494,7 +3503,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT l1, COUNT(*) FROM druid.numfoo GROUP BY l1 ORDER BY l1 DESC LIMIT 10",
-        QUERY_CONTEXT_DEFAULT,
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -3507,7 +3516,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new DimensionTopNMetricSpec(null, StringComparators.NUMERIC)
                     )
                 )
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         expected
@@ -6240,6 +6249,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_NULL_COLUMN_ORDER)
   @Test
   public void testOrderByNullType()
   {
@@ -6247,6 +6257,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
         // from a table.
         "SELECT dim1, NULL as nullcol FROM (SELECT DISTINCT dim1 FROM druid.foo LIMIT 1) ORDER BY 2",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             WindowOperatorQueryBuilder
                 .builder()
@@ -6258,7 +6269,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .threshold(1)
                         .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                         .postAggregators(expressionPostAgg("s0", "null", ColumnType.STRING))
-                        .context(QUERY_CONTEXT_DEFAULT)
+                        .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                         .build()
                 )
                 .setSignature(
@@ -7097,6 +7108,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_INCORRECT_RESULTS_EMPTY_STRING)
   @Test
   public void testApproxCountDistinctWhenHllDisabled()
   {
@@ -7215,6 +7227,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.AGG_COL_EXCHANGE)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
@@ -11791,6 +11804,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "select __time as bug from druid.foo group by 1 order by 1 limit 1",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -11801,7 +11815,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .threshold(1)
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(
@@ -12079,6 +12093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "GROUP BY m1 "
         + "ORDER BY m1 "
         + "LIMIT 5",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         Collections.singletonList(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -12110,7 +12125,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(
@@ -12506,6 +12521,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
@@ -13033,6 +13049,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
+    outerLimitContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     TopNQueryBuilder baseBuilder = new TopNQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
@@ -14340,6 +14357,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "where dim1 = 'none'\n"
         + "group by dim1\n"
         + "limit 1",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(new TopNQueryBuilder()
                              .dataSource(CalciteTests.DATASOURCE1)
                              .intervals(querySegmentSpec(Filtration.eternity()))
@@ -14358,7 +14376,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                      new LongSumAggregatorFactory("a0", "v1", null, ExprMacroTable.nil()),
                                      new DoubleSumAggregatorFactory("a1", "v2", null, ExprMacroTable.nil())
                                  ))
-                             .context(QUERY_CONTEXT_DEFAULT)
+                             .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                              .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                              .threshold(1)
                              .build()),
@@ -14618,63 +14636,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.SORT_REMOVE_CONSTANT_KEYS_CONFLICT)
-  @Test
-  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
-  {
-    // TODO(gianm): this test does not actually test the below thing, b/c the timestamp_floor got baked in
-    msqIncompatible();
-    //msqCompatible();
-
-    // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
-    // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
-    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
-    // with granularity MONTH, to avoid excessive materialization of time grains.
-    //
-    // See DruidQuery#canUseQueryGranularity for the relevant check.
-
-    cannotVectorize();
-
-    testQuery(
-        "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from "
-        + "(VALUES (TIMESTAMP '2000-01-01', 1.0), (TIMESTAMP '2000-01-02', 2.0)) t (__time, m1)\n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 1 DESC",
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(InlineDataSource.fromIterable(
-                            ImmutableList.of(
-                                new Object[]{timestamp("2000-01-01"), 1.0},
-                                // Floor to month is applied while creating inline source, so this is
-                                // 2000-01-01, not 2000-01-02.
-                                new Object[]{timestamp("2000-01-01"), 2.0}
-                            ),
-                            RowSignature.builder()
-                                        .add("EXPR$0", ColumnType.LONG)
-                                        .add("m1", ColumnType.DOUBLE)
-                                        .build()
-                        ))
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("EXPR$0", "d0", ColumnType.LONG))
-                        .addAggregator(new DoubleMaxAggregatorFactory("a0", "m1"))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.NUMERIC)
-                                ),
-                                null
-                            )
-                        )
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), 2.0}
-        )
-    );
-  }
-
-
   @Test
   public void testComplexDecode()
   {
@@ -14783,6 +14744,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14827,6 +14789,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
@@ -15161,6 +15124,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 + "GROUP BY 1 \n"
                 + "ORDER BY 2 DESC"
         )
+        .queryContext(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
         .expectedQuery(
             WindowOperatorQueryBuilder.builder()
                 .setDataSource(
@@ -15178,7 +15142,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-                        .context(OUTER_LIMIT_CONTEXT)
+                        .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                         .build()
                 )
                 .setSignature(
@@ -15498,6 +15462,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testWindowingOverJoin()
   {
@@ -15964,5 +15929,53 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         DruidException.class,
         "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1]"
     );
+  }
+
+  @Test
+  public void testSetUseApproximateCountDistinctFalse()
+  {
+    testBuilder().sql(
+        "SET useApproximateCountDistinct = FALSE;\n"
+        + "SELECT COUNT(DISTINCT dim2) FROM druid.foo"
+    ).expectedQueries(
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setContext(
+                                                ImmutableMap.<String, Object>builder()
+                                                            .putAll(QUERY_CONTEXT_DEFAULT)
+                                                            .put("useApproximateCountDistinct", false)
+                                                            .build()
+                                            )
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0"),
+                                notNull("d0")
+                            )
+                        ))
+                        .setContext(
+                            ImmutableMap.<String, Object>builder()
+                                        .putAll(QUERY_CONTEXT_DEFAULT)
+                                        .put("useApproximateCountDistinct", false)
+                                        .build()
+                        )
+                        .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    ).run();
   }
 }
