@@ -65,6 +65,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -164,19 +165,17 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     // Initialize the indexers and brokers later.
     cluster.addServer(coordinator)
            .addServer(overlord)
-//           .addServer(indexer)
-//           .addServer(broker)
-//           .addServer(historical)
            .addServer(router);
 
     return cluster;
   }
 
-  @BeforeEach
-  void setUpEach() throws Exception
+  @BeforeAll
+  @Override
+  protected void setup() throws Exception
   {
-    msqApis = new EmbeddedMSQApis(cluster, overlord);
-    topic = dataSource = EmbeddedClusterApis.createTestDatasourceName();
+    cluster = createCluster();
+    cluster.start();
 
     // Initialize lookups
     cluster.callApi().onLeaderCoordinator(
@@ -191,13 +190,20 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         c -> c.updateAllLookups(EmbeddedClusterApis.deserializeJsonToMap(lookupPayload))
     );
 
-    // Initialize the broker/data-servers later so that lookups are already loaded.
+    // Initialize the broker/data-servers later so that lookups are loaded on startup.
     cluster.addServer(broker);
     broker.start();
     cluster.addServer(indexer);
     indexer.start();
     cluster.addServer(historical);
-    indexer.start();
+    historical.start();
+  }
+
+  @BeforeEach
+  void setUpEach()
+  {
+    msqApis = new EmbeddedMSQApis(cluster, overlord);
+    topic = dataSource = EmbeddedClusterApis.createTestDatasourceName();
 
     // Create Kafka topic.
     kafka.createTopicWithPartitions(topic, 2);
@@ -453,6 +459,35 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         ),
         payload.getResults().getResults()
     );
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_selectJoinWithConcatVirtualDimension_task_withRealtime()
+  {
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_scanWithFilter_task_withRealtime()
+  {
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_groupByWithFilter_task_withRealtime()
+  {
+  }
+
+  @Test
+  @Timeout(60)
+  @Disabled
+  public void test_scanWithFilterAfterJoin_task_withRealtime()
+  {
+    // SELECT * FROM wikipedia INNER JOIN lookup.xyz ON wikipedia.foo = xyz.k WHERE CONCAT(wikipedia.foo, ': ', xyz.v) = 'something: something'
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor()
