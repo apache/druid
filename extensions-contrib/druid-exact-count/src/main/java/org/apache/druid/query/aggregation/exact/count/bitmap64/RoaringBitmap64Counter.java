@@ -57,7 +57,8 @@ public class RoaringBitmap64Counter implements Bitmap64
       Roaring64NavigableMap bitmap = new Roaring64NavigableMap();
       bitmap.deserialize(in);
       return new RoaringBitmap64Counter(bitmap);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.error(e, "Failed to deserialize RoaringBitmap64Counter from data input");
       throw new RuntimeException(e);
     }

@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 
 public class Bitmap64ExactCountMergeComplexMetricSerde extends ComplexMetricSerde
 {
-
   static RoaringBitmap64Counter deserializeRoaringBitmap64Counter(final Object object)
   {
     if (object instanceof String) {
@@ -49,7 +48,8 @@ public class Bitmap64ExactCountMergeComplexMetricSerde extends ComplexMetricSerd
     throw new IAE("Cannot deserialize type[%s] to an RoaringBitmap64Counter:", object.getClass().getName());
   }
 
-  private static byte[] decodeStringToByteArray(String string) {
+  private static byte[] decodeStringToByteArray(String string)
+  {
     try {
       return StringUtils.decodeBase64(StringUtils.toUtf8(string));
     }
@@ -110,5 +110,4 @@ public class Bitmap64ExactCountMergeComplexMetricSerde extends ComplexMetricSerd
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
-
 }
