@@ -34,6 +34,7 @@ import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -166,6 +167,13 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return this;
   }
 
+  public EmbeddedDruidCluster addExtensions(Class<? extends DruidModule>... moduleClasses)
+  {
+    validateNotStarted();
+    extensionModules.addAll(Arrays.asList(moduleClasses));
+    return this;
+  }
+
   /**
    * Adds a Druid server to this cluster. A server added to the cluster after the
    * cluster has started must be started explicitly by calling
@@ -247,6 +255,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         }
 
         log.info("Starting resource[%s].", resource);
+        resource.beforeStart(this);
         resource.start();
         resource.onStarted(this);
       }

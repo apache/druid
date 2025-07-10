@@ -304,19 +304,20 @@ public class ServerManager implements QuerySegmentWalker
         .create(segmentReferences)
         .transform(
             ref ->
-                ref.getSegmentReference()
-                   .map(segment ->
-                            buildQueryRunnerForSegment(
-                                ref.getSegmentDescriptor(),
-                                closer.register(segment),
-                                factory,
-                                toolChest,
-                                cpuTimeAccumulator,
-                                cacheKeyPrefix
-                            )
-                   ).orElse(
-                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
-                   )
+                closer.register(ref)
+                      .getSegmentReference()
+                      .map(segment ->
+                               buildQueryRunnerForSegment(
+                                   ref.getSegmentDescriptor(),
+                                   segment,
+                                   factory,
+                                   toolChest,
+                                   cpuTimeAccumulator,
+                                   cacheKeyPrefix
+                               )
+                      ).orElse(
+                          new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                      )
         );
   }
 

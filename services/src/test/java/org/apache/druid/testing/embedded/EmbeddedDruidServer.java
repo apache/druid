@@ -29,7 +29,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +59,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private long serverMemory = MEM_100_MB;
   private long serverDirectMemory = MEM_100_MB;
   private final Map<String, String> serverProperties = new HashMap<>();
+  private final List<BeforeStart> beforeStartHooks = new ArrayList<>();
   private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
   EmbeddedDruidServer()
@@ -90,6 +93,14 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
     }
   }
 
+  @Override
+  public void beforeStart(EmbeddedDruidCluster cluster)
+  {
+    for (BeforeStart hook : beforeStartHooks) {
+      hook.run(cluster, this);
+    }
+  }
+
   /**
    * @return Name of this server = type + 2-digit ID.
    */
@@ -107,6 +118,12 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   public final T addProperty(String key, String value)
   {
     serverProperties.put(key, value);
+    return (T) this;
+  }
+
+  public final T addBeforeStart(BeforeStart hook)
+  {
+    beforeStartHooks.add(hook);
     return (T) this;
   }
 
@@ -175,6 +192,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
         "Server[%s] using directories: task directory[%s], logs directory[%s], storage directory[%s].",
         name, taskDirectory, logsDirectory, storageDirectory
     );
+    serverProperties.setProperty("druid.host", "localhost");
     serverProperties.setProperty("druid.indexer.task.baseDir", taskDirectory);
     serverProperties.setProperty("druid.indexer.logs.directory", logsDirectory);
     serverProperties.setProperty("druid.storage.storageDirectory", storageDirectory);
@@ -251,5 +269,11 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
      * from {@link ServerRunnable#initLifecycle(Injector)}.
      */
     void onLifecycleInit(Lifecycle lifecycle);
+  }
+
+  @FunctionalInterface
+  public interface BeforeStart
+  {
+    void run(EmbeddedDruidCluster cluster, EmbeddedDruidServer self);
   }
 }
