@@ -39,14 +39,14 @@ public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
   public EmbeddedHistorical()
   {
     addBeforeStartHook((cluster, self) -> {
-        self.addProperty(
-            "druid.segmentCache.locations",
-            StringUtils.format(
-                "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
-                cluster.getTestFolder().newFolder().getAbsolutePath(),
-                MEM_100_MB
-            )
-        );
+      self.addProperty(
+          "druid.segmentCache.locations",
+          StringUtils.format(
+              "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
+              cluster.getTestFolder().newFolder().getAbsolutePath(),
+              MEM_100_MB
+          )
+      );
     });
   }
 
