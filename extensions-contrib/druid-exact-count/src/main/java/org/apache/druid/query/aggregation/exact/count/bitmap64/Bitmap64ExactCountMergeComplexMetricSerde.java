@@ -40,14 +40,22 @@ public class Bitmap64ExactCountMergeComplexMetricSerde extends ComplexMetricSerd
   static RoaringBitmap64Counter deserializeRoaringBitmap64Counter(final Object object)
   {
     if (object instanceof String) {
-      return RoaringBitmap64Counter.fromBytes(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
+      return RoaringBitmap64Counter.fromBytes(toByteArray((String) object));
     } else if (object instanceof byte[]) {
       return RoaringBitmap64Counter.fromBytes((byte[]) object);
     } else if (object instanceof RoaringBitmap64Counter) {
       return (RoaringBitmap64Counter) object;
     }
-    throw new IAE("Object is not of a type that can be deserialized to an RoaringBitmap64Counter:" + object.getClass()
-                                                                                                           .getName());
+    throw new IAE("Cannot deserialize type[%s] to an RoaringBitmap64Counter:", object.getClass().getName());
+  }
+
+  private static byte[] toByteArray(String string) {
+    try {
+      return StringUtils.decodeBase64(StringUtils.toUtf8(string));
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Failed to deserialize to RoaringBitmap64Counter, input is an invalid base64 string");
+    }
   }
 
   @Override
