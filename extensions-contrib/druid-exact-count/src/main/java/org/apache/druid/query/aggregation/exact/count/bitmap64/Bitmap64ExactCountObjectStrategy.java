@@ -22,6 +22,9 @@ package org.apache.druid.query.aggregation.exact.count.bitmap64;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
@@ -40,15 +43,21 @@ public class Bitmap64ExactCountObjectStrategy implements ObjectStrategy<Bitmap64
   @Override
   public Bitmap64 fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
-    final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+    final ByteBuffer readOnlyBuf = buffer.asReadOnlyBuffer();
 
-    if (readOnlyBuffer.remaining() < numBytes) {
+    if (readOnlyBuf.remaining() < numBytes) {
       throw new BufferUnderflowException();
     }
 
-    byte[] bytes = new byte[numBytes];
-    readOnlyBuffer.get(bytes, 0, numBytes);
-    return RoaringBitmap64Counter.fromBytes(bytes);
+    if (readOnlyBuf.hasArray()) {
+      // Use the underlying array directly without copying the entire byte array into input stream.
+      return RoaringBitmap64Counter.fromDataInput(new DataInputStream(
+          new ByteArrayInputStream(readOnlyBuf.array(), readOnlyBuf.arrayOffset() + readOnlyBuf.position(), numBytes)));
+    } else {
+      byte[] bytes = new byte[numBytes];
+      readOnlyBuf.get(bytes, 0, numBytes);
+      return RoaringBitmap64Counter.fromBytes(bytes);
+    }
   }
 
   @Nullable

@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
@@ -46,14 +47,18 @@ public class RoaringBitmap64Counter implements Bitmap64
   public static RoaringBitmap64Counter fromBytes(byte[] bytes)
   {
     ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+    DataInputStream in = new DataInputStream(inputStream);
+    return fromDataInput(in);
+  }
+
+  public static RoaringBitmap64Counter fromDataInput(DataInput in)
+  {
     try {
-      DataInputStream in = new DataInputStream(inputStream);
       Roaring64NavigableMap bitmap = new Roaring64NavigableMap();
       bitmap.deserialize(in);
       return new RoaringBitmap64Counter(bitmap);
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to deserialize RoaringBitmap64Counter from bytes");
+    } catch (Exception e) {
+      log.error(e, "Failed to deserialize RoaringBitmap64Counter from data input");
       throw new RuntimeException(e);
     }
   }
