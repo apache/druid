@@ -23,6 +23,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.cli.CliHistorical;
 import org.apache.druid.cli.ServerRunnable;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.util.ArrayList;
@@ -35,6 +36,20 @@ import java.util.List;
  */
 public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
 {
+  public EmbeddedHistorical()
+  {
+    super();
+    addBeforeStart((cluster, self) -> {
+        self.addProperty(
+            "druid.segmentCache.locations",
+            StringUtils.format(
+                "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
+                cluster.getTestFolder().newFolder().getAbsolutePath(),
+                MEM_100_MB
+            )
+        );
+    });
+  }
 
   @Override
   ServerRunnable createRunnable(LifecycleInitHandler handler)

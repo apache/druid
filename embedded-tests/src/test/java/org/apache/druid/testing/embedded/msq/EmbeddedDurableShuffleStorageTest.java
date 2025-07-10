@@ -55,7 +55,7 @@ import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.shaded.com.google.common.io.ByteStreams;
@@ -101,17 +101,19 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addExtension(DartControllerModule.class)
-        .addExtension(DartWorkerModule.class)
-        .addExtension(DartControllerMemoryManagementModule.class)
-        .addExtension(DartWorkerMemoryManagementModule.class)
-        .addExtension(IndexerMemoryManagementModule.class)
-        .addExtension(MSQDurableStorageModule.class)
-        .addExtension(MSQIndexingModule.class)
-        .addExtension(MSQSqlModule.class)
-        .addExtension(SqlTaskModule.class)
-        .addExtension(MSQExternalDataSourceModule.class)
-        .addExtension(S3StorageConnectorModule.class)
+        .addExtensions(
+            DartControllerModule.class,
+            DartWorkerModule.class,
+            DartControllerMemoryManagementModule.class,
+            DartWorkerMemoryManagementModule.class,
+            IndexerMemoryManagementModule.class,
+            MSQDurableStorageModule.class,
+            MSQIndexingModule.class,
+            MSQSqlModule.class,
+            SqlTaskModule.class,
+            MSQExternalDataSourceModule.class,
+            S3StorageConnectorModule.class
+        )
         .addResource(storageResource)
         .addResource(msqStorageResource)
         .addServer(coordinator)
@@ -122,19 +124,25 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         .addServer(router);
   }
 
-  @BeforeEach
-  void setUpEach()
+  @BeforeAll
+  void setupData() throws IOException
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     dataSource = EmbeddedClusterApis.createTestDatasourceName();
+    loadWikipediaTable();
+  }
+
+  @Override
+  protected void beforeEachTest()
+  {
+    // do nothing here, the super version of this method generates a new value for dataSource field each time, but
+    // we are setting that in our @BeforeAll where we are just inserting data once and re-using between runs
   }
 
   @Test
   @Timeout(120)
-  public void test_selectFirstPage() throws IOException
+  public void test_selectFirstPage()
   {
-    loadWikipediaTable();
-
     final String sql = StringUtils.format(
         "SET durableShuffleStorage = TRUE;\n"
         + "SET targetPartitionsPerWorker = 3;\n"
@@ -158,10 +166,8 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(120)
-  public void test_selectCount() throws IOException
+  public void test_selectCount()
   {
-    loadWikipediaTable();
-
     final String sql = StringUtils.format(
         "SET durableShuffleStorage = TRUE;\n"
         + "SET targetPartitionsPerWorker = 3;\n"
@@ -182,10 +188,8 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(120)
-  public void test_selectJoin_broadcast() throws IOException
+  public void test_selectJoin_broadcast()
   {
-    loadWikipediaTable();
-
     final String sql = StringUtils.format(
         "SET durableShuffleStorage = TRUE;\n"
         + "SET sqlJoinAlgorithm = 'broadcast';\n"
@@ -218,10 +222,8 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(120)
-  public void test_selectJoin_sortMerge() throws IOException
+  public void test_selectJoin_sortMerge()
   {
-    loadWikipediaTable();
-
     final String sql = StringUtils.format(
         "SET durableShuffleStorage = TRUE;\n"
         + "SET sqlJoinAlgorithm = 'sortMerge';\n"
@@ -254,10 +256,8 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(120)
-  public void test_selectJoin_sortMerge_durableDestination() throws IOException
+  public void test_selectJoin_sortMerge_durableDestination()
   {
-    loadWikipediaTable();
-
     final String sql = StringUtils.format(
         "SET durableShuffleStorage = TRUE;\n"
         + "SET sqlJoinAlgorithm = 'sortMerge';\n"

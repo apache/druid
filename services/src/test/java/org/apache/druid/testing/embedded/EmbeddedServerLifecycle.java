@@ -151,7 +151,7 @@ class EmbeddedServerLifecycle
     try {
       final Properties serverProperties = new Properties();
       serverProperties.putAll(commonProperties);
-      serverProperties.putAll(server.getStartupProperties(testFolder, zookeeper));
+      serverProperties.putAll(server.getStartupProperties());
 
       final Injector injector = new StartupInjectorBuilder()
           .withProperties(serverProperties)
