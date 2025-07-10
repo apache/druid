@@ -17,7 +17,7 @@
     "shard_spec": "{\"type\":\"none\"}",
     "dimensions": "[\"anonymous\",\"area_code\",\"city\",\"continent_code\",\"country_name\",\"dma_code\",\"geo\",\"language\",\"namespace\",\"network\",\"newpage\",\"page\",\"postal_code\",\"region_lookup\",\"robot\",\"unpatrolled\",\"user\"]",
     "metrics": "[\"added\",\"count\",\"deleted\",\"delta\",\"delta_hist\",\"unique_users\",\"variation\"]",
-    "projections": null,
+    "projections": "[\"daily_added\",\"daily_unique_users\"]",
     "last_compaction_state": null,
     "replication_factor": 2
   }

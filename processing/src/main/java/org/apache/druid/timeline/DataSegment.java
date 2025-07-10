@@ -296,10 +296,10 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return metrics;
   }
 
+  @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonSerialize(using = CommaListJoinSerializer.class)
-  @Nullable
   public List<String> getProjections()
   {
     return projections;

@@ -174,6 +174,7 @@ public class SystemSchema extends AbstractSchema
           SEGMENTS_SIGNATURE.indexOf("shard_spec"),
           SEGMENTS_SIGNATURE.indexOf("dimensions"),
           SEGMENTS_SIGNATURE.indexOf("metrics"),
+          SEGMENTS_SIGNATURE.indexOf("projections"),
           SEGMENTS_SIGNATURE.indexOf("last_compaction_state")
       }
   );
