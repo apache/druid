@@ -42,7 +42,7 @@ spec:
             - "3600"
           env:
             - name: "TASK_DIR"
-              value: "/tmp/persistent/task/id"
+              value: "/tmp/id"
             - name: "TASK_ID"
               value: "id"
             - name: "LOAD_BROADCAST_DATASOURCE_MODE"
