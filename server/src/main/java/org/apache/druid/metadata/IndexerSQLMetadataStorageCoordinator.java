@@ -2463,7 +2463,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Set<DataSegment> segmentsWithAllocationInfo = new HashSet<>();
     for (SegmentId id : overlappingSegmentIds) {
       final int corePartitions = versionIntervalToNumCorePartitions.get(id.getVersion()).get(id.getInterval());
-       segmentsWithAllocationInfo.add(DataSegment.builder(id)
+      segmentsWithAllocationInfo.add(DataSegment.builder(id)
                                                 .shardSpec(new NumberedShardSpec(id.getPartitionNum(), corePartitions))
                                                 .size(1)
                                                 .build());

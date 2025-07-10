@@ -573,14 +573,11 @@ public class BatchDataSegmentAnnouncerTest
 
   private static DataSegment makeSegment(int offset, boolean isTombstone)
   {
-    SegmentId segmentId = SegmentId.of("foo",
-                                       new Interval(
-                                           DateTimes.of("2013-01-01").plusDays(offset),
-                                           DateTimes.of("2013-01-02").plusDays(offset)
-                                       ),
-                                       DateTimes.nowUtc().toString(),
-                                       null
+    Interval interval = new Interval(
+        DateTimes.of("2013-01-01").plusDays(offset),
+        DateTimes.of("2013-01-02").plusDays(offset)
     );
+    SegmentId segmentId = SegmentId.of("foo", interval, DateTimes.nowUtc().toString(), null);
     DataSegment.Builder builder = DataSegment.builder(segmentId)
                                              .loadSpec(ImmutableMap.of("type", "local"))
                                              .dimensions(ImmutableList.of("dim1", "dim2"))

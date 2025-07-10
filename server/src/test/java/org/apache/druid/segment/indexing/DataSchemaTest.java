@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -557,6 +559,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   public void testSerde() throws Exception
   {
+    // deserialize, then serialize, then deserialize of DataSchema.
     String jsonStr = "{"
                      + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
                      + "\"parser\":{"
@@ -607,6 +610,48 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         actual.getGranularitySpec()
     );
     Assert.assertNull(actual.getProjections());
+  }
+
+  @Test
+  public void testSerdeWithProjections() throws Exception
+  {
+    // serialize, then deserialize of DataSchema with projections.
+    JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+            "dimB",
+            "dimA"
+        ))).withDimensionExclusions(ImmutableSet.of("__time", "time")),
+        null,
+        null,
+        null
+    );
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "ab_count_projection",
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("a"),
+            new LongDimensionSchema("b")
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count")
+        }
+    );
+    DataSchema original = DataSchema.builder()
+                                    .withDataSource("datasource")
+                                    .withObjectMapper(jsonMapper)
+                                    .withParserMap(jsonMapper.convertValue(
+                                        new StringInputRowParser(parseSpec, null),
+                                        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+                                    ))
+                                    .withProjections(ImmutableList.of(projectionSpec))
+                                    .build();
+
+    DataSchema serdeResult = jsonMapper.readValue(jsonMapper.writeValueAsString(original), DataSchema.class);
+
+    Assert.assertEquals("datasource", serdeResult.getDataSource());
+    Assert.assertEquals(parseSpec, serdeResult.getParser().getParseSpec());
+    Assert.assertEquals(ImmutableList.of(projectionSpec), serdeResult.getProjections());
   }
 
   @Test

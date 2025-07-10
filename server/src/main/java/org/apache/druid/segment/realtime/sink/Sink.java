@@ -26,7 +26,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -66,7 +65,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
@@ -256,12 +254,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
                       .shardSpec(shardSpec)
                       .dimensions(null)
                       .metrics(Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName))
-                      .projections(schema.getProjections() == null
-                                   ? null
-                                   : schema.getProjections()
-                                           .stream()
-                                           .map(AggregateProjectionSpec::getName)
-                                           .collect(Collectors.toList()))
+                      .projections(schema.getProjectionNames())
                       .build();
   }
 
