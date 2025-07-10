@@ -20,15 +20,15 @@
 package org.apache.druid.query.aggregation.exact.count.bitmap64;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
 /**
- * This class is used to expose the underlying byte array in the output stream, to prevent extra copying of
- * the array.
+ * This class is used to prevent extra copying of the underlying byte array.
  */
 public class ExposedByteArrayOutputStream extends ByteArrayOutputStream
 {
-  byte[] getBuffer()
+  ByteBuffer getBuffer()
   {
-    return this.buf;
+    return ByteBuffer.wrap(this.buf, 0, this.count);
   }
 }

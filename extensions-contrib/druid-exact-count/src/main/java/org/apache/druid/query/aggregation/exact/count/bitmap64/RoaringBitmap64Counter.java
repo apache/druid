@@ -80,28 +80,17 @@ public class RoaringBitmap64Counter implements Bitmap64
     return this;
   }
 
-  private ExposedByteArrayOutputStream toOutputStream()
+  @Override
+  public ByteBuffer toByteBuffer()
   {
     bitmap.runOptimize();
     try {
       final ExposedByteArrayOutputStream out = new ExposedByteArrayOutputStream();
       bitmap.serialize(new DataOutputStream(out));
-      return out;
+      return out.getBuffer();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Override
-  public ByteBuffer toByteBuffer()
-  {
-    return ByteBuffer.wrap(toOutputStream().toByteArray());
-  }
-
-  public ByteArrayInputStream toJsonSerializableInputStream()
-  {
-    final byte[] byteArray = toOutputStream().getBuffer();
-    return new ByteArrayInputStream(byteArray);
   }
 }
