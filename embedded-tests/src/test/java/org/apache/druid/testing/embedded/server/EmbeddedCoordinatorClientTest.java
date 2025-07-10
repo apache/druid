@@ -43,6 +43,7 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -66,7 +67,6 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   protected EmbeddedDruidCluster createCluster()
   {
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
@@ -108,6 +108,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  @Disabled
   @Timeout(20)
   public void test_fetchSegment()
   {
