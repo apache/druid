@@ -446,9 +446,36 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  @Disabled
   public void test_selectJoinWithConcatVirtualDimension_task_withRealtime()
   {
+    final String sql = StringUtils.format(
+        "SET includeSegmentSource = 'REALTIME';\n"
+        + "SELECT\n"
+        + "  \"channel\",\n"
+        + "  \"countryIsoCode\",\n"
+        + "  CONCAT(w.\"cityName\", ': ', l.v),\n"
+        + "  \"user\"\n"
+        + "FROM %s w\n"
+        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "WHERE\n"
+        + "  w.\"cityName\" IS NOT NULL\n"
+        + "  AND \"added\" > 1000 AND \"delta\" > 5000\n"
+        + "\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"#en.wikipedia","GB","London: English","78.145.31.93"},
+            new Object[]{"#en.wikipedia","IN","Bhopal: English","14.139.241"},
+            new Object[]{"#ar.wikipedia","AE","Dubai: Arabic","86.98.5.51"}
+        ),
+        payload.getResults().getResults()
+    );
   }
 
   @Test
