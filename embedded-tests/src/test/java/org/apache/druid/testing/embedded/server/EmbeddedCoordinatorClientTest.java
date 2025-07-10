@@ -66,6 +66,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
   protected EmbeddedDruidCluster createCluster()
   {
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
