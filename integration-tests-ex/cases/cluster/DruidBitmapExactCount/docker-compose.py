@@ -18,7 +18,7 @@ from template import COORDINATOR, MIDDLE_MANAGER
 
 class Template(BaseTemplate):
     def extend_druid_service(self, service):
-        self.add_env(service, 'druid_test_loadList', 'druid-exact-count')
+        self.add_env(service, 'druid_test_loadList', 'druid-bitmap-exact-count')
 
     def define_coordinator(self):
         service_name = COORDINATOR

@@ -261,7 +261,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>druid-exact-count</artifactId>
+            <artifactId>druid-bitmap-exact-count</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -564,12 +564,12 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-DruidExactCount</id>
+            <id>IT-DruidBitmapExactCount</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <it.category>DruidExactCount</it.category>
+                <it.category>DruidBitmapExactCount</it.category>
             </properties>
         </profile>
     </profiles>

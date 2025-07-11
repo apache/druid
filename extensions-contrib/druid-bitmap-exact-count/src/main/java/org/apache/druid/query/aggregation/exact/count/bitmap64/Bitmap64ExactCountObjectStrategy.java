@@ -30,7 +30,6 @@ import java.nio.ByteBuffer;
 
 public class Bitmap64ExactCountObjectStrategy implements ObjectStrategy<Bitmap64>
 {
-
   static final Bitmap64ExactCountObjectStrategy STRATEGY = new Bitmap64ExactCountObjectStrategy();
 
   @Override

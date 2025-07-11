@@ -2437,7 +2437,7 @@ quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
 
-- ../docs/development/extensions-contrib/druid-exact-count.md
+- ../docs/development/extensions-contrib/druid-bitmap-exact-count.md
 Bitmap64ExactCountBuild
 Bitmap64ExactCountMerge
 

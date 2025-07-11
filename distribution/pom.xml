@@ -463,7 +463,7 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-exact-count</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-bitmap-exact-count</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.DruidExactCount;
+package org.apache.druid.testsEx.DruidBitmapExactCount;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.Intervals;
@@ -45,12 +45,12 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class DruidExactCountTest extends AbstractIndexerTest
+public class DruidBitmapExactCountTest extends AbstractIndexerTest
 {
-  private static final Logger LOG = new Logger(DruidExactCountTest.class);
-  private static final String SUPERVISOR_TEMPLATE = "/druid-exact-count/kafka_supervisor_template.json";
-  private static final String QUERY_FILE = "/druid-exact-count/queries.json";
-  private static final String DATA_FILE = "/druid-exact-count/data.json";
+  private static final Logger LOG = new Logger(DruidBitmapExactCountTest.class);
+  private static final String SUPERVISOR_TEMPLATE = "/druid-bitmap-exact-count/kafka_supervisor_template.json";
+  private static final String QUERY_FILE = "/druid-bitmap-exact-count/queries.json";
+  private static final String DATA_FILE = "/druid-bitmap-exact-count/data.json";
   private static final String DATASOURCE = "wikipedia_index_test";
 
   @Test

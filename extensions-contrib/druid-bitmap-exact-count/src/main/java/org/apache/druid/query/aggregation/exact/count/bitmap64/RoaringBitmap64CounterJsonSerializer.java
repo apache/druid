@@ -17,8 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.categories;
+package org.apache.druid.query.aggregation.exact.count.bitmap64;
 
-public class DruidExactCount
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+public class RoaringBitmap64CounterJsonSerializer extends JsonSerializer<RoaringBitmap64Counter>
 {
+  @Override
+  public void serialize(
+      final RoaringBitmap64Counter bitmap64Counter,
+      final JsonGenerator jgen,
+      final SerializerProvider provider
+  ) throws IOException
+  {
+    ByteBuffer buffer = bitmap64Counter.toByteBuffer();
+    jgen.writeBinary(buffer.array(), buffer.arrayOffset(), buffer.limit());
+  }
 }
