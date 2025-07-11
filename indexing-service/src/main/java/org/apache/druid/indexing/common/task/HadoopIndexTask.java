@@ -307,8 +307,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         return TaskStatus.failure(getId(), errorMsg);
       }
       log.warn("Running deprecated index_hadoop task [%s]. "
-              + "Hadoop indexing framework is deprecated and will be removed in a future release. "
-              + "Please migrate to the new indexing framework.",
+              + "Hadoop batch indexing is deprecated and will be removed in a future release. "
+              + "Please plan your migration to one of Druid's supported indexing patterns.",
           getId()
       );
       if (chatHandlerProvider.isPresent()) {
