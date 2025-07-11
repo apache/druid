@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class RoaringBitmap64CounterJsonSerializer extends JsonSerializer<RoaringBitmap64Counter>
 {
@@ -35,6 +36,7 @@ public class RoaringBitmap64CounterJsonSerializer extends JsonSerializer<Roaring
       final SerializerProvider provider
   ) throws IOException
   {
-    jgen.writeBinary(bitmap64Counter.toByteBuffer().array());
+    ByteBuffer buffer = bitmap64Counter.toByteBuffer();
+    jgen.writeBinary(buffer.array(), buffer.arrayOffset(), buffer.limit());
   }
 }
