@@ -137,6 +137,7 @@ public class DataServerQueryHandlerTest
     );
     target = spy(
         new DataServerQueryHandler(
+            1,
             DATASOURCE1,
             new ChannelCounters(),
             mock(ServiceClientFactory.class),

@@ -39,6 +39,8 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
+import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -74,7 +76,8 @@ public class DataServerQueryHandler
   private static final Logger log = new Logger(DataServerQueryHandler.class);
   private static final int DEFAULT_NUM_TRIES = 3;
   private static final int PER_SERVER_QUERY_NUM_TRIES = 5;
-  private final String dataSource;
+  private final int inputNumber;
+  private final String dataSourceName;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
   private final CoordinatorClient coordinatorClient;
@@ -84,7 +87,8 @@ public class DataServerQueryHandler
   private final DataServerRequestDescriptor dataServerRequestDescriptor;
 
   public DataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
@@ -94,7 +98,8 @@ public class DataServerQueryHandler
       DataServerRequestDescriptor dataServerRequestDescriptor
   )
   {
-    this.dataSource = dataSource;
+    this.inputNumber = inputNumber;
+    this.dataSourceName = dataSourceName;
     this.channelCounters = channelCounters;
     this.serviceClientFactory = serviceClientFactory;
     this.coordinatorClient = coordinatorClient;
@@ -136,8 +141,7 @@ public class DataServerQueryHandler
       Closer closer
   )
   {
-    // MSQ changes the datasource to a number datasource. This needs to be changed back for data servers to understand.
-    final Query<QueryType> preparedQuery = query.withDataSource(new TableDataSource(dataSource));
+    final Query<QueryType> preparedQuery = query.withDataSource(transformDatasource(query.getDataSource()));
     final List<Yielder<RowType>> yielders = new ArrayList<>();
     final List<RichSegmentDescriptor> handedOffSegments = new ArrayList<>();
 
@@ -195,7 +199,30 @@ public class DataServerQueryHandler
       }
     }
 
-    return new DataServerQueryResult<>(yielders, handedOffSegments, dataSource);
+    return new DataServerQueryResult<>(yielders, handedOffSegments, dataSourceName);
+  }
+
+  /**
+   * Transform the {@link InputNumberDataSource}, which are only understood by MSQ tasks, back into a
+   * {@link TableDataSource}.
+   */
+  private DataSource transformDatasource(DataSource dataSource)
+  {
+    if (dataSource instanceof InputNumberDataSource) {
+      if (((InputNumberDataSource) dataSource).getInputNumber() == inputNumber) {
+        return new TableDataSource(dataSourceName);
+      } else {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Unknown numbered datasource [%s]", dataSource);
+      }
+    } else {
+      List<DataSource> transformed = dataSource.getChildren()
+                                               .stream()
+                                               .map(this::transformDatasource)
+                                               .collect(Collectors.toList());
+      return dataSource.withChildren(transformed);
+    }
   }
 
   private <QueryType, RowType> Yielder<RowType> fetchRowsFromDataServerInternal(
@@ -274,7 +301,7 @@ public class DataServerQueryHandler
 
     Iterable<ImmutableSegmentLoadInfo> immutableSegmentLoadInfos =
         coordinatorClient.fetchServerViewSegments(
-            dataSource,
+            dataSourceName,
             richSegmentDescriptors.stream().map(RichSegmentDescriptor::getFullInterval).collect(Collectors.toList())
         );
 
@@ -350,7 +377,7 @@ public class DataServerQueryHandler
 
       for (SegmentDescriptor segmentDescriptor : segmentDescriptors) {
         Boolean wasHandedOff = FutureUtils.get(
-            coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor),
+            coordinatorClient.isHandoffComplete(dataSourceName, segmentDescriptor),
             true
         );
         if (Boolean.TRUE.equals(wasHandedOff)) {
