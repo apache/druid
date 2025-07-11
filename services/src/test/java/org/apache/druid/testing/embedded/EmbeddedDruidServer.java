@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import org.apache.druid.cli.ServerRunnable;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -29,7 +30,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.utils.RuntimeInfo;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
-  protected static final long MEM_100_MB = 100_000_000;
+  protected static final long MEM_100_MB = HumanReadableBytes.parse("100M");
 
   /**
    * A static incremental ID is used instead of a random number to ensure that
@@ -57,6 +60,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private long serverMemory = MEM_100_MB;
   private long serverDirectMemory = MEM_100_MB;
   private final Map<String, String> serverProperties = new HashMap<>();
+  private final List<BeforeStart> beforeStartHooks = new ArrayList<>();
   private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
   EmbeddedDruidServer()
@@ -65,6 +69,34 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
         "%s-%d",
         this.getClass().getSimpleName(),
         SERVER_ID.incrementAndGet()
+    );
+    beforeStartHooks.add(
+        (cluster, self) -> {
+          // Add properties for temporary directories used by the servers
+          final String logsDirectory = cluster.getTestFolder().getOrCreateFolder("indexer-logs").getAbsolutePath();
+          final String taskDirectory = cluster.getTestFolder().newFolder().getAbsolutePath();
+          final String storageDirectory = cluster.getTestFolder().newFolder().getAbsolutePath();
+          log.info(
+              "Server[%s] using directories: task directory[%s], logs directory[%s], storage directory[%s].",
+              self.getName(),
+              taskDirectory,
+              logsDirectory,
+              storageDirectory
+          );
+          self.addProperty("druid.host", "localhost");
+          self.addProperty("druid.indexer.task.baseDir", taskDirectory);
+          self.addProperty("druid.indexer.logs.directory", logsDirectory);
+          self.addProperty("druid.storage.storageDirectory", storageDirectory);
+
+          // Add properties for Zookeeper
+          if (cluster.getZookeeper() != null) {
+            self.addProperty("druid.zk.service.host", cluster.getZookeeper().getConnectString());
+          }
+
+          // Add properties for RuntimeInfoModule
+          self.addProperty(RuntimeInfoModule.SERVER_MEMORY_PROPERTY, String.valueOf(serverMemory));
+          self.addProperty(RuntimeInfoModule.SERVER_DIRECT_MEMORY_PROPERTY, String.valueOf(serverDirectMemory));
+        }
     );
   }
 
@@ -90,6 +122,14 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
     }
   }
 
+  @Override
+  public void beforeStart(EmbeddedDruidCluster cluster)
+  {
+    for (BeforeStart hook : beforeStartHooks) {
+      hook.run(cluster, this);
+    }
+  }
+
   /**
    * @return Name of this server = type + 2-digit ID.
    */
@@ -111,9 +151,19 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   }
 
   /**
+   * Adds a {@link BeforeStart} to run as part of {@link #beforeStart(EmbeddedDruidCluster)}
+   */
+  @SuppressWarnings("UnusedReturnValue")
+  public final T addBeforeStartHook(BeforeStart hook)
+  {
+    beforeStartHooks.add(hook);
+    return (T) this;
+  }
+
+  /**
    * Sets the amount of heap memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer setServerMemory(long serverMemory)
+  public final EmbeddedDruidServer<T> setServerMemory(long serverMemory)
   {
     this.serverMemory = serverMemory;
     return this;
@@ -122,7 +172,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Sets the amount of direct (off-heap) memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer setServerDirectMemory(long serverDirectMemory)
+  public final EmbeddedDruidServer<T> setServerDirectMemory(long serverDirectMemory)
   {
     this.serverDirectMemory = serverDirectMemory;
     return this;
@@ -132,11 +182,9 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
    * Called from {@link EmbeddedDruidCluster#addServer(EmbeddedDruidServer)} to
    * tie the lifecycle of this server to the cluster.
    */
-  final void onAddedToCluster(EmbeddedDruidCluster cluster, Properties commonProperties)
+  final void onAddedToCluster(Properties commonProperties)
   {
-    this.lifecycle.set(
-        new EmbeddedServerLifecycle(this, cluster.getTestFolder(), cluster.getZookeeper(), commonProperties)
-    );
+    this.lifecycle.set(new EmbeddedServerLifecycle(this, commonProperties));
   }
 
   /**
@@ -160,45 +208,9 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
    * this server. This must be called only after all the resources required by
    * the Druid server have been initialized.
    */
-  final Properties getStartupProperties(
-      TestFolder testFolder,
-      EmbeddedZookeeper zookeeper
-  )
+  final Properties getStartupProperties()
   {
     final Properties serverProperties = new Properties();
-
-    // Add properties for temporary directories used by the servers
-    final String logsDirectory = testFolder.getOrCreateFolder("indexer-logs").getAbsolutePath();
-    final String taskDirectory = testFolder.newFolder().getAbsolutePath();
-    final String storageDirectory = testFolder.newFolder().getAbsolutePath();
-    log.info(
-        "Server[%s] using directories: task directory[%s], logs directory[%s], storage directory[%s].",
-        name, taskDirectory, logsDirectory, storageDirectory
-    );
-    serverProperties.setProperty("druid.indexer.task.baseDir", taskDirectory);
-    serverProperties.setProperty("druid.indexer.logs.directory", logsDirectory);
-    serverProperties.setProperty("druid.storage.storageDirectory", storageDirectory);
-
-    // Add properties for Zookeeper
-    if (zookeeper != null) {
-      serverProperties.setProperty("druid.zk.service.host", zookeeper.getConnectString());
-    }
-
-    if (this instanceof EmbeddedHistorical) {
-      serverProperties.setProperty(
-          "druid.segmentCache.locations",
-          StringUtils.format(
-              "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
-              testFolder.newFolder().getAbsolutePath(),
-              MEM_100_MB
-          )
-      );
-    }
-
-    // Add properties for RuntimeInfoModule
-    serverProperties.setProperty(RuntimeInfoModule.SERVER_MEMORY_PROPERTY, String.valueOf(serverMemory));
-    serverProperties.setProperty(RuntimeInfoModule.SERVER_DIRECT_MEMORY_PROPERTY, String.valueOf(serverDirectMemory));
-
     serverProperties.putAll(this.serverProperties);
     return serverProperties;
   }
@@ -232,6 +244,14 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
     return referenceHolder.latchableEmitter();
   }
 
+  @Override
+  public String toString()
+  {
+    return "EmbeddedDruidServer{" +
+           "name='" + name + '\'' +
+           '}';
+  }
+
   /**
    * Handler used to register the lifecycle of an embedded server.
    */
@@ -243,5 +263,17 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
      * from {@link ServerRunnable#initLifecycle(Injector)}.
      */
     void onLifecycleInit(Lifecycle lifecycle);
+  }
+
+  @FunctionalInterface
+  public interface BeforeStart
+  {
+    /**
+     * Allows a {@link EmbeddedDruidServer} to perform additional initialization before starting
+     *
+     * @param cluster - the {@link EmbeddedDruidCluster} the {@link EmbeddedDruidServer} is part of
+     * @param self    - the {@link EmbeddedDruidServer} to perform initialization on
+     */
+    void run(EmbeddedDruidCluster cluster, EmbeddedDruidServer<?> self);
   }
 }

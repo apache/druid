@@ -65,6 +65,11 @@ public class EmbeddedClusterApis
     return getResult(coordinatorApi.apply(cluster.leaderCoordinator()));
   }
 
+  public <T> T onLeaderCoordinatorSync(Function<CoordinatorClient, T> coordinatorApi)
+  {
+    return coordinatorApi.apply(cluster.leaderCoordinator());
+  }
+
   public <T> T onLeaderOverlord(Function<OverlordClient, ListenableFuture<T>> overlordApi)
   {
     return getResult(overlordApi.apply(cluster.leaderOverlord()));
@@ -193,10 +198,7 @@ public class EmbeddedClusterApis
   public static Map<String, Object> deserializeJsonToMap(String payload)
   {
     try {
-      return TestHelper.JSON_MAPPER.readValue(
-          payload,
-          new TypeReference<>() {}
-      );
+      return TestHelper.JSON_MAPPER.readValue(payload, new TypeReference<>() {});
     }
     catch (Exception e) {
       throw new ISE(e, "Could not deserialize payload[%s]", payload);
