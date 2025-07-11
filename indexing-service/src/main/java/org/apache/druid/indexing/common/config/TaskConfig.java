@@ -50,6 +50,7 @@ public class TaskConfig implements TaskDirectory
   private static final Logger log = new Logger(TaskConfig.class);
   private static final String HADOOP_LIB_VERSIONS = "hadoop.indexer.libs.version";
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES;
+  public static final String ALLOW_HADOOP_TASK_EXECUTION_KEY = "druid.indexer.task.allowHadoopTaskExecution";
 
   static {
     try {
@@ -109,6 +110,9 @@ public class TaskConfig implements TaskDirectory
   @JsonProperty
   private final long tmpStorageBytesPerTask;
 
+  @JsonProperty
+  private final boolean allowHadoopTaskExecution;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -123,7 +127,8 @@ public class TaskConfig implements TaskDirectory
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
-      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask
+      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
+      @JsonProperty("allowHadoopTaskExecution") boolean allowHadoopTaskExecution
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -156,6 +161,7 @@ public class TaskConfig implements TaskDirectory
 
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
+    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
   }
 
   private TaskConfig(
@@ -171,7 +177,8 @@ public class TaskConfig implements TaskDirectory
       boolean ignoreTimestampSpecForDruidInputSource,
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
-      long tmpStorageBytesPerTask
+      long tmpStorageBytesPerTask,
+      boolean allowHadoopTaskExecution
   )
   {
     this.baseDir = baseDir;
@@ -187,6 +194,7 @@ public class TaskConfig implements TaskDirectory
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
+    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
   }
 
   @JsonProperty
@@ -297,6 +305,12 @@ public class TaskConfig implements TaskDirectory
     return tmpStorageBytesPerTask;
   }
 
+  @JsonProperty
+  public boolean isAllowHadoopTaskExecution()
+  {
+    return allowHadoopTaskExecution;
+  }
+
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
@@ -321,7 +335,8 @@ public class TaskConfig implements TaskDirectory
         ignoreTimestampSpecForDruidInputSource,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        allowHadoopTaskExecution
     );
   }
 
@@ -340,7 +355,8 @@ public class TaskConfig implements TaskDirectory
         ignoreTimestampSpecForDruidInputSource,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        allowHadoopTaskExecution
     );
   }
 }
