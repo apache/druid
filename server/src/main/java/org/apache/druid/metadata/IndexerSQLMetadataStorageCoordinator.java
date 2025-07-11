@@ -1631,9 +1631,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Iterate until a new non-clashing version is found
     boolean foundFreshVersion = false;
-    StringBuilder candidateVersion = new StringBuilder(
-        allocatedId.getVersion() + PendingSegmentRecord.CONCURRENT_APPEND_VERSION_SUFFIX
-    );
+    StringBuilder candidateVersion = new StringBuilder(allocatedId.getVersion());
     for (int i = 0; i < 10; ++i) {
       if (unusedSegmentVersions.contains(candidateVersion.toString())) {
         candidateVersion.append(PendingSegmentRecord.CONCURRENT_APPEND_VERSION_SUFFIX);
@@ -1644,15 +1642,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     if (foundFreshVersion) {
-      return new SegmentIdWithShardSpec(
+      final SegmentIdWithShardSpec uniqueId = new SegmentIdWithShardSpec(
           allocatedId.getDataSource(),
           allocatedId.getInterval(),
           candidateVersion.toString(),
           allocatedId.getShardSpec()
       );
+      log.info(
+          "Created new unique pending segment ID[%s] with version[%s] for originally allocated ID[%s].",
+          uniqueId, candidateVersion.toString(), allocatedId
+      );
+
+      return uniqueId;
     } else {
       throw InternalServerError.exception(
-          "Could not allocate segment[%s] as there are too many unused"
+          "Could not allocate segment[%s] as there are too many clashing unused"
           + " versions(upto [%s]) in the interval. Kill the old unused versions to proceed.",
           allocatedId, candidateVersion.toString()
       );
@@ -1700,7 +1704,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         allocatedId.getShardSpec().getPartitionNum(),
         unusedMaxId.getPartitionNum() + 1
     );
-    return new SegmentIdWithShardSpec(
+    final SegmentIdWithShardSpec uniqueId = new SegmentIdWithShardSpec(
         allocatedId.getDataSource(),
         allocatedId.getInterval(),
         allocatedId.getVersion(),
@@ -1709,6 +1713,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             allocatedId.getShardSpec().getNumCorePartitions()
         )
     );
+    log.info(
+        "Created new unique pending segment ID[%s] with partition number[%s] for originally allocated ID[%s].",
+        uniqueId, maxPartitionNum, allocatedId
+    );
+
+    return uniqueId;
   }
 
   @Override

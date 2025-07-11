@@ -19,6 +19,7 @@
 
 package org.apache.druid.error;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.matchers.DruidMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.DiagnosingMatcher;
@@ -72,6 +73,12 @@ public class ExceptionMatcher extends DiagnosingMatcher<Throwable>
   public ExceptionMatcher expectCause(Matcher<Throwable> causeMatcher)
   {
     matcherList.add(0, DruidMatchers.fn("cause", Throwable::getCause, causeMatcher));
+    return this;
+  }
+
+  public ExceptionMatcher expectRootCause(Matcher<Throwable> causeMatcher)
+  {
+    matcherList.add(0, DruidMatchers.fn("rootCause", Throwables::getRootCause, causeMatcher));
     return this;
   }
 
