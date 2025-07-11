@@ -162,7 +162,7 @@ fi
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
 mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
 
-# Start peon using CliPeon, with variables `Main internal peon TASK_ID ATTEMPT_ID`
+# Start peon using CliPeon, with variables `Main internal peon TASK_DIR ATTEMPT_ID`
 if [ -n "$TASK_ID" ]; then
     # TASK_ID is only set from PodTemplateTaskAdapter
     exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 --taskId "${TASK_ID}" "$@"
