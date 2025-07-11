@@ -36,16 +36,9 @@ import java.util.Set;
  */
 public abstract class LogicalInputSpec
 {
-  public interface InputProperty
+  public enum InputProperty
   {
-    InputProperty BROADCAST = new Broadcast();
-  }
-
-  private static final class Broadcast implements InputProperty
-  {
-    private Broadcast()
-    {
-    }
+    BROADCAST
   }
 
   final int inputIndex;

@@ -28,8 +28,8 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-@SqlTestFrameworkConfig.ComponentSupplier(DecoupledDartNestedDataQueryTest.NestedDataQueryMSQComponentSupplier.class)
-public class DecoupledDartNestedDataQueryTest extends CalciteNestedDataQueryTest
+@SqlTestFrameworkConfig.ComponentSupplier(DecoupledDartCalciteNestedDataQueryTest.NestedDataQueryMSQComponentSupplier.class)
+public class DecoupledDartCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
 {
 
   public static class NestedDataQueryMSQComponentSupplier extends AbstractDartComponentSupplier
