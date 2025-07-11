@@ -23,8 +23,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.druid.extensions.contrib</groupId>
-  <artifactId>druid-bitmap-exact-count</artifactId>
-  <name>druid-bitmap-exact-count</name>
+  <artifactId>druid-exact-count-bitmap</artifactId>
+  <name>druid-exact-count-bitmap</name>
   <description>Druid Aggregators for counting the exact cardinality of number columns</description>
 
   <parent>

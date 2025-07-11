@@ -19,6 +19,6 @@
 
 package org.apache.druid.testsEx.categories;
 
-public class DruidBitmapExactCount
+public class DruidExactCountBitmap
 {
 }

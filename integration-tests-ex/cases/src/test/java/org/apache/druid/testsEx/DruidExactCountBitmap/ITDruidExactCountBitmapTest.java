@@ -17,15 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.DruidBitmapExactCount;
+package org.apache.druid.testsEx.DruidExactCountBitmap;
 
-import org.apache.druid.testsEx.categories.DruidBitmapExactCount;
+import org.apache.druid.testsEx.categories.DruidExactCountBitmap;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
-@Category(DruidBitmapExactCount.class)
-public class ITDruidBitmapExactCountTest extends DruidBitmapExactCountTest
+@Category(DruidExactCountBitmap.class)
+public class ITDruidExactCountBitmapTest extends DruidExactCountBitmapTest
 {
 }

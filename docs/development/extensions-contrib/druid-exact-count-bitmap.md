@@ -1,5 +1,5 @@
 ---
-id: druid-bitmap-exact-count
+id: druid-exact-count-bitmap
 title: "Exact Count"
 ---
 
@@ -26,7 +26,7 @@ This extension provides exact cardinality counting functionality for LONG type c
 
 ## Installation
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-bitmap-exact-count` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-exact-count-bitmap` in the extensions load list.
 
 ## Comparison with Similar Aggregations
 

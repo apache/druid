@@ -235,7 +235,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
-        <module>extensions-contrib/druid-bitmap-exact-count</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
