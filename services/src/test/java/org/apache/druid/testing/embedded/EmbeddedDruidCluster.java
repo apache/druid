@@ -34,7 +34,6 @@ import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -158,7 +157,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   /**
    * Adds an extension to this cluster. The list of extensions is populated in
-   * the common property {@code druid.extensions.modulesForSimulation}.
+   * the common property {@code druid.extensions.modulesForEmbeddedTest}.
    */
   public EmbeddedDruidCluster addExtension(Class<? extends DruidModule> moduleClass)
   {
@@ -167,10 +166,16 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return this;
   }
 
-  public EmbeddedDruidCluster addExtensions(Class<? extends DruidModule>... moduleClasses)
+  /**
+   * Adds extensions to this cluster.
+   *
+   * @see #addExtension(Class)
+   */
+  @SafeVarargs
+  public final EmbeddedDruidCluster addExtensions(Class<? extends DruidModule>... moduleClasses)
   {
     validateNotStarted();
-    extensionModules.addAll(Arrays.asList(moduleClasses));
+    extensionModules.addAll(List.of(moduleClasses));
     return this;
   }
 
@@ -181,9 +186,12 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
-    server.onAddedToCluster(this, commonProperties);
+    server.onAddedToCluster(commonProperties);
     servers.add(server);
     resources.add(server);
+    if (startedFirstDruidServer) {
+      server.beforeStart(this);
+    }
     return this;
   }
 
