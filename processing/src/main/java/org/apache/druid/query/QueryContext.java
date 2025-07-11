@@ -514,14 +514,14 @@ public class QueryContext
 
   public long getDefaultTimeout()
   {
-    final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    final long defaultTimeout = getValue(QueryContexts.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     if (defaultTimeout >= 0) {
       return defaultTimeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.DEFAULT_TIMEOUT_KEY,
+            QueryContexts.DEFAULT_TIMEOUT.name(),
             defaultTimeout
         )
     );

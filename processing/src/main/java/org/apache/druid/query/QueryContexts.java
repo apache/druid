@@ -88,6 +88,13 @@ public class QueryContexts
                                                                    "Query timeout in milliseconds. Queries that take longer than this timeout are cancelled")
                                                                .register(QuerySettingRegistry.getInstance());
 
+  public static final SettingEntry<Long> DEFAULT_TIMEOUT = SettingEntry.newLongEntry()
+                                                                       .name("defaultTimeout")
+                                                                       .defaultValue(TimeUnit.MINUTES.toMillis(5))
+                                                                       .description(
+                                                                           "Default timeout in milliseconds for queries that don't specify a timeout")
+                                                                       .register(QuerySettingRegistry.getInstance());
+
   public static final SettingEntry<Long> MAX_SCATTER_GATHER_BYTES = SettingEntry.newLongEntry()
                                                                                 .name("maxScatterGatherBytes")
                                                                                 .defaultValue(Long.MAX_VALUE)
@@ -102,7 +109,6 @@ public class QueryContexts
                                                                             "Maximum number of bytes to queue for each query. This limit is enforced to prevent queries from exhausting memory")
                                                                         .register(QuerySettingRegistry.getInstance());
 
-  public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";

@@ -1768,7 +1768,7 @@ public class ClientQuerySegmentWalkerTest
       // Need to blast various parameters that will vary and aren't important to test for.
       ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
       contextBuilder.put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-                    .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
+                    .put(QueryContexts.DEFAULT_TIMEOUT.name(), 0L)
                     .put(QueryContexts.FINALIZE_KEY.name(), true)
                     .put(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), 0L)
                     .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)

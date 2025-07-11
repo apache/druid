@@ -271,6 +271,6 @@ public class Queries
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT_KEY, defaultTimeout));
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT.name(), defaultTimeout));
   }
 }

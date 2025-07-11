@@ -176,7 +176,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
-                  .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+                  .put(QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS)
                   .put(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE)
                   .build();
 
@@ -195,7 +195,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE
   );
 
@@ -203,7 +203,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE
   );
 
@@ -214,7 +214,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE
   );
 
@@ -222,7 +222,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE
   );
 
@@ -231,7 +231,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
       TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
+      QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE
   );
 
@@ -270,7 +270,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT.name(), QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), Long.MAX_VALUE);
 
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
