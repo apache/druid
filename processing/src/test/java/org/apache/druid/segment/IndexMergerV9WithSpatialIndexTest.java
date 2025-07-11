@@ -100,7 +100,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
     return argumentArrays;
   }
 
-  private static IncrementalIndex makeIncrementalIndex() throws IOException
+  private static IncrementalIndex makeIncrementalIndex()
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(

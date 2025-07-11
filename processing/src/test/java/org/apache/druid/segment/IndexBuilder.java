@@ -40,7 +40,6 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -449,13 +448,8 @@ public class IndexBuilder
         .build();
 
     while (rows.hasNext()) {
-      try {
-        InputRow row = rows.next();
-        incrementalIndex.add(row);
-      }
-      catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
-      }
+      InputRow row = rows.next();
+      incrementalIndex.add(row);
     }
     return incrementalIndex;
   }
