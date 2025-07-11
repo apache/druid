@@ -157,12 +157,25 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   /**
    * Adds an extension to this cluster. The list of extensions is populated in
-   * the common property {@code druid.extensions.modulesForSimulation}.
+   * the common property {@code druid.extensions.modulesForEmbeddedTest}.
    */
   public EmbeddedDruidCluster addExtension(Class<? extends DruidModule> moduleClass)
   {
     validateNotStarted();
     extensionModules.add(moduleClass);
+    return this;
+  }
+
+  /**
+   * Adds extensions to this cluster.
+   *
+   * @see #addExtension(Class)
+   */
+  @SafeVarargs
+  public final EmbeddedDruidCluster addExtensions(Class<? extends DruidModule>... moduleClasses)
+  {
+    validateNotStarted();
+    extensionModules.addAll(List.of(moduleClasses));
     return this;
   }
 
@@ -173,9 +186,12 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
   {
-    server.onAddedToCluster(this, commonProperties);
+    server.onAddedToCluster(commonProperties);
     servers.add(server);
     resources.add(server);
+    if (startedFirstDruidServer) {
+      server.beforeStart(this);
+    }
     return this;
   }
 
@@ -247,6 +263,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         }
 
         log.info("Starting resource[%s].", resource);
+        resource.beforeStart(this);
         resource.start();
         resource.onStarted(this);
       }
