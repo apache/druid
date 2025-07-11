@@ -118,6 +118,37 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
    */
   @Deprecated
   public DataSegment(
+      SegmentId segmentId,
+      Map<String, Object> loadSpec,
+      List<String> dimensions,
+      List<String> metrics,
+      ShardSpec shardSpec,
+      CompactionState lastCompactionState,
+      Integer binaryVersion,
+      long size
+  )
+  {
+    this(
+        segmentId.getDataSource(),
+        segmentId.getInterval(),
+        segmentId.getVersion(),
+        loadSpec,
+        dimensions,
+        metrics,
+        null,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        PruneSpecsHolder.DEFAULT
+    );
+  }
+
+  /**
+   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
+   */
+  @Deprecated
+  public DataSegment(
       String dataSource,
       Interval interval,
       String version,
