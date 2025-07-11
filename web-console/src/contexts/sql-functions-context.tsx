@@ -16,9 +16,29 @@
  * limitations under the License.
  */
 
-import 'ace-builds/src-noconflict/ace'; // Import Ace editor and all the sub components used in the app
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-noconflict/ext-searchbox';
-import 'ace-builds/src-noconflict/theme-solarized_dark';
+import type React from 'react';
+import { createContext, useContext } from 'react';
 
-import './ace.scss';
+import type { AvailableFunctions } from '../helpers';
+
+const SqlFunctionsContext = createContext<AvailableFunctions | undefined>(undefined);
+
+export interface SqlFunctionsProviderProps {
+  availableSqlFunctions?: AvailableFunctions;
+  children: React.ReactNode;
+}
+
+export const SqlFunctionsProvider: React.FC<SqlFunctionsProviderProps> = ({
+  availableSqlFunctions,
+  children,
+}) => {
+  return (
+    <SqlFunctionsContext.Provider value={availableSqlFunctions}>
+      {children}
+    </SqlFunctionsContext.Provider>
+  );
+};
+
+export const useAvailableSqlFunctions = () => {
+  return useContext(SqlFunctionsContext);
+};

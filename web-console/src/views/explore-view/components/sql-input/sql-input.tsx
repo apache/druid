@@ -18,15 +18,15 @@
 
 import type { Ace } from 'ace-builds';
 import type { Column } from 'druid-query-toolkit';
-import { C } from 'druid-query-toolkit';
 import React from 'react';
 import AceEditor from 'react-ace';
 
 import { getSqlCompletions } from '../../../../ace-completions/sql-completions';
+import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
 import type { RowColumn } from '../../../../utils';
-import { uniq } from '../../../../utils';
 
 const V_PADDING = 10;
+const ACE_THEME = 'solarized_dark';
 
 export interface SqlInputProps {
   value: string;
@@ -36,109 +36,102 @@ export interface SqlInputProps {
   columns?: readonly Column[];
   autoFocus?: boolean;
   showGutter?: boolean;
+  includeAggregates?: boolean;
 }
 
-export class SqlInput extends React.PureComponent<SqlInputProps> {
-  static aceTheme = 'solarized_dark';
+export const SqlInput = React.forwardRef<
+  { goToPosition: (rowColumn: RowColumn) => void } | undefined,
+  SqlInputProps
+>(function SqlInput(props, ref) {
+  const {
+    value,
+    onValueChange,
+    placeholder,
+    autoFocus,
+    editorHeight,
+    showGutter,
+    columns,
+    includeAggregates,
+  } = props;
 
-  private aceEditor: Ace.Editor | undefined;
+  const availableSqlFunctions = useAvailableSqlFunctions();
+  const aceEditorRef = React.useRef<Ace.Editor | undefined>();
 
-  static getCompletions(columns: readonly Column[], quote: boolean): Ace.Completion[] {
-    return ([] as Ace.Completion[]).concat(
-      uniq(columns.map(column => column.name)).map(v => ({
-        value: quote ? String(C(v)) : v,
-        score: 50,
-        meta: 'column',
-      })),
-    );
-  }
-
-  constructor(props: SqlInputProps) {
-    super(props);
-    this.state = {};
-  }
-
-  componentWillUnmount() {
-    delete this.aceEditor;
-  }
-
-  private readonly handleChange = (value: string) => {
-    const { onValueChange } = this.props;
-    if (!onValueChange) return;
-    onValueChange(value);
-  };
-
-  public goToPosition(rowColumn: RowColumn) {
-    const { aceEditor } = this;
+  const goToPosition = React.useCallback((rowColumn: RowColumn) => {
+    const aceEditor = aceEditorRef.current;
     if (!aceEditor) return;
     aceEditor.focus(); // Grab the focus
     aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
-    // If we had an end we could also do
-    // aceEditor.getSelection().selectToPosition({ row: endRow, column: endColumn });
-  }
+  }, []);
 
-  render() {
-    const { value, onValueChange, placeholder, autoFocus, editorHeight, showGutter } = this.props;
+  React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
 
-    const getColumns = () => this.props.columns?.map(column => column.name);
-    const cmp: Ace.Completer[] = [
-      {
-        getCompletions: (_state, session, pos, prefix, callback) => {
-          const allText = session.getValue();
-          const line = session.getLine(pos.row);
-          const charBeforePrefix = line[pos.column - prefix.length - 1];
-          const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
-          callback(
-            null,
-            getSqlCompletions({
-              allText,
-              lineBeforePrefix,
-              charBeforePrefix,
-              prefix,
-              columns: getColumns(),
-            }),
-          );
-        },
+  const handleChange = React.useCallback(
+    (value: string) => {
+      if (!onValueChange) return;
+      onValueChange(value);
+    },
+    [onValueChange],
+  );
+
+  const handleAceLoad = React.useCallback((editor: Ace.Editor) => {
+    editor.renderer.setPadding(V_PADDING);
+    editor.renderer.setScrollMargin(V_PADDING, V_PADDING, 0, 0);
+    aceEditorRef.current = editor;
+  }, []);
+
+  const getColumns = () => columns?.map(column => column.name);
+  const cmp: Ace.Completer[] = [
+    {
+      getCompletions: (_state, session, pos, prefix, callback) => {
+        const allText = session.getValue();
+        const line = session.getLine(pos.row);
+        const charBeforePrefix = line[pos.column - prefix.length - 1];
+        const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
+        callback(
+          null,
+          getSqlCompletions({
+            allText,
+            lineBeforePrefix,
+            charBeforePrefix,
+            prefix,
+            columns: getColumns(),
+            availableSqlFunctions,
+            skipAggregates: !includeAggregates,
+          }),
+        );
       },
-    ];
+    },
+  ];
 
-    return (
-      <AceEditor
-        mode="dsql"
-        theme={SqlInput.aceTheme}
-        className="sql-input placeholder-padding"
-        // 'react-ace' types are incomplete. Completion options can accept completers array.
-        enableBasicAutocompletion={cmp as any}
-        enableLiveAutocompletion={cmp as any}
-        name="ace-editor"
-        onChange={this.handleChange}
-        focus
-        fontSize={12}
-        width="100%"
-        height={editorHeight ? `${editorHeight}px` : '100%'}
-        showGutter={Boolean(showGutter)}
-        showPrintMargin={false}
-        tabSize={2}
-        value={value}
-        readOnly={!onValueChange}
-        editorProps={{
-          $blockScrolling: Infinity,
-        }}
-        setOptions={{
-          showLineNumbers: true,
-          newLineMode: 'unix' as any, // This type is specified incorrectly in AceEditor
-        }}
-        placeholder={placeholder || 'SELECT * FROM ...'}
-        onLoad={(editor: Ace.Editor) => {
-          editor.renderer.setPadding(V_PADDING);
-          editor.renderer.setScrollMargin(V_PADDING, V_PADDING, 0, 0);
-          this.aceEditor = editor;
-
-          if (autoFocus) {
-            editor.focus();
-          }
-        }}
-      />
-    );
-  }
-}
+  return (
+    <AceEditor
+      mode="dsql"
+      theme={ACE_THEME}
+      className="sql-input placeholder-padding"
+      // 'react-ace' types are incomplete. Completion options can accept an array of completers.
+      enableBasicAutocompletion={cmp as any}
+      enableLiveAutocompletion={cmp as any}
+      name="ace-editor"
+      onChange={handleChange}
+      focus={autoFocus}
+      fontSize={12}
+      width="100%"
+      height={editorHeight ? `${editorHeight}px` : '100%'}
+      showGutter={Boolean(showGutter)}
+      showPrintMargin={false}
+      tabSize={2}
+      value={value}
+      readOnly={!onValueChange}
+      editorProps={{
+        $blockScrolling: Infinity,
+      }}
+      setOptions={{
+        showLineNumbers: true,
+        newLineMode: 'unix' as any, // This type is specified incorrectly in AceEditor
+      }}
+      placeholder={placeholder || 'SQL filter'}
+      onLoad={handleAceLoad}
+    />
+  );
+});

@@ -454,11 +454,13 @@ export class WorkbenchQuery {
     return ret.changeQueryString(newQueryString);
   }
 
-  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
-    const { queryContext } = this;
-    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+  public getMaxNumTasks(): number | undefined {
+    return this.getQueryStringContext().maxNumTasks ?? this.queryContext.maxNumTasks;
+  }
 
-    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    if (!maxNumTasks || typeof this.getMaxNumTasks() === 'number') return this;
+    return this.changeQueryContext({ ...this.queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

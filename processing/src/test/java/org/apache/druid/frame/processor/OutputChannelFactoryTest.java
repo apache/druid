@@ -83,6 +83,27 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void test_openChannel_noPartition() throws IOException, ExecutionException, InterruptedException
+  {
+    OutputChannel channel = outputChannelFactory.openChannel(1);
+
+    Assert.assertEquals(1, channel.getPartitionNumber());
+
+    // write data to the channel
+    WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
+    writableFrameChannel.writabilityFuture().get();
+    writableFrameChannel.write(frame);
+    writableFrameChannel.close();
+
+    // read back data from the channel
+    verifySingleFrameReadableChannel(
+        channel.getReadableChannel(),
+        sourceCursorFactory
+    );
+    Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+  }
+
+  @Test
   public void test_openPartitionedChannel() throws IOException, ExecutionException, InterruptedException
   {
     PartitionedOutputChannel channel = outputChannelFactory.openPartitionedChannel("test", true);
