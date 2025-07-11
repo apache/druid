@@ -70,7 +70,6 @@ public class QueryContexts
                                                                        "Query priority. Queries with higher priority get precedence for resource allocation")
                                                                    .register(QuerySettingRegistry.getInstance());
 
-
   public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
                                                                        .name("finalize")
                                                                        .defaultValue(null)
@@ -78,7 +77,10 @@ public class QueryContexts
                                                                            "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
                                                                        .register(QuerySettingRegistry.getInstance());
 
-  public static final String LANE_KEY = "lane";
+  public static final SettingEntry<String> LANE = SettingEntry.newStringEntry()
+                                                              .name("lane")
+                                                              .register(QuerySettingRegistry.getInstance());
+
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";

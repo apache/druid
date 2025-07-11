@@ -410,7 +410,7 @@ public class QueryContext
 
   public String getLane()
   {
-    return getString(QueryContexts.LANE_KEY);
+    return getValue(QueryContexts.LANE);
   }
 
   public boolean getEnableParallelMerges()

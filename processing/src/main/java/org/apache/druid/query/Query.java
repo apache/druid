@@ -253,7 +253,7 @@ public interface Query<T>
 
   default Query<T> withLane(String lane)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE.name(), lane));
   }
 
   default VirtualColumns getVirtualColumns()

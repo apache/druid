@@ -188,7 +188,7 @@ public class HiLoQueryLaningStrategyTest
   public void testLaningPreservesManualSetLane()
   {
     TimeseriesQuery query = queryBuilder.context(
-        ImmutableMap.of(QueryContexts.PRIORITY.name(), 100, QueryContexts.LANE_KEY, "low")
+        ImmutableMap.of(QueryContexts.PRIORITY.name(), 100, QueryContexts.LANE.name(), "low")
     ).build();
     Assert.assertEquals(
         HiLoQueryLaningStrategy.LOW,
