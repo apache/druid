@@ -395,13 +395,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  public void test_unnest_task_withRealtime()
-  {
-    // TODO: add test
-  }
-
-  @Test
-  @Timeout(60)
   public void test_selectSortMergeJoin_dart()
   {
     final long selectedCount = Long.parseLong(
