@@ -65,7 +65,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -74,7 +73,6 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -82,37 +80,16 @@ import java.util.concurrent.ExecutionException;
  * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
  * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
-public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
+public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
 {
   private static final Period TASK_DURATION = Period.hours(1);
   private static final int TASK_COUNT = 2;
-  private static final String LOOKUP_TABLE = "test_lookup";
-  private static final String BULK_UPDATE_LOOKUP_PAYLOAD
-      = "{\n"
-        + "  \"__default\": {\n"
-        + "    \"%s\": {\n"
-        + "      \"version\": \"v1\",\n"
-        + "      \"lookupExtractorFactory\": {\n"
-        + "        \"type\": \"map\",\n"
-        + "        \"map\": {\n"
-        + "          \"#en.wikipedia\": \"English\",\n"
-        + "          \"#fr.wikipedia\": \"French\",\n"
-        + "          \"#eu.wikipedia\": \"European\",\n"
-        + "          \"#ar.wikipedia\": \"Arabic\",\n"
-        + "          \"#cs.wikipedia\": \"Czech\"\n"
-        + "        }\n"
-        + "      }\n"
-        + "    }\n"
-        + "  }\n"
-        + "}";
-
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
-  private final int totalRows = TestIndex.getMMappedWikipediaIndex().getNumRows();
 
   private KafkaResource kafka;
   private String topic;
@@ -165,38 +142,11 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     // Initialize the indexers and brokers later.
     cluster.addServer(coordinator)
            .addServer(overlord)
-           .addServer(router);
-
+           .addServer(router)
+           .addServer(historical)
+           .addServer(indexer)
+           .addServer(broker);
     return cluster;
-  }
-
-  @BeforeAll
-  @Override
-  protected void setup() throws Exception
-  {
-    cluster = createCluster();
-    cluster.start();
-
-    // Initialize lookups
-    cluster.callApi().onLeaderCoordinator(
-        c -> c.updateAllLookups(Map.of())
-    );
-
-    final String lookupPayload = StringUtils.format(
-        BULK_UPDATE_LOOKUP_PAYLOAD,
-        LOOKUP_TABLE
-    );
-    cluster.callApi().onLeaderCoordinator(
-        c -> c.updateAllLookups(EmbeddedClusterApis.deserializeJsonToMap(lookupPayload))
-    );
-
-    // Initialize the broker/data-servers later so that lookups are loaded on startup.
-    cluster.addServer(broker);
-    broker.start();
-    cluster.addServer(indexer);
-    indexer.start();
-    cluster.addServer(historical);
-    historical.start();
   }
 
   @BeforeEach
@@ -216,7 +166,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
     // Send data to Kafka.
     final QueryableIndexCursorFactory wikiCursorFactory =
-        new QueryableIndexCursorFactory(TestIndex.getMMappedWikipediaIndex());
+        new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
     final RowSignature wikiSignature = wikiCursorFactory.getRowSignature();
     kafka.produceRecordsToTopic(
         FrameTestUtil.readRowsFromCursorFactory(wikiCursorFactory)
@@ -239,6 +189,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
                      .toList()
     );
 
+    final int totalRows = TestIndex.getMMappedTestIndex().getNumRows();
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
@@ -266,289 +217,16 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  public void test_selectCount_task_default()
+  @Disabled
+  public void test_Unnest()
   {
-    final String sql = StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource);
+    final String sql = StringUtils.format("SELECT * FROM \"%s\"", dataSource);
     final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
 
     // By default tasks do not include realtime data; count is zero.
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         Collections.singletonList(new Object[]{0}),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_selectCount_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT COUNT(*) FROM \"%s\"",
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        Collections.singletonList(new Object[]{totalRows}),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_selectCount_dart_default()
-  {
-    final String sql = StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource);
-    final long selectedCount = Long.parseLong(msqApis.runDartSql(sql));
-
-    // By default Dart includes realtime data.
-    Assertions.assertEquals(totalRows, selectedCount);
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_selectCount_dart_noRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'NONE';\n"
-        + "SELECT COUNT(*) FROM \"%s\"",
-        dataSource
-    );
-
-    final long selectedCount = Long.parseLong(msqApis.runDartSql(sql));
-    Assertions.assertEquals(0, selectedCount);
-  }
-
-  @Test
-  @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
-  public void test_selectBroadcastJoin_dart()
-  {
-    final long selectedCount = Long.parseLong(
-        msqApis.runDartSql(
-            "SELECT COUNT(*) FROM \"%s\"\n"
-            + "WHERE countryName IN (\n"
-            + "  SELECT countryName\n"
-            + "  FROM \"%s\"\n"
-            + "  WHERE countryName IS NOT NULL\n"
-            + "  GROUP BY 1\n"
-            + "  ORDER BY COUNT(*) DESC\n"
-            + "  LIMIT 1\n"
-            + ")",
-            dataSource,
-            dataSource
-        )
-    );
-
-    Assertions.assertEquals(528, selectedCount);
-  }
-
-  @Test
-  @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
-  public void test_selectBroadcastJoin_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT COUNT(*) FROM \"%s\"\n"
-        + "WHERE countryName IN (\n"
-        + "  SELECT countryName\n"
-        + "  FROM \"%s\"\n"
-        + "  WHERE countryName IS NOT NULL\n"
-        + "  GROUP BY 1\n"
-        + "  ORDER BY COUNT(*) DESC\n"
-        + "  LIMIT 1\n"
-        + ")",
-        dataSource,
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        Collections.singletonList(new Object[]{528}),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_selectSortMergeJoin_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';"
-        + "SET sqlJoinAlgorithm = 'sortMerge';\n"
-        + "SELECT COUNT(*) FROM \"%s\"\n"
-        + "WHERE countryName IN (\n"
-        + "  SELECT countryName\n"
-        + "  FROM \"%s\"\n"
-        + "  WHERE countryName IS NOT NULL\n"
-        + "  GROUP BY 1\n"
-        + "  ORDER BY COUNT(*) DESC\n"
-        + "  LIMIT 1\n"
-        + ")",
-        dataSource,
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        Collections.singletonList(new Object[]{528}),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  @Disabled
-  public void test_selectJoinwithLookup_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT \n"
-        + " l.v AS newName, \n"
-        + " SUM(w.\"added\") AS total\n"
-        + "FROM \"%s\" w INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 2 DESC\n",
-        dataSource,
-        LOOKUP_TABLE
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"English", 3045299},
-            new Object[]{"French", 642555},
-            new Object[]{"Arabic", 153605},
-            new Object[]{"Czech", 132768},
-            new Object[]{"European", 6690}
-        ),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_selectJoinWithConcatVirtualDimension_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT\n"
-        + "  \"channel\",\n"
-        + "  \"countryIsoCode\",\n"
-        + "  CONCAT(w.\"cityName\", ': ', l.v),\n"
-        + "  \"user\"\n"
-        + "FROM %s w\n"
-        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
-        + "WHERE\n"
-        + "  w.\"cityName\" IS NOT NULL\n"
-        + "  AND \"added\" > 1000 AND \"delta\" > 5000\n"
-        + "\n",
-        dataSource,
-        LOOKUP_TABLE
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"#en.wikipedia","GB","London: English","78.145.31.93"},
-            new Object[]{"#en.wikipedia","IN","Bhopal: English","14.139.241"},
-            new Object[]{"#ar.wikipedia","AE","Dubai: Arabic","86.98.5.51"}
-        ),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_scanWithFilter_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT \"channel\", \"page\", \"user\", \"deleted\"\n"
-        + "FROM \"%s\"\n"
-        + "WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10",
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"#en.wikipedia","Coca-Cola formula","124.169.17.234", 0},
-            new Object[]{"#en.wikipedia","List of Harry Potter characters","121.211.82.121", 0}
-        ),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_groupByWithFilter_task_withRealtime()
-  {
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT \"channel\", COUNT(*)\n"
-        + "FROM \"%s\"\n"
-        + "WHERE \"countryName\" = 'Australia'\n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 1 DESC",
-        dataSource
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"#en.wikipedia", 63},
-            new Object[]{"#de.wikipedia", 2}
-        ),
-        payload.getResults().getResults()
-    );
-  }
-
-  @Test
-  @Timeout(60)
-  public void test_scanWithFilterAfterJoin_task_withRealtime()
-  {
-    // SELECT * FROM wikipedia INNER JOIN lookup.xyz ON wikipedia.foo = xyz.k WHERE CONCAT(wikipedia.foo, ': ', xyz.v) = 'something: something'
-    final String sql = StringUtils.format(
-        "SET includeSegmentSource = 'REALTIME';\n"
-        + "SELECT \n"
-        + "  \"page\", \n"
-        + "  \"user\", \n"
-        + "  \"added\"\n"
-        + "FROM %s w\n"
-        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
-        + "WHERE CONCAT(w.\"cityName\", ': ', l.v) = 'London: English' AND \"comment\" IN ('/* Works */', '/* Early life */')\n",
-        dataSource,
-        LOOKUP_TABLE
-    );
-
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        List.of(
-            new Object[]{"Andy Wilman", "109.156.217.121", 0},
-            new Object[]{"Angharad Rees", "89.240.46.182", 578},
-            new Object[]{"Chazz Palminteri", "81.178.229.60", 10}
-        ),
         payload.getResults().getResults()
     );
   }
