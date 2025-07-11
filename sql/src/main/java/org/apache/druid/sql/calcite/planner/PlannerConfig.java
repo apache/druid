@@ -38,7 +38,7 @@ public class PlannerConfig
                                                                                                  .scope("sql")
                                                                                                  .defaultValue(true)
                                                                                                  .description("Use approximate count distinct in SQL queries.")
-                                                                                                 .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                                                 .register(QuerySettingRegistry.getInstance());
 
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";

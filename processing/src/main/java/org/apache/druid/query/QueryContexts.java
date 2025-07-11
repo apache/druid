@@ -47,28 +47,28 @@ public class QueryContexts
                                                                   .defaultValue(null)
                                                                   .description(
                                                                       "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
-                                                                  .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                  .register(QuerySettingRegistry.getInstance());
 
   public static final SettingEntry<String> SUB_QUERY_ID = SettingEntry.newStringEntry()
                                                                       .name("subQueryId")
                                                                       .defaultValue(null)
                                                                       .description(
                                                                           "Unique identifier for the sub-query, that is used to map the global shared resources (specifically merge buffers) to the sub-query's runtime")
-                                                                      .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                      .register(QuerySettingRegistry.getInstance());
 
   public static final SettingEntry<String> SQL_QUERY_ID = SettingEntry.newStringEntry()
                                                                       .name("sqlQueryId")
                                                                       .defaultValue(null)
                                                                       .description(
                                                                           "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
-                                                                      .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                      .register(QuerySettingRegistry.getInstance());
 
   public static final SettingEntry<Integer> PRIORITY = SettingEntry.newIntegerEntry()
                                                                    .name("priority")
                                                                    .defaultValue(0)
                                                                    .description(
                                                                        "Query priority. Queries with higher priority get precedence for resource allocation")
-                                                                   .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                   .register(QuerySettingRegistry.getInstance());
 
 
   public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
@@ -76,7 +76,7 @@ public class QueryContexts
                                                                        .defaultValue(null)
                                                                        .description(
                                                                            "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                       .register(QuerySettingRegistry.getInstance());
 
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
@@ -125,7 +125,7 @@ public class QueryContexts
                                                                                      .defaultValue(true)
                                                                                      .description(
                                                                                          "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                                     .buildAndRegister(
+                                                                                     .register(
                                                                                          QuerySettingRegistry.getInstance());
 
   //public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
@@ -170,7 +170,7 @@ public class QueryContexts
                                                                            .defaultValue(null)
                                                                            .description(
                                                                                "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
-                                                                           .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                           .register(QuerySettingRegistry.getInstance());
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
@@ -182,7 +182,7 @@ public class QueryContexts
                                                                        .defaultValue(null)
                                                                        .description(
                                                                            "Unique identifier for the Dart query, used to manage query resources and execution tracking")
-                                                                       .buildAndRegister(QuerySettingRegistry.getInstance());
+                                                                       .register(QuerySettingRegistry.getInstance());
   public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name();
   public static final String CTX_FULL_REPORT = "fullReport";
 

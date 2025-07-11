@@ -158,7 +158,7 @@ public abstract class SettingEntry<T>
       return this;
     }
 
-    public SettingEntry<T> buildAndRegister(ISettingRegistry registry)
+    public SettingEntry<T> register(ISettingRegistry registry)
     {
       return registry.register(build());
     }
