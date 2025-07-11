@@ -61,5 +61,4 @@ public class SortStage extends AbstractShuffleStage
   {
     return null;
   }
-
 }

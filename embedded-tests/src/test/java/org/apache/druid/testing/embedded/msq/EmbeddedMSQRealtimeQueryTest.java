@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -80,8 +79,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
- * ingest them back into the cluster with a {@code KafkaSupervisor}.
+ * Embedded test to ingest {@link TestIndex#getMMappedWikipediaIndex()} into Kafka tasks, then query
+ * those tasks with MSQ.
  */
 public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 {
@@ -122,8 +121,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
-
     kafka = new KafkaResource();
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
@@ -146,29 +143,29 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
            .addProperty("druid.worker.capacity", "4")
            .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
-    cluster.addExtension(KafkaIndexTaskModule.class)
-           .addExtension(DartControllerModule.class)
-           .addExtension(DartWorkerModule.class)
-           .addExtension(DartControllerMemoryManagementModule.class)
-           .addExtension(DartControllerModule.class)
-           .addExtension(DartWorkerMemoryManagementModule.class)
-           .addExtension(DartWorkerModule.class)
-           .addExtension(IndexerMemoryManagementModule.class)
-           .addExtension(MSQDurableStorageModule.class)
-           .addExtension(MSQIndexingModule.class)
-           .addExtension(MSQSqlModule.class)
-           .addExtension(SqlTaskModule.class)
-           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addCommonProperty("druid.msq.dart.enabled", "true")
-           .useLatchableEmitter()
-           .addResource(kafka);
-
-    // Initialize the indexers and brokers later.
-    cluster.addServer(coordinator)
-           .addServer(overlord)
-           .addServer(router);
-
-    return cluster;
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .addExtensions(
+            KafkaIndexTaskModule.class,
+            DartControllerModule.class,
+            DartWorkerModule.class,
+            DartControllerMemoryManagementModule.class,
+            DartControllerModule.class,
+            DartWorkerMemoryManagementModule.class,
+            DartWorkerModule.class,
+            IndexerMemoryManagementModule.class,
+            MSQDurableStorageModule.class,
+            MSQIndexingModule.class,
+            MSQSqlModule.class,
+            SqlTaskModule.class
+        )
+        .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
+        .addCommonProperty("druid.msq.dart.enabled", "true")
+        .useLatchableEmitter()
+        .addResource(kafka)
+        .addServer(coordinator)
+        .addServer(overlord)
+        .addServer(router);
   }
 
   @BeforeAll

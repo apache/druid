@@ -303,10 +303,6 @@ public class AggregateProjectionMetadata
       }
       Projections.ProjectionMatchBuilder matchBuilder = new Projections.ProjectionMatchBuilder();
 
-      if (timeColumnName != null) {
-        matchBuilder.remapColumn(timeColumnName, ColumnHolder.TIME_COLUMN_NAME)
-                    .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-      }
       final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
       if (queryGrouping != null) {
         for (String queryColumn : queryGrouping) {
@@ -398,13 +394,19 @@ public class AggregateProjectionMetadata
         // check to see if we have an equivalent virtual column defined in the projection, if so we can
         final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
         if (projectionEquivalent != null) {
-          if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
+          final String remapColumnName;
+          if (Objects.equals(projectionEquivalent.getOutputName(), timeColumnName)) {
+            remapColumnName = ColumnHolder.TIME_COLUMN_NAME;
+          } else {
+            remapColumnName = projectionEquivalent.getOutputName();
+          }
+          if (!buildSpecVirtualColumn.getOutputName().equals(remapColumnName)) {
             matchBuilder.remapColumn(
                 buildSpecVirtualColumn.getOutputName(),
-                projectionEquivalent.getOutputName()
+                remapColumnName
             );
           }
-          return matchBuilder.addReferencedPhysicalColumn(projectionEquivalent.getOutputName());
+          return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
         }
 
         matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
@@ -417,8 +419,12 @@ public class AggregateProjectionMetadata
             if (virtualGranularity.isFinerThan(granularity)) {
               return null;
             }
-            return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
-                               .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            // same granularity, replace virtual column directly by remapping it to the physical column
+            if (granularity.equals(virtualGranularity)) {
+              return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
+                                 .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            }
+            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           } else {
             // anything else with __time requires none granularity
             if (Granularities.NONE.equals(granularity)) {
