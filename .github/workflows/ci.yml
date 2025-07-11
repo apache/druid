@@ -85,7 +85,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        split: [ "0/4", "1/4", "2/4", "3/4" ]
+        split: [ "0/8", "1/8", "2/8", "3/8", "4/8", "5/8", "6/8", "7/8" ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
