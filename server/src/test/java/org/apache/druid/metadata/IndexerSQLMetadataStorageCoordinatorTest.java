@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
@@ -80,6 +82,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -3124,6 +3127,112 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
+  public void test_concurrentAppend_toIntervalWithUnusedAppendSegment_createsFreshVersion()
+  {
+    final String wiki = TestDataSource.WIKI;
+    final String appendLockVersion = PendingSegmentRecord.DEFAULT_VERSION_FOR_CONCURRENT_APPEND;
+    final Interval firstOfJan23 = Intervals.of("2023-01-01/P1D");
+
+    // Allocate and commit an APPEND segment
+    final String taskAllocator1 = "taskAlloc1";
+    final SegmentIdWithShardSpec pendingSegment
+        = allocatePendingSegmentForAppendTask(wiki, firstOfJan23, taskAllocator1);
+
+    Assert.assertNotNull(pendingSegment);
+    Assert.assertEquals(appendLockVersion, pendingSegment.getVersion());
+    Assert.assertEquals(0, pendingSegment.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    coordinator.commitAppendSegments(Set.of(segmentV01), Map.of(), taskAllocator1, null);
+
+    verifyIntervalHasUsedSegments(wiki, firstOfJan23, segmentV01);
+    verifyIntervalHasVisibleSegments(wiki, firstOfJan23, segmentV01);
+
+    // Mark the segment as unused with a future update time to avoid race conditions
+    final DateTime markUnusedTime = DateTimes.nowUtc().plusHours(1);
+    transactionFactory.inReadWriteDatasourceTransaction(
+        wiki,
+        t -> t.markAllSegmentsAsUnused(markUnusedTime)
+    );
+    verifyIntervalHasUsedSegments(wiki, firstOfJan23);
+
+    // Allocate and commit another APPEND segment
+    final String taskAllocator2 = "taskAlloc2";
+    final SegmentIdWithShardSpec pendingSegment2
+        = allocatePendingSegmentForAppendTask(wiki, firstOfJan23, taskAllocator2);
+
+    // Verify that the new segment gets a different version
+    Assert.assertNotNull(pendingSegment2);
+    Assert.assertEquals(appendLockVersion + "S", pendingSegment2.getVersion());
+    Assert.assertEquals(0, pendingSegment2.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV02 = asSegment(pendingSegment2);
+    coordinator.commitAppendSegments(Set.of(segmentV02), Map.of(), taskAllocator2, null);
+    Assert.assertNotEquals(segmentV01, segmentV02);
+
+    verifyIntervalHasUsedSegments(wiki, firstOfJan23, segmentV02);
+    verifyIntervalHasVisibleSegments(wiki, firstOfJan23, segmentV02);
+  }
+
+  @Test
+  public void test_allocateCommitDelete_createsFreshVersion_uptoMaxAllowedRetries()
+  {
+    final String wiki = TestDataSource.WIKI;
+    final Interval firstOfJan23 = Intervals.of("2023-01-01/P1D");
+
+    final int maxAllowedAppends = 10;
+    final int expectedParitionNum = 0;
+
+    String expectedVersion = DateTimes.EPOCH.toString();
+
+    // Allocate, commit, delete, repeat
+    for (int i = 0; i < maxAllowedAppends; ++i, expectedVersion += "S") {
+      // Allocate a segment and verify its version and partition number
+      final String taskAllocatorId = IdUtils.getRandomId();
+      final SegmentIdWithShardSpec pendingSegment
+          = allocatePendingSegmentForAppendTask(wiki, firstOfJan23, taskAllocatorId);
+
+      Assert.assertNotNull(pendingSegment);
+      Assert.assertEquals(expectedVersion, pendingSegment.getVersion());
+      Assert.assertEquals(expectedParitionNum, pendingSegment.getShardSpec().getPartitionNum());
+
+      // Commit the segment and verify its version and partition number
+      final DataSegment segment = asSegment(pendingSegment);
+      coordinator.commitAppendSegments(Set.of(segment), Map.of(), taskAllocatorId, null);
+
+      Assert.assertEquals(expectedVersion, segment.getVersion());
+      Assert.assertEquals(expectedParitionNum, segment.getShardSpec().getPartitionNum());
+
+      verifyIntervalHasUsedSegments(wiki, firstOfJan23, segment);
+      verifyIntervalHasVisibleSegments(wiki, firstOfJan23, segment);
+
+      // Mark the segment as unused with a future update time to avoid race conditions
+      final DateTime markUnusedTime = DateTimes.nowUtc().plusHours(1);
+      transactionFactory.inReadWriteDatasourceTransaction(
+          wiki,
+          t -> t.markAllSegmentsAsUnused(markUnusedTime)
+      );
+      verifyIntervalHasUsedSegments(wiki, firstOfJan23);
+    }
+
+    // Verify that the next attempt fails
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            CallbackFailedException.class,
+            () -> allocatePendingSegmentForAppendTask(wiki, firstOfJan23, IdUtils.getRandomId())
+        ),
+        ExceptionMatcher.of(CallbackFailedException.class).expectRootCause(
+            DruidExceptionMatcher.internalServerError().expectMessageIs(
+                "Could not allocate segment"
+                + "[wiki_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_1970-01-01T00:00:00.000Z]"
+                + " as there are too many clashing unused versions(upto [1970-01-01T00:00:00.000ZSSSSSSSSSS])"
+                + " in the interval. Kill the old unused versions to proceed."
+            )
+        )
+    );
+  }
+
+  @Test
   public void testDeletePendingSegment() throws InterruptedException
   {
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
@@ -4231,6 +4340,26 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
   }
 
+  private SegmentIdWithShardSpec allocatePendingSegmentForAppendTask(
+      String dataSource,
+      Interval interval,
+      String taskAllocatorId
+  )
+  {
+    return coordinator.allocatePendingSegment(
+        dataSource,
+        interval,
+        true,
+        new SegmentCreateRequest(
+            IdUtils.getRandomId(),
+            null,
+            PendingSegmentRecord.DEFAULT_VERSION_FOR_CONCURRENT_APPEND,
+            NumberedPartialShardSpec.instance(),
+            taskAllocatorId
+        )
+    );
+  }
+
   private int insertPendingSegments(
       String dataSource,
       List<PendingSegmentRecord> pendingSegments,
@@ -4246,5 +4375,44 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
   {
     insertUsedSegments(segments, upgradedFromSegmentIdMap, derbyConnectorRule, mapper);
+  }
+
+  private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
+  {
+    final SegmentId id = pendingSegment.asSegmentId();
+    return new DataSegment(
+        id,
+        Map.of(id.toString(), id.toString()),
+        List.of(),
+        List.of(),
+        pendingSegment.getShardSpec(),
+        null,
+        0,
+        0
+    );
+  }
+
+  private void verifyIntervalHasUsedSegments(
+      String dataSource,
+      Interval interval,
+      DataSegment... expectedSegments
+  )
+  {
+    Assert.assertEquals(
+        Set.of(expectedSegments),
+        coordinator.retrieveUsedSegmentsForIntervals(dataSource, List.of(interval), Segments.INCLUDING_OVERSHADOWED)
+    );
+  }
+
+  private void verifyIntervalHasVisibleSegments(
+      String dataSource,
+      Interval interval,
+      DataSegment... expectedSegments
+  )
+  {
+    Assert.assertEquals(
+        Set.of(expectedSegments),
+        coordinator.retrieveUsedSegmentsForIntervals(dataSource, List.of(interval), Segments.ONLY_VISIBLE)
+    );
   }
 }
