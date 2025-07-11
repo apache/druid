@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -45,8 +47,8 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addServer(coordinator)
                                .addServer(overlord)
+                               .addServer(coordinator)
                                .addServer(new EmbeddedIndexer())
                                .addServer(new EmbeddedBroker())
                                .addServer(new EmbeddedHistorical());
@@ -58,8 +60,8 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
     // Run an APPEND task to ingest data into an interval
     final String data1Row = "2013-01-01T00:00:00.000Z,shirt,100";
     final String task1 = EmbeddedClusterApis.newTaskId(dataSource);
-    final TaskPayload taskPayload =
-        TaskPayload.ofType("index")
+    final TaskBuilder<IndexTask, IndexTask.IndexTuningConfig> taskBuilder =
+        TaskBuilder.ofTypeIndex()
                    .dataSource(dataSource)
                    .csvInputFormatWithColumns("time", "item", "value")
                    .isoTimestampColumn("time")
@@ -68,7 +70,7 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
                    .context("useConcurrentLocks", true)
                    .dimensions();
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(task1, taskPayload.withId(task1))
+        o -> o.runTask(task1, taskBuilder.withId(task1))
     );
     cluster.callApi().waitForTaskToSucceed(task1, overlord);
 
@@ -87,7 +89,7 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
     // Run the APPEND task again with a different taskId
     final String task2 = EmbeddedClusterApis.newTaskId(dataSource);
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(task2, taskPayload.withId(task2))
+        o -> o.runTask(task2, taskBuilder.withId(task2))
     );
     cluster.callApi().waitForTaskToSucceed(task2, overlord);
 

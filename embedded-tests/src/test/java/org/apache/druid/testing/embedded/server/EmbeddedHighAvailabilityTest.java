@@ -24,6 +24,8 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -39,7 +41,6 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.embedded.indexing.TaskPayload;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -73,10 +74,10 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addServer(coordinator1)
-                               .addServer(coordinator2)
                                .addServer(overlord1)
                                .addServer(overlord2)
+                               .addServer(coordinator1)
+                               .addServer(coordinator2)
                                .addServer(indexer)
                                .addServer(broker)
                                .addServer(router);
@@ -106,16 +107,15 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   {
     // Ingest some data so that we can query sys tables later
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    final TaskPayload taskPayload =
-        TaskPayload.ofType("index")
-                   .dataSource(dataSource)
-                   .csvInputFormatWithColumns("time", "item", "value")
-                   .isoTimestampColumn("time")
-                   .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
-                   .dimensions();
-    cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskPayload.withId(taskId))
-    );
+    final Task task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .csvInputFormatWithColumns("time", "item", "value")
+        .isoTimestampColumn("time")
+        .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+        .dimensions()
+        .withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
 
     // Run sys queries, switch leaders, repeat

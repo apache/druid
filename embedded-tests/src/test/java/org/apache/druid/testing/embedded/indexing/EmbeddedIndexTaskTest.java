@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -62,9 +63,9 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
@@ -143,7 +144,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
   private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
-    return TaskPayload.ofType("index")
+    return TaskBuilder.ofTypeIndex()
                       .dataSource(dataSource)
                       .isoTimestampColumn("time")
                       .csvInputFormatWithColumns("time", "item", "value")

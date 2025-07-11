@@ -19,10 +19,21 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -38,7 +49,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -61,20 +71,20 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
   }
 
-  public static List<Map<String, Object>> getTestParamPartitionsSpec()
+  public static List<PartitionsSpec> getTestParamPartitionsSpec()
   {
     return List.of(
-        Map.of("type", "dynamic"),
-        Map.of("type", "hashed", "numShards", 2),
-        Map.of("type", "range", "targetRowsPerSegment", 2, "partitionDimensions", List.of("namespace"))
+        new DynamicPartitionsSpec(null, null),
+        new HashedPartitionsSpec(null, 2, null, null),
+        new SingleDimensionPartitionsSpec(2, null, "namespace", false)
     );
   }
 
@@ -85,15 +95,16 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
       final long segmentAvailabilityTimeoutMillis
   )
   {
-    final TaskPayload indexTask =
-        TaskPayload.ofType("index_parallel")
+    final TaskBuilder<?, ?> indexTask =
+        TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource)
-                   .partitionsSpec(Map.of("type", "dynamic"))
                    .timestampColumn("timestamp")
-                   .inputFormat(Map.of("type", "json"))
+                   .jsonInputFormat()
                    .localInputSourceWithFiles(Resources.WIKIPEDIA_1_JSON)
                    .dimensions()
-                   .awaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis);
+                   .tuningConfig(
+                       t -> t.withAwaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis)
+                   );
 
     final String taskId = runTask(indexTask, dataSource);
 
@@ -114,30 +125,34 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
   @MethodSource("getTestParamPartitionsSpec")
   @ParameterizedTest(name = "partitionsSpec={0}")
-  public void test_runIndexTask_andReindexIntoAnotherDatasource(Map<String, Object> partitionsSpec)
+  public void test_runIndexTask_andReindexIntoAnotherDatasource(PartitionsSpec partitionsSpec)
   {
-    final boolean isRollup = !partitionsSpec.get("type").equals("dynamic");
+    final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
 
-    final TaskPayload indexTask =
-        TaskPayload.ofType("index_parallel")
+    final TaskBuilder<?, ?> indexTask =
+        TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource)
-                   .partitionsSpec(partitionsSpec)
-                   .forceGuaranteedRollup(isRollup)
                    .timestampColumn("timestamp")
-                   .inputFormat(Map.of("type", "json"))
+                   .jsonInputFormat()
                    .localInputSourceWithFiles(
-                      Resources.WIKIPEDIA_1_JSON,
-                      Resources.WIKIPEDIA_2_JSON,
-                      Resources.WIKIPEDIA_3_JSON
-                  )
+                       Resources.WIKIPEDIA_1_JSON,
+                       Resources.WIKIPEDIA_2_JSON,
+                       Resources.WIKIPEDIA_3_JSON
+                   )
                    .segmentGranularity("DAY")
                    .dimensions("namespace", "page", "language")
-                   .metricAggregate("added", "doubleSum")
-                   .metricAggregate("deleted", "doubleSum")
-                   .metricAggregate("delta", "doubleSum")
-                   .metricAggregate("count", "count")
-                   .maxConcurrentSubTasks(10)
-                   .splitHintSpec(Map.of("type", "maxSize", "maxSplitSize", 1));
+                   .metricAggregates(
+                       new DoubleSumAggregatorFactory("added", "added"),
+                       new DoubleSumAggregatorFactory("deleted", "deleted"),
+                       new DoubleSumAggregatorFactory("delta", "delta"),
+                       new CountAggregatorFactory("count")
+                   )
+                   .tuningConfig(
+                       t -> t.withPartitionsSpec(partitionsSpec)
+                             .withForceGuaranteedRollup(isRollup)
+                             .withMaxNumConcurrentSubTasks(10)
+                             .withSplitHintSpec(new MaxSizeSplitHintSpec(1, null))
+                   );
 
     runTask(indexTask, dataSource);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
@@ -145,16 +160,25 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
     // Re-index into a different datasource, indexing 1 segment per sub-task
     final String dataSource2 = EmbeddedClusterApis.createTestDatasourceName();
-    final TaskPayload reindexTaskSplitBySegment =
-        TaskPayload.ofType("index_parallel")
+    final TaskBuilder<?, ?> reindexTaskSplitBySegment =
+        TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource2)
-                   .dimensionsSpec(Map.of("dimensionExclusions", List.of("robot", "continent")))
                    .isoTimestampColumn("ignored")
                    .druidInputSource(dataSource, Intervals.ETERNITY)
-                   .maxConcurrentSubTasks(10)
-                   .forceGuaranteedRollup(isRollup)
-                   .partitionsSpec(partitionsSpec)
-                   .splitHintSpec(Map.of("type", "segments", "maxInputSegmentBytesPerTask", 1));
+                   .tuningConfig(
+                       t -> t.withPartitionsSpec(partitionsSpec)
+                             .withMaxNumConcurrentSubTasks(10)
+                             .withForceGuaranteedRollup(isRollup)
+                             .withSplitHintSpec(new SegmentsSplitHintSpec(HumanReadableBytes.valueOf(1), null))
+                   )
+                   .dataSchema(
+                       d -> d.withDimensions(
+                           DimensionsSpec
+                               .builder()
+                               .setDimensionExclusions(List.of("robot", "continent"))
+                               .build()
+                       )
+                   );
 
     runTask(reindexTaskSplitBySegment, dataSource2);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator);
@@ -162,23 +186,32 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
     // Re-index into a different datasource, indexing 1 file per sub-task
     final String dataSource3 = EmbeddedClusterApis.createTestDatasourceName();
-    final TaskPayload reindexTaskSplitByFile =
-        TaskPayload.ofType("index_parallel")
+    final TaskBuilder<?, ?> reindexTaskSplitByFile =
+        TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource3)
-                   .partitionsSpec(partitionsSpec)
-                   .forceGuaranteedRollup(isRollup)
                    .timestampColumn("timestamp")
                    .druidInputSource(dataSource, Intervals.ETERNITY)
-                   .dimensionsSpec(Map.of("dimensionExclusions", List.of("robot", "continent")))
-                   .maxConcurrentSubTasks(10)
-                   .splitHintSpec(Map.of("type", "maxSize", "maxNumFiles", 1));
+                   .dataSchema(
+                       d -> d.withDimensions(
+                           DimensionsSpec
+                               .builder()
+                               .setDimensionExclusions(List.of("robot", "continent"))
+                               .build()
+                       )
+                   )
+                   .tuningConfig(
+                       t -> t.withPartitionsSpec(partitionsSpec)
+                             .withMaxNumConcurrentSubTasks(10)
+                             .withForceGuaranteedRollup(isRollup)
+                             .withSplitHintSpec(new MaxSizeSplitHintSpec(null, 1))
+                   );
 
     runTask(reindexTaskSplitByFile, dataSource3);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator);
     runQueries(dataSource3);
   }
 
-  private String runTask(TaskPayload taskBuilder, String dataSource)
+  private String runTask(TaskBuilder<?, ?> taskBuilder, String dataSource)
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));

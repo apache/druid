@@ -28,15 +28,20 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -80,7 +85,6 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.embedded.indexing.TaskPayload;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.Matcher;
@@ -102,7 +106,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Supplier;
@@ -114,9 +117,9 @@ import java.util.stream.Collectors;
 public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
 {
   private static final Logger LOG = new Logger(EmbeddedAutoCompactionTest.class);
-  private static final Supplier<TaskPayload> INDEX_TASK =
-      () -> TaskPayload
-          .ofType("index")
+  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK =
+      () -> TaskBuilder
+          .ofTypeIndex()
           .jsonInputFormat()
           .localInputSourceWithFiles(
               Resources.WIKIPEDIA_1_JSON,
@@ -129,20 +132,22 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
               "language", "tags", "user", "unpatrolled", "newPage", "robot",
               "anonymous", "namespace", "continent", "country", "region", "city"
           )
-          .metricAggregate("ingested_events", "count")
-          .metricAggregate("added", "doubleSum")
-          .metricAggregate("deleted", "doubleSum")
-          .metricAggregate("delta", "doubleSum")
-          .metricAggregate("thetaSketch", "thetaSketch", "user")
-          .metricAggregate("HLLSketchBuild", "HLLSketchBuild", "user")
-          .metricAggregate("quantilesDoublesSketch", "quantilesDoublesSketch", "delta")
+          .metricAggregates(
+              new CountAggregatorFactory("ingested_events"),
+              new DoubleSumAggregatorFactory("added", "added"),
+              new DoubleSumAggregatorFactory("deleted", "deleted"),
+              new DoubleSumAggregatorFactory("delta", "delta"),
+              new SketchMergeAggregatorFactory("thetaSketch", "user", null, null, null, null),
+              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", null, null, null, null, true),
+              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", null)
+          )
           .dynamicPartitionWithMaxRows(3)
           .granularitySpec("DAY", "SECOND", true)
           .appendToExisting(false);
 
-  private static final Supplier<TaskPayload> INDEX_TASK_WITH_GRANULARITY_SPEC =
+  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_GRANULARITY_SPEC =
       () -> INDEX_TASK.get().dimensions("language").dynamicPartitionWithMaxRows(10);
-  private static final Supplier<TaskPayload> INDEX_TASK_WITH_DIMENSION_SPEC =
+  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_DIMENSION_SPEC =
       () -> INDEX_TASK.get().granularitySpec("DAY", "DAY", true);
 
   private static final String SELECT_APPROX_COUNT_DISTINCT =
@@ -169,56 +174,67 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
           "Crimson Typhoon,1,905.0,9050.0"
       )
   );
-  private static final Supplier<TaskPayload> INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS =
-      () -> TaskPayload
-          .ofType("index_parallel")
+  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS =
+      () -> TaskBuilder
+          .ofTypeIndexParallel()
           .jsonInputFormat()
           .inlineInputSourceWithData(Resources.JSON_DATA_2_ROWS)
           .isoTimestampColumn("timestamp")
           .appendToExisting(true)
           .granularitySpec("DAY", "HOUR", true)
-          .metricAggregate("ingested_events", "count")
-          .metricAggregate("thetaSketch", "thetaSketch", "user")
-          .metricAggregate("HLLSketchBuild", "HLLSketchBuild", "user")
-          .metricAggregate("quantilesDoublesSketch", "quantilesDoublesSketch", "delta")
-          .metricAggregate("sum_added", "longSum", "added")
-          .metricAggregate("sum_deleted", "longSum", "deleted")
-          .metricAggregate("sum_delta", "longSum", "delta")
-          .metricAggregate("sum_deltaBucket", "longSum", "deltaBucket")
-          .metricAggregate("sum_commentLength", "longSum", "commentLength")
+          .metricAggregates(
+              new SketchMergeAggregatorFactory("thetaSketch", "user", null, null, null, null),
+              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", null, null, null, null, true),
+              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", null),
+              new CountAggregatorFactory("ingested_events"),
+              new LongSumAggregatorFactory("sum_added", "added"),
+              new LongSumAggregatorFactory("sum_deleted", "deleted"),
+              new LongSumAggregatorFactory("sum_delta", "delta"),
+              new LongSumAggregatorFactory("sum_deltaBucket", "deltaBucket"),
+              new LongSumAggregatorFactory("sum_commentLength", "commentLength")
+          )
           .dimensions(
               "isRobot",
               "language", "flags", "isUnpatrolled", "page", "diffUrl", "comment",
               "isNew", "isMinor", "isAnonymous", "namespace"
           );
 
-  private static final Supplier<TaskPayload> INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS =
-      () -> TaskPayload
-          .ofType("index_parallel")
+  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS =
+      () -> TaskBuilder
+          .ofTypeIndexParallel()
           .jsonInputFormat()
           .inlineInputSourceWithData(Resources.JSON_DATA_1_ROW)
           .isoTimestampColumn("timestamp")
           .granularitySpec("DAY", "HOUR", false)
           .appendToExisting(true)
-          .dimensionsSpec(
-              Map.of(
-                  "dimensions",
-                  List.of(
-                      "isRobot",
-                      "language", "flags", "isUnpatrolled", "page", "diffUrl",
-                      Map.of("type", "long", "name", "added"),
-                      "comment",
-                      Map.of("type", "long", "name", "commentLength"),
-                      "isNew", "isMinor",
-                      Map.of("type", "long", "name", "delta"),
-                      "isAnonymous", "user",
-                      Map.of("type", "long", "name", "deltaBucket"),
-                      Map.of("type", "long", "name", "deleted"),
-                      "namespace", "cityName", "countryName", "regionIsoCode",
-                      "metroCode", "countryIsoCode", "regionName"
-                  )
+          .dataSchema(
+              d -> d.withDimensions(
+                  new StringDimensionSchema("isRobot"),
+                  new StringDimensionSchema("language"),
+                  new StringDimensionSchema("flags"),
+                  new StringDimensionSchema("isUnpatrolled"),
+                  new StringDimensionSchema("page"),
+                  new StringDimensionSchema("diffUrl"),
+                  new LongDimensionSchema("added"),
+                  new StringDimensionSchema("comment"),
+                  new LongDimensionSchema("commentLength"),
+                  new StringDimensionSchema("isNew"),
+                  new StringDimensionSchema("isMinor"),
+                  new LongDimensionSchema("delta"),
+                  new StringDimensionSchema("isAnonymous"),
+                  new StringDimensionSchema("user"),
+                  new LongDimensionSchema("deltaBucket"),
+                  new LongDimensionSchema("deleted"),
+                  new StringDimensionSchema("namespace"),
+                  new StringDimensionSchema("cityName"),
+                  new StringDimensionSchema("countryName"),
+                  new StringDimensionSchema("regionIsoCode"),
+                  new StringDimensionSchema("metroCode"),
+                  new StringDimensionSchema("countryIsoCode"),
+                  new StringDimensionSchema("regionName")
               )
           );
+
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
@@ -242,8 +258,8 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)
-                               .addServer(coordinator)
                                .addServer(overlord)
+                               .addServer(coordinator)
                                .addServer(broker)
                                .addServer(new EmbeddedIndexer().addProperty("druid.worker.capacity", "10"))
                                .addServer(new EmbeddedHistorical())
@@ -1369,7 +1385,8 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   public void testAutoCompactionDutyWithSegmentGranularityFinerAndNotAlignWithSegment() throws Exception
   {
     updateCompactionTaskSlot(1, 1);
-    Map<String, Object> specs = Map.of("segmentGranularity", "MONTH", "queryGranularity", "DAY", "rollup", false, "intervals", List.of("2013-08-31T-07/2013-09-02T-07"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    GranularitySpec specs = new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       verifyScanResult("added", "57.0||459.0");
@@ -1415,7 +1432,8 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   public void testAutoCompactionDutyWithSegmentGranularityCoarserAndNotAlignWithSegment(CompactionEngine engine) throws Exception
   {
     updateCompactionTaskSlot(1, 1);
-    Map<String, Object> specs = Map.of("segmentGranularity", "WEEK", "queryGranularity", "DAY", "rollup", false, "intervals", List.of("2013-08-31T-07/2013-09-02T-07"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    GranularitySpec specs = new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       verifyScanResult("added", "57.0||459.0");
@@ -1456,7 +1474,8 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   @Test()
   public void testAutoCompactionDutyWithRollup() throws Exception
   {
-    Map<String, Object> specs = Map.of("segmentGranularity", "DAY", "queryGranularity", "DAY", "rollup", false, "intervals", List.of("2013-08-31T-07/2013-09-02T-07"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    GranularitySpec specs = new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       verifyScanResult("added", "57.0||459.0");
@@ -1485,7 +1504,8 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   @MethodSource("getEngine")
   public void testAutoCompactionDutyWithQueryGranularity(CompactionEngine engine) throws Exception
   {
-    Map<String, Object> specs = Map.of("segmentGranularity", "DAY", "queryGranularity", "NONE", "intervals", List.of("2013-08-31T-07/2013-09-02T-07"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
+    GranularitySpec specs = new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, true, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       verifyScanResult("added", "57.0||459.0");
@@ -1645,11 +1665,12 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   @Test
   public void testAutoCompactionDutyWithOverlappingInterval() throws Exception
   {
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     // Create WEEK segment with 2013-08-26 to 2013-09-02
-    Map<String, Object> specs = Map.of("segmentGranularity", "WEEK", "queryGranularity", "NONE", "intervals", List.of("2013-08-31T-07/2013-09-02T-07"));
+    GranularitySpec specs = new UniformGranularitySpec(Granularities.WEEK, Granularities.NONE, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     // Create MONTH segment with 2013-09-01 to 2013-10-01
-    specs = Map.of("segmentGranularity", "MONTH", "queryGranularity", "NONE", "intervals", List.of("2013-09-01T-07/2013-09-02T-07"));
+    specs = new UniformGranularitySpec(Granularities.MONTH, Granularities.NONE, false, List.of(new Interval("2013-09-01/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
 
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1693,20 +1714,20 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void loadData(Supplier<TaskPayload> updatePayload)
+  private void loadData(Supplier<TaskBuilder<?, ?>> updatePayload)
   {
-    loadData(updatePayload, Map.of());
+    loadData(updatePayload, null);
   }
 
-  private void loadData(Supplier<TaskPayload> taskPayloadSupplier, Map<String, Object> granularitySpec)
+  private void loadData(Supplier<TaskBuilder<?, ?>> taskPayloadSupplier, GranularitySpec granularitySpec)
   {
-    final TaskPayload taskPayload = taskPayloadSupplier.get().dataSource(fullDatasourceName);
-    if (!granularitySpec.isEmpty()) {
-      taskPayload.granularitySpec(granularitySpec);
+    final TaskBuilder<?, ?> taskBuilder = taskPayloadSupplier.get().dataSource(fullDatasourceName);
+    if (granularitySpec != null) {
+      taskBuilder.granularitySpec(granularitySpec);
     }
 
     final String taskId = EmbeddedClusterApis.newTaskId(fullDatasourceName);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskPayload.withId(taskId)));
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));
     LOG.info("Submitted task[%s] to load data", taskId);
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator);
