@@ -59,6 +59,7 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
 
     @NotYetSupported(Modes.DD_JOIN_CONDITION_NORMALIZATION)
     @Test
+    @Override
     public void testJoinWithInputRefCondition()
     {
       super.testJoinWithInputRefCondition();
