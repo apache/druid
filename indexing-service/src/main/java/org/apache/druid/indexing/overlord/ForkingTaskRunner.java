@@ -525,14 +525,16 @@ public class ForkingTaskRunner
         taskLogPusher.pushTaskLog(task.getId(), logFile);
       }
       catch (IOException e) {
-        LOGGER.error("Task[%s] failed to push task logs to [%s]", task.getId(), logFile.getName());
+        LOGGER.error("Task[%s] failed to push task logs to [%s]: Exception[%s]",
+            task.getId(), logFile.getName(), e.getMessage());
       }
       if (reportsFile.exists()) {
         try {
           taskLogPusher.pushTaskReports(task.getId(), reportsFile);
         }
         catch (IOException e) {
-          LOGGER.error("Task[%s] failed to push task reports to [%s]", task.getId(), reportsFile.getName());
+          LOGGER.error("Task[%s] failed to push task reports to [%s]: Exception[%s]",
+              task.getId(), reportsFile.getName(), e.getMessage());
         }
       }
     }
