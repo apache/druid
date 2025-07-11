@@ -288,8 +288,8 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
     final List<SegmentReference> segmentReferences;
-    // todo (clint): this feels hella wack... but otherwise we're going to be loading weak assignments more or less as
-    //  soon as they are assigned instead of on demand at query time
+    // this is kind of gross, but otherwise we're going to be loading weak assignments more or less as soon as they
+    // are assigned instead of on demand at query time
     if (query instanceof SegmentMetadataQuery) {
       segmentReferences = getSegmentMetadataSegmentReferences(timeline, specs, segmentMapFn);
     } else {

@@ -70,7 +70,6 @@ public class SegmentLoaderConfig
   @JsonProperty("isVirtualStorageFabric")
   private boolean isVirtualStorageFabric = false;
 
-  // todo (clint): lol idk, measure these for sensible defaults
   @JsonProperty("minVirtualStorageFabricLoadThreads")
   private int minVirtualStorageFabricLoadThreads = 2;
 
@@ -167,8 +166,6 @@ public class SegmentLoaderConfig
     return virtualStorageFabricLoadThreadKeepaliveMillis;
   }
 
-  // todo (clint): this isn't mine, but it doesn't really copy everything... the people should know this,
-  //  maybe javadocs? maybe just fix it?
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();

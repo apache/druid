@@ -211,10 +211,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               removeInfo = false;
               final boolean reserveResult;
               if (config.isVirtualStorageFabric()) {
-                reserveResult = location.reserveWeak(cacheEntry);
-                // todo (clint): go ahead and mount for now, but this is wack... it should happen on the correct pool
-                //  instead of this thread, but at least we aren't pulling from deep storage...
-                location.getCacheEntry(cacheEntry.id).mount(location.getPath());
+                reserveResult = location.reserveWeak(cacheEntry);;
               } else {
                 reserveResult = location.reserve(cacheEntry);
               }
@@ -372,6 +369,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorageFabric()) {
+      // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
+      // did the reserving for us
+      final ReferenceCountingLock lock = lock(dataSegment);
+      final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
+      synchronized (lock) {
+        try {
+          for (StorageLocation location : locations) {
+            final SegmentCacheEntry entry = location.getCacheEntry(id);
+            if (entry != null) {
+              entry.mount(location.getPath());
+            }
+          }
+        }
+        finally {
+          unlock(dataSegment, lock);
+        }
+      }
       return;
     }
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
