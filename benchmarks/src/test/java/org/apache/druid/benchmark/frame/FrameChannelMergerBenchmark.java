@@ -285,7 +285,7 @@ public class FrameChannelMergerBenchmark
       final Sequence<Frame> frameSequence =
           FrameSequenceBuilder.fromCursorFactory(segment.as(CursorFactory.class))
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
-                              .frameType(FrameType.ROW_BASED)
+                              .frameType(FrameType.latestRowBased())
                               .frames();
       final List<Frame> channelFrameList = channelFrames.get(channelNumber);
       frameSequence.forEach(channelFrameList::add);
@@ -350,7 +350,8 @@ public class FrameChannelMergerBenchmark
         channels.stream().map(BlockingQueueFrameChannel::readable).collect(Collectors.toList()),
         frameReader,
         outputChannel.writable(),
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
             sortKey,

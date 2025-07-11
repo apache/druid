@@ -686,4 +686,129 @@ describe('WorkbenchQuery', () => {
       expect(extractedContext).toEqual(complexContext);
     });
   });
+
+  describe('#getMaxNumTasks', () => {
+    it('returns maxNumTasks from query string context for SQL queries with SET statements', () => {
+      const queryWithSet = sane`
+        SET maxNumTasks = 5;
+        SELECT * FROM wikipedia
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(queryWithSet);
+
+      expect(workbenchQuery.getMaxNumTasks()).toBe(5);
+    });
+
+    it('returns maxNumTasks from queryContext when no SET statements exist', () => {
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString('SELECT * FROM wikipedia')
+        .changeQueryContext({ maxNumTasks: 3 });
+
+      expect(workbenchQuery.getMaxNumTasks()).toBe(3);
+    });
+
+    it('prioritizes query string context over queryContext', () => {
+      const queryWithSet = sane`
+        SET maxNumTasks = 8;
+        SELECT * FROM wikipedia
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString(queryWithSet)
+        .changeQueryContext({ maxNumTasks: 3 });
+
+      expect(workbenchQuery.getMaxNumTasks()).toBe(8);
+    });
+
+    it('returns undefined when maxNumTasks is not set anywhere', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
+
+      expect(workbenchQuery.getMaxNumTasks()).toBeUndefined();
+    });
+
+    it('returns maxNumTasks from queryContext for JSON queries', () => {
+      const jsonQuery = '{"queryType": "topN", "dataSource": "test"}';
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString(jsonQuery)
+        .changeQueryContext({ maxNumTasks: 10 });
+
+      expect(workbenchQuery.getMaxNumTasks()).toBe(10);
+    });
+  });
+
+  describe('#setMaxNumTasksIfUnset', () => {
+    it('sets maxNumTasks when it is not already set', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(5);
+
+      expect(updatedQuery.getMaxNumTasks()).toBe(5);
+      expect(updatedQuery.queryContext.maxNumTasks).toBe(5);
+    });
+
+    it('does not override existing maxNumTasks in queryContext', () => {
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString('SELECT * FROM wikipedia')
+        .changeQueryContext({ maxNumTasks: 3 });
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(10);
+
+      expect(updatedQuery).toBe(workbenchQuery); // Should return same instance
+      expect(updatedQuery.getMaxNumTasks()).toBe(3);
+    });
+
+    it('does not override maxNumTasks from SET statements', () => {
+      const queryWithSet = sane`
+        SET maxNumTasks = 7;
+        SELECT * FROM wikipedia
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(queryWithSet);
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(10);
+
+      expect(updatedQuery).toBe(workbenchQuery); // Should return same instance
+      expect(updatedQuery.getMaxNumTasks()).toBe(7);
+    });
+
+    it('enforces minimum value of 2', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(1);
+
+      expect(updatedQuery.getMaxNumTasks()).toBe(2);
+    });
+
+    it('returns same instance when passed undefined', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(undefined);
+
+      expect(updatedQuery).toBe(workbenchQuery);
+      expect(updatedQuery.getMaxNumTasks()).toBeUndefined();
+    });
+
+    it('returns same instance when passed 0', () => {
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(0);
+
+      expect(updatedQuery).toBe(workbenchQuery);
+      expect(updatedQuery.getMaxNumTasks()).toBeUndefined();
+    });
+
+    it('preserves other queryContext properties when setting maxNumTasks', () => {
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString('SELECT * FROM wikipedia')
+        .changeQueryContext({ useCache: false, timeout: 30000 });
+
+      const updatedQuery = workbenchQuery.setMaxNumTasksIfUnset(5);
+
+      expect(updatedQuery.queryContext).toEqual({
+        useCache: false,
+        timeout: 30000,
+        maxNumTasks: 5,
+      });
+    });
+  });
 });

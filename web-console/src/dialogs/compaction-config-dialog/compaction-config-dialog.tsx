@@ -37,6 +37,8 @@ import { getLink } from '../../links';
 import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
+import { COMPACTION_CONFIG_COMPLETIONS } from './compaction-config-completions';
+
 import './compaction-config-dialog.scss';
 
 export interface CompactionConfigDialogProps {
@@ -149,6 +151,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, COMPACTION_CONFIG_FIELDS)}
             height="100%"
+            jsonCompletions={COMPACTION_CONFIG_COMPLETIONS}
           />
         )}
       </div>

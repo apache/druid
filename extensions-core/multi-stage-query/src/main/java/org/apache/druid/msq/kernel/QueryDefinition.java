@@ -59,13 +59,6 @@ public class QueryDefinition
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   private final QueryContext context;
 
-  private QueryDefinition()
-  {
-    this.stageDefinitions = null;
-    this.finalStage = null;
-    this.context = QueryContext.empty();
-  }
-
   private QueryDefinition(
       final Map<StageId, StageDefinition> stageDefinitions,
       final StageId finalStage,

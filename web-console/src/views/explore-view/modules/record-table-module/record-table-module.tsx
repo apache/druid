@@ -79,7 +79,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     } = props;
 
     const query = useMemo((): string | undefined => {
-      return SqlQuery.create(querySource.query)
+      return SqlQuery.selectStarFrom(querySource.query)
         .changeWhereExpression(where.and(moduleWhere))
         .changeLimitValue(parameterValues.maxRows)
         .applyIf(

@@ -112,6 +112,19 @@ public class CounterTracker
     return (T) countersMap.computeIfAbsent(counterName, ignored -> newCounterFn.get());
   }
 
+  public long totalCpu()
+  {
+    if (!countersMap.containsKey(CounterNames.cpu())) {
+      return 0;
+    }
+    long cpuTimeNs = 0;
+    CpuCounters cpuCounters = (CpuCounters) countersMap.get(CounterNames.cpu());
+    for (CpuCounter.Snapshot value : cpuCounters.snapshot().getCountersMap().values()) {
+      cpuTimeNs += value.getCpuTime();
+    }
+    return cpuTimeNs;
+  }
+
   public CounterSnapshots snapshot()
   {
     final Map<String, QueryCounterSnapshot> m = new HashMap<>();

@@ -27,10 +27,13 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -95,6 +98,18 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId)
   {
     throw new UnsupportedOperationException();
   }
@@ -172,6 +187,18 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<ClusterCompactionConfig> getClusterCompactionConfig()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<UpdateResponse> updateClusterCompactionConfig(ClusterCompactionConfig config)
   {
     throw new UnsupportedOperationException();
   }

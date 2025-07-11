@@ -27,6 +27,7 @@ import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.ResourceInputSource;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,6 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -179,6 +181,17 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
+  public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS = ImmutableList.of(
+      new AggregateProjectionSpec(
+          "index_projection",
+          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
+          Arrays.asList(
+              new LongDimensionSchema("__gran"),
+              new StringDimensionSchema("market")
+          ),
+          new AggregatorFactory[]{new DoubleMaxAggregatorFactory("maxQuality", "qualityLong")}
+      )
+  );
   public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
@@ -406,9 +419,14 @@ public class TestIndex
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
             .withTimestampSpec(new TimestampSpec("ts", "iso", null))
-            .withDimensionsSpec(DimensionsSpec.builder().setDimensions(dimensionsSpec.getDimensions()).setDimensionExclusions(ImmutableList.of("index")).setIncludeAllDimensions(true).build())
+            .withDimensionsSpec(DimensionsSpec.builder()
+                                              .setDimensions(dimensionsSpec.getDimensions())
+                                              .setDimensionExclusions(ImmutableList.of("index"))
+                                              .setIncludeAllDimensions(true)
+                                              .build())
             .withVirtualColumns(VIRTUAL_COLUMNS)
             .withMetrics(METRIC_AGGS)
+            .withProjections(PROJECTIONS)
             .withRollup(rollup)
             .build(),
         DEFAULT_JSON_INPUT_FORMAT
@@ -523,6 +541,7 @@ public class TestIndex
         .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
+        .withProjections(PROJECTIONS)
         .withRollup(true)
         .build();
     final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()

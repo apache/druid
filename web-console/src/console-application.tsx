@@ -26,9 +26,12 @@ import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 import type { Filter } from 'react-table';
 
-import type { HeaderActiveTab } from './components';
+import { initAceDsqlMode } from './ace-modes/dsql';
+import { initAceHjsonMode } from './ace-modes/hjson';
 import { HeaderBar, Loader } from './components';
-import type { QueryContext, QueryWithContext } from './druid-models';
+import { SqlFunctionsProvider } from './contexts/sql-functions-context';
+import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
+import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
@@ -51,20 +54,20 @@ import './console-application.scss';
 
 type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
 
-function changeTabWithFilter(tab: HeaderActiveTab, filters: Filter[]) {
+function changeTabWithFilter(tab: ConsoleViewId, filters: Filter[]) {
   const filterString = tableFiltersToString(filters);
   location.hash = tab + (filterString ? `/${filterString}` : '');
 }
 
-function viewFilterChange(tab: HeaderActiveTab) {
+function viewFilterChange(tab: ConsoleViewId) {
   return (filters: Filter[]) => changeTabWithFilter(tab, filters);
 }
 
-function pathWithFilter(tab: HeaderActiveTab) {
+function pathWithFilter(tab: ConsoleViewId) {
   return `/${tab}/:filters?`;
 }
 
-function switchTab(tab: HeaderActiveTab) {
+function switchTab(tab: ConsoleViewId) {
   location.hash = tab;
 }
 
@@ -81,6 +84,7 @@ export interface ConsoleApplicationProps {
 
 export interface ConsoleApplicationState {
   capabilities: Capabilities;
+  availableSqlFunctions?: AvailableFunctions;
   capabilitiesLoading: boolean;
 }
 
@@ -88,7 +92,10 @@ export class ConsoleApplication extends React.PureComponent<
   ConsoleApplicationProps,
   ConsoleApplicationState
 > {
-  private readonly capabilitiesQueryManager: QueryManager<null, Capabilities>;
+  private readonly capabilitiesQueryManager: QueryManager<
+    null,
+    [Capabilities, AvailableFunctions | undefined]
+  >;
 
   static shownServiceNotification() {
     AppToaster.show({
@@ -127,17 +134,25 @@ export class ConsoleApplication extends React.PureComponent<
 
         if (!capabilities) {
           ConsoleApplication.shownServiceNotification();
-          return Capabilities.FULL;
+          return [Capabilities.FULL, undefined];
         }
 
-        return await Capabilities.detectCapacity(capabilities);
+        return Promise.all([
+          Capabilities.detectCapacity(capabilities),
+          Capabilities.detectAvailableSqlFunctions(capabilities),
+        ]);
       },
       onStateChange: ({ data, loading, error }) => {
         if (error) {
           console.error('There was an error retrieving the capabilities', error);
         }
+        const capabilities = data?.[0] || Capabilities.FULL;
+        const availableSqlFunctions = data?.[1];
+        initAceDsqlMode(availableSqlFunctions);
+        initAceHjsonMode();
         this.setState({
-          capabilities: data || Capabilities.FULL,
+          capabilities,
+          availableSqlFunctions,
           capabilitiesLoading: loading,
         });
       },
@@ -245,7 +260,7 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrapInViewContainer = (
-    active: HeaderActiveTab | null,
+    active: ConsoleViewId | null,
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' | 'thin' | 'thinner' = 'normal',
   ) => {
@@ -254,7 +269,7 @@ export class ConsoleApplication extends React.PureComponent<
     return (
       <>
         <HeaderBar
-          active={active}
+          activeView={active}
           capabilities={capabilities}
           onUnrestrict={this.handleUnrestrict}
         />
@@ -438,12 +453,8 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedExploreView = () => {
-    return this.wrapInViewContainer('explore', <ExploreView />, 'thinner');
-  };
-
   render() {
-    const { capabilities, capabilitiesLoading } = this.state;
+    const { capabilities, availableSqlFunctions, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
       return (
@@ -455,58 +466,69 @@ export class ConsoleApplication extends React.PureComponent<
 
     return (
       <HotkeysProvider>
-        <HashRouter hashType="noslash">
-          <div className="console-application">
-            <Switch>
-              {capabilities.hasCoordinatorAccess() && (
-                <Route path="/data-loader" component={this.wrappedDataLoaderView} />
-              )}
-              {capabilities.hasCoordinatorAccess() && (
+        <SqlFunctionsProvider availableSqlFunctions={availableSqlFunctions}>
+          <HashRouter hashType="noslash">
+            <div className="console-application">
+              <Switch>
+                {capabilities.hasCoordinatorAccess() && (
+                  <Route path="/data-loader" component={this.wrappedDataLoaderView} />
+                )}
+                {capabilities.hasCoordinatorAccess() && (
+                  <Route
+                    path="/streaming-data-loader"
+                    component={this.wrappedStreamingDataLoaderView}
+                  />
+                )}
+                {capabilities.hasCoordinatorAccess() && (
+                  <Route
+                    path="/classic-batch-data-loader"
+                    component={this.wrappedClassicBatchDataLoaderView}
+                  />
+                )}
+                {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask() && (
+                  <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
+                )}
+
                 <Route
-                  path="/streaming-data-loader"
-                  component={this.wrappedStreamingDataLoaderView}
+                  path={pathWithFilter('supervisors')}
+                  component={this.wrappedSupervisorsView}
                 />
-              )}
-              {capabilities.hasCoordinatorAccess() && (
+                <Route path={pathWithFilter('tasks')} component={this.wrappedTasksView} />
+                <Route path="/ingestion">
+                  <Redirect to="/tasks" />
+                </Route>
+
                 <Route
-                  path="/classic-batch-data-loader"
-                  component={this.wrappedClassicBatchDataLoaderView}
+                  path={pathWithFilter('datasources')}
+                  component={this.wrappedDatasourcesView}
                 />
-              )}
-              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask() && (
-                <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
-              )}
+                <Route path={pathWithFilter('segments')} component={this.wrappedSegmentsView} />
+                <Route path={pathWithFilter('services')} component={this.wrappedServicesView} />
 
-              <Route path={pathWithFilter('supervisors')} component={this.wrappedSupervisorsView} />
-              <Route path={pathWithFilter('tasks')} component={this.wrappedTasksView} />
-              <Route path="/ingestion">
-                <Redirect to="/tasks" />
-              </Route>
+                <Route path="/query">
+                  <Redirect to="/workbench" />
+                </Route>
+                <Route
+                  path={['/workbench/:tabId', '/workbench']}
+                  component={this.wrappedWorkbenchView}
+                />
 
-              <Route path={pathWithFilter('datasources')} component={this.wrappedDatasourcesView} />
-              <Route path={pathWithFilter('segments')} component={this.wrappedSegmentsView} />
-              <Route path={pathWithFilter('services')} component={this.wrappedServicesView} />
+                {capabilities.hasCoordinatorAccess() && (
+                  <Route path={pathWithFilter('lookups')} component={this.wrappedLookupsView} />
+                )}
 
-              <Route path="/query">
-                <Redirect to="/workbench" />
-              </Route>
-              <Route
-                path={['/workbench/:tabId', '/workbench']}
-                component={this.wrappedWorkbenchView}
-              />
+                {capabilities.hasSql() && (
+                  <Route
+                    path="/explore"
+                    component={() => <ExploreView capabilities={capabilities} />}
+                  />
+                )}
 
-              {capabilities.hasCoordinatorAccess() && (
-                <Route path={pathWithFilter('lookups')} component={this.wrappedLookupsView} />
-              )}
-
-              {capabilities.hasSql() && (
-                <Route path="/explore" component={this.wrappedExploreView} />
-              )}
-
-              <Route component={this.wrappedHomeView} />
-            </Switch>
-          </div>
-        </HashRouter>
+                <Route component={this.wrappedHomeView} />
+              </Switch>
+            </div>
+          </HashRouter>
+        </SqlFunctionsProvider>
       </HotkeysProvider>
     );
   }

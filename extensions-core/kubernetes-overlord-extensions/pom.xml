@@ -30,29 +30,13 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>34.0.0-SNAPSHOT</version>
+    <version>35.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <!-- fabric8 6.13.2+ is incompatible with jackson 2.12
-       ~ due to fix for https://github.com/fabric8io/kubernetes-client/issues/6110.
-       ~ GoIntegerDeserializer uses a _parseInteger method that does not exist in 2.12 (introduced in 2.14) -->
-    <fabric8.version>6.13.1</fabric8.version>
+    <fabric8.version>7.2.0</fabric8.version>
   </properties>
-
-  <dependencyManagement>
-      <dependencies>
-            <!-- snakeyaml explicitly pinned to version 1.33 as it is
-             a transitive dependency of com.fasterxml.jackson.dataformat:jackson-dataformat-yaml 2.12.7
-             please remove this pin, after updating jackson-dataform-yaml to version > 2.14.3  / 2.15.0 -->
-          <dependency>
-              <groupId>org.yaml</groupId>
-              <artifactId>snakeyaml</artifactId>
-              <version>1.33</version>
-          </dependency>
-      </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -155,7 +139,7 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <version>4.5.8</version>
+      <version>4.5.14</version>
     </dependency>
     <dependency>
       <groupId>javax.ws.rs</groupId>
@@ -198,7 +182,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>mockwebserver</artifactId>
-      <version>0.2.2</version>
+      <version>${fabric8.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

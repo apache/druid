@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 /**
@@ -30,21 +31,27 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 public class FloatFieldWriter extends NumericFieldWriter
 {
   private final BaseFloatColumnValueSelector selector;
+  private final FrameType frameType;
 
-  public static FloatFieldWriter forPrimitive(final BaseFloatColumnValueSelector selector)
+  public static FloatFieldWriter forPrimitive(final BaseFloatColumnValueSelector selector, final FrameType frameType)
   {
-    return new FloatFieldWriter(selector, false);
+    return new FloatFieldWriter(selector, false, frameType);
   }
 
-  public static FloatFieldWriter forArray(final BaseFloatColumnValueSelector selector)
+  public static FloatFieldWriter forArray(final BaseFloatColumnValueSelector selector, final FrameType frameType)
   {
-    return new FloatFieldWriter(selector, true);
+    return new FloatFieldWriter(selector, true, frameType);
   }
 
-  private FloatFieldWriter(final BaseFloatColumnValueSelector selector, final boolean forArray)
+  private FloatFieldWriter(
+      final BaseFloatColumnValueSelector selector,
+      final boolean forArray,
+      final FrameType frameType
+  )
   {
     super(selector, forArray);
     this.selector = selector;
+    this.frameType = frameType;
   }
 
   @Override
@@ -73,6 +80,6 @@ public class FloatFieldWriter extends NumericFieldWriter
 
   private void writeToMemory(WritableMemory memory, long position, float value)
   {
-    memory.putInt(position, TransformUtils.transformFromFloat(value));
+    memory.putInt(position, TransformUtils.transformFromFloat(value, frameType));
   }
 }

@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { getApiArray, lookupBy, queryDruidSql } from '../../../utils';
@@ -82,7 +82,7 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
     <HomeViewCard
       className="services-card"
       href="#services"
-      icon={IconNames.DATABASE}
+      icon={getConsoleViewIcon('services')}
       title="Services"
       loading={serviceCountState.loading}
       error={serviceCountState.error}

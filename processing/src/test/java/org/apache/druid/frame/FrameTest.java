@@ -84,7 +84,7 @@ public class FrameTest
       columnarFrame = Iterables.getOnlyElement(
           FrameSequenceBuilder
               .fromCursorFactory(cursorFactory)
-              .frameType(FrameType.COLUMNAR)
+              .frameType(FrameType.latestColumnar())
               .frames()
               .toList()
       );
@@ -92,7 +92,7 @@ public class FrameTest
       rowBasedSortedFrame = Iterables.getOnlyElement(
           FrameSequenceBuilder
               .fromCursorFactory(cursorFactory)
-              .frameType(FrameType.ROW_BASED)
+              .frameType(FrameType.latestRowBased())
               .sortBy(sortBy)
               .frames()
               .toList()
@@ -321,7 +321,7 @@ public class FrameTest
       final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
       final Frame frame =
           Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                                                       .frameType(FrameType.COLUMNAR)
+                                                       .frameType(FrameType.latestColumnar())
                                                        .frames()
                                                        .toList());
       FRAME_DATA = frameToByteArray(frame, false);
@@ -403,7 +403,7 @@ public class FrameTest
     {
       final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
       return Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                                                          .frameType(FrameType.COLUMNAR)
+                                                          .frameType(FrameType.latestColumnar())
                                                           .frames()
                                                           .toList());
     }

@@ -101,7 +101,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     NIL_FILE_BYTES = toFileBytes(Sequences.empty());
     FILE_BYTES = toFileBytes(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.COLUMNAR)
+                            .frameType(FrameType.latestColumnar())
                             .maxRowsPerFrame(10)
                             .frames()
     );

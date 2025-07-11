@@ -51,7 +51,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -218,6 +218,7 @@ public class SystemSchema extends AbstractSchema
   static final RowSignature SUPERVISOR_SIGNATURE = RowSignature
       .builder()
       .add("supervisor_id", ColumnType.STRING)
+      .add("datasource", ColumnType.STRING)
       .add("state", ColumnType.STRING)
       .add("detailed_state", ColumnType.STRING)
       .add("healthy", ColumnType.LONG)
@@ -236,27 +237,33 @@ public class SystemSchema extends AbstractSchema
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
-      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
+      final CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
-    this.tableMap = ImmutableMap.<String, Table>builder()
-                                .put(SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper))
-                                .put(SERVERS_TABLE, new ServersTable(
-                                    druidNodeDiscoveryProvider,
-                                    serverInventoryView,
-                                    authorizerMapper,
-                                    overlordClient,
-                                    coordinatorDruidLeaderClient
-                                ))
-                                .put(SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper))
-                                .put(TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper))
-                                .put(SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper))
-                                .put(QuerySettingTable.TABLE_NAME, new QuerySettingTable())
-                                .build();
+    this.tableMap = ImmutableMap.of(
+        SEGMENTS_TABLE,
+        new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SERVERS_TABLE,
+        new ServersTable(
+            druidNodeDiscoveryProvider,
+            serverInventoryView,
+            authorizerMapper,
+            overlordClient,
+            coordinatorClient
+        ),
+        SERVER_SEGMENTS_TABLE,
+        new ServerSegmentsTable(serverView, authorizerMapper),
+        TASKS_TABLE,
+        new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE,
+        new SupervisorsTable(overlordClient, authorizerMapper),
+        QuerySettingTable.TABLE_NAME,
+        new QuerySettingTable()
+    );
   }
 
   @Override
@@ -526,21 +533,21 @@ public class SystemSchema extends AbstractSchema
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
-    private final DruidLeaderClient coordinatorLeaderClient;
+    private final CoordinatorClient coordinatorClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        DruidLeaderClient coordinatorLeaderClient
+        CoordinatorClient coordinatorClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
-      this.coordinatorLeaderClient = coordinatorLeaderClient;
+      this.coordinatorClient = coordinatorClient;
     }
 
     @Override
@@ -569,7 +576,7 @@ public class SystemSchema extends AbstractSchema
       String tmpOverlordLeader = "";
 
       try {
-        tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
+        tmpCoordinatorLeader = FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString();
       }
       catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders
@@ -984,6 +991,7 @@ public class SystemSchema extends AbstractSchema
               final SupervisorStatus supervisor = it.next();
               return new Object[]{
                   supervisor.getId(),
+                  supervisor.getDataSource(),
                   supervisor.getState(),
                   supervisor.getDetailedState(),
                   supervisor.isHealthy() ? 1L : 0L,

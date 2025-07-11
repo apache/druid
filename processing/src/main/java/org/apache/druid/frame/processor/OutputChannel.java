@@ -52,22 +52,18 @@ public class OutputChannel
   private MemoryAllocator frameMemoryAllocator;
 
   private final Supplier<ReadableFrameChannel> readableChannelSupplier;
-
-  private final boolean readableChannelUsableWhileWriting;
   private final int partitionNumber;
 
   private OutputChannel(
       @Nullable final WritableFrameChannel writableChannel,
       @Nullable final MemoryAllocator frameMemoryAllocator,
       final Supplier<ReadableFrameChannel> readableChannelSupplier,
-      final boolean readableChannelUsableWhileWriting,
       final int partitionNumber
   )
   {
     this.writableChannel = writableChannel;
     this.frameMemoryAllocator = frameMemoryAllocator;
     this.readableChannelSupplier = readableChannelSupplier;
-    this.readableChannelUsableWhileWriting = readableChannelUsableWhileWriting;
     this.partitionNumber = partitionNumber;
 
     if (partitionNumber < 0 && partitionNumber != FrameWithPartition.NO_PARTITION) {
@@ -95,7 +91,6 @@ public class OutputChannel
         Preconditions.checkNotNull(writableChannel, "writableChannel"),
         Preconditions.checkNotNull(frameMemoryAllocator, "frameMemoryAllocator"),
         readableChannelSupplier,
-        false,
         partitionNumber
     );
   }
@@ -119,7 +114,6 @@ public class OutputChannel
         Preconditions.checkNotNull(writableChannel, "writableChannel"),
         Preconditions.checkNotNull(frameMemoryAllocator, "frameMemoryAllocator"),
         () -> readableChannel,
-        true,
         partitionNumber
     );
   }
@@ -150,7 +144,7 @@ public class OutputChannel
       final int partitionNumber
   )
   {
-    return new OutputChannel(null, null, readableChannelSupplier, true, partitionNumber);
+    return new OutputChannel(null, null, readableChannelSupplier, partitionNumber);
   }
 
   /**
@@ -159,7 +153,7 @@ public class OutputChannel
    */
   public static OutputChannel nil(final int partitionNumber)
   {
-    return new OutputChannel(null, null, () -> ReadableNilFrameChannel.INSTANCE, true, partitionNumber);
+    return new OutputChannel(null, null, () -> ReadableNilFrameChannel.INSTANCE, partitionNumber);
   }
 
   /**
@@ -192,24 +186,11 @@ public class OutputChannel
 
   /**
    * Returns the readable channel of this pair. This readable channel may, or may not, be usable before the
-   * writable channel is closed. It depends on whether the channel pair was created in a stream-capable manner or not.
-   * Check {@link #isReadableChannelReady()} to find out.
+   * writable channel is closed. It depends on how the channel pair was created.
    */
   public ReadableFrameChannel getReadableChannel()
   {
-    if (isReadableChannelReady()) {
-      return readableChannelSupplier.get();
-    } else {
-      throw new ISE("Readable channel is not ready");
-    }
-  }
-
-  /**
-   * Whether {@link #getReadableChannel()} is ready to use.
-   */
-  public synchronized boolean isReadableChannelReady()
-  {
-    return readableChannelUsableWhileWriting || writableChannel == null || writableChannel.isClosed();
+    return readableChannelSupplier.get();
   }
 
   public Supplier<ReadableFrameChannel> getReadableChannelSupplier()
@@ -231,7 +212,6 @@ public class OutputChannel
           mapFn.apply(writableChannel),
           frameMemoryAllocator,
           readableChannelSupplier,
-          readableChannelUsableWhileWriting,
           partitionNumber
       );
     }

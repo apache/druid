@@ -68,6 +68,15 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     return new DruidExceptionMatcher(DruidException.Persona.USER, DruidException.Category.FORBIDDEN, "general");
   }
 
+  public static DruidExceptionMatcher conflict()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.OPERATOR,
+        DruidException.Category.CONFLICT,
+        "general"
+    );
+  }
+
   public static DruidExceptionMatcher defensive()
   {
     return new DruidExceptionMatcher(

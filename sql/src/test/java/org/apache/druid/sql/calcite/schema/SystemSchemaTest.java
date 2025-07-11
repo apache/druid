@@ -43,11 +43,11 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -157,8 +157,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private SystemSchema schema;
   private SpecificSegmentsQuerySegmentWalker walker;
-  private DruidLeaderClient client;
-  private DruidLeaderClient coordinatorClient;
+  private CoordinatorClient coordinatorClient;
   private OverlordClient overlordClient;
   private TimelineServerView serverView;
   private StringFullResponseHolder responseHolder;
@@ -189,8 +188,7 @@ public class SystemSchemaTest extends CalciteTestBase
   public void setUp(@TempDir File tmpDir) throws Exception
   {
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
-    client = EasyMock.createMock(DruidLeaderClient.class);
-    coordinatorClient = EasyMock.createMock(DruidLeaderClient.class);
+    coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
     overlordClient = EasyMock.createMock(OverlordClient.class);
     responseHolder = EasyMock.createMock(StringFullResponseHolder.class);
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
@@ -275,7 +273,7 @@ public class SystemSchemaTest extends CalciteTestBase
         serverView,
         serverInventoryView,
         EasyMock.createStrictMock(AuthorizerMapper.class),
-        client,
+        coordinatorClient,
         overlordClient,
         druidNodeDiscoveryProvider,
         MAPPER
@@ -579,7 +577,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
 
-    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), null).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
@@ -733,7 +731,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
 
-    EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);
+    EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = segmentsTable.scan(
         dataContext,
@@ -881,7 +879,9 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(peon1, peon2)).once();
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
-    EasyMock.expect(coordinatorClient.findCurrentLeader()).andReturn(coordinator.getDruidNode().getHostAndPortToUse()).once();
+    EasyMock.expect(coordinatorClient.findCurrentLeader())
+            .andReturn(Futures.immediateFuture(new URI(coordinator.getDruidNode().getHostAndPortToUse())))
+            .once();
     EasyMock.expect(overlordClient.findCurrentLeader())
             .andReturn(Futures.immediateFuture(new URI(overlord.getDruidNode().getHostAndPortToUse()))).once();
 
@@ -1391,7 +1391,8 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(supervisorTable);
 
     String json = "[{\n"
-                  + "\t\"id\": \"wikipedia\",\n"
+                  + "\t\"id\": \"wikipedia_supervisor\",\n"
+                  + "\t\"dataSource\": \"wikipedia\",\n"
                   + "\t\"state\": \"UNHEALTHY_SUPERVISOR\",\n"
                   + "\t\"detailedState\": \"UNABLE_TO_CONNECT_TO_STREAM\",\n"
                   + "\t\"healthy\": false,\n"
@@ -1415,16 +1416,17 @@ public class SystemSchemaTest extends CalciteTestBase
     final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
-    Assert.assertEquals("wikipedia", row0[0].toString());
-    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[1].toString());
-    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[2].toString());
-    Assert.assertEquals(0L, row0[3]);
-    Assert.assertEquals("kafka", row0[4].toString());
-    Assert.assertEquals("wikipedia", row0[5].toString());
-    Assert.assertEquals(0L, row0[6]);
+    Assert.assertEquals("wikipedia_supervisor", row0[0].toString());
+    Assert.assertEquals("wikipedia", row0[1].toString());
+    Assert.assertEquals("UNHEALTHY_SUPERVISOR", row0[2].toString());
+    Assert.assertEquals("UNABLE_TO_CONNECT_TO_STREAM", row0[3].toString());
+    Assert.assertEquals(0L, row0[4]);
+    Assert.assertEquals("kafka", row0[5].toString());
+    Assert.assertEquals("wikipedia", row0[6].toString());
+    Assert.assertEquals(0L, row0[7]);
     Assert.assertEquals(
         "{\"type\":\"kafka\",\"dataSchema\":{\"dataSource\":\"wikipedia\"},\"context\":null,\"suspended\":false}",
-        row0[7].toString()
+        row0[8].toString()
     );
 
     // Verify value types.

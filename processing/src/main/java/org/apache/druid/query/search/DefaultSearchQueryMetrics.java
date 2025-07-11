@@ -218,6 +218,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportResultCachePoll(boolean hit)
+  {
+    return delegateQueryMetrics.reportResultCachePoll(hit);
+  }
+
+  @Override
   public QueryMetrics reportCpuTime(long timeNs)
   {
     return delegateQueryMetrics.reportCpuTime(timeNs);
