@@ -270,10 +270,16 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       Set<KafkaTopicPartition> kafkaPartitions = latestSequenceFromStream.keySet();
       Set<KafkaTopicPartition> taskPartitions = highestCurrentOffsets.keySet();
 
-      Set<KafkaTopicPartition> missingTaskPartitions = Sets.difference(kafkaPartitions, taskPartitions);
-      Set<KafkaTopicPartition> missingKafkaPartitions = Sets.difference(taskPartitions, kafkaPartitions);
+      List<Integer> missingTaskPartitions = Sets.difference(kafkaPartitions, taskPartitions)
+                                                .stream()
+                                                .map(KafkaTopicPartition::partition)
+                                                .collect(Collectors.toList());
+      List<Integer> missingKafkaPartitions = Sets.difference(taskPartitions, kafkaPartitions)
+                                                 .stream()
+                                                 .map(KafkaTopicPartition::partition)
+                                                 .collect(Collectors.toList());
 
-      log.warn("Mismatched kafka and task partitions: Missing Task Partitions[%s], Missing Kafka Partitions[%s]",
+      log.warn("Mismatched kafka and task partitions: Missing Task Partitions %s, Missing Kafka Partitions %s",
                missingTaskPartitions, missingKafkaPartitions);
     }
 
