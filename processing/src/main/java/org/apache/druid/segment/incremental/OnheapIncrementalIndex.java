@@ -30,7 +30,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -145,7 +144,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
       if (projections.containsKey(projectionSpec.getName())) {
-        throw new IAE("Found duplicate projection name[%s].", projectionSpec.getName());
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Found duplicate projection[%s], please remove and resubmit the ingestion.",
+                                projectionSpec.getName()
+                            );
       }
 
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(

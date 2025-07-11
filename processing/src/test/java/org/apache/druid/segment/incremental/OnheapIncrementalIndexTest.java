@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -104,8 +103,8 @@ public class OnheapIncrementalIndexTest
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
     );
     // act & assert
-    IAE e = Assert.assertThrows(
-        IAE.class,
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> IndexBuilder.create()
                           .schema(IncrementalIndexSchema.builder()
                                                         .withDimensionsSpec(dimensionsSpec)
@@ -118,7 +117,9 @@ public class OnheapIncrementalIndexTest
                                                         .build())
                           .buildIncrementalIndex()
     );
-    Assert.assertEquals("Found duplicate projection name[proj].", e.getMessage());
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Assert.assertEquals("Found duplicate projection[proj], please remove and resubmit the ingestion.", e.getMessage());
   }
 
   @Test
