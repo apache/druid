@@ -56,6 +56,7 @@ import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -209,12 +210,17 @@ public class DataServerQueryHandler
   private DataSource transformDatasource(DataSource dataSource)
   {
     if (dataSource instanceof InputNumberDataSource) {
-      if (((InputNumberDataSource) dataSource).getInputNumber() == inputNumber) {
+      InputNumberDataSource numberDataSource = (InputNumberDataSource) dataSource;
+      if (numberDataSource.getInputNumber() == inputNumber) {
         return new TableDataSource(dataSourceName);
       } else {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("Unknown numbered datasource [%s]", dataSource);
+                            .build("Unknown InputNumberDataSource datasource with number[%s]. Queries with realtime sources "
+                                   + "cannot join results with stage outputs. Use sortMerge join instead by setting [%s].",
+                                   numberDataSource.getInputNumber(),
+                                   PlannerContext.CTX_SQL_JOIN_ALGORITHM
+                            );
       }
     } else {
       List<DataSource> transformed = dataSource.getChildren()

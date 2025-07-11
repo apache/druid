@@ -112,6 +112,20 @@ public class EmbeddedClusterApis
   }
 
   /**
+   * Waits for the given task to fail, with the given errorMsq. If the given
+   * {@link EmbeddedOverlord} is not the leader, this method can only return by
+   * throwing an exception upon timeout.
+   */
+  public void waitForTaskToFail(String taskId, String errorMsg, EmbeddedOverlord overlord)
+  {
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+    );
+    verifyTaskHasStatus(taskId, TaskStatus.failure(taskId, errorMsg));
+  }
+
+  /**
    * Fetches the status of the given task from the cluster and verifies that it
    * matches the expected status.
    */

@@ -62,12 +62,13 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -325,11 +326,9 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
   public void test_selectBroadcastJoin_dart()
   {
-    final long selectedCount = Long.parseLong(
-        msqApis.runDartSql(
+    msqApis.runDartWithError(
             "SELECT COUNT(*) FROM \"%s\"\n"
             + "WHERE countryName IN (\n"
             + "  SELECT countryName\n"
@@ -339,17 +338,16 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
             + "  ORDER BY COUNT(*) DESC\n"
             + "  LIMIT 1\n"
             + ")",
-            dataSource,
+            CoreMatchers.instanceOf(ExecutionException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
+                + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].")),
             dataSource
-        )
     );
-
-    Assertions.assertEquals(528, selectedCount);
   }
 
   @Test
   @Timeout(60)
-  @Disabled // Test does not currently pass, see https://github.com/apache/druid/issues/18198
   public void test_selectBroadcastJoin_task_withRealtime()
   {
     final String sql = StringUtils.format(
@@ -367,13 +365,8 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
-
-    BaseCalciteQueryTest.assertResultsEquals(
-        sql,
-        Collections.singletonList(new Object[]{528}),
-        payload.getResults().getResults()
-    );
+    msqApis.expectTaskFailure(sql, "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
+                                   + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].");
   }
 
   @Test
@@ -407,7 +400,37 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  @Disabled
+  public void test_unnest_task_withRealtime()
+  {
+    // TODO: add test
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_selectSortMergeJoin_dart()
+  {
+    final long selectedCount = Long.parseLong(
+        msqApis.runDartSql(
+            "SET sqlJoinAlgorithm = 'sortMerge';\n"
+            + "SELECT COUNT(*) FROM \"%s\"\n"
+            + "WHERE countryName IN (\n"
+            + "  SELECT countryName\n"
+            + "  FROM \"%s\"\n"
+            + "  WHERE countryName IS NOT NULL\n"
+            + "  GROUP BY 1\n"
+            + "  ORDER BY COUNT(*) DESC\n"
+            + "  LIMIT 1\n"
+            + ")",
+            dataSource,
+            dataSource
+        )
+    );
+
+    Assertions.assertEquals(528, selectedCount);
+  }
+
+  @Test
+  @Timeout(60)
   public void test_selectJoinwithLookup_task_withRealtime()
   {
     final String sql = StringUtils.format(
@@ -439,6 +462,33 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
+  public void test_selectJoinwithLookup_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \n"
+        + " l.v AS newName, \n"
+        + " SUM(w.\"added\") AS total\n"
+        + "FROM \"%s\" w INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 2 DESC\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "English,3045299\n"
+        + "French,642555\n"
+        + "Arabic,153605\n"
+        + "Czech,132768\n"
+        + "European,6690",
+        result
+    );
+  }
+
+  @Test
+  @Timeout(60)
   public void test_selectJoinWithConcatVirtualDimension_task_withRealtime()
   {
     final String sql = StringUtils.format(
@@ -453,7 +503,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         + "WHERE\n"
         + "  w.\"cityName\" IS NOT NULL\n"
         + "  AND \"added\" > 1000 AND \"delta\" > 5000\n"
-        + "\n",
+        + "ORDER BY 3 DESC\n",
         dataSource,
         LOOKUP_TABLE
     );
@@ -463,11 +513,41 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         List.of(
-            new Object[]{"#en.wikipedia","GB","London: English","78.145.31.93"},
-            new Object[]{"#en.wikipedia","IN","Bhopal: English","14.139.241"},
-            new Object[]{"#ar.wikipedia","AE","Dubai: Arabic","86.98.5.51"}
+            new Object[]{"#en.wikipedia", "GB", "London: English", "78.145.31.93"},
+            new Object[]{"#ar.wikipedia", "AE", "Dubai: Arabic", "86.98.5.51"},
+            new Object[]{"#en.wikipedia", "IN", "Bhopal: English", "14.139.241.50"}
         ),
         payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_selectJoinWithConcatVirtualDimension_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT\n"
+        + "  \"channel\",\n"
+        + "  \"countryIsoCode\",\n"
+        + "  CONCAT(w.\"cityName\", ': ', l.v),\n"
+        + "  \"user\"\n"
+        + "FROM %s w\n"
+        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "WHERE\n"
+        + "  w.\"cityName\" IS NOT NULL\n"
+        + "  AND \"added\" > 1000 AND \"delta\" > 5000\n"
+        + "ORDER BY 3 DESC\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final String results = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "#en.wikipedia,GB,London: English,78.145.31.93\n"
+        + "#ar.wikipedia,AE,Dubai: Arabic,86.98.5.51\n"
+        + "#en.wikipedia,IN,Bhopal: English,14.139.241.50",
+        results
     );
   }
 
@@ -477,7 +557,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   {
     final String sql = StringUtils.format(
         "SET includeSegmentSource = 'REALTIME';\n"
-        + "SET includeSegmentSource = 'REALTIME';\n"
         + "SELECT \"channel\", \"page\", \"user\", \"deleted\"\n"
         + "FROM \"%s\"\n"
         + "WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10",
@@ -489,10 +568,30 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         List.of(
-            new Object[]{"#en.wikipedia","Coca-Cola formula","124.169.17.234", 0},
-            new Object[]{"#en.wikipedia","List of Harry Potter characters","121.211.82.121", 0}
+            new Object[]{"#en.wikipedia", "Coca-Cola formula", "124.169.17.234", 0},
+            new Object[]{"#en.wikipedia", "List of Harry Potter characters", "121.211.82.121", 0}
         ),
         payload.getResults().getResults()
+    );
+  }
+
+
+  @Test
+  @Timeout(60)
+  public void test_scanWithFilter_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", \"page\", \"user\", \"deleted\"\n"
+        + "FROM \"%s\"\n"
+        + "WHERE \"cityName\" = 'Sydney' AND \"delta\" > 10",
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "#en.wikipedia,Coca-Cola formula,124.169.17.234,0\n#en.wikipedia,List of Harry Potter characters,121.211.82.121,0",
+        result
     );
   }
 
@@ -524,9 +623,26 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
+  public void test_groupByWithFilter_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \"channel\", COUNT(*)\n"
+        + "FROM \"%s\"\n"
+        + "WHERE \"countryName\" = 'Australia'\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        dataSource
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals("#en.wikipedia,63\n#de.wikipedia,2", result);
+  }
+
+  @Test
+  @Timeout(60)
   public void test_scanWithFilterAfterJoin_task_withRealtime()
   {
-    // SELECT * FROM wikipedia INNER JOIN lookup.xyz ON wikipedia.foo = xyz.k WHERE CONCAT(wikipedia.foo, ': ', xyz.v) = 'something: something'
     final String sql = StringUtils.format(
         "SET includeSegmentSource = 'REALTIME';\n"
         + "SELECT \n"
@@ -550,6 +666,30 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
             new Object[]{"Chazz Palminteri", "81.178.229.60", 10}
         ),
         payload.getResults().getResults()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_scanWithFilterAfterJoin_dart()
+  {
+    final String sql = StringUtils.format(
+        "SELECT \n"
+        + "  \"page\", \n"
+        + "  \"user\", \n"
+        + "  \"added\"\n"
+        + "FROM %s w\n"
+        + "  INNER JOIN lookup.%s l ON w.\"channel\" = l.k\n"
+        + "WHERE CONCAT(w.\"cityName\", ': ', l.v) = 'London: English' AND \"comment\" IN ('/* Works */', '/* Early life */')\n",
+        dataSource,
+        LOOKUP_TABLE
+    );
+
+    final String result = msqApis.runDartSql(sql);
+
+    Assertions.assertEquals(
+        "Andy Wilman,109.156.217.121,0\nAngharad Rees,89.240.46.182,578\nChazz Palminteri,81.178.229.60,10",
+        result
     );
   }
 
