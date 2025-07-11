@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+git grep junit-jupiter-engine '**/pom.xml' | cut -d: -f1 | while read pom ;do
+
+	m=`dirname $pom`
+	hasj4=`git grep org.junit.Test $m | head -n 1 | wc -l`
+	hasVintage=`git grep junit-vintage-engine $m|head -n 1 | wc -l`
+
+	echo "$m hasj4:$hasj4 hasVintage:$hasVintage"
+
+	if [ "$hasVintage" != "$hasj4" ];then
+		echo "Module [$m] either needs tests upgraded to junit5 or the vintage engine!"
+		exit 1
+	fi
+done
