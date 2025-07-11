@@ -81,18 +81,17 @@ public class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
   public EmbeddedDruidCluster createCluster()
   {
     historical.addProperty("druid.segmentCache.isVirtualStorageFabric", "true")
-              .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")))
               .addBeforeStartHook(
-                  (cluster, self) ->
-                      self.addProperty(
-                          "druid.segmentCache.locations",
-                          StringUtils.format(
-                              "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
-                              cluster.getTestFolder().newFolder().getAbsolutePath(),
-                              HumanReadableBytes.parse("1MiB")
-                          )
+                  (cluster, self) -> self.addProperty(
+                      "druid.segmentCache.locations",
+                      StringUtils.format(
+                          "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
+                          cluster.getTestFolder().newFolder().getAbsolutePath(),
+                          HumanReadableBytes.parse("1MiB")
                       )
-              );
+                  )
+              )
+              .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")));
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 

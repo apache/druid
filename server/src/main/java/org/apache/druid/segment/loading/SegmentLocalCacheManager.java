@@ -211,7 +211,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               removeInfo = false;
               final boolean reserveResult;
               if (config.isVirtualStorageFabric()) {
-                reserveResult = location.reserveWeak(cacheEntry);;
+                reserveResult = location.reserveWeak(cacheEntry);
               } else {
                 reserveResult = location.reserve(cacheEntry);
               }
