@@ -100,7 +100,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
-                   .localInputSourceWithFiles(Resources.WIKIPEDIA_1_JSON)
+                   .localInputSourceWithFiles(Resources.TINY_WIKI_1_JSON)
                    .dimensions()
                    .tuningConfig(
                        t -> t.withAwaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis)
@@ -135,9 +135,9 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
                    .localInputSourceWithFiles(
-                       Resources.WIKIPEDIA_1_JSON,
-                       Resources.WIKIPEDIA_2_JSON,
-                       Resources.WIKIPEDIA_3_JSON
+                       Resources.TINY_WIKI_1_JSON,
+                       Resources.TINY_WIKI_2_JSON,
+                       Resources.TINY_WIKI_JSON
                    )
                    .segmentGranularity("DAY")
                    .dimensions("namespace", "page", "language")

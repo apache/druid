@@ -122,9 +122,9 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
           .ofTypeIndex()
           .jsonInputFormat()
           .localInputSourceWithFiles(
-              Resources.WIKIPEDIA_1_JSON,
-              Resources.WIKIPEDIA_2_JSON,
-              Resources.WIKIPEDIA_3_JSON
+              Resources.TINY_WIKI_1_JSON,
+              Resources.TINY_WIKI_2_JSON,
+              Resources.TINY_WIKI_JSON
           )
           .timestampColumn("timestamp")
           .dimensions(

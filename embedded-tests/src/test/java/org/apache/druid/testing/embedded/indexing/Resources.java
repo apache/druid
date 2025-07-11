@@ -62,7 +62,7 @@ public class Resources
       + "\"commentLength\":35,\"isNew\":true,\"isMinor\":false,\"delta\":31,"
       + "\"isAnonymous\":false,\"user\":\"maytas3\",\"deltaBucket\":0.0,\"deleted\":0,\"namespace\":\"Main\"}\n";
 
-  public static final String WIKIPEDIA_1_JSON = "data/json/wikipedia_1.json";
-  public static final String WIKIPEDIA_2_JSON = "data/json/wikipedia_2.json";
-  public static final String WIKIPEDIA_3_JSON = "data/json/wikipedia_3.json";
+  public static final String TINY_WIKI_1_JSON = "data/json/tiny_wiki_1.json";
+  public static final String TINY_WIKI_2_JSON = "data/json/tiny_wiki_2.json";
+  public static final String TINY_WIKI_JSON = "data/json/tiny_wiki_3.json";
 }
