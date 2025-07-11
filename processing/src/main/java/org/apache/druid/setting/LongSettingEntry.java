@@ -20,7 +20,6 @@
 package org.apache.druid.setting;
 
 
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
 public class LongSettingEntry extends SettingEntry<Long>
@@ -31,21 +30,15 @@ public class LongSettingEntry extends SettingEntry<Long>
   }
 
   @Override
-  public Long from(QueryContext context)
+  public Long from(Object value)
   {
-    return QueryContexts.getAsLong(name, context.get(name), defaultValue);
+    return QueryContexts.getAsLong(name, value, defaultValue);
   }
 
   @Override
-  public Long from(QueryContext context, Long defaultValue)
+  public Long from(Object value, Long defaultValue)
   {
-    return QueryContexts.getAsLong(name, context.get(name), defaultValue);
-  }
-
-  @Override
-  public Long convert(Object value)
-  {
-    return QueryContexts.getAsLong(name, value);
+    return QueryContexts.getAsLong(name, value, defaultValue);
   }
 
   public static class Builder extends AbstractBuilder<Long>

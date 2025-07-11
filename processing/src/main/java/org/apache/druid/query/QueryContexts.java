@@ -81,9 +81,27 @@ public class QueryContexts
                                                               .name("lane")
                                                               .register(QuerySettingRegistry.getInstance());
 
-  public static final String TIMEOUT_KEY = "timeout";
-  public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
-  public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
+  public static final SettingEntry<Long> TIMEOUT = SettingEntry.newLongEntry()
+                                                               .name("timeout")
+                                                               .defaultValue(TimeUnit.MINUTES.toMillis(5))
+                                                               .description(
+                                                                   "Query timeout in milliseconds. Queries that take longer than this timeout are cancelled")
+                                                               .register(QuerySettingRegistry.getInstance());
+
+  public static final SettingEntry<Long> MAX_SCATTER_GATHER_BYTES = SettingEntry.newLongEntry()
+                                                                                .name("maxScatterGatherBytes")
+                                                                                .defaultValue(Long.MAX_VALUE)
+                                                                                .description(
+                                                                                    "Maximum number of bytes to gather from all data servers in a cluster for a single query. This limit is enforced to prevent queries from exhausting memory")
+                                                                                .register(QuerySettingRegistry.getInstance());
+
+  public static final SettingEntry<Long> MAX_QUEUED_BYTES = SettingEntry.newLongEntry()
+                                                                        .name("maxQueuedBytes")
+                                                                        .defaultValue(Long.MAX_VALUE)
+                                                                        .description(
+                                                                            "Maximum number of bytes to queue for each query. This limit is enforced to prevent queries from exhausting memory")
+                                                                        .register(QuerySettingRegistry.getInstance());
+
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";

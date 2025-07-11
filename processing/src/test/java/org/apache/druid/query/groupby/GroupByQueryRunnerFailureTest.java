@@ -196,7 +196,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
@@ -234,7 +234,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 500))
         .build();
 
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
@@ -259,7 +259,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 500))
         .build();
 
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
@@ -286,7 +286,7 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 1))
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(

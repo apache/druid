@@ -20,7 +20,6 @@
 package org.apache.druid.setting;
 
 
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
 public class IntegerSettingEntry extends SettingEntry<Integer>
@@ -31,21 +30,15 @@ public class IntegerSettingEntry extends SettingEntry<Integer>
   }
 
   @Override
-  public Integer from(QueryContext context)
+  public Integer from(Object value)
   {
-    return QueryContexts.getAsInt(name, context.get(name), defaultValue);
+    return QueryContexts.getAsInt(name, value, defaultValue);
   }
 
   @Override
-  public Integer from(QueryContext context, Integer defaultValue)
+  public Integer from(Object value, Integer defaultValue)
   {
-    return QueryContexts.getAsInt(name, context.get(name), defaultValue);
-  }
-
-  @Override
-  public Integer convert(Object value)
-  {
-    return QueryContexts.getAsInt(name, value);
+    return QueryContexts.getAsInt(name, value, defaultValue);
   }
 
   public static class Builder extends AbstractBuilder<Integer>

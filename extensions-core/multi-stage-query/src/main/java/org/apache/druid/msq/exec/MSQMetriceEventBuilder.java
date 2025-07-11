@@ -23,9 +23,9 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 
 import java.util.Map;
 
@@ -89,8 +89,8 @@ public class MSQMetriceEventBuilder extends ServiceMetricEvent.Builder
 
   private void setQueryIdDimensions(final QueryContext queryContext)
   {
-    setDimensionIfNotNull(BaseQuery.QUERY_ID, queryContext.getString(BaseQuery.QUERY_ID));
-    setDimensionIfNotNull(BaseQuery.SQL_QUERY_ID, queryContext.getString(BaseQuery.SQL_QUERY_ID));
+    setDimensionIfNotNull(QueryContexts.QUERY_ID.name(), queryContext.getString(QueryContexts.QUERY_ID.name()));
+    setDimensionIfNotNull(QueryContexts.SQL_QUERY_ID.name(), queryContext.getString(QueryContexts.SQL_QUERY_ID.name()));
     setDimension(DruidMetrics.TYPE, QUERY_METRIC_TYPE);
   }
 }

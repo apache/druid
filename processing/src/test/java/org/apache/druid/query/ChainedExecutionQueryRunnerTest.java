@@ -255,7 +255,7 @@ public class ChainedExecutionQueryRunnerTest
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-                                  .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+                                  .context(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 100, "queryId", "test"))
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
@@ -324,7 +324,7 @@ public class ChainedExecutionQueryRunnerTest
         .dataSource("test")
         .intervals("2014/2015")
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 100, "queryId", "test"))
         .build();
     List<QueryRunner<Result<TimeseriesResultValue>>> runners = Arrays.asList(
         Mockito.mock(QueryRunner.class),

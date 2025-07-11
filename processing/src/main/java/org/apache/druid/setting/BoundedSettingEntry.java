@@ -38,7 +38,7 @@ public class BoundedSettingEntry<T>
    */
   public T get()
   {
-    return def.from(context);
+    return def.from(context.get(def.name));
   }
 
   /**
@@ -46,15 +46,7 @@ public class BoundedSettingEntry<T>
    */
   public T get(T defaultValue)
   {
-    return def.from(context, defaultValue);
-  }
-
-  /**
-   * Get the setting's name
-   */
-  public String name()
-  {
-    return def.name();
+    return def.from(context.get(def.name), defaultValue);
   }
 
   /**

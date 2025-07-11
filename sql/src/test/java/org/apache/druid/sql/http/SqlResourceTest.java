@@ -1831,7 +1831,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String sqlQueryId = "timeoutTest";
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
+        QueryContexts.TIMEOUT.name(),
         1,
         QueryContexts.SQL_QUERY_ID.name(),
         sqlQueryId
@@ -1977,7 +1977,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String sqlQueryId = "badQueryContextTimeout";
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.TIMEOUT_KEY,
+        QueryContexts.TIMEOUT.name(),
         "2000'",
         QueryContexts.SQL_QUERY_ID.name(),
         sqlQueryId

@@ -257,8 +257,8 @@ public class Queries
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     QueryContext context = query.context();
-    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY)) {
-      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, maxScatterGatherBytesLimit));
+    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES.name())) {
+      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), maxScatterGatherBytesLimit));
     }
     context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
     return query;
@@ -266,7 +266,7 @@ public class Queries
 
   public static <T> Query<T> withTimeout(Query<T> query, long timeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeout));
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), timeout));
   }
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)

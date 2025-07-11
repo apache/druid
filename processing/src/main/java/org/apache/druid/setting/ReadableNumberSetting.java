@@ -21,7 +21,6 @@ package org.apache.druid.setting;
 
 
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
 public class ReadableNumberSetting extends SettingEntry<HumanReadableBytes>
@@ -32,21 +31,15 @@ public class ReadableNumberSetting extends SettingEntry<HumanReadableBytes>
   }
 
   @Override
-  public HumanReadableBytes from(QueryContext context)
+  public HumanReadableBytes from(Object value)
   {
-    return QueryContexts.getAsHumanReadableBytes(name, context.get(name), defaultValue);
+    return QueryContexts.getAsHumanReadableBytes(name, value, defaultValue);
   }
 
   @Override
-  public HumanReadableBytes from(QueryContext context, HumanReadableBytes defaultValue)
+  public HumanReadableBytes from(Object value, HumanReadableBytes defaultValue)
   {
-    return QueryContexts.getAsHumanReadableBytes(name, context.get(name), defaultValue);
-  }
-
-  @Override
-  public HumanReadableBytes convert(Object value)
-  {
-    return QueryContexts.getAsHumanReadableBytes(name, value);
+    return QueryContexts.getAsHumanReadableBytes(name, value, defaultValue);
   }
 
   public static class Builder extends AbstractBuilder<HumanReadableBytes>

@@ -52,7 +52,6 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -319,11 +318,11 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 
     if (querySpec.getId() != null) {
-      builder.put(BaseQuery.QUERY_ID, querySpec.getId());
+      builder.put(QueryContexts.QUERY_ID.name(), querySpec.getId());
     }
 
     if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
-      builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+      builder.put(QueryContexts.SQL_QUERY_ID.name(), queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
     }
 
     MSQDestination destination = querySpec.getDestination();

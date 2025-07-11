@@ -139,7 +139,7 @@ public final class QueryPlus<T>
   public QueryPlus<T> withMaxQueuedBytes(long maxQueuedBytes)
   {
     return new QueryPlus<>(
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES_KEY, maxQueuedBytes)),
+        query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_QUEUED_BYTES.name(), maxQueuedBytes)),
         queryMetrics,
         identity
     );

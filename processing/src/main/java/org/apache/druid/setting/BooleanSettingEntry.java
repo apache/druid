@@ -21,7 +21,6 @@
 package org.apache.druid.setting;
 
 
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
 public class BooleanSettingEntry extends SettingEntry<Boolean>
@@ -32,21 +31,15 @@ public class BooleanSettingEntry extends SettingEntry<Boolean>
   }
 
   @Override
-  public Boolean from(QueryContext context)
+  public Boolean from(Object value)
   {
-    return QueryContexts.getAsBoolean(name, context.get(name), defaultValue);
+    return QueryContexts.getAsBoolean(name, value, defaultValue);
   }
 
   @Override
-  public Boolean from(QueryContext context, Boolean defaultValue)
+  public Boolean from(Object value, Boolean defaultValue)
   {
-    return QueryContexts.getAsBoolean(name, context.get(name), defaultValue);
-  }
-
-  @Override
-  public Boolean convert(Object value)
-  {
-    return QueryContexts.getAsBoolean(name, value);
+    return QueryContexts.getAsBoolean(name, value, defaultValue);
   }
 
   public static class Builder extends AbstractBuilder<Boolean>

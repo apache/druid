@@ -42,7 +42,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 1))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -93,7 +93,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 0))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig();
@@ -115,7 +115,7 @@ public class SetAndVerifyContextQueryRunnerTest
     Query<ScanResultValue> query = new Druids.ScanQueryBuilder()
         .dataSource("foo")
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-        .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 0))
+        .context(ImmutableMap.of(QueryContexts.TIMEOUT.name(), 0))
         .build();
 
     ServerConfig defaultConfig = new ServerConfig()

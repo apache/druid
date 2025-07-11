@@ -470,12 +470,12 @@ public class QueryContext
 
   public long getMaxQueuedBytes(long defaultValue)
   {
-    return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);
+    return getValue(QueryContexts.MAX_QUEUED_BYTES, defaultValue);
   }
 
   public long getMaxScatterGatherBytes()
   {
-    return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+    return getValue(QueryContexts.MAX_SCATTER_GATHER_BYTES);
   }
 
   public String getEngine()
@@ -499,14 +499,14 @@ public class QueryContext
 
   public long getTimeout(long defaultTimeout)
   {
-    final long timeout = getLong(QueryContexts.TIMEOUT_KEY, defaultTimeout);
+    final long timeout = getValue(QueryContexts.TIMEOUT, defaultTimeout);
     if (timeout >= 0) {
       return timeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.TIMEOUT_KEY,
+            QueryContexts.TIMEOUT.name(),
             timeout
         )
     );
@@ -534,7 +534,7 @@ public class QueryContext
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.TIMEOUT_KEY,
+              QueryContexts.TIMEOUT.name(),
               timeout,
               maxQueryTimeout
           )
@@ -544,12 +544,12 @@ public class QueryContext
 
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
   {
-    long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
+    long curr = getValue(QueryContexts.MAX_SCATTER_GATHER_BYTES, 0L);
     if (curr > maxScatterGatherBytesLimit) {
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
+              QueryContexts.MAX_SCATTER_GATHER_BYTES.name(),
               curr,
               maxScatterGatherBytesLimit
           )

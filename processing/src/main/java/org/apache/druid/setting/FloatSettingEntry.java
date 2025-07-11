@@ -20,7 +20,6 @@
 package org.apache.druid.setting;
 
 
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 
 public class FloatSettingEntry extends SettingEntry<Float>
@@ -31,21 +30,15 @@ public class FloatSettingEntry extends SettingEntry<Float>
   }
 
   @Override
-  public Float from(QueryContext context)
+  public Float from(Object value)
   {
-    return QueryContexts.getAsFloat(name, context.get(name), defaultValue);
+    return QueryContexts.getAsFloat(name, value, defaultValue);
   }
 
   @Override
-  public Float from(QueryContext context, Float defaultValue)
+  public Float from(Object value, Float defaultValue)
   {
-    return QueryContexts.getAsFloat(name, context.get(name), defaultValue);
-  }
-
-  @Override
-  public Float convert(Object value)
-  {
-    return QueryContexts.getAsFloat(name, value);
+    return QueryContexts.getAsFloat(name, value, defaultValue);
   }
 
   public static class Builder extends AbstractBuilder<Float>

@@ -89,7 +89,7 @@ public class QuerySettingTable extends AbstractTable implements ScannableTable
           final SettingEntry<?> task = it.next();
           return new Object[]{
               task.name(),
-              task.type(),
+              task.type().getSimpleName(),
               task.defaultValue() == null ? null : task.defaultValue().toString(),
               task.deprecated() ? 1L : 0L,
               task.description()

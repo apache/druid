@@ -2756,7 +2756,7 @@ public class MSQSelectTest extends MSQTestBase
 
     ImmutableMap<String, Object> timeoutContext = ImmutableMap.<String, Object>builder()
                                                               .putAll(context)
-                                                              .put(QueryContexts.TIMEOUT_KEY, 1) // Trigger timeout
+                                                              .put(QueryContexts.TIMEOUT.name(), 1) // Trigger timeout
                                                               .build();
 
     testSelectQuery()

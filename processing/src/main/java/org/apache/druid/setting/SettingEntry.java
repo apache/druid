@@ -21,18 +21,14 @@
 package org.apache.druid.setting;
 
 
-import org.apache.druid.query.QueryContext;
-
-import java.util.Locale;
-
 public abstract class SettingEntry<T>
 {
   protected String name;
 
   /**
-   * Java type name of the setting
+   * Java type class
    */
-  protected String type;
+  protected Class<T> type;
 
   /**
    * Default value for the setting. can be null.
@@ -69,7 +65,7 @@ public abstract class SettingEntry<T>
     return name;
   }
 
-  public String type()
+  public Class<T> type()
   {
     return type;
   }
@@ -92,14 +88,9 @@ public abstract class SettingEntry<T>
   /**
    * Get the value of this setting from the given context. If the setting is not present in the context, the default value of the setting is returned.
    */
-  public abstract T from(QueryContext context);
+  public abstract T from(Object context);
 
-  public abstract T from(QueryContext context, T defaultValue);
-
-  /**
-   * Convert the given value to the type of this setting.
-   */
-  public abstract T convert(Object value);
+  public abstract T from(Object context, T defaultValue);
 
   @Override
   public String toString()
@@ -109,7 +100,7 @@ public abstract class SettingEntry<T>
 
   public abstract static class AbstractBuilder<T>
   {
-    protected final String type;
+    protected final Class<T> type;
     protected String name;
     protected T defaultValue;
     protected String scope;
@@ -117,9 +108,9 @@ public abstract class SettingEntry<T>
     protected boolean deprecated;
     protected String description;
 
-    protected AbstractBuilder(Class<T> clazz)
+    protected AbstractBuilder(Class<T> type)
     {
-      this.type = clazz.getSimpleName().toLowerCase(Locale.ENGLISH);
+      this.type = type;
     }
 
     public AbstractBuilder<T> name(String name)
