@@ -27,6 +27,7 @@ package org.apache.druid.testing.embedded;
  */
 public interface EmbeddedResource
 {
+
   /**
    * Starts this resource. Implementations of this method should clean up any
    * previous state as it may be called multiple times on a single instance of
@@ -38,6 +39,17 @@ public interface EmbeddedResource
    * Cleans up this resource.
    */
   void stop() throws Exception;
+
+
+  /**
+   * Called before {@link #start()} with a pointer to the current cluster. This is primarily useful for any
+   * final initialization of {@link EmbeddedDruidServer} that need to configure themselves based on some
+   * shared resources which have already been started, such as {@link TestFolder}.
+   */
+  default void beforeStart(EmbeddedDruidCluster cluster)
+  {
+    // do nothing by default
+  }
 
   /**
    * Called after {@link #start()} with a pointer to the current cluster. This is intended for use by resources

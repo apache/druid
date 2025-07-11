@@ -75,6 +75,7 @@ import javax.ws.rs.core.MediaType;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -660,8 +661,9 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3))
     );
 
+    Set<String> dataSources = new LinkedHashSet<>(List.of("xyz", "abc"));
     CloseableIterator<SegmentStatusInCluster> iterator = FutureUtils.getUnchecked(
-        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(Set.of("abc", "xyz"), true),
+        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(dataSources, true),
         true
     );
 

@@ -1939,7 +1939,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Collections.singletonList(2L), rowList.get(2).metricValues());
   }
 
-  private IncrementalIndex getIndexWithNumericDims() throws Exception
+  private IncrementalIndex getIndexWithNumericDims()
   {
     IncrementalIndex index = getIndexWithDimsFromSchemata(
         Arrays.asList(
@@ -2036,7 +2036,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
   }
 
 
-  private IncrementalIndex getIndexD3() throws Exception
+  private IncrementalIndex getIndexD3()
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -2070,7 +2070,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     return toPersist1;
   }
 
-  private IncrementalIndex getSingleDimIndex(String dimName, List<String> values) throws Exception
+  private IncrementalIndex getSingleDimIndex(String dimName, List<String> values)
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -2081,7 +2081,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     return toPersist1;
   }
 
-  private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values) throws Exception
+  private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values)
   {
     for (String val : values) {
       index.add(new MapBasedInputRow(1, Collections.singletonList(dimName), ImmutableMap.of(dimName, val)));
