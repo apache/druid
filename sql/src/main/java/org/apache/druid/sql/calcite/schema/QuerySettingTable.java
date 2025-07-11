@@ -44,6 +44,8 @@ public class QuerySettingTable extends AbstractTable implements ScannableTable
       .builder()
       .add("name", ColumnType.STRING)
       .add("type", ColumnType.STRING)
+      .add("min", ColumnType.STRING)
+      .add("max", ColumnType.STRING)
       .add("default_value", ColumnType.STRING)
       .add("deprecated", ColumnType.LONG)
       .add("description", ColumnType.STRING)
@@ -86,13 +88,15 @@ public class QuerySettingTable extends AbstractTable implements ScannableTable
         @Override
         public Object[] current()
         {
-          final SettingEntry<?> task = it.next();
+          final SettingEntry<?> entry = it.next();
           return new Object[]{
-              task.name(),
-              task.type().getSimpleName(),
-              task.defaultValue() == null ? null : task.defaultValue().toString(),
-              task.deprecated() ? 1L : 0L,
-              task.description()
+              entry.name(),
+              entry.type().getSimpleName(),
+              entry.min() == null ? null : entry.min().toString(),
+              entry.max() == null ? null : entry.max().toString(),
+              entry.defaultValue() == null ? null : entry.defaultValue().toString(),
+              entry.deprecated() ? 1L : 0L,
+              entry.description()
           };
         }
 

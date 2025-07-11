@@ -36,6 +36,16 @@ public abstract class SettingEntry<T>
   protected T defaultValue;
 
   /**
+   * Minimum value for the setting. Can be null if no minimum is enforced.
+   */
+  protected T min;
+
+  /**
+   * Maximum value for the setting. Can be null if no maximum is enforced.
+   */
+  protected T max;
+
+  /**
    * The version since which this setting is available. For example, "0.20.0".
    */
   protected String since;
@@ -55,6 +65,8 @@ public abstract class SettingEntry<T>
     this.name = builder.name;
     this.type = builder.type;
     this.defaultValue = builder.defaultValue;
+    this.min = builder.min;
+    this.max = builder.max;
     this.since = builder.since;
     this.deprecated = builder.deprecated;
     this.description = builder.description;
@@ -73,6 +85,16 @@ public abstract class SettingEntry<T>
   public T defaultValue()
   {
     return defaultValue;
+  }
+
+  public T min()
+  {
+    return min;
+  }
+
+  public T max()
+  {
+    return max;
   }
 
   public boolean deprecated()
@@ -103,6 +125,8 @@ public abstract class SettingEntry<T>
     protected final Class<T> type;
     protected String name;
     protected T defaultValue;
+    protected T min;
+    protected T max;
     protected String scope;
     protected String since;
     protected boolean deprecated;
@@ -122,6 +146,25 @@ public abstract class SettingEntry<T>
     public AbstractBuilder<T> defaultValue(T defaultValue)
     {
       this.defaultValue = defaultValue;
+      return this;
+    }
+
+    public AbstractBuilder<T> min(T min)
+    {
+      this.min = min;
+      return this;
+    }
+
+    public AbstractBuilder<T> max(T max)
+    {
+      this.max = max;
+      return this;
+    }
+
+    public AbstractBuilder<T> range(T min, T max)
+    {
+      this.min = min;
+      this.max = max;
       return this;
     }
 
