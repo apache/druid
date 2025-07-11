@@ -296,7 +296,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       taskConfig = toolbox.getConfig();
       if (!taskConfig.isAllowHadoopTaskExecution()) {
-        String errorMsg = StringUtils.format(
+        errorMsg = StringUtils.format(
             "Hadoop tasks are deprecated and will be removed in a future release. "
             + "Currently, they are not allowed to run on this cluster. If you wish to run them despite deprecation, "
             + "please set [%s] to true.",
