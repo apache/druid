@@ -170,7 +170,7 @@ jobs:
 
       - name: Run IT
         id: test
-        timeout-minutes: 60
+        timeout-minutes: 90
         run: |
           set -x
           mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C
