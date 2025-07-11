@@ -82,7 +82,7 @@ public class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
   {
     historical.addProperty("druid.segmentCache.isVirtualStorageFabric", "true")
               .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")))
-              .addBeforeStart(
+              .addBeforeStartHook(
                   (cluster, self) ->
                       self.addProperty(
                           "druid.segmentCache.locations",
