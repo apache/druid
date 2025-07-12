@@ -28,6 +28,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.TaskMetrics;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -117,6 +118,24 @@ public class EmbeddedClusterApis
   }
 
   /**
+   * Waits for all used segments (including overshadowed) of the given datasource
+   * to be loaded on historicals.
+   */
+  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator)
+  {
+    final int numSegments = coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .size();
+    coordinator.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/loadQueue/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numSegments)
+    );
+  }
+
+  /**
    * Fetches the status of the given task from the cluster and verifies that it
    * matches the expected status.
    */
@@ -164,15 +183,11 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Deserializes the given String payload into a Map-based object that may be
-   * submitted directly to the Overlord using
-   * {@code cluster.callApi().onLeaderOverlord(o -> o.runTask(...))}.
+   * Creates a random task ID prefixed with the {@code dataSource}.
    */
-  public static Object createTaskFromPayload(String taskId, String payload)
+  public static String newTaskId(String dataSource)
   {
-    final Map<String, Object> task = deserializeJsonToMap(payload);
-    task.put("id", taskId);
-    return task;
+    return dataSource + "_" + IdUtils.getRandomId();
   }
 
   /**
