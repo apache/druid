@@ -30,15 +30,15 @@ import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.setting.QuerySettingRegistry;
+import org.apache.druid.query.QueryContextParameterRegistry;
 import org.apache.druid.setting.SettingEntry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Iterator;
 
-public class QuerySettingTable extends AbstractTable implements ScannableTable
+public class QueryContextParameterTable extends AbstractTable implements ScannableTable
 {
-  static final String TABLE_NAME = "query_settings";
+  static final String TABLE_NAME = "query_context_parameters";
 
   static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
@@ -60,9 +60,9 @@ public class QuerySettingTable extends AbstractTable implements ScannableTable
   @Override
   public Enumerable<Object[]> scan(DataContext root)
   {
-    return new DataEnumerable(QuerySettingRegistry.getInstance()
-                                                  .getSettings()
-                                                  .iterator());
+    return new DataEnumerable(QueryContextParameterRegistry.getInstance()
+                                                           .getParameters()
+                                                           .iterator());
   }
 
   static class DataEnumerable extends DefaultEnumerable<Object[]>

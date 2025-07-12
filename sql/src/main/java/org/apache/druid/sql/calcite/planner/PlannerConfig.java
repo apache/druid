@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.setting.QuerySettingRegistry;
+import org.apache.druid.query.QueryContextParameterRegistry;
 import org.apache.druid.setting.SettingEntry;
 import org.joda.time.DateTimeZone;
 
@@ -38,7 +38,7 @@ public class PlannerConfig
                                                                                                  .scope("sql")
                                                                                                  .defaultValue(true)
                                                                                                  .description("Use approximate count distinct in SQL queries.")
-                                                                                                 .register(QuerySettingRegistry.getInstance());
+                                                                                                 .register(QueryContextParameterRegistry.getInstance());
 
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";

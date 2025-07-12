@@ -261,8 +261,8 @@ public class SystemSchema extends AbstractSchema
         new TasksTable(overlordClient, authorizerMapper),
         SUPERVISOR_TABLE,
         new SupervisorsTable(overlordClient, authorizerMapper),
-        QuerySettingTable.TABLE_NAME,
-        new QuerySettingTable()
+        QueryContextParameterTable.TABLE_NAME,
+        new QueryContextParameterTable()
     );
   }
 

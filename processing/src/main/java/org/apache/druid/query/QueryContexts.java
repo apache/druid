@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.setting.QuerySettingRegistry;
 import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
@@ -47,74 +46,74 @@ public class QueryContexts
                                                                   .defaultValue(null)
                                                                   .description(
                                                                       "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
-                                                                  .register(QuerySettingRegistry.getInstance());
+                                                                  .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<String> SUB_QUERY_ID = SettingEntry.newStringEntry()
                                                                       .name("subQueryId")
                                                                       .defaultValue(null)
                                                                       .description(
                                                                           "Unique identifier for the sub-query, that is used to map the global shared resources (specifically merge buffers) to the sub-query's runtime")
-                                                                      .register(QuerySettingRegistry.getInstance());
+                                                                      .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<String> SQL_QUERY_ID = SettingEntry.newStringEntry()
                                                                       .name("sqlQueryId")
                                                                       .defaultValue(null)
                                                                       .description(
                                                                           "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
-                                                                      .register(QuerySettingRegistry.getInstance());
+                                                                      .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Integer> PRIORITY = SettingEntry.newIntegerEntry()
                                                                    .name("priority")
                                                                    .defaultValue(0)
                                                                    .description(
                                                                        "Query priority. Queries with higher priority get precedence for resource allocation")
-                                                                   .register(QuerySettingRegistry.getInstance());
+                                                                   .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Boolean> FINALIZE = SettingEntry.newBooleanEntry()
                                                                    .name("finalize")
                                                                    .defaultValue(null)
                                                                    .description(
                                                                            "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                   .register(QuerySettingRegistry.getInstance());
+                                                                   .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<String> LANE = SettingEntry.newStringEntry()
                                                               .name("lane")
-                                                              .register(QuerySettingRegistry.getInstance());
+                                                              .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Long> TIMEOUT = SettingEntry.newLongEntry()
                                                                .name("timeout")
                                                                .defaultValue(TimeUnit.MINUTES.toMillis(5))
                                                                .description(
                                                                    "Query timeout in milliseconds. Queries that take longer than this timeout are cancelled")
-                                                               .register(QuerySettingRegistry.getInstance());
+                                                               .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Long> DEFAULT_TIMEOUT = SettingEntry.newLongEntry()
                                                                        .name("defaultTimeout")
                                                                        .defaultValue(TimeUnit.MINUTES.toMillis(5))
                                                                        .description(
                                                                            "Default timeout in milliseconds for queries that don't specify a timeout")
-                                                                       .register(QuerySettingRegistry.getInstance());
+                                                                       .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Long> MAX_SCATTER_GATHER_BYTES = SettingEntry.newLongEntry()
                                                                                 .name("maxScatterGatherBytes")
                                                                                 .defaultValue(Long.MAX_VALUE)
                                                                                 .description(
                                                                                     "Maximum number of bytes to gather from all data servers in a cluster for a single query. This limit is enforced to prevent queries from exhausting memory")
-                                                                                .register(QuerySettingRegistry.getInstance());
+                                                                                .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Long> MAX_QUEUED_BYTES = SettingEntry.newLongEntry()
                                                                         .name("maxQueuedBytes")
                                                                         .defaultValue(Long.MAX_VALUE)
                                                                         .description(
                                                                             "Maximum number of bytes to queue for each query. This limit is enforced to prevent queries from exhausting memory")
-                                                                        .register(QuerySettingRegistry.getInstance());
+                                                                        .register(QueryContextParameterRegistry.getInstance());
 
   public static final SettingEntry<Boolean> BROKER_PARALLEL_MERGE = SettingEntry.newBooleanEntry()
                                                                                .name("enableParallelMerge")
                                                                                .defaultValue(true)
                                                                                .description(
                                                                                    "Enable parallel merge for broker queries to improve performance by processing segments concurrently")
-                                                                               .register(QuerySettingRegistry.getInstance());
+                                                                               .register(QueryContextParameterRegistry.getInstance());
 
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
@@ -156,7 +155,7 @@ public class QueryContexts
                                                                                  .name("useResultLevelCache")
                                                                                  .defaultValue(true)
                                                                                  .description("Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                                 .register(QuerySettingRegistry.getInstance());
+                                                                                 .register(QueryContextParameterRegistry.getInstance());
 
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
@@ -199,7 +198,7 @@ public class QueryContexts
                                                                            .defaultValue(null)
                                                                            .description(
                                                                                "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
-                                                                           .register(QuerySettingRegistry.getInstance());
+                                                                           .register(QueryContextParameterRegistry.getInstance());
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
@@ -211,7 +210,7 @@ public class QueryContexts
                                                                        .defaultValue(null)
                                                                        .description(
                                                                            "Unique identifier for the Dart query, used to manage query resources and execution tracking")
-                                                                       .register(QuerySettingRegistry.getInstance());
+                                                                       .register(QueryContextParameterRegistry.getInstance());
   public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name();
   public static final String CTX_FULL_REPORT = "fullReport";
 
