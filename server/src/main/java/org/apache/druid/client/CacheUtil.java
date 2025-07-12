@@ -142,7 +142,7 @@ public class CacheUtil
   )
   {
     return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType, false)
-           && query.context().isUseResultLevelCache()
+           && query.context().useResultLevelCache.value()
            && cacheConfig.isUseResultLevelCache();
   }
 

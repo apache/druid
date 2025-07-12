@@ -22,7 +22,9 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContextParameterRegistry;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.setting.SettingEntry;
 import org.joda.time.DateTimeZone;
 
 import java.util.HashMap;
@@ -31,7 +33,13 @@ import java.util.Objects;
 
 public class PlannerConfig
 {
-  public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
+  public static final SettingEntry<Boolean> CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = SettingEntry.newBooleanEntry()
+                                                                                                 .name("useApproximateCountDistinct")
+                                                                                                 .scope("sql")
+                                                                                                 .defaultValue(true)
+                                                                                                 .description("Use approximate count distinct in SQL queries.")
+                                                                                                 .register(QueryContextParameterRegistry.getInstance());
+
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
   public static final String CTX_KEY_USE_LEXICOGRAPHIC_TOPN = "useLexicographicTopN";
@@ -344,7 +352,7 @@ public class PlannerConfig
     {
       useApproximateCountDistinct = QueryContexts.parseBoolean(
           queryContext,
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name,
           useApproximateCountDistinct
       );
       useGroupingSetForExactDistinct = QueryContexts.parseBoolean(
@@ -384,7 +392,8 @@ public class PlannerConfig
       );
       maxNumericInFilters = validateMaxNumericInFilters(
           queryContextMaxNumericInFilters,
-          maxNumericInFilters);
+          maxNumericInFilters
+      );
       nativeQuerySqlPlanningMode = QueryContexts.parseString(
           queryContext,
           QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
@@ -398,7 +407,10 @@ public class PlannerConfig
       return this;
     }
 
-    private static int validateMaxNumericInFilters(int queryContextMaxNumericInFilters, int systemConfigMaxNumericInFilters)
+    private static int validateMaxNumericInFilters(
+        int queryContextMaxNumericInFilters,
+        int systemConfigMaxNumericInFilters
+    )
     {
       // if maxNumericInFIlters through context == 0 catch exception
       // else if query context exceeds system set value throw error
@@ -451,7 +463,7 @@ public class PlannerConfig
     PlannerConfig def = new PlannerConfig();
     if (def.useApproximateCountDistinct != useApproximateCountDistinct) {
       overrides.put(
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name,
           String.valueOf(useApproximateCountDistinct)
       );
     }

@@ -240,7 +240,7 @@ public class DartQueryMaker implements QueryMaker
   private QueryContext finalizeTimeout(QueryContext queryContext)
   {
     final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
-    QueryContext timeoutContext = queryContext.override(Map.of(QueryContexts.TIMEOUT_KEY, timeout));
+    QueryContext timeoutContext = queryContext.override(Collections.singletonMap(QueryContexts.TIMEOUT.name, timeout));
     timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
     return timeoutContext;
   }
@@ -352,7 +352,7 @@ public class DartQueryMaker implements QueryMaker
         "%s-sqlQueryId[%s]-queryId[%s]",
         Thread.currentThread().getName(),
         plannerContext.getSqlQueryId(),
-        plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID)
+        plannerContext.queryContext().getValue(QueryContexts.DART_QUERY_ID)
     );
   }
 

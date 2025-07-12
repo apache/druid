@@ -273,7 +273,7 @@ public class QueryScheduler implements QueryWatcher
   @VisibleForTesting
   List<Bulkhead> acquireLanes(Query<?> query)
   {
-    final String lane = query.context().getLane();
+    final String lane = query.context().lane.value();
     final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
     final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
     List<Bulkhead> hallPasses = new ArrayList<>(2);
