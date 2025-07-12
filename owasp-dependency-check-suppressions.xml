@@ -142,6 +142,7 @@
     <cve>CVE-2024-47561</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to hadoop-client 3.4 which required aws sdk v2 dependency work to finish -->
     <cve>CVE-2024-29131</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to hadoop-client 3.4 which required aws sdk v2 dependency work to finish -->
     <cve>CVE-2024-22201</cve> <!--  This seems to be a legitimate vulnerability. We would need to go to a hadoop-client which was not yet released  -->
+    <cve>CVE-2025-52999</cve> <!--  This is vulneraability in all versions of hadoop-client-runtime and has not been fixed by hadoop yet -->
   </suppress>
 
   <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->
@@ -192,6 +193,7 @@
     <cve>CVE-2022-34917</cve>
     <cve>CVE-2023-25194</cve>
     <cve>CVE-2024-31141</cve>
+    <cve>CVE-2025-27818</cve> <!-- not fixed in any version of ranger dependency. I don't think it is exploitable in Druid within this extension -->
   </suppress>
 
   <suppress>
