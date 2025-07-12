@@ -295,6 +295,22 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   {
     try {
       taskConfig = toolbox.getConfig();
+      if (!taskConfig.isAllowHadoopTaskExecution()) {
+        errorMsg = StringUtils.format(
+            "Hadoop tasks are deprecated and will be removed in a future release. "
+            + "Currently, they are not allowed to run on this cluster. If you wish to run them despite deprecation, "
+            + "please set [%s] to true.",
+            TaskConfig.ALLOW_HADOOP_TASK_EXECUTION_KEY
+        );
+        log.error(errorMsg);
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        return TaskStatus.failure(getId(), errorMsg);
+      }
+      log.warn("Running deprecated index_hadoop task [%s]. "
+              + "Hadoop batch indexing is deprecated and will be removed in a future release. "
+              + "Please plan your migration to one of Druid's supported indexing patterns.",
+          getId()
+      );
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
         chatHandlerProvider.get().register(getId(), this, false);
