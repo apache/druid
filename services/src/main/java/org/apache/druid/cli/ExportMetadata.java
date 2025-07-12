@@ -431,17 +431,7 @@ public class ExportMetadata extends GuiceRunnable
     }
 
     if (newLoadSpec != null) {
-      segment = new DataSegment(
-          segment.getDataSource(),
-          segment.getInterval(),
-          segment.getVersion(),
-          newLoadSpec,
-          segment.getDimensions(),
-          segment.getMetrics(),
-          segment.getShardSpec(),
-          segment.getBinaryVersion(),
-          segment.getSize()
-      );
+      segment = DataSegment.builder(segment).loadSpec(newLoadSpec).build();
     }
 
     String serialized = JSON_MAPPER.writeValueAsString(segment);

@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
+ * A custom Jackson serializer that converts a list of objects into a comma-separated string.
  */
 public class CommaListJoinSerializer extends StdScalarSerializer<List<String>>
 {
@@ -42,5 +43,11 @@ public class CommaListJoinSerializer extends StdScalarSerializer<List<String>>
   public void serialize(List<String> value, JsonGenerator jgen, SerializerProvider provider) throws IOException
   {
     jgen.writeString(JOINER.join(value));
+  }
+
+  @Override
+  public boolean isEmpty(SerializerProvider prov, List<String> value)
+  {
+    return value.isEmpty();
   }
 }

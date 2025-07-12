@@ -897,19 +897,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    final DataSegment someNewBrokerSegment = DataSegment.builder(SegmentId.of(
+                                                            "foo",
+                                                            Intervals.of("2012/2013"),
+                                                            "version1",
+                                                            null
+                                                        ))
+                                                        .shardSpec(new NumberedShardSpec(2, 3))
+                                                        .dimensions(ImmutableList.of("dim1", "dim2"))
+                                                        .metrics(ImmutableList.of("met1", "met2"))
+                                                        .projections(ImmutableList.of("proj1", "proj2"))
+                                                        .binaryVersion(1)
+                                                        .size(100L)
+                                                        .build();
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
@@ -964,19 +964,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    final DataSegment someNewBrokerSegment = DataSegment.builder(SegmentId.of(
+                                                            "foo",
+                                                            Intervals.of("2012/2013"),
+                                                            "version1",
+                                                            null
+                                                        ))
+                                                        .shardSpec(new NumberedShardSpec(2, 3))
+                                                        .dimensions(ImmutableList.of("dim1", "dim2"))
+                                                        .metrics(ImmutableList.of("met1", "met2"))
+                                                        .projections(ImmutableList.of("proj1", "proj2"))
+                                                        .binaryVersion(1)
+                                                        .size(100L)
+                                                        .build();
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 

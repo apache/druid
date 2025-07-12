@@ -65,19 +65,15 @@ public class SegmentStatusInClusterTest
 
   private static SegmentStatusInCluster createSegmentForTest()
   {
-    DataSegment dataSegment = new DataSegment(
-        "something",
-        INTERVAL,
-        "1",
-        LOAD_SPEC,
-        Arrays.asList("dim1", "dim2"),
-        Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
-        null,
-        TEST_VERSION,
-        1
-    );
-
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of("something", INTERVAL, "1", null))
+                                         .shardSpec(NoneShardSpec.instance())
+                                         .dimensions(Arrays.asList("dim1", "dim2"))
+                                         .metrics(Arrays.asList("met1", "met2"))
+                                         .projections(Arrays.asList("proj1", "proj2"))
+                                         .loadSpec(LOAD_SPEC)
+                                         .binaryVersion(TEST_VERSION)
+                                         .size(1)
+                                         .build();
     return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, NUM_ROWS, REALTIME);
   }
 
@@ -89,13 +85,14 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(14, objectMap.size());
+    Assert.assertEquals(15, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
     Assert.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assert.assertEquals("proj1,proj2", objectMap.get("projections"));
     Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
@@ -118,6 +115,7 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(dataSegment.getLoadSpec(), deserializedSegment.getLoadSpec());
     Assert.assertEquals(dataSegment.getDimensions(), deserializedSegment.getDimensions());
     Assert.assertEquals(dataSegment.getMetrics(), deserializedSegment.getMetrics());
+    Assert.assertEquals(dataSegment.getProjections(), deserializedSegment.getProjections());
     Assert.assertEquals(dataSegment.getShardSpec(), deserializedSegment.getShardSpec());
     Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
@@ -155,11 +153,10 @@ class TestSegment extends DataSegment
       @JsonProperty("dimensions")
       @JsonDeserialize(using = CommaListJoinDeserializer.class)
       @Nullable
-          List<String> dimensions,
-      @JsonProperty("metrics")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
-          List<String> metrics,
+      List<String> dimensions,
+      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
+      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
+      List<String> projections,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lasCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -175,10 +172,12 @@ class TestSegment extends DataSegment
         loadSpec,
         dimensions,
         metrics,
+        projections,
         shardSpec,
         lastCompactionState,
         binaryVersion,
-        size
+        size,
+        PruneSpecsHolder.DEFAULT
     );
     this.overshadowed = overshadowed;
     this.replicationFactor = replicationFactor;

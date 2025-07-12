@@ -88,6 +88,7 @@ public class DataSchema
 
   // This is used for backward compatibility
   private InputRowParser inputRowParser;
+  @Nullable
   private List<AggregateProjectionSpec> projections;
 
   @JsonCreator
@@ -186,7 +187,7 @@ public class DataSchema
 
   /**
    * Computes the set of field names that are specified by the provided dimensions and aggregator lists.
-   *
+   * <p>
    * If either list is null, it is ignored.
    *
    * @throws IllegalArgumentException if there are duplicate field names, or if any dimension or aggregator
@@ -357,9 +358,19 @@ public class DataSchema
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
+  }
+
+  @Nullable
+  public List<String> getProjectionNames()
+  {
+    if (projections == null) {
+      return null;
+    }
+    return projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList());
   }
 
   @Deprecated
