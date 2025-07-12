@@ -22,8 +22,11 @@ package org.apache.druid.cli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.testing.embedded.RuntimeInfoModule;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -49,9 +52,22 @@ public class MainTest
 
   private final ServerRunnable runnable;
 
+
   public MainTest(ServerRunnable runnable)
   {
     this.runnable = runnable;
+  }
+
+  @BeforeClass
+  public static void beforeClass()
+  {
+    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
+  }
+
+  @AfterClass
+  public static void afterClass()
+  {
+    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
   }
 
   @Test

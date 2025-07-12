@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded;
 
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
@@ -28,11 +29,13 @@ import org.apache.druid.utils.RuntimeInfo;
 import java.util.Properties;
 
 /**
- * Module for providing overridden {@link RuntimeInfo}, based on {@link EmbeddedDruidServer#setServerMemory(long)}
- * and {@link EmbeddedDruidServer#setServerDirectMemory(long)}.
+ * Module for providing overridden {@link RuntimeInfo}, based on
+ * {@link EmbeddedDruidServer#setServerMemory(long)} and
+ * {@link EmbeddedDruidServer#setServerDirectMemory(long)}.
  */
 public class RuntimeInfoModule implements DruidModule
 {
+  public static final String RUNTIMEINFOMODULE_ENABLED = "druid.testing.runtimeinfo.module.enabled";
   public static final String SERVER_MEMORY_PROPERTY = "druid.testing.embedded.serverMemory";
   public static final String SERVER_DIRECT_MEMORY_PROPERTY = "druid.testing.embedded.serverDirectMemory";
   private static final int NUM_PROCESSORS = 2;
@@ -48,14 +51,37 @@ public class RuntimeInfoModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    final long serverMemory = Long.parseLong(properties.getProperty(SERVER_MEMORY_PROPERTY));
-    final long serverDirectMemory = Long.parseLong(properties.getProperty(SERVER_DIRECT_MEMORY_PROPERTY));
-    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
-        new DruidProcessingConfigTest.MockRuntimeInfo(
-            NUM_PROCESSORS,
-            serverDirectMemory,
-            serverMemory
-        );
+    if (!isModuleEnabled()) {
+      return;
+    }
+    final long serverMemory = getMandatoryProperty(SERVER_MEMORY_PROPERTY);
+    final long serverDirectMemory = getMandatoryProperty(SERVER_DIRECT_MEMORY_PROPERTY);
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(
+        NUM_PROCESSORS,
+        serverDirectMemory,
+        serverMemory
+    );
     binder.bind(RuntimeInfo.class).toInstance(runtimeInfo);
+  }
+
+  private boolean isModuleEnabled()
+  {
+    return Boolean.parseBoolean(properties.getProperty(RUNTIMEINFOMODULE_ENABLED, "true"));
+  }
+
+  private long getMandatoryProperty(String property)
+  {
+    String value = properties.getProperty(property);
+    try {
+      return Long.parseLong(value);
+    }
+    catch (Exception e) {
+      throw DruidException
+          .defensive(
+              "Valid value for property [%s] is mandatory if RuntimeInfoModule is being used; [%s] is not acceptable",
+              property,
+              value
+          );
+    }
   }
 }

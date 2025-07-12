@@ -33,9 +33,12 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.testing.embedded.RuntimeInfoModule;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -49,6 +52,18 @@ public class DruidJsonValidatorTest
 {
   private File inputFile;
   private final Injector injector = GuiceInjectors.makeStartupInjector();
+
+  @BeforeClass
+  public static void beforeClass()
+  {
+    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
+  }
+
+  @AfterClass
+  public static void afterClass()
+  {
+    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
+  }
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

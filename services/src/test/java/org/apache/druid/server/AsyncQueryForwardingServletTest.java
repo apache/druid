@@ -80,6 +80,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.testing.embedded.RuntimeInfoModule;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.HttpResponse;
@@ -94,8 +95,10 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -127,6 +130,18 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
   private static int port1;
   private static int port2;
+
+  @BeforeClass
+  public static void beforeClass()
+  {
+    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
+  }
+
+  @AfterClass
+  public static void afterClass()
+  {
+    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
+  }
 
   @Override
   @Before
@@ -294,7 +309,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void testHandleExceptionWithFilterEnabled() throws Exception
   {
     String errorMessage = "test exception message";
-    ServerConfig serverConfig = new ServerConfig() 
+    ServerConfig serverConfig = new ServerConfig()
     {
       @Override
       public boolean isShowDetailedJettyErrors()
