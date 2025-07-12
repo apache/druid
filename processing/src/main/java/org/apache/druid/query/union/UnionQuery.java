@@ -162,7 +162,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name(), id));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name, id));
   }
 
   @Override
@@ -174,7 +174,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name(), subQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name, subQueryId));
   }
 
   @Override

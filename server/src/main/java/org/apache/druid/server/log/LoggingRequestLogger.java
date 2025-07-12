@@ -61,7 +61,7 @@ public class LoggingRequestLogger implements RequestLogger
         try {
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
-          MDC.put(QueryContexts.SQL_QUERY_ID.name(), StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
+          MDC.put(QueryContexts.SQL_QUERY_ID.name, StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
           MDC.put("dataSource", String.join(",", query.getDataSource().getTableNames()));
           MDC.put("queryType", query.getType());
           MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));

@@ -201,7 +201,7 @@ public class QueryContexts
                                                                            .register(QueryContextParameterRegistry.getInstance());
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name();
+  public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
@@ -211,7 +211,7 @@ public class QueryContexts
                                                                        .description(
                                                                            "Unique identifier for the Dart query, used to manage query resources and execution tracking")
                                                                        .register(QueryContextParameterRegistry.getInstance());
-  public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name();
+  public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name;
   public static final String CTX_FULL_REPORT = "fullReport";
 
   // SQL statement resource specific keys

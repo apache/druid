@@ -83,13 +83,13 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        QueryContexts.PRIORITY.name(),
+                                                        QueryContexts.PRIORITY.name,
                                                         1,
                                                         QueryContexts.USE_CACHE_KEY,
                                                         true,
                                                         QueryContexts.POPULATE_CACHE_KEY,
                                                         "true",
-                                                        QueryContexts.FINALIZE.name(),
+                                                        QueryContexts.FINALIZE.name,
                                                         true
                                                     )
                                                 ).build();

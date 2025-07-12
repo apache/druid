@@ -161,7 +161,7 @@ public class CachingClusteredClientPerfTest
     return new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(interval)),
-        ImmutableMap.of(QueryContexts.QUERY_ID.name(), "testQuery")
+        ImmutableMap.of(QueryContexts.QUERY_ID.name, "testQuery")
     );
   }
 

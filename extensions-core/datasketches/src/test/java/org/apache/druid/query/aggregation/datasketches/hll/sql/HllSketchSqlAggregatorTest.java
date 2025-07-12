@@ -424,7 +424,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                               ImmutableMap.of(
                                                   TimeseriesQuery.SKIP_EMPTY_BUCKETS,
                                                   true,
-                                                  QueryContexts.SQL_QUERY_ID.name(),
+                                                  QueryContexts.SQL_QUERY_ID.name,
                                                   "dummy"
                                               ),
                                               "d0"

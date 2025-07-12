@@ -72,7 +72,7 @@ public class HiLoQueryLaningStrategy implements QueryLaningStrategy
     // we make sure that priority has been set.
     Integer priority = null;
     final QueryContext queryContext = theQuery.context();
-    if (queryContext.containsKey(QueryContexts.PRIORITY.name())) {
+    if (queryContext.containsKey(QueryContexts.PRIORITY.name)) {
       priority = queryContext.priority.value();
     }
     final String lane = queryContext.lane.value();

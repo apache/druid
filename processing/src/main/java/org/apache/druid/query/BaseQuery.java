@@ -209,7 +209,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name(), subQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SUB_QUERY_ID.name, subQueryId));
   }
 
   @Nullable
@@ -222,13 +222,13 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name(), id));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.QUERY_ID.name, id));
   }
 
   @Override
   public Query<T> withSqlQueryId(String sqlQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name(), sqlQueryId));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.SQL_QUERY_ID.name, sqlQueryId));
   }
 
   @Override

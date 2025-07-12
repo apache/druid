@@ -170,7 +170,7 @@ import java.util.stream.IntStream;
 public class CachingClusteredClientTest
 {
   private static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
-      QueryContexts.FINALIZE.name(), false
+      QueryContexts.FINALIZE.name, false
   );
   private static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
   private static final String DATA_SOURCE = "test";

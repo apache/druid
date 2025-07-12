@@ -52,7 +52,7 @@ public class GroupByQueryBuilderTest
     final GroupByQuery query = builder
         .queryId("queryId")
         .build();
-    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "queryId"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name, "queryId"), query.getContext());
   }
 
   @Test
@@ -62,17 +62,17 @@ public class GroupByQueryBuilderTest
         .setContext(ImmutableMap.of("my", "context"))
         .queryId("queryId")
         .build();
-    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "queryId", "my", "context"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name, "queryId", "my", "context"), query.getContext());
   }
 
   @Test
   public void testQueryIdWhenBuilderHasNonnullContextWithQueryIdReturnMergedContext()
   {
     final GroupByQuery query = builder
-        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name(), "queryId"))
+        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name, "queryId"))
                   .queryId("realQueryId")
           .build();
-    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "realQueryId", "my", "context"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name, "realQueryId", "my", "context"), query.getContext());
   }
 
   @Test
@@ -90,8 +90,8 @@ public class GroupByQueryBuilderTest
   {
     final GroupByQuery query = builder
         .queryId("queryId")
-        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name(), "realQueryId"))
+        .setContext(ImmutableMap.of("my", "context", QueryContexts.QUERY_ID.name, "realQueryId"))
         .build();
-    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name(), "realQueryId", "my", "context"), query.getContext());
+    Assert.assertEquals(ImmutableMap.of(QueryContexts.QUERY_ID.name, "realQueryId", "my", "context"), query.getContext());
   }
 }

@@ -147,7 +147,7 @@ public class ManualQueryLaningStrategyTest
   public void testPreservesManualLaneFromContextThatArentInMapAndIgnoresThem()
   {
     final String someLane = "some-lane";
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.LANE.name(), someLane)).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.LANE.name, someLane)).build();
     Assert.assertEquals(
         someLane,
         exactStrategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
@@ -162,7 +162,7 @@ public class ManualQueryLaningStrategyTest
   public void testPreservesManualLaneFromContext()
   {
     final String someLane = "ten";
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.LANE.name(), someLane)).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.LANE.name, someLane)).build();
     Assert.assertEquals(
         someLane,
         exactStrategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()

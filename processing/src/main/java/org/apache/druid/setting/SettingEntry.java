@@ -23,42 +23,42 @@ package org.apache.druid.setting;
 
 public abstract class SettingEntry<T>
 {
-  protected String name;
+  public final String name;
 
   /**
    * Java type class
    */
-  protected Class<T> type;
+  public final Class<T> type;
 
   /**
    * Default value for the setting. can be null.
    */
-  protected T defaultValue;
+  public final T defaultValue;
 
   /**
    * Minimum value for the setting. Can be null if no minimum is enforced.
    */
-  protected T min;
+  public final T min;
 
   /**
    * Maximum value for the setting. Can be null if no maximum is enforced.
    */
-  protected T max;
+  public final T max;
 
   /**
    * The version since which this setting is available. For example, "0.20.0".
    */
-  protected String since;
+  public final String since;
 
   /**
    * Whether this setting is deprecated. If true, it should not be used in new queries.
    */
-  protected boolean deprecated;
+  public final boolean deprecated;
 
   /**
    * Description of the setting, which can be used to provide additional context or information.
    */
-  protected String description;
+  public final String description;
 
   protected SettingEntry(AbstractBuilder<T> builder)
   {
@@ -70,41 +70,6 @@ public abstract class SettingEntry<T>
     this.since = builder.since;
     this.deprecated = builder.deprecated;
     this.description = builder.description;
-  }
-
-  public String name()
-  {
-    return name;
-  }
-
-  public Class<T> type()
-  {
-    return type;
-  }
-
-  public T defaultValue()
-  {
-    return defaultValue;
-  }
-
-  public T min()
-  {
-    return min;
-  }
-
-  public T max()
-  {
-    return max;
-  }
-
-  public boolean deprecated()
-  {
-    return deprecated;
-  }
-
-  public String description()
-  {
-    return description;
   }
 
   /**

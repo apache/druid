@@ -318,11 +318,11 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 
     if (querySpec.getId() != null) {
-      builder.put(QueryContexts.QUERY_ID.name(), querySpec.getId());
+      builder.put(QueryContexts.QUERY_ID.name, querySpec.getId());
     }
 
     if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
-      builder.put(QueryContexts.SQL_QUERY_ID.name(), queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+      builder.put(QueryContexts.SQL_QUERY_ID.name, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
     }
 
     MSQDestination destination = querySpec.getDestination();

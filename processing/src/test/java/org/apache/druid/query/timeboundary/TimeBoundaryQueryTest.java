@@ -56,13 +56,13 @@ public class TimeBoundaryQueryTest
                                           .intervals("2013/2014")
                                           .context(
                                               ImmutableMap.of(
-                                                  QueryContexts.PRIORITY.name(),
+                                                  QueryContexts.PRIORITY.name,
                                                   1,
                                                   QueryContexts.USE_CACHE_KEY,
                                                   true,
                                                   QueryContexts.POPULATE_CACHE_KEY,
                                                   true,
-                                                  QueryContexts.FINALIZE.name(),
+                                                  QueryContexts.FINALIZE.name,
                                                   true
                                               )
                                           ).build();
@@ -94,13 +94,13 @@ public class TimeBoundaryQueryTest
                                           .intervals("2013/2014")
                                           .context(
                                               ImmutableMap.of(
-                                                  QueryContexts.PRIORITY.name(),
+                                                  QueryContexts.PRIORITY.name,
                                                   "1",
                                                   QueryContexts.USE_CACHE_KEY,
                                                   "true",
                                                   QueryContexts.POPULATE_CACHE_KEY,
                                                   "true",
-                                                  QueryContexts.FINALIZE.name(),
+                                                  QueryContexts.FINALIZE.name,
                                                   "true"
                                               )
                                           ).build();
@@ -122,6 +122,6 @@ public class TimeBoundaryQueryTest
     Assert.assertEquals(1, (int) queryContext.priority.value());
     Assert.assertEquals("true", queryContext.get(QueryContexts.USE_CACHE_KEY));
     Assert.assertEquals("true", queryContext.get(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals("true", queryContext.finalize.value());
+    Assert.assertEquals(true, queryContext.finalize.value());
   }
 }

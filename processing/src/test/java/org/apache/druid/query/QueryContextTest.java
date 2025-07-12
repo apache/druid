@@ -531,7 +531,7 @@ public class QueryContextTest
     @Override
     public Query<Integer> withId(String id)
     {
-      context.put(QueryContexts.QUERY_ID.name(), id);
+      context.put(QueryContexts.QUERY_ID.name, id);
       return this;
     }
 
@@ -539,13 +539,13 @@ public class QueryContextTest
     @Override
     public String getId()
     {
-      return (String) context.get(QueryContexts.QUERY_ID.name());
+      return (String) context.get(QueryContexts.QUERY_ID.name);
     }
 
     @Override
     public Query<Integer> withSubQueryId(String subQueryId)
     {
-      context.put(QueryContexts.SUB_QUERY_ID.name(), subQueryId);
+      context.put(QueryContexts.SUB_QUERY_ID.name, subQueryId);
       return this;
     }
 
@@ -553,7 +553,7 @@ public class QueryContextTest
     @Override
     public String getSubQueryId()
     {
-      return (String) context.get(QueryContexts.SUB_QUERY_ID.name());
+      return (String) context.get(QueryContexts.SUB_QUERY_ID.name);
     }
 
     @Override

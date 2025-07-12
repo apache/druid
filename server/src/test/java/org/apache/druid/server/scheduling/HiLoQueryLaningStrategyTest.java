@@ -144,28 +144,28 @@ public class HiLoQueryLaningStrategyTest
   @Test
   public void testLaningZeroPriority()
   {
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name(), 0)).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name, 0)).build();
     Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningInteractivePriority()
   {
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name(), 100)).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name, 100)).build();
     Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningInteractivePriority_String()
   {
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name(), "100")).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name, "100")).build();
     Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningLowPriority()
   {
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name(), -1)).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name, -1)).build();
     Assert.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
     Assert.assertEquals(
         HiLoQueryLaningStrategy.LOW,
@@ -176,7 +176,7 @@ public class HiLoQueryLaningStrategyTest
   @Test
   public void testLaningLowPriority_String()
   {
-    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name(), "-1")).build();
+    TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY.name, "-1")).build();
     Assert.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
     Assert.assertEquals(
         HiLoQueryLaningStrategy.LOW,
@@ -188,7 +188,7 @@ public class HiLoQueryLaningStrategyTest
   public void testLaningPreservesManualSetLane()
   {
     TimeseriesQuery query = queryBuilder.context(
-        ImmutableMap.of(QueryContexts.PRIORITY.name(), 100, QueryContexts.LANE.name(), "low")
+        ImmutableMap.of(QueryContexts.PRIORITY.name, 100, QueryContexts.LANE.name, "low")
     ).build();
     Assert.assertEquals(
         HiLoQueryLaningStrategy.LOW,

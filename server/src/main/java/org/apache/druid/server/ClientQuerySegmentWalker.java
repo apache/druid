@@ -694,7 +694,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       }
 
       query.withOverriddenContext(Collections.singletonMap(
-          QueryContexts.QUERY_RESOURCE_ID.name(),
+          QueryContexts.QUERY_RESOURCE_ID.name,
           parentQueryResourceId
       ));
 

@@ -89,8 +89,8 @@ public class MSQMetriceEventBuilder extends ServiceMetricEvent.Builder
 
   private void setQueryIdDimensions(final QueryContext queryContext)
   {
-    setDimensionIfNotNull(QueryContexts.QUERY_ID.name(), queryContext.getString(QueryContexts.QUERY_ID.name()));
-    setDimensionIfNotNull(QueryContexts.SQL_QUERY_ID.name(), queryContext.getString(QueryContexts.SQL_QUERY_ID.name()));
+    setDimensionIfNotNull(QueryContexts.QUERY_ID.name, queryContext.getString(QueryContexts.QUERY_ID.name));
+    setDimensionIfNotNull(QueryContexts.SQL_QUERY_ID.name, queryContext.getString(QueryContexts.SQL_QUERY_ID.name));
     setDimension(DruidMetrics.TYPE, QUERY_METRIC_TYPE);
   }
 }

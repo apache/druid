@@ -639,7 +639,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         ImmutableMap.of(
             QueryContexts.CTX_FULL_REPORT, true,
-            QueryContexts.TIMEOUT.name(), 1,
+            QueryContexts.TIMEOUT.name, 1,
             QueryContexts.ENGINE, DartSqlEngine.NAME
         ),
         Collections.emptyList()

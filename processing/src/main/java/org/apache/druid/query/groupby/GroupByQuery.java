@@ -1212,7 +1212,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name(), queryId));
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name, queryId));
       return this;
     }
 

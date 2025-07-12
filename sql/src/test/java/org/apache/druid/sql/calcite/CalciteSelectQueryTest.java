@@ -2157,7 +2157,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)),
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false)),
         "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2196,7 +2196,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)),
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false)),
         "select count(distinct m1) from druid.foo where m1 < 111.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2236,7 +2236,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)),
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2279,7 +2279,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(), false)),
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) c from druid.foo HAVING c > 3",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(

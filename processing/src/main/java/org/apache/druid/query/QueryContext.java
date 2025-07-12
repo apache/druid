@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
-import org.apache.druid.setting.BoundedSettingEntry;
 import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
@@ -108,7 +107,7 @@ public class QueryContext
 
   public boolean containsKey(SettingEntry<?> entry)
   {
-    return context.containsKey(entry.name());
+    return context.containsKey(entry.name);
   }
 
   /**
@@ -140,12 +139,12 @@ public class QueryContext
 
   public <T> T getValue(SettingEntry<T> entry)
   {
-    return entry.valueOf(get(entry.name()));
+    return entry.valueOf(get(entry.name));
   }
 
   public <T> T getValue(SettingEntry<T> entry, T defaultValue)
   {
-    return entry.valueOf(get(entry.name()), defaultValue);
+    return entry.valueOf(get(entry.name), defaultValue);
   }
 
   /**
@@ -312,8 +311,8 @@ public class QueryContext
     return getBoolean(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
 
-  public final BoundedSettingEntry<Boolean> useResultLevelCache = new BoundedSettingEntry<>(QueryContexts.USE_RESULT_LEVEL_CACHE, this);
-  public final BoundedSettingEntry<Boolean> finalize = new BoundedSettingEntry<>(QueryContexts.FINALIZE, this);
+  public final QueryContextParameter<Boolean> useResultLevelCache = new QueryContextParameter<>(QueryContexts.USE_RESULT_LEVEL_CACHE, this);
+  public final QueryContextParameter<Boolean> finalize = new QueryContextParameter<>(QueryContexts.FINALIZE, this);
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {
@@ -394,9 +393,9 @@ public class QueryContext
     return getInt(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
-  public final BoundedSettingEntry<Integer> priority = new BoundedSettingEntry<>(QueryContexts.PRIORITY, this);
-  public final BoundedSettingEntry<String> lane = new BoundedSettingEntry<>(QueryContexts.LANE, this);
-  public final BoundedSettingEntry<Boolean> enableParallelMerges = new BoundedSettingEntry<>(QueryContexts.BROKER_PARALLEL_MERGE, this);
+  public final QueryContextParameter<Integer> priority = new QueryContextParameter<>(QueryContexts.PRIORITY, this);
+  public final QueryContextParameter<String> lane = new QueryContextParameter<>(QueryContexts.LANE, this);
+  public final QueryContextParameter<Boolean> enableParallelMerges = new QueryContextParameter<>(QueryContexts.BROKER_PARALLEL_MERGE, this);
 
   public int getParallelMergeInitialYieldRows(int defaultValue)
   {
@@ -445,8 +444,8 @@ public class QueryContext
     );
   }
 
-  public final BoundedSettingEntry<Long> maxQueuedBytes = new BoundedSettingEntry<>(QueryContexts.MAX_QUEUED_BYTES, this);
-  public final BoundedSettingEntry<Long> maxScatterGatherBytes = new BoundedSettingEntry<>(QueryContexts.MAX_SCATTER_GATHER_BYTES, this);
+  public final QueryContextParameter<Long> maxQueuedBytes = new QueryContextParameter<>(QueryContexts.MAX_QUEUED_BYTES, this);
+  public final QueryContextParameter<Long> maxScatterGatherBytes = new QueryContextParameter<>(QueryContexts.MAX_SCATTER_GATHER_BYTES, this);
 
   public String getEngine()
   {
@@ -476,7 +475,7 @@ public class QueryContext
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.TIMEOUT.name(),
+            QueryContexts.TIMEOUT.name,
             timeout
         )
     );
@@ -491,7 +490,7 @@ public class QueryContext
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.DEFAULT_TIMEOUT.name(),
+            QueryContexts.DEFAULT_TIMEOUT.name,
             defaultTimeout
         )
     );
@@ -504,7 +503,7 @@ public class QueryContext
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.TIMEOUT.name(),
+              QueryContexts.TIMEOUT.name,
               timeout,
               maxQueryTimeout
           )
@@ -519,7 +518,7 @@ public class QueryContext
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.MAX_SCATTER_GATHER_BYTES.name(),
+              QueryContexts.MAX_SCATTER_GATHER_BYTES.name,
               curr,
               maxScatterGatherBytesLimit
           )

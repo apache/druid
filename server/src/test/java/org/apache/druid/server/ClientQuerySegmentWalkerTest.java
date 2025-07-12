@@ -1655,8 +1655,8 @@ public class ClientQuerySegmentWalkerTest
 
     class CapturingWalker implements QuerySegmentWalker
     {
-      private QuerySegmentWalker baseWalker;
-      private ClusterOrLocal how;
+      private final QuerySegmentWalker baseWalker;
+      private final ClusterOrLocal how;
 
       CapturingWalker(QuerySegmentWalker baseWalker, ClusterOrLocal how)
       {
@@ -1768,15 +1768,15 @@ public class ClientQuerySegmentWalkerTest
       // Need to blast various parameters that will vary and aren't important to test for.
       ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
       contextBuilder.put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-                    .put(QueryContexts.DEFAULT_TIMEOUT.name(), 0L)
-                    .put(QueryContexts.FINALIZE.name(), true)
-                    .put(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), 0L)
+                    .put(QueryContexts.DEFAULT_TIMEOUT.name, 0L)
+                    .put(QueryContexts.FINALIZE.name, true)
+                    .put(QueryContexts.MAX_SCATTER_GATHER_BYTES.name, 0L)
                     .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
                     .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
                     .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
                     .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
                     .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-                    .put(QueryContexts.QUERY_RESOURCE_ID.name(), "dummy")
+                    .put(QueryContexts.QUERY_RESOURCE_ID.name, "dummy")
                     .put(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "blast");
 
       modifiedQuery = query.withOverriddenContext(contextBuilder.build());

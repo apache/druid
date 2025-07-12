@@ -240,7 +240,7 @@ public class DartQueryMaker implements QueryMaker
   private QueryContext finalizeTimeout(QueryContext queryContext)
   {
     final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
-    QueryContext timeoutContext = queryContext.override(Collections.singletonMap(QueryContexts.TIMEOUT.name(), timeout));
+    QueryContext timeoutContext = queryContext.override(Collections.singletonMap(QueryContexts.TIMEOUT.name, timeout));
     timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
     return timeoutContext;
   }

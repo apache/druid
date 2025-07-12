@@ -20,9 +20,10 @@
 package org.apache.druid.java.util.common;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.jetbrains.annotations.NotNull;
 
 @JsonSerialize(using = HumanReadableBytesSerializer.class)
-public class HumanReadableBytes
+public class HumanReadableBytes implements Comparable<HumanReadableBytes>
 {
   public static final HumanReadableBytes ZERO = new HumanReadableBytes(0L);
 
@@ -214,6 +215,12 @@ public class HumanReadableBytes
     catch (NumberFormatException e) {
       throw new IAE("Invalid format or out of range of long: %s", rawNumber);
     }
+  }
+
+  @Override
+  public int compareTo(@NotNull HumanReadableBytes o)
+  {
+    return Long.compare(bytes, o.bytes);
   }
 
   public enum UnitSystem

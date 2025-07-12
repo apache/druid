@@ -22,8 +22,8 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContextParameterRegistry;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.setting.SettingEntry;
 import org.joda.time.DateTimeZone;
 
@@ -352,7 +352,7 @@ public class PlannerConfig
     {
       useApproximateCountDistinct = QueryContexts.parseBoolean(
           queryContext,
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(),
+          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name,
           useApproximateCountDistinct
       );
       useGroupingSetForExactDistinct = QueryContexts.parseBoolean(
@@ -463,7 +463,7 @@ public class PlannerConfig
     PlannerConfig def = new PlannerConfig();
     if (def.useApproximateCountDistinct != useApproximateCountDistinct) {
       overrides.put(
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name(),
+          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name,
           String.valueOf(useApproximateCountDistinct)
       );
     }

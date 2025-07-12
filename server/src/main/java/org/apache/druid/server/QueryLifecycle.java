@@ -215,7 +215,7 @@ public class QueryLifecycle
         defaultQueryConfig.getContext(),
         baseQuery.getContext()
     );
-    mergedUserAndConfigContext.put(QueryContexts.QUERY_ID.name(), queryId);
+    mergedUserAndConfigContext.put(QueryContexts.QUERY_ID.name, queryId);
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
   }

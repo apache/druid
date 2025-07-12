@@ -278,7 +278,7 @@ public class Druids
 
     public TimeseriesQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name(), queryId));
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name, queryId));
       return this;
     }
 
@@ -512,7 +512,7 @@ public class Druids
 
     public SearchQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name(), queryId));
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name, queryId));
       return this;
     }
   }
@@ -629,7 +629,7 @@ public class Druids
 
     public TimeBoundaryQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name(), queryId));
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(QueryContexts.QUERY_ID.name, queryId));
       return this;
     }
   }

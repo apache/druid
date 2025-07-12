@@ -122,7 +122,7 @@ public class ITQueryRetryTestOnMissingSegments
   public void testWithRetriesEnabledPartialResultDisallowed() throws Exception
   {
     // Since retry is enabled, the query must succeed even though partial result is disallowed.
-    // The retry count is set to 1 since on the first retry of the query (i.e second overall try), the historical
+    // The retry count is set to 1 since on the first retry of the query (i.e. second overall try), the historical
     // will start processing the segment and not call it missing.
     // The query must return correct results.
     testQueries(buildQuery(1, false), Expectation.ALL_SUCCESS);
@@ -241,7 +241,7 @@ public class ITQueryRetryTestOnMissingSegments
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
     context.put(QueryContexts.USE_CACHE_KEY, false);
-    context.put(QueryContexts.USE_RESULT_LEVEL_CACHE.name(), false);
+    context.put(QueryContexts.USE_RESULT_LEVEL_CACHE.name, false);
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
     context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);

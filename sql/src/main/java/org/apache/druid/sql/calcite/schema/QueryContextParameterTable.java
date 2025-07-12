@@ -28,9 +28,9 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.druid.query.QueryContextParameterRegistry;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.query.QueryContextParameterRegistry;
 import org.apache.druid.setting.SettingEntry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -83,20 +83,20 @@ public class QueryContextParameterTable extends AbstractTable implements Scannab
     @Override
     public Enumerator<Object[]> enumerator()
     {
-      return new Enumerator<Object[]>()
+      return new Enumerator<>()
       {
         @Override
         public Object[] current()
         {
           final SettingEntry<?> entry = it.next();
           return new Object[]{
-              entry.name(),
-              entry.type().getSimpleName(),
-              entry.min() == null ? null : entry.min().toString(),
-              entry.max() == null ? null : entry.max().toString(),
-              entry.defaultValue() == null ? null : entry.defaultValue().toString(),
-              entry.deprecated() ? 1L : 0L,
-              entry.description()
+              entry.name,
+              entry.type.getSimpleName(),
+              entry.min == null ? null : entry.min.toString(),
+              entry.max == null ? null : entry.max.toString(),
+              entry.defaultValue == null ? null : entry.defaultValue.toString(),
+              entry.deprecated ? 1L : 0L,
+              entry.description
           };
         }
 

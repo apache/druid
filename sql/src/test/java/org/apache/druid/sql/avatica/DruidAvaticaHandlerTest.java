@@ -321,7 +321,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesLosAngeles = new Properties();
     propertiesLosAngeles.setProperty("sqlTimeZone", "America/Los_Angeles");
     propertiesLosAngeles.setProperty("user", "regularUserLA");
-    propertiesLosAngeles.setProperty(QueryContexts.SQL_QUERY_ID.name(), DUMMY_SQL_QUERY_ID);
+    propertiesLosAngeles.setProperty(QueryContexts.SQL_QUERY_ID.name, DUMMY_SQL_QUERY_ID);
     clientLosAngeles = DriverManager.getConnection(server.url, propertiesLosAngeles);
   }
 

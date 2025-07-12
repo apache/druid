@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.setting.ISettingRegistry;
 import org.apache.druid.setting.SettingEntry;
 
@@ -49,8 +50,8 @@ public class QueryContextParameterRegistry implements ISettingRegistry
   @Override
   public <T> SettingEntry<T> register(SettingEntry<T> parameter)
   {
-    if (parameters.put(parameter.name(), parameter) != null) {
-      throw new IllegalArgumentException("Setting with name [" + parameter.name() + "] already exists.");
+    if (parameters.put(parameter.name, parameter) != null) {
+      throw new IAE("Setting with name [%s] already exists.", parameter.name);
     }
     return parameter;
   }

@@ -313,11 +313,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
   {
     Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
-    String sqlQueryId = (String) context.getOrDefault(QueryContexts.SQL_QUERY_ID.name(), UUID.randomUUID().toString());
+    String sqlQueryId = (String) context.getOrDefault(QueryContexts.SQL_QUERY_ID.name, UUID.randomUUID().toString());
     // set queryId to sqlQueryId if not overridden
-    String queryId = (String) context.getOrDefault(QueryContexts.QUERY_ID.name(), sqlQueryId);
-    context.put(QueryContexts.SQL_QUERY_ID.name(), sqlQueryId);
-    context.put(QueryContexts.QUERY_ID.name(), queryId);
+    String queryId = (String) context.getOrDefault(QueryContexts.QUERY_ID.name, sqlQueryId);
+    context.put(QueryContexts.SQL_QUERY_ID.name, sqlQueryId);
+    context.put(QueryContexts.QUERY_ID.name, queryId);
     return sqlQuery.withOverridenContext(context);
   }
 
@@ -766,8 +766,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       if (isJDBC) {
         sqlQueryId = result.getResponse().getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
-        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name(), null);
-        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name(), null);
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name, null);
       } else if (query != null) {
         queryId = query.getId();
       }
@@ -858,8 +858,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       if (isJDBC) {
         sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
-        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name(), null);
-        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name(), null);
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name, null);
       } else if (query != null) {
         queryId = query.getId();
       }

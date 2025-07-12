@@ -68,7 +68,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT.name(), 1000)
+        ImmutableMap.of(QueryContexts.TIMEOUT.name, 1000)
     );
     Assert.assertEquals(1000, query.context().getTimeout());
 
@@ -84,7 +84,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT.name(), 1000)
+        ImmutableMap.of(QueryContexts.TIMEOUT.name, 1000)
     );
 
     query.context().verifyMaxQueryTimeout(100);
@@ -98,7 +98,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), 1000)
+        ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES.name, 1000)
     );
 
     Queries.withMaxScatterGatherBytes(query, 100);
@@ -209,7 +209,7 @@ public class QueryContextsTest
   public void testGetTimeout_withNonNumericValue()
   {
     Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.TIMEOUT.name(), "2000'");
+    queryContext.put(QueryContexts.TIMEOUT.name, "2000'");
 
     exception.expect(BadQueryContextException.class);
     new TestQuery(

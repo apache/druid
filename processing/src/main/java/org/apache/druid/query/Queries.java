@@ -145,7 +145,7 @@ public class Queries
    * function will throw an exception.
    *
    * Unlike the seemingly-similar {@code query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors))},
-   * this this method will walk down subqueries found within the query datasource, if any, and modify the lowest-level
+   * this method will walk down subqueries found within the query datasource, if any, and modify the lowest-level
    * subquery. The effect is that
    * {@code DataSourceAnalysis.forDataSource(query.getDataSource()).getBaseQuerySegmentSpec()} is guaranteed to return
    * either {@code new MultipleSpecificSegmentSpec(descriptors)} or empty.
@@ -257,8 +257,8 @@ public class Queries
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
     QueryContext context = query.context();
-    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES.name())) {
-      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES.name(), maxScatterGatherBytesLimit));
+    if (!context.containsKey(QueryContexts.MAX_SCATTER_GATHER_BYTES.name)) {
+      return query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES.name, maxScatterGatherBytesLimit));
     }
     context.verifyMaxScatterGatherBytes(maxScatterGatherBytesLimit);
     return query;
@@ -266,11 +266,11 @@ public class Queries
 
   public static <T> Query<T> withTimeout(Query<T> query, long timeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT.name(), timeout));
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT.name, timeout));
   }
 
   public static <T> Query<T> withDefaultTimeout(Query<T> query, long defaultTimeout)
   {
-    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT.name(), defaultTimeout));
+    return query.withOverriddenContext(ImmutableMap.of(QueryContexts.DEFAULT_TIMEOUT.name, defaultTimeout));
   }
 }
