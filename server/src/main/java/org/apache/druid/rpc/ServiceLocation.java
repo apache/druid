@@ -166,6 +166,18 @@ public class ServiceLocation
     return host;
   }
 
+  /**
+   * Returns a host:port string for the preferred port (TLS if available; plaintext otherwise).
+   */
+  public String getHostAndPort()
+  {
+    if (tlsPort > 0) {
+      return host + ":" + tlsPort;
+    } else {
+      return host + ":" + plaintextPort;
+    }
+  }
+
   public int getPlaintextPort()
   {
     return plaintextPort;

@@ -19,13 +19,14 @@
 
 package org.apache.druid.frame.processor;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
+import java.util.Collection;
 
 /**
  * Instances of this class are returned by {@link FrameProcessor#runIncrementally}, and are used by
@@ -35,8 +36,8 @@ import java.util.Objects;
  * In this case {@link #isReturn()} is true and {@link #value()} contains the result.
  *
  * An instance can also be an "await", which means that the {@link FrameProcessor} wants to be scheduled again
- * in the future. In this case {@link #isAwait()} is true, {@link #awaitSet()} contains the set of input channels to
- * wait for, and {@link #isAwaitAll()} is whether the processor wants to wait for all channels, or any channel.
+ * in the future. In this case {@link #isAwait()} is true, and *either* {@link #hasAwaitableChannels()} or
+ * {@link #hasAwaitableFutures()} is true.
  */
 public class ReturnOrAwait<T>
 {
@@ -46,18 +47,31 @@ public class ReturnOrAwait<T>
   private final T retVal;
 
   @Nullable
-  private final IntSet await;
+  private final IntSet awaitChannels;
 
-  private final boolean awaitAll;
+  private final boolean awaitAllChannels;
 
-  private ReturnOrAwait(@Nullable T retVal, @Nullable IntSet await, final boolean awaitAll)
+  @Nullable
+  private final Collection<ListenableFuture<?>> awaitFutures;
+
+  private ReturnOrAwait(
+      @Nullable T retVal,
+      @Nullable IntSet awaitChannels,
+      @Nullable Collection<ListenableFuture<?>> awaitFutures,
+      final boolean awaitAllChannels
+  )
   {
     this.retVal = retVal;
-    this.await = await;
-    this.awaitAll = awaitAll;
+    this.awaitChannels = awaitChannels;
+    this.awaitAllChannels = awaitAllChannels;
+    this.awaitFutures = awaitFutures;
 
-    if (retVal != null && await != null) {
-      throw new IAE("Cannot have a value when await != null");
+    if (retVal != null && (awaitChannels != null || awaitFutures != null)) {
+      throw new IAE("Cannot have a value when await != null or futures != null");
+    }
+
+    if (awaitChannels != null && awaitFutures != null) {
+      throw new ISE("Cannot have both awaitChannels and awaitFutures");
     }
   }
 
@@ -66,7 +80,7 @@ public class ReturnOrAwait<T>
    */
   public static <T> ReturnOrAwait<T> runAgain()
   {
-    return new ReturnOrAwait<>(null, IntSets.emptySet(), true);
+    return new ReturnOrAwait<>(null, IntSets.emptySet(), null, true);
   }
 
   /**
@@ -78,7 +92,7 @@ public class ReturnOrAwait<T>
    */
   public static <T> ReturnOrAwait<T> awaitAll(final IntSet await)
   {
-    return new ReturnOrAwait<>(null, await, true);
+    return new ReturnOrAwait<>(null, await, null, true);
   }
 
   /**
@@ -86,7 +100,15 @@ public class ReturnOrAwait<T>
    */
   public static <T> ReturnOrAwait<T> awaitAll(final int count)
   {
-    return new ReturnOrAwait<>(null, rangeSet(count), true);
+    return new ReturnOrAwait<>(null, rangeSet(count), null, true);
+  }
+
+  /**
+   * Wait for all of the provided futures.
+   */
+  public static <T> ReturnOrAwait<T> awaitAllFutures(final Collection<ListenableFuture<?>> futures)
+  {
+    return new ReturnOrAwait<>(null, null, futures, true);
   }
 
   /**
@@ -100,7 +122,7 @@ public class ReturnOrAwait<T>
    */
   public static <T> ReturnOrAwait<T> awaitAny(final IntSet await)
   {
-    return new ReturnOrAwait<>(null, await, false);
+    return new ReturnOrAwait<>(null, await, null, false);
   }
 
   /**
@@ -108,7 +130,7 @@ public class ReturnOrAwait<T>
    */
   public static <T> ReturnOrAwait<T> returnObject(final T o)
   {
-    return new ReturnOrAwait<>(o, null, false);
+    return new ReturnOrAwait<>(o, null, null, false);
   }
 
   /**
@@ -129,13 +151,23 @@ public class ReturnOrAwait<T>
    *
    * Numbers in this set correspond to positions in the {@link FrameProcessor#inputChannels()} list.
    */
-  public IntSet awaitSet()
+  public IntSet awaitableChannels()
   {
-    if (isReturn()) {
+    if (!hasAwaitableChannels()) {
       throw new ISE("No await set");
     }
 
-    return await;
+    return awaitChannels;
+  }
+
+
+  public Collection<ListenableFuture<?>> awaitableFutures()
+  {
+    if (!hasAwaitableFutures()) {
+      throw new ISE("No futures set");
+    }
+
+    return awaitFutures;
   }
 
   /**
@@ -145,7 +177,7 @@ public class ReturnOrAwait<T>
    */
   public boolean isReturn()
   {
-    return await == null;
+    return awaitChannels == null && awaitFutures == null;
   }
 
   /**
@@ -155,41 +187,46 @@ public class ReturnOrAwait<T>
    */
   public boolean isAwait()
   {
-    return await != null;
+    return !isReturn();
   }
 
   /**
-   * Whether the processor wants to wait for all channels in {@link #awaitSet()} (true), or any channel (false)
+   * Whether the processor wants to wait for a set of futures. If true, {@link #awaitableFutures()} contains the
+   * set of futures to wait for.
    */
-  public boolean isAwaitAll()
+  public boolean hasAwaitableFutures()
   {
-    return awaitAll;
+    return awaitFutures != null;
   }
 
-  @Override
-  public boolean equals(Object o)
+  /**
+   * Whether the processor wants to wait for a set of channels. If true, {@link #awaitableChannels()} contains the
+   * set of channels to wait for, and {@link #isAwaitAllChannels()}.
+   */
+  public boolean hasAwaitableChannels()
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ReturnOrAwait<?> that = (ReturnOrAwait<?>) o;
-    return awaitAll == that.awaitAll && Objects.equals(retVal, that.retVal) && Objects.equals(await, that.await);
+    return awaitChannels != null;
   }
 
-  @Override
-  public int hashCode()
+  /**
+   * Whether the processor wants to wait for all channels in {@link #awaitableChannels()} (true), or any channel (false)
+   */
+  public boolean isAwaitAllChannels()
   {
-    return Objects.hash(retVal, await, awaitAll);
+    if (!hasAwaitableChannels()) {
+      throw new ISE("No channels set");
+    }
+
+    return awaitAllChannels;
   }
 
   @Override
   public String toString()
   {
-    if (isAwait()) {
-      return "await=" + (awaitAll ? "all" : "any") + await;
+    if (hasAwaitableChannels()) {
+      return "await channels=" + (awaitAllChannels ? "all" : "any") + awaitChannels;
+    } else if (hasAwaitableFutures()) {
+      return "await futures=" + awaitFutures;
     } else {
       return "return=" + retVal;
     }

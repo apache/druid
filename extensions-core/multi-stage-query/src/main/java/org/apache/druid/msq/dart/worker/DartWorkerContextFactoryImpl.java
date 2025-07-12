@@ -22,7 +22,6 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -31,14 +30,12 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
-import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -65,8 +62,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
-  private final CoordinatorClient coordinatorClient;
-  private final QueryToolChestWarehouse warehouse;
+  private final DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -84,8 +80,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox,
-      CoordinatorClient coordinatorClient,
-      QueryToolChestWarehouse warehouse,
+      DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       ServiceEmitter emitter
   )
   {
@@ -102,8 +97,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
-    this.coordinatorClient = coordinatorClient;
-    this.warehouse = warehouse;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.emitter = emitter;
   }
 
@@ -132,12 +126,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         outbox,
         tempDir,
         queryContext,
-        new DataServerQueryHandlerFactory(
-            coordinatorClient,
-            serviceClientFactory,
-            jsonMapper,
-            warehouse
-        ),
+        dataServerQueryHandlerFactory,
         emitter
     );
   }
