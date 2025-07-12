@@ -85,6 +85,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
       Iterator<ReadableInput> dataServerIterator =
           Iterators.transform(
               dataServerIterator(
+                  inputNumber,
                   segmentsInputSlice.getDataSource(),
                   segmentsInputSlice.getServedSegments(),
                   counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
@@ -118,6 +119,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   }
 
   private Iterator<DataServerQueryHandler> dataServerIterator(
+      final int inputNumber,
       final String dataSource,
       final List<DataServerRequestDescriptor> servedSegments,
       final ChannelCounters channelCounters
@@ -125,6 +127,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   {
     return servedSegments.stream().map(
         dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createDataServerQueryHandler(
+            inputNumber,
             dataSource,
             channelCounters,
             dataServerRequestDescriptor

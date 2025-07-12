@@ -649,7 +649,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
     doReturn(dataServerQueryHandler)
         .when(mockFactory)
-        .createDataServerQueryHandler(anyString(), any(), any());
+        .createDataServerQueryHandler(any(), anyString(), any(), any());
     return mockFactory;
   }
 

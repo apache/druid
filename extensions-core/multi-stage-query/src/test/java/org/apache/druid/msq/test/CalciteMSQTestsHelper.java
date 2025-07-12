@@ -194,7 +194,7 @@ public class CalciteMSQTestsHelper
     DataServerQueryHandler dataServerQueryHandler = Mockito.mock(DataServerQueryHandler.class);
     doThrow(new AssertionError("Test does not support loaded segment query"))
         .when(dataServerQueryHandler).fetchRowsFromDataServer(any(), any(), any());
-    doReturn(dataServerQueryHandler).when(mockFactory).createDataServerQueryHandler(anyString(), any(), any());
+    doReturn(dataServerQueryHandler).when(mockFactory).createDataServerQueryHandler(any(), anyString(), any(), any());
     return mockFactory;
   }
 }

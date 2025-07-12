@@ -34,9 +34,13 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.hamcrest.Matcher;
+import org.junit.Assert;
 
 import java.util.Map;
 import java.util.Optional;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Convenience APIs for issuing MSQ SQL queries.
@@ -76,6 +80,31 @@ public class EmbeddedMSQApis
         ),
         true
     ).trim();
+  }
+
+  public void runDartWithError(String sql, Matcher<Throwable> matcher, Object... args)
+  {
+    try {
+      cluster.anyBroker().submitSqlQuery(
+          new ClientSqlQuery(
+              StringUtils.format(sql, args),
+              ResultFormat.CSV.name(),
+              false,
+              false,
+              false,
+              Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+              null
+          )
+      ).get();
+      Assert.fail(StringUtils.format("Query did not throw an exception (sql = [%s])", sql));
+    }
+    catch (Exception e) {
+      assertThat(
+          StringUtils.format("Query error did not match expectations (sql = [%s])", sql),
+          e,
+          matcher
+      );
+    }
   }
 
   /**
@@ -129,5 +158,34 @@ public class EmbeddedMSQApis
     }
 
     return taskReportPayload;
+  }
+
+  public void expectTaskFailure(String sql, String reason, Object... args)
+  {
+    final SqlTaskStatus taskStatus =
+        FutureUtils.getUnchecked(
+            cluster.anyBroker().submitSqlTask(
+                new ClientSqlQuery(
+                    StringUtils.format(sql, args),
+                    ResultFormat.CSV.name(),
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+                )
+            ),
+            true
+        );
+
+    if (taskStatus.getState() != TaskState.RUNNING) {
+      throw DruidException.defensive(
+          "Task[%s] had unexpected state[%s]",
+          taskStatus.getTaskId(),
+          taskStatus.getState()
+      );
+    }
+
+    cluster.callApi().waitForTaskToFail(taskStatus.getTaskId(), reason, overlord);
   }
 }

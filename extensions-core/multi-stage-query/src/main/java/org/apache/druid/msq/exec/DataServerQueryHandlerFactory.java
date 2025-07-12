@@ -61,12 +61,14 @@ public class DataServerQueryHandlerFactory implements Closeable
   }
 
   public DataServerQueryHandler createDataServerQueryHandler(
+      int inputNumber,
       String dataSource,
       ChannelCounters channelCounters,
       DataServerRequestDescriptor dataServerRequestDescriptor
   )
   {
     return new DataServerQueryHandler(
+        inputNumber,
         dataSource,
         channelCounters,
         serviceClientFactory,
