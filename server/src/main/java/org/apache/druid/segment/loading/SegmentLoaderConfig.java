@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
 import java.util.Collections;
@@ -34,6 +35,9 @@ import java.util.stream.Collectors;
  */
 public class SegmentLoaderConfig
 {
+  @JacksonInject
+  private final RuntimeInfo runtimeInfo = new RuntimeInfo();
+
   @JsonProperty
   private List<StorageLocationConfig> locations = Collections.emptyList();
 
@@ -50,7 +54,7 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 6);
+  private int numLoadingThreads = Math.max(1, runtimeInfo.getAvailableProcessors() / 6);
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
@@ -66,6 +70,18 @@ public class SegmentLoaderConfig
 
   @JsonProperty
   private int statusQueueMaxSize = 100;
+
+  @JsonProperty("isVirtualStorageFabric")
+  private boolean isVirtualStorageFabric = false;
+
+  @JsonProperty("minVirtualStorageFabricLoadThreads")
+  private int minVirtualStorageFabricLoadThreads = runtimeInfo.getAvailableProcessors();
+
+  @JsonProperty("maxVirtualStorageFabricLoadThreads")
+  private int maxVirtualStorageFabricLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
+
+  @JsonProperty("virtualStorageFabricLoadThreadKeepaliveMillis")
+  private long virtualStorageFabricLoadThreadKeepaliveMillis = TimeUnit.MINUTES.toMillis(1);
 
   private long combinedMaxSize = 0;
 
@@ -134,6 +150,26 @@ public class SegmentLoaderConfig
     return combinedMaxSize;
   }
 
+  public boolean isVirtualStorageFabric()
+  {
+    return isVirtualStorageFabric;
+  }
+
+  public int getMinVirtualStorageFabricLoadThreads()
+  {
+    return minVirtualStorageFabricLoadThreads;
+  }
+
+  public int getMaxVirtualStorageFabricLoadThreads()
+  {
+    return maxVirtualStorageFabricLoadThreads;
+  }
+
+  public long getVirtualStorageFabricLoadThreadKeepaliveMillis()
+  {
+    return virtualStorageFabricLoadThreadKeepaliveMillis;
+  }
+
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();
@@ -163,9 +199,21 @@ public class SegmentLoaderConfig
   {
     return "SegmentLoaderConfig{" +
            "locations=" + locations +
+           ", lazyLoadOnStart=" + lazyLoadOnStart +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", announceIntervalMillis=" + announceIntervalMillis +
+           ", numLoadingThreads=" + numLoadingThreads +
+           ", numBootstrapThreads=" + numBootstrapThreads +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnDownload=" + numThreadsToLoadSegmentsIntoPageCacheOnDownload +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
+           ", statusQueueMaxSize=" + statusQueueMaxSize +
+           ", useVirtualStorageFabric=" + isVirtualStorageFabric +
+           ", minVirtualStorageFabricLoadThreads=" + minVirtualStorageFabricLoadThreads +
+           ", maxVirtualStorageFabricLoadThreads=" + maxVirtualStorageFabricLoadThreads +
+           ", virtualStorageFabricLoadThreadKeepaliveMillis=" + virtualStorageFabricLoadThreadKeepaliveMillis +
+           ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
 }

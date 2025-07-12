@@ -152,7 +152,7 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinLookupStringKeySegment = new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesLookupStringKey,
         preAnalysisLookupStringKey,
@@ -189,7 +189,7 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinLookupLongKeySegment = new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesLookupLongKey,
         preAnalysisLookupLongKey,
@@ -226,7 +226,7 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesIndexedTableStringKey,
         preAnalysisIndexedStringKey,
@@ -263,7 +263,7 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesIndexedTableLongKey,
         preAnalysisIndexedLongKey,
