@@ -56,7 +56,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -343,12 +342,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
 
 
     getStreamOfEvents().forEach(o -> {
-      try {
-        index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
-      }
-      catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
-      }
+      index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
     });
 
     if (oldValue == null) {
