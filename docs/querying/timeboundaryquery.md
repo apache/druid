@@ -48,7 +48,7 @@ There are 3 main parts to a time boundary query:
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |bound   | Optional, set to `maxTime` or `minTime` to return only the latest or earliest timestamp. Default to returning both if not set| no |
 |filter|See [Filters](../querying/filters.md)|no|
-|context|See [Context](../querying/query-context.md)|no|
+|context|See [Query context reference](../querying/query-context-reference.md)|no|
 
 The format of the result is:
 
