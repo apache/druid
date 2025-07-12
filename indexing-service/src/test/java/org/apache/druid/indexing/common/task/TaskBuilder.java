@@ -24,6 +24,8 @@ import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -77,6 +79,10 @@ public class TaskBuilder<T extends Task, C>
 
   private Boolean appendToExisting = null;
 
+  private String dataSource;
+  private Interval interval;
+  private DimensionsSpec dimensionsSpec;
+
   private final BuilderType<T, C> type;
   private final DataSchema.Builder dataSchema;
   private final TuningConfigBuilder<C> tuningConfig;
@@ -104,9 +110,15 @@ public class TaskBuilder<T extends Task, C>
     return new TaskBuilder<>(new ParallelIndex());
   }
 
+  public static TaskBuilder<CompactionTask, CompactionTask.CompactionTuningConfig> ofTypeCompact()
+  {
+    return new TaskBuilder<>(new Compact());
+  }
+
   public TaskBuilder<T, C> dataSource(String dataSource)
   {
-    dataSchema.withDataSource(dataSource);
+    this.dataSource = dataSource;
+    this.dataSchema.withDataSource(dataSource);
     return this;
   }
 
@@ -118,9 +130,18 @@ public class TaskBuilder<T extends Task, C>
   {
     Preconditions.checkNotNull(taskId, "Task ID must not be null");
     Preconditions.checkNotNull(type, "Task type must be specified");
-    Preconditions.checkNotNull(inputSource, "'inputSource' must be specified");
+    Preconditions.checkNotNull(dataSource, "Datasource must not be null");
 
     return type.buildTask(taskId, this);
+  }
+
+  /**
+   * Used by {@link CompactionTask}.
+   */
+  public TaskBuilder<T, C> interval(Interval interval)
+  {
+    this.interval = interval;
+    return this;
   }
 
   public TaskBuilder<T, C> inputSource(InputSource inputSource)
@@ -261,9 +282,12 @@ public class TaskBuilder<T extends Task, C>
    */
   public TaskBuilder<T, C> dimensions(String... dimensions)
   {
-    dataSchema.withDimensions(
-        Stream.of(dimensions).map(StringDimensionSchema::new).collect(Collectors.toList())
-    );
+    List<DimensionSchema> dimensionList = Stream.of(dimensions)
+                                                .map(StringDimensionSchema::new)
+                                                .collect(Collectors.toList());
+    dataSchema.withDimensions(dimensionList);
+    dimensionsSpec = new DimensionsSpec(dimensionList);
+
     return this;
   }
 
@@ -309,6 +333,7 @@ public class TaskBuilder<T extends Task, C>
     @Override
     public IndexTask buildTask(String taskId, TaskBuilder<IndexTask, IndexTask.IndexTuningConfig> builder)
     {
+      Preconditions.checkNotNull(builder.inputSource, "'inputSource' must be specified");
       return new IndexTask(
           taskId,
           null,
@@ -329,13 +354,13 @@ public class TaskBuilder<T extends Task, C>
 
   private static class ParallelIndex implements BuilderType<ParallelIndexSupervisorTask, ParallelIndexTuningConfig>
   {
-
     @Override
     public ParallelIndexSupervisorTask buildTask(
         String taskId,
         TaskBuilder<ParallelIndexSupervisorTask, ParallelIndexTuningConfig> builder
     )
     {
+      Preconditions.checkNotNull(builder.inputSource, "'inputSource' must be specified");
       return new ParallelIndexSupervisorTask(
           taskId,
           null,
@@ -358,6 +383,42 @@ public class TaskBuilder<T extends Task, C>
     public TuningConfigBuilder<ParallelIndexTuningConfig> tuningConfigBuilder()
     {
       return TuningConfigBuilder.forParallelIndexTask();
+    }
+  }
+
+  private static class Compact implements BuilderType<CompactionTask, CompactionTask.CompactionTuningConfig>
+  {
+    @Override
+    public CompactionTask buildTask(
+        String taskId,
+        TaskBuilder<CompactionTask, CompactionTask.CompactionTuningConfig> builder
+    )
+    {
+      return new CompactionTask(
+          taskId,
+          null,
+          builder.dataSource,
+          builder.interval,
+          null,
+          null,
+          builder.dimensionsSpec,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          builder.tuningConfig.build(),
+          null,
+          null,
+          null
+      );
+    }
+
+    @Override
+    public TuningConfigBuilder<CompactionTask.CompactionTuningConfig> tuningConfigBuilder()
+    {
+      return TuningConfigBuilder.forCompactionTask();
     }
   }
 }
