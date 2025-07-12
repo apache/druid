@@ -184,6 +184,27 @@ public class Execs
   )
   {
     final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
+    if (minThreads == maxThreads) {
+      return new ThreadPoolExecutor(
+          minThreads,
+          maxThreads,
+          keepAliveTime,
+          keepAliveTimeUnit,
+          queue,
+          makeThreadFactory(nameFormat, priority),
+          (r, executor) -> {
+            if (executor.isShutdown()) {
+              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
+            }
+            try {
+              executor.getQueue().put(r);
+            }
+            catch (InterruptedException e) {
+              throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
+            }
+          }
+      );
+    }
     return new ThreadPoolExecutor(
         minThreads,
         maxThreads,
@@ -202,7 +223,26 @@ public class Execs
             throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
           }
         }
-    );
+    )
+    {
+      @Override
+      public void execute(Runnable command) {
+        super.execute(command);
+        // let it grow
+        if (!queue.isEmpty()) {
+          int poolSize = getPoolSize();
+          if (poolSize < maxThreads) {
+            int activeCount = getActiveCount();
+            if (activeCount >= poolSize) {
+              synchronized (this) {
+                setCorePoolSize(poolSize + 1);
+                setCorePoolSize(poolSize);
+              }
+            }
+          }
+        }
+      }
+    };
   }
 
   public static ListeningExecutorService directExecutor()

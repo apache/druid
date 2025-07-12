@@ -41,6 +41,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,6 +118,18 @@ class SegmentLocalCacheManagerConcurrencyTest
       public boolean isVirtualStorageFabric()
       {
         return true;
+      }
+
+      @Override
+      public int getMinVirtualStorageFabricLoadThreads()
+      {
+        return Runtime.getRuntime().availableProcessors();
+      }
+
+      @Override
+      public int getMaxVirtualStorageFabricLoadThreads()
+      {
+        return Runtime.getRuntime().availableProcessors();
       }
     };
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
@@ -206,7 +219,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
 
     List<DataSegment> currentBatch = new ArrayList<>();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
       // process batches of 10 requests at a time
       if (i > 0 && i % 10 == 0) {
         final List<Future<Integer>> futures = currentBatch
@@ -240,9 +253,16 @@ class SegmentLocalCacheManagerConcurrencyTest
         currentBatch.clear();
         exceptions.clear();
       } else {
-        currentBatch.add(segmentsToWeakLoad.get(i));
+        currentBatch.add(segmentsToWeakLoad.get(i % 100));
       }
     }
+
+    File segmentsPath = new File(
+        virtualStorageFabricManager.getLocations().get(0).getPath(),
+        DataSegmentPusher.getDefaultStorageDir(segmentsToWeakLoad.get(0), false)
+    ).getParentFile();
+
+    Assert.assertEquals(8, segmentsPath.listFiles().length);
   }
 
 
@@ -346,7 +366,7 @@ class SegmentLocalCacheManagerConcurrencyTest
           try {
             PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
             // sleep to make tests well behaved and simulate doing query stuff or whatever
-            Thread.sleep(1000);
+            Thread.sleep(200);
             return gadget.getNumRows();
           }
           finally {

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
@@ -33,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -60,7 +60,7 @@ public class AcquireSegmentAction implements Closeable
     Throwable failure = null;
 
     // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
+    final List<Future<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
     for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
       safetyNet.register(acquireSegmentAction);
       // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
@@ -84,7 +84,7 @@ public class AcquireSegmentAction implements Closeable
       // all references before rethrowing the error
       try {
         final AcquireSegmentAction action = acquireSegmentActions.get(i);
-        final ListenableFuture<Optional<Segment>> future = futures.get(i);
+        final Future<Optional<Segment>> future = futures.get(i);
         final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                                                 .map(safetyNet::register);
         segmentReferences.add(
@@ -115,12 +115,12 @@ public class AcquireSegmentAction implements Closeable
   }
 
   private final SegmentDescriptor segmentDescriptor;
-  private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
+  private final Supplier<Future<Optional<Segment>>> segmentFutureSupplier;
   private final Closeable loadCleanup;
 
   public AcquireSegmentAction(
       SegmentDescriptor segmentDescriptor,
-      Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
+      Supplier<Future<Optional<Segment>>> segmentFutureSupplier,
       Closeable loadCleanup
   )
   {
@@ -134,7 +134,7 @@ public class AcquireSegmentAction implements Closeable
     return segmentDescriptor;
   }
 
-  public ListenableFuture<Optional<Segment>> getSegmentFuture()
+  public Future<Optional<Segment>> getSegmentFuture()
   {
     return segmentFutureSupplier.get();
   }

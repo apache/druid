@@ -65,7 +65,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Virtual storage fabric mode tests for classic native JSON queries
  */
-public class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
+class EmbeddedQueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -81,6 +81,8 @@ public class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
   public EmbeddedDruidCluster createCluster()
   {
     historical.addProperty("druid.segmentCache.isVirtualStorageFabric", "true")
+              .addProperty("druid.segmentCache.minVirtualStorageFabricLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
+              .addProperty("druid.segmentCache.maxVirtualStorageFabricLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
                       "druid.segmentCache.locations",
