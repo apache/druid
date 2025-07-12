@@ -51,6 +51,16 @@ public abstract class SettingEntry<T>
   public final String since;
 
   /**
+   * Scope of the setting, which can be used to categorize the setting.
+   * valid values:
+   * "sql"
+   * "native"
+   * "all
+   * If null, it means the setting is applicable to all scopes.
+   */
+  public final String scope;
+
+  /**
    * Whether this setting is deprecated. If true, it should not be used in new queries.
    */
   public final boolean deprecated;
@@ -68,6 +78,7 @@ public abstract class SettingEntry<T>
     this.min = builder.min;
     this.max = builder.max;
     this.since = builder.since;
+    this.scope = builder.scope == null ? "all" : builder.scope;
     this.deprecated = builder.deprecated;
     this.description = builder.description;
   }

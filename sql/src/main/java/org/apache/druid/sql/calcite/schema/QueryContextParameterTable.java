@@ -47,6 +47,7 @@ public class QueryContextParameterTable extends AbstractTable implements Scannab
       .add("min", ColumnType.STRING)
       .add("max", ColumnType.STRING)
       .add("default_value", ColumnType.STRING)
+      .add("scope", ColumnType.STRING)
       .add("deprecated", ColumnType.LONG)
       .add("description", ColumnType.STRING)
       .build();
@@ -95,6 +96,7 @@ public class QueryContextParameterTable extends AbstractTable implements Scannab
               entry.min == null ? null : entry.min.toString(),
               entry.max == null ? null : entry.max.toString(),
               entry.defaultValue == null ? null : entry.defaultValue.toString(),
+              entry.scope,
               entry.deprecated ? 1L : 0L,
               entry.description
           };
