@@ -60,14 +60,14 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
     final Query<T> query = queryPlus.getQuery();
     final QueryContext queryContext = query.context();
     final boolean isBySegment = queryContext.isBySegment();
-    final boolean shouldFinalize = queryContext.isFinalize.valueOrDefault(true);
+    final boolean shouldFinalize = queryContext.finalize.valueOrDefault(true);
 
     final Query<T> queryToRun;
     final Function<T, ?> finalizerFn;
     final MetricManipulationFn metricManipulationFn;
 
     if (shouldFinalize) {
-      queryToRun = query.withOverriddenContext(ImmutableMap.of(QueryContexts.FINALIZE_KEY.name(), false));
+      queryToRun = query.withOverriddenContext(ImmutableMap.of(QueryContexts.FINALIZE.name(), false));
       metricManipulationFn = MetricManipulatorFns.finalizing();
     } else {
       queryToRun = query;

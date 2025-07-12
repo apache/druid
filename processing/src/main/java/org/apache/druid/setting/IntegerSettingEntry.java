@@ -30,13 +30,13 @@ public class IntegerSettingEntry extends SettingEntry<Integer>
   }
 
   @Override
-  public Integer from(Object value)
+  public Integer valueOf(Object value)
   {
     return QueryContexts.getAsInt(name, value, defaultValue);
   }
 
   @Override
-  public Integer from(Object value, Integer defaultValue)
+  public Integer valueOf(Object value, Integer defaultValue)
   {
     return QueryContexts.getAsInt(name, value, defaultValue);
   }

@@ -301,7 +301,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
       final QueryContext queryContext = query.context();
-      final int priority = queryContext.getPriority();
+      final int priority = queryContext.priority.value();
       contextBuilder.put(QueryContexts.PRIORITY.name(), priority);
       final String lane = queryContext.lane.value();
       if (lane != null) {
@@ -394,7 +394,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             mergeFn,
             queryContext.hasTimeout(),
             queryContext.getTimeout(),
-            queryContext.getPriority(),
+            queryContext.priority.value(),
             queryContext.getParallelMergeParallelism(parallelMergeConfig.getDefaultMaxQueryParallelism()),
             queryContext.getParallelMergeInitialYieldRows(parallelMergeConfig.getInitialYieldNumRows()),
             queryContext.getParallelMergeSmallBatchRows(parallelMergeConfig.getSmallBatchNumRows()),
@@ -685,7 +685,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
 
         // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
-        final long maxQueuedBytes = query.context().getMaxQueuedBytes(httpClientConfig.getMaxQueuedBytes());
+        final long maxQueuedBytes = query.context().maxQueuedBytes.valueOrDefault(httpClientConfig.getMaxQueuedBytes());
         final long maxQueuedBytesPerServer = maxQueuedBytes / segmentsByServer.size();
         final Sequence<T> serverResults;
 

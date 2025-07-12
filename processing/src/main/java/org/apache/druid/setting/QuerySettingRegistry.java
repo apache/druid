@@ -74,6 +74,6 @@ public class QuerySettingRegistry implements ISettingRegistry
     if (entry == null) {
       throw InvalidInput.exception("Setting with name [%s] does not exist.", name);
     }
-    return entry.from(val);
+    return entry.valueOf(val);
   }
 }

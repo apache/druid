@@ -31,13 +31,13 @@ public class BooleanSettingEntry extends SettingEntry<Boolean>
   }
 
   @Override
-  public Boolean from(Object value)
+  public Boolean valueOf(Object value)
   {
     return QueryContexts.getAsBoolean(name, value, defaultValue);
   }
 
   @Override
-  public Boolean from(Object value, Boolean defaultValue)
+  public Boolean valueOf(Object value, Boolean defaultValue)
   {
     return QueryContexts.getAsBoolean(name, value, defaultValue);
   }

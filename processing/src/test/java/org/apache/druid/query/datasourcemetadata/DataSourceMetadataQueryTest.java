@@ -89,7 +89,7 @@ public class DataSourceMetadataQueryTest
                                                         true,
                                                         QueryContexts.POPULATE_CACHE_KEY,
                                                         "true",
-                                                        QueryContexts.FINALIZE_KEY.name(),
+                                                        QueryContexts.FINALIZE.name(),
                                                         true
                                                     )
                                                 ).build();
@@ -107,13 +107,13 @@ public class DataSourceMetadataQueryTest
     );
 
     final QueryContext queryContext = serdeQuery.context();
-    Assert.assertEquals(1, (int) queryContext.getValue(QueryContexts.PRIORITY));
+    Assert.assertEquals(1, (int) queryContext.priority.value());
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
     Assert.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
-    Assert.assertEquals(true, queryContext.getValue(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, queryContext.finalize.value());
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
     Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    Assert.assertEquals(true, queryContext.getValue(QueryContexts.FINALIZE_KEY, false));
+    Assert.assertEquals(true, queryContext.finalize.valueOrDefault(false));
   }
 
   /**

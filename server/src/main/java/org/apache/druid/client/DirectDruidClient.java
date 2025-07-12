@@ -169,9 +169,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final QueryContext queryContext = query.context();
       // Will NPE if the value is not set.
       final long timeoutAt = queryContext.getLong(QUERY_FAIL_TIME);
-      final long maxScatterGatherBytes = queryContext.getMaxScatterGatherBytes();
+      final long maxScatterGatherBytes = queryContext.maxScatterGatherBytes.value();
       final AtomicLong totalBytesGathered = context.getTotalBytes();
-      final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
+      final long maxQueuedBytes = queryContext.maxQueuedBytes.valueOrDefault(0L);
       final boolean usingBackpressure = maxQueuedBytes > 0;
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<>()

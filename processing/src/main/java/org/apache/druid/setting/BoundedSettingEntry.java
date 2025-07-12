@@ -38,7 +38,7 @@ public class BoundedSettingEntry<T>
    */
   public T value()
   {
-    return entryDef.from(context.get(entryDef.name));
+    return entryDef.valueOf(context.get(entryDef.name));
   }
 
   /**
@@ -46,7 +46,7 @@ public class BoundedSettingEntry<T>
    */
   public T valueOrDefault(T defaultValue)
   {
-    return entryDef.from(context.get(entryDef.name), defaultValue);
+    return entryDef.valueOf(context.get(entryDef.name), defaultValue);
   }
 
   /**

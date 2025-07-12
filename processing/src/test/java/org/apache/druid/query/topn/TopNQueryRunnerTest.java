@@ -3665,7 +3665,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
         )
-        .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY.name(), true, QueryContexts.BY_SEGMENT_KEY, true))
+        .context(ImmutableMap.of(QueryContexts.FINALIZE.name(), true, QueryContexts.BY_SEGMENT_KEY, true))
         .build();
     TopNResultValue topNResult = TopNResultValue.create(
         Arrays.<Map<String, Object>>asList(

@@ -74,7 +74,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     this.responseContext = responseContext;
     this.objectMapper = objectMapper;
     QueryContext queryContext = query.context();
-    maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
+    maxQueuedBytes = queryContext.maxQueuedBytes.valueOrDefault(0L);
     usingBackpressure = maxQueuedBytes > 0;
     long startTimeMillis = System.currentTimeMillis();
     if (queryContext.hasTimeout()) {

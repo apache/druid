@@ -110,9 +110,9 @@ public abstract class SettingEntry<T>
   /**
    * Get the value of this setting from the given context. If the setting is not present in the context, the default value of the setting is returned.
    */
-  public abstract T from(Object context);
+  public abstract T valueOf(Object value);
 
-  public abstract T from(Object context, T defaultValue);
+  public abstract T valueOf(Object value, T defaultValue);
 
   @Override
   public String toString()

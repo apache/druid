@@ -262,7 +262,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // Add appropriate finalization to native query context.
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
-    nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY.name(), finalizeAggregations);
+    nativeQueryContextOverrides.put(QueryContexts.FINALIZE.name(), finalizeAggregations);
 
     // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
     nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);

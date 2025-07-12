@@ -30,13 +30,13 @@ public class StringSettingEntry extends SettingEntry<String>
   }
 
   @Override
-  public String from(Object value)
+  public String valueOf(Object value)
   {
     return QueryContexts.getAsString(name, value, defaultValue);
   }
 
   @Override
-  public String from(Object value, String defaultValue)
+  public String valueOf(Object value, String defaultValue)
   {
     return QueryContexts.getAsString(name, value, defaultValue);
   }

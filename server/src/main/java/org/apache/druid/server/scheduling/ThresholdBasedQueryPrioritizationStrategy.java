@@ -103,7 +103,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
     boolean violatesSegmentThreshold = segments.size() > segmentCountThreshold;
 
     if (violatesPeriodThreshold || violatesDurationThreshold || violatesSegmentThreshold || violatesSegmentRangeThreshold) {
-      final int adjustedPriority = theQuery.context().getPriority() - adjustment;
+      final int adjustedPriority = theQuery.context().priority.value() - adjustment;
       return Optional.of(adjustedPriority);
     }
     return Optional.empty();

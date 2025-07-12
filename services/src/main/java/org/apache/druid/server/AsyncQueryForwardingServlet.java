@@ -858,8 +858,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       if (isJDBC) {
         sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
       } else if (sqlQuery != null) {
-        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID, null);
-        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID, null);
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.SQL_QUERY_ID.name(), null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(QueryContexts.QUERY_ID.name(), null);
       } else if (query != null) {
         queryId = query.getId();
       }

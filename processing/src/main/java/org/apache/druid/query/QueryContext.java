@@ -140,12 +140,12 @@ public class QueryContext
 
   public <T> T getValue(SettingEntry<T> entry)
   {
-    return entry.from(get(entry.name()));
+    return entry.valueOf(get(entry.name()));
   }
 
   public <T> T getValue(SettingEntry<T> entry, T defaultValue)
   {
-    return entry.from(get(entry.name()), defaultValue);
+    return entry.valueOf(get(entry.name()), defaultValue);
   }
 
   /**
@@ -312,12 +312,8 @@ public class QueryContext
     return getBoolean(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
 
-  public boolean isUseResultLevelCache()
-  {
-    return QueryContexts.USE_RESULT_LEVEL_CACHE_KEY.from(this);
-  }
-
-  public final BoundedSettingEntry<Boolean> isFinalize = new BoundedSettingEntry<>(QueryContexts.FINALIZE_KEY, this);
+  public final BoundedSettingEntry<Boolean> useResultLevelCache = new BoundedSettingEntry<>(QueryContexts.USE_RESULT_LEVEL_CACHE, this);
+  public final BoundedSettingEntry<Boolean> finalize = new BoundedSettingEntry<>(QueryContexts.FINALIZE, this);
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {
@@ -398,22 +394,8 @@ public class QueryContext
     return getInt(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
-  public int getPriority()
-  {
-    return getPriority(QueryContexts.DEFAULT_PRIORITY);
-  }
-
-  public int getPriority(int defaultValue)
-  {
-    return getValue(QueryContexts.PRIORITY, defaultValue);
-  }
-
-  public String getLane()
-  {
-    return getValue(QueryContexts.LANE);
-  }
+  public final BoundedSettingEntry<Integer> priority = new BoundedSettingEntry<>(QueryContexts.PRIORITY, this);
   public final BoundedSettingEntry<String> lane = new BoundedSettingEntry<>(QueryContexts.LANE, this);
-
   public final BoundedSettingEntry<Boolean> enableParallelMerges = new BoundedSettingEntry<>(QueryContexts.BROKER_PARALLEL_MERGE, this);
 
   public int getParallelMergeInitialYieldRows(int defaultValue)
@@ -463,15 +445,8 @@ public class QueryContext
     );
   }
 
-  public long getMaxQueuedBytes(long defaultValue)
-  {
-    return getValue(QueryContexts.MAX_QUEUED_BYTES, defaultValue);
-  }
-
-  public long getMaxScatterGatherBytes()
-  {
-    return getValue(QueryContexts.MAX_SCATTER_GATHER_BYTES);
-  }
+  public final BoundedSettingEntry<Long> maxQueuedBytes = new BoundedSettingEntry<>(QueryContexts.MAX_QUEUED_BYTES, this);
+  public final BoundedSettingEntry<Long> maxScatterGatherBytes = new BoundedSettingEntry<>(QueryContexts.MAX_SCATTER_GATHER_BYTES, this);
 
   public String getEngine()
   {

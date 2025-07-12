@@ -70,12 +70,12 @@ public class QueryContexts
                                                                        "Query priority. Queries with higher priority get precedence for resource allocation")
                                                                    .register(QuerySettingRegistry.getInstance());
 
-  public static final SettingEntry<Boolean> FINALIZE_KEY = SettingEntry.newBooleanEntry()
-                                                                       .name("finalize")
-                                                                       .defaultValue(null)
-                                                                       .description(
+  public static final SettingEntry<Boolean> FINALIZE = SettingEntry.newBooleanEntry()
+                                                                   .name("finalize")
+                                                                   .defaultValue(null)
+                                                                   .description(
                                                                            "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                       .register(QuerySettingRegistry.getInstance());
+                                                                   .register(QuerySettingRegistry.getInstance());
 
   public static final SettingEntry<String> LANE = SettingEntry.newStringEntry()
                                                               .name("lane")
@@ -152,15 +152,12 @@ public class QueryContexts
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
 
-  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE_KEY = SettingEntry.newBooleanEntry()
-                                                                                     .name("useResultLevelCache")
-                                                                                     .defaultValue(true)
-                                                                                     .description(
-                                                                                         "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
-                                                                                     .register(
-                                                                                         QuerySettingRegistry.getInstance());
+  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE = SettingEntry.newBooleanEntry()
+                                                                                 .name("useResultLevelCache")
+                                                                                 .defaultValue(true)
+                                                                                 .description("Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                                                                                 .register(QuerySettingRegistry.getInstance());
 
-  //public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
@@ -236,7 +233,6 @@ public class QueryContexts
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
   public static final int DEFAULT_VECTOR_SIZE = 512;
-  public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;

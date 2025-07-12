@@ -533,7 +533,7 @@ public class QuerySchedulerTest
             EasyMock.createMock(SegmentServerSelector.class)
         )
     );
-    Assert.assertEquals(-5, query.context().getPriority());
+    Assert.assertEquals(-5, query.context().priority.value());
     Assert.assertEquals(HiLoQueryLaningStrategy.LOW, query.context().lane.value());
   }
 

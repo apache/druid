@@ -30,13 +30,13 @@ public class LongSettingEntry extends SettingEntry<Long>
   }
 
   @Override
-  public Long from(Object value)
+  public Long valueOf(Object value)
   {
     return QueryContexts.getAsLong(name, value, defaultValue);
   }
 
   @Override
-  public Long from(Object value, Long defaultValue)
+  public Long valueOf(Object value, Long defaultValue)
   {
     return QueryContexts.getAsLong(name, value, defaultValue);
   }

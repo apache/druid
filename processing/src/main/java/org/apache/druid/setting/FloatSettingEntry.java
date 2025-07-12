@@ -30,13 +30,13 @@ public class FloatSettingEntry extends SettingEntry<Float>
   }
 
   @Override
-  public Float from(Object value)
+  public Float valueOf(Object value)
   {
     return QueryContexts.getAsFloat(name, value, defaultValue);
   }
 
   @Override
-  public Float from(Object value, Float defaultValue)
+  public Float valueOf(Object value, Float defaultValue)
   {
     return QueryContexts.getAsFloat(name, value, defaultValue);
   }

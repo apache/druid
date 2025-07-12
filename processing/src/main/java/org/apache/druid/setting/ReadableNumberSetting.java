@@ -31,13 +31,13 @@ public class ReadableNumberSetting extends SettingEntry<HumanReadableBytes>
   }
 
   @Override
-  public HumanReadableBytes from(Object value)
+  public HumanReadableBytes valueOf(Object value)
   {
     return QueryContexts.getAsHumanReadableBytes(name, value, defaultValue);
   }
 
   @Override
-  public HumanReadableBytes from(Object value, HumanReadableBytes defaultValue)
+  public HumanReadableBytes valueOf(Object value, HumanReadableBytes defaultValue)
   {
     return QueryContexts.getAsHumanReadableBytes(name, value, defaultValue);
   }
