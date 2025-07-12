@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.jetbrains.annotations.NotNull;
 
 @JsonSerialize(using = HumanReadableBytesSerializer.class)
 public class HumanReadableBytes implements Comparable<HumanReadableBytes>
@@ -218,7 +217,7 @@ public class HumanReadableBytes implements Comparable<HumanReadableBytes>
   }
 
   @Override
-  public int compareTo(@NotNull HumanReadableBytes o)
+  public int compareTo(HumanReadableBytes o)
   {
     return Long.compare(bytes, o.bytes);
   }
