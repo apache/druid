@@ -24,29 +24,29 @@ import org.apache.druid.query.QueryContext;
 
 public class BoundedSettingEntry<T>
 {
-  private final SettingEntry<T> def;
+  private final SettingEntry<T> entryDef;
   private final QueryContext context;
 
-  public BoundedSettingEntry(SettingEntry<T> def, QueryContext context)
+  public BoundedSettingEntry(SettingEntry<T> entryDef, QueryContext context)
   {
-    this.def = def;
+    this.entryDef = entryDef;
     this.context = context;
   }
 
   /**
    * Get the value using the setting's default
    */
-  public T get()
+  public T value()
   {
-    return def.from(context.get(def.name));
+    return entryDef.from(context.get(entryDef.name));
   }
 
   /**
    * Get the value with a custom default
    */
-  public T get(T defaultValue)
+  public T valueOrDefault(T defaultValue)
   {
-    return def.from(context.get(def.name), defaultValue);
+    return entryDef.from(context.get(entryDef.name), defaultValue);
   }
 
   /**
@@ -54,6 +54,6 @@ public class BoundedSettingEntry<T>
    */
   public T defaultValue()
   {
-    return def.defaultValue();
+    return entryDef.defaultValue();
   }
 }

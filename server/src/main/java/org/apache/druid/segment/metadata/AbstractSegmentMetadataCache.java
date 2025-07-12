@@ -959,7 +959,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
             internalQueryConfig.getContext(),
-            QueryContexts.BROKER_PARALLEL_MERGE_KEY,
+            QueryContexts.BROKER_PARALLEL_MERGE.name(),
             false
         ),
         fetchAggregatorsInSegmentMetadataQuery()

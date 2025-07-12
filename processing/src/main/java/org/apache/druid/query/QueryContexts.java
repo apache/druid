@@ -109,7 +109,13 @@ public class QueryContexts
                                                                             "Maximum number of bytes to queue for each query. This limit is enforced to prevent queries from exhausting memory")
                                                                         .register(QuerySettingRegistry.getInstance());
 
-  public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  public static final SettingEntry<Boolean> BROKER_PARALLEL_MERGE = SettingEntry.newBooleanEntry()
+                                                                               .name("enableParallelMerge")
+                                                                               .defaultValue(true)
+                                                                               .description(
+                                                                                   "Enable parallel merge for broker queries to improve performance by processing segments concurrently")
+                                                                               .register(QuerySettingRegistry.getInstance());
+
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
@@ -234,7 +240,6 @@ public class QueryContexts
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
-  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;

@@ -305,7 +305,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   static boolean isFinalize(final GroupByQuery query)
   {
-    return query.context().isFinalize.get(true);
+    return query.context().isFinalize.valueOrDefault(true);
   }
 
   /**

@@ -140,12 +140,12 @@ public class QueryContext
 
   public <T> T getValue(SettingEntry<T> entry)
   {
-    return entry.from(this);
+    return entry.from(get(entry.name()));
   }
 
   public <T> T getValue(SettingEntry<T> entry, T defaultValue)
   {
-    return entry.from(this, defaultValue);
+    return entry.from(get(entry.name()), defaultValue);
   }
 
   /**
@@ -412,14 +412,9 @@ public class QueryContext
   {
     return getValue(QueryContexts.LANE);
   }
+  public final BoundedSettingEntry<String> lane = new BoundedSettingEntry<>(QueryContexts.LANE, this);
 
-  public boolean getEnableParallelMerges()
-  {
-    return getBoolean(
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY,
-        QueryContexts.DEFAULT_ENABLE_PARALLEL_MERGE
-    );
-  }
+  public final BoundedSettingEntry<Boolean> enableParallelMerges = new BoundedSettingEntry<>(QueryContexts.BROKER_PARALLEL_MERGE, this);
 
   public int getParallelMergeInitialYieldRows(int defaultValue)
   {

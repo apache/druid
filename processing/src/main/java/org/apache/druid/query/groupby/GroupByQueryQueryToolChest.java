@@ -377,7 +377,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> finalizeSubqueryResults(Sequence<ResultRow> subqueryResult, GroupByQuery subquery)
   {
     final Sequence<ResultRow> finalizingResults;
-    if (subquery.context().isFinalize.get(false)) {
+    if (subquery.context().isFinalize.valueOrDefault(false)) {
       finalizingResults = new MappedSequence<>(
           subqueryResult,
           makePreComputeManipulatorFn(
@@ -780,7 +780,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   )
   {
     RowSignature rowSignature = query.getResultRowSignature(
-        query.context().isFinalize.get(true)
+        query.context().isFinalize.valueOrDefault(true)
         ? RowSignature.Finalization.YES
         : RowSignature.Finalization.NO
     );

@@ -382,7 +382,7 @@ public class CachingClusteredClientBenchmark
                        .context(
                            ImmutableMap.of(
                                QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
-                               QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                               QueryContexts.BROKER_PARALLEL_MERGE.name(), parallelCombine,
                                QueryContexts.BROKER_PARALLELISM, parallelism
                            )
                        )
@@ -413,7 +413,7 @@ public class CachingClusteredClientBenchmark
         .context(
             ImmutableMap.of(
                 QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
-                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                QueryContexts.BROKER_PARALLEL_MERGE.name(), parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )
         )
@@ -446,7 +446,7 @@ public class CachingClusteredClientBenchmark
         .setContext(
             ImmutableMap.of(
                 QueryContexts.QUERY_ID.name(), "BenchmarkQuery",
-                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
+                QueryContexts.BROKER_PARALLEL_MERGE.name(), parallelCombine,
                 QueryContexts.BROKER_PARALLELISM, parallelism
             )
         )

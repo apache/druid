@@ -559,7 +559,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = query.getResultRowSignature(query.context().isFinalize.get(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
+    final RowSignature rowSignature = query.getResultRowSignature(query.context().isFinalize.valueOrDefault(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
 
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),

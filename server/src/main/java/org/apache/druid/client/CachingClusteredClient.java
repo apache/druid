@@ -303,7 +303,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final QueryContext queryContext = query.context();
       final int priority = queryContext.getPriority();
       contextBuilder.put(QueryContexts.PRIORITY.name(), priority);
-      final String lane = queryContext.getLane();
+      final String lane = queryContext.lane.value();
       if (lane != null) {
         contextBuilder.put(QueryContexts.LANE.name(), lane);
       }
@@ -386,7 +386,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
       final QueryContext queryContext = query.context();
-      if (parallelMergeConfig.useParallelMergePool() && queryContext.getEnableParallelMerges() && mergeFn != null) {
+      if (parallelMergeConfig.useParallelMergePool() && queryContext.enableParallelMerges.value() && mergeFn != null) {
         final ParallelMergeCombiningSequence<T> parallelSequence = new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
