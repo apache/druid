@@ -232,7 +232,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  public class TextualResultsVerifier implements ResultsVerifier
+  public static class TextualResultsVerifier implements ResultsVerifier
   {
     protected final List<String[]> expectedResultsText;
     @Nullable
