@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -225,21 +226,39 @@ public class Execs
         }
     )
     {
+      private int running = 0;
       @Override
       public void execute(Runnable command) {
+        synchronized (this) {
+          running++;
+          growIfNeeded();
+        }
         super.execute(command);
-        // let it grow
-        if (!queue.isEmpty()) {
-          int poolSize = getPoolSize();
-          if (poolSize < maxThreads) {
-            int activeCount = getActiveCount();
-            if (activeCount >= poolSize) {
-              synchronized (this) {
-                setCorePoolSize(poolSize + 1);
-                setCorePoolSize(poolSize);
-              }
-            }
-          }
+      }
+
+      @Override
+      protected void afterExecute(Runnable r, Throwable t)
+      {
+        super.afterExecute(r, t);
+        synchronized (this) {
+          running--;
+          shrinkIfNeeded();
+        }
+      }
+
+      @GuardedBy("this")
+      private void growIfNeeded()
+      {
+        if (minThreads < running && running <= maxThreads) {
+          setCorePoolSize(running);
+        }
+      }
+
+      @GuardedBy("this")
+      private void shrinkIfNeeded()
+      {
+        if (running < maxThreads) {
+          setCorePoolSize(Math.max(running, minThreads));
         }
       }
     };
