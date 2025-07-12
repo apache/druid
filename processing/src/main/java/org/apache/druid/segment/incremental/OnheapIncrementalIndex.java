@@ -143,6 +143,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // initialize them all with 0 rows
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
+      if (projections.containsKey(projectionSpec.getName())) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Found duplicate projection[%s], please remove and resubmit the ingestion.",
+                                projectionSpec.getName()
+                            );
+      }
 
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
           projectionSpec,
