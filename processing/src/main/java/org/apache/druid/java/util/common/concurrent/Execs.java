@@ -227,8 +227,10 @@ public class Execs
     )
     {
       private int running = 0;
+
       @Override
-      public void execute(Runnable command) {
+      public void execute(Runnable command)
+      {
         synchronized (this) {
           running++;
           growIfNeeded();

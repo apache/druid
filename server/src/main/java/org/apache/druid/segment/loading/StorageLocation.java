@@ -213,7 +213,16 @@ public class StorageLocation
 
     synchronized (lock) {
       if (canHandle(entry)) {
-        linkNewWeakEntry(new WeakCacheEntry(entry));
+
+        weakCacheEntries.computeIfAbsent(
+            entry.getId(),
+            identifier -> {
+              final WeakCacheEntry newEntry = new WeakCacheEntry(entry);
+              linkNewWeakEntry(newEntry);
+              return newEntry;
+            }
+        );
+
         return true;
       }
       return false;
