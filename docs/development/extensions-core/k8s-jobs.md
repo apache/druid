@@ -372,7 +372,6 @@ The below runtime properties need to be passed to the Job's peon process.
 druid.port=8100 (what port the peon should run on)
 druid.peon.mode=remote
 druid.service=druid/peon (for metrics reporting)
-druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
 druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
@@ -398,7 +397,7 @@ template:
         - sh
         - -c
         - |
-          /peon.sh /druid/data 1
+          /peon.sh
       env:
       - name: CUSTOM_ENV_VARIABLE
         value: "hello"
@@ -492,7 +491,6 @@ data:
         druid.port=8100
         druid.service=druid/peon
         druid.server.http.numThreads=5
-        druid.indexer.task.baseTaskDir=/druid/data
         druid.indexer.runner.type=k8s
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
@@ -544,7 +542,7 @@ data:
             - sh
             - -c
             - |
-              /peon.sh /druid/data 1
+              /peon.sh
           env:
             - name: druid_port
               value: 8100
@@ -556,8 +554,6 @@ data:
               value: remote
             - name: druid_service
               value: "druid/peon"
-            - name: druid_indexer_task_baseTaskDir
-              value: /druid/data
             - name: druid_indexer_runner_type
               value: k8s
             - name: druid_indexer_task_encapsulatedTask
