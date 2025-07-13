@@ -697,11 +697,11 @@ public class PlannerContext
       useGranularity = DEFAULT_SQL_USE_GRANULARITY;
     }
 
-    sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+    sqlQueryId = (String) this.queryContext.get(QueryContexts.SQL_QUERY_ID.name);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+      this.queryContext.put(QueryContexts.SQL_QUERY_ID.name, UUID.randomUUID().toString());
     }
 
     if (plannerConfig != null) {

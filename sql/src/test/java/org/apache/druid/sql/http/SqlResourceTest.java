@@ -1434,7 +1434,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testExplainCountStar() throws Exception
   {
     Map<String, Object> queryContext = ImmutableMap.of(
-        QueryContexts.CTX_SQL_QUERY_ID,
+        QueryContexts.SQL_QUERY_ID.name,
         DUMMY_SQL_QUERY_ID,
         PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
         "false"

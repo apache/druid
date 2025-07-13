@@ -92,7 +92,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+                  .put(QueryContexts.SQL_QUERY_ID.name, DUMMY_SQL_ID)
                   .build();
 
   public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(

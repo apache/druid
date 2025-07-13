@@ -15828,7 +15828,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     expectedContext.put("timeout", 9000.0);
     expectedContext.put("vectorize", "force");
     // sql query id is also set in the base context sent with the query, expect the SET statement to override this
-    expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
+    expectedContext.put(QueryContexts.SQL_QUERY_ID.name, "dummy2");
 
     testBuilder().sql(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;;;"

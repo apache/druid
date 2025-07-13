@@ -244,11 +244,11 @@ public class DartSqlEngine implements SqlEngine
       contextMap.putIfAbsent(entry.getKey(), entry.getValue());
     }
     /**
-     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#SQL_QUERY_ID.name}
      * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
      * the user may have provided. This becomes the {@link Controller#queryId()}.
      *
-     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+     * The user-provided {@link QueryContexts#SQL_QUERY_ID.name} is still registered with the {@link SqlLifecycleManager}
      * for purposes of query cancellation.
      *
      * The user-provided {@link BaseQuery#QUERY_ID} is ignored.

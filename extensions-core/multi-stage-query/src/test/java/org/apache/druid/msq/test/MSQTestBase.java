@@ -271,7 +271,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
+                  .put(QueryContexts.SQL_QUERY_ID.name, "test-query")
                   .put(QueryContexts.FINALIZE.name, true)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)

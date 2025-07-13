@@ -154,7 +154,7 @@ public class QueryContexts
   public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE = SettingEntry.newBooleanEntry()
                                                                                  .name("useResultLevelCache")
                                                                                  .defaultValue(true)
-                                                                                 .description("Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                                                                                 .description("Flag indicating whether to leverage the result level cache for this query. When set to false, it disables reading from the query cache for this query. When set to true, Druid uses `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the result-level query cache")
                                                                                  .register(QueryContextParameterRegistry.getInstance());
 
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
@@ -201,7 +201,6 @@ public class QueryContexts
                                                                            .register(QueryContextParameterRegistry.getInstance());
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = SQL_QUERY_ID.name;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart

@@ -60,7 +60,7 @@ public class AuthConfig
       // Set in DartSqlEngine
       QueryContexts.CTX_DART_QUERY_ID,
       // Set by the Router
-      QueryContexts.CTX_SQL_QUERY_ID
+      QueryContexts.SQL_QUERY_ID.name
   );
 
   public AuthConfig()

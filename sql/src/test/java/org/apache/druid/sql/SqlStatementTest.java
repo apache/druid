@@ -533,7 +533,7 @@ public class SqlStatementTest
     Map<String, Object> context = stmt.context();
     Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(context.containsKey(QueryContexts.SQL_QUERY_ID.name));
   }
 
   @Test

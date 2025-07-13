@@ -321,8 +321,8 @@ public class IndexerControllerContext implements ControllerContext
       builder.put(QueryContexts.QUERY_ID.name, querySpec.getId());
     }
 
-    if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
-      builder.put(QueryContexts.SQL_QUERY_ID.name, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+    if (queryContext.containsKey(QueryContexts.SQL_QUERY_ID.name)) {
+      builder.put(QueryContexts.SQL_QUERY_ID.name, queryContext.get(QueryContexts.SQL_QUERY_ID.name));
     }
 
     MSQDestination destination = querySpec.getDestination();
