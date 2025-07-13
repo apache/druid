@@ -136,7 +136,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
               .addProperty("druid.msq.dart.worker.concurrentQueries", "1")
               .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
-    indexer.setServerMemory(300_000_000) // to run 2x realtime and 2x MSQ tasks
+    indexer.setServerMemory(400_000_000) // to run 2x realtime and 2x MSQ tasks
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            // druid.processing.numThreads must be higher than # of MSQ tasks to avoid contention, because the realtime
            // server is contacted in such a way that the processing thread is blocked
@@ -363,8 +363,11 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    msqApis.expectTaskFailure(sql, "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
-                                   + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].");
+    msqApis.expectTaskFailure(sql, "UnknownError: java.lang.RuntimeException: org.apache.druid.error.DruidException:"
+                                   + " Unknown InputNumberDataSource datasource with number[1]. "
+                                   + "Queries with realtime sources cannot join results with stage outputs. Use "
+                                   + "sortMerge join instead by setting [sqlJoinAlgorithm]."
+    );
   }
 
   @Test
