@@ -42,7 +42,7 @@ public interface BrokerClient
   /**
    * Submits the given query to the {@code /druid/v2} endpoint of a Broker.
    */
-  ListenableFuture<Object> submitNativeQuery(Query<?> query);
+  ListenableFuture<String> submitNativeQuery(Query<?> query);
 
   /**
    * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint, {@code /druid/v2/sql/}.

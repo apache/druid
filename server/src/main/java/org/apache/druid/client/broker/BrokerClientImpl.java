@@ -53,7 +53,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<Object> submitNativeQuery(Query<?> query)
+  public ListenableFuture<String> submitNativeQuery(Query<?> query)
   {
     return FutureUtils.transform(
         client.asyncRequest(

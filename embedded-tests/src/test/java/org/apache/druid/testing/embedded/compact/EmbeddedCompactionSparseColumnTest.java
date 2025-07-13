@@ -264,7 +264,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
   private String getScanEvents(ScanQuery scanQuery)
   {
     final String resultAsJson =
-        (String) FutureUtils.getUnchecked(cluster.anyBroker().submitNativeQuery(scanQuery), true);
+        FutureUtils.getUnchecked(cluster.anyBroker().submitNativeQuery(scanQuery), true);
     final List<Map<String, Object>> resultList = JacksonUtils.readValue(
         TestHelper.JSON_MAPPER,
         resultAsJson.getBytes(StandardCharsets.UTF_8),
