@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class ITCompactionSparseColumnTest extends EmbeddedClusterTestBase
+public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
 {
   private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK =
       () -> TaskBuilder
