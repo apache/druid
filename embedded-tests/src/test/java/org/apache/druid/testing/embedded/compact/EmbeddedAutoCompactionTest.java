@@ -117,7 +117,7 @@ import java.util.stream.Collectors;
 public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
 {
   private static final Logger LOG = new Logger(EmbeddedAutoCompactionTest.class);
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK =
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK =
       () -> TaskBuilder
           .ofTypeIndex()
           .jsonInputFormat()
@@ -145,9 +145,9 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
           .granularitySpec("DAY", "SECOND", true)
           .appendToExisting(false);
 
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_GRANULARITY_SPEC =
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_GRANULARITY_SPEC =
       () -> INDEX_TASK.get().dimensions("language").dynamicPartitionWithMaxRows(10);
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_DIMENSION_SPEC =
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_DIMENSION_SPEC =
       () -> INDEX_TASK.get().granularitySpec("DAY", "DAY", true);
 
   private static final String SELECT_APPROX_COUNT_DISTINCT =
@@ -174,7 +174,7 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
           "Crimson Typhoon,1,905.0,9050.0"
       )
   );
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS =
+  private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS =
       () -> TaskBuilder
           .ofTypeIndexParallel()
           .jsonInputFormat()
@@ -199,7 +199,7 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
               "isNew", "isMinor", "isAnonymous", "namespace"
           );
 
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS =
+  private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS =
       () -> TaskBuilder
           .ofTypeIndexParallel()
           .jsonInputFormat()
@@ -1714,14 +1714,18 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void loadData(Supplier<TaskBuilder<?, ?>> updatePayload)
+  private <T extends TaskBuilder.IndexCommon<?, ?, ?>> void loadData(Supplier<T> updatePayload)
   {
     loadData(updatePayload, null);
   }
 
-  private void loadData(Supplier<TaskBuilder<?, ?>> taskPayloadSupplier, GranularitySpec granularitySpec)
+  private <T extends TaskBuilder.IndexCommon<?, ?, ?>> void loadData(
+      Supplier<T> taskPayloadSupplier,
+      GranularitySpec granularitySpec
+  )
   {
-    final TaskBuilder<?, ?> taskBuilder = taskPayloadSupplier.get().dataSource(fullDatasourceName);
+    final TaskBuilder.IndexCommon<?, ?, ?> taskBuilder = taskPayloadSupplier.get();
+    taskBuilder.dataSource(fullDatasourceName);
     if (granularitySpec != null) {
       taskBuilder.granularitySpec(granularitySpec);
     }

@@ -95,7 +95,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
       final long segmentAvailabilityTimeoutMillis
   )
   {
-    final TaskBuilder<?, ?> indexTask =
+    final TaskBuilder.IndexParallel indexTask =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
@@ -129,7 +129,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
   {
     final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
 
-    final TaskBuilder<?, ?> indexTask =
+    final TaskBuilder.IndexParallel indexTask =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
@@ -160,7 +160,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
     // Re-index into a different datasource, indexing 1 segment per sub-task
     final String dataSource2 = EmbeddedClusterApis.createTestDatasourceName();
-    final TaskBuilder<?, ?> reindexTaskSplitBySegment =
+    final TaskBuilder.IndexParallel reindexTaskSplitBySegment =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource2)
                    .isoTimestampColumn("ignored")
@@ -186,7 +186,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
 
     // Re-index into a different datasource, indexing 1 file per sub-task
     final String dataSource3 = EmbeddedClusterApis.createTestDatasourceName();
-    final TaskBuilder<?, ?> reindexTaskSplitByFile =
+    final TaskBuilder.IndexParallel reindexTaskSplitByFile =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource3)
                    .timestampColumn("timestamp")
@@ -211,7 +211,7 @@ public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
     runQueries(dataSource3);
   }
 
-  private String runTask(TaskBuilder<?, ?> taskBuilder, String dataSource)
+  private String runTask(TaskBuilder.IndexParallel taskBuilder, String dataSource)
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));

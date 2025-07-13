@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -60,7 +59,7 @@ public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
     // Run an APPEND task to ingest data into an interval
     final String data1Row = "2013-01-01T00:00:00.000Z,shirt,100";
     final String task1 = EmbeddedClusterApis.newTaskId(dataSource);
-    final TaskBuilder<IndexTask, IndexTask.IndexTuningConfig> taskBuilder =
+    final TaskBuilder.Index taskBuilder =
         TaskBuilder.ofTypeIndex()
                    .dataSource(dataSource)
                    .csvInputFormatWithColumns("time", "item", "value")

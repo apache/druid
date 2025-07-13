@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 
 public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
 {
-  private static final Supplier<TaskBuilder<?, ?>> INDEX_TASK =
+  private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK =
       () -> TaskBuilder
           .ofTypeIndexParallel()
           .jsonInputFormat()
@@ -82,7 +82,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
               + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimC\":\"A\",\"dimB\":\"X\",\"metA\":1}\n"
           );
 
-  private static final Supplier<TaskBuilder<?, ?>> COMPACTION_TASK =
+  private static final Supplier<TaskBuilder.Compact> COMPACTION_TASK =
       () -> TaskBuilder
           .ofTypeCompact()
           .interval(Intervals.of("2010-10-29T05:00:00Z/2030-10-29T06:00:00Z"))
@@ -117,7 +117,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get());
+      runTask(COMPACTION_TASK.get().dataSource(dataSource));
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -144,7 +144,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dimensions("dimA", "dimB", "dimC"));
+      runTask(COMPACTION_TASK.get().dataSource(dataSource).dimensions("dimA", "dimB", "dimC"));
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -170,7 +170,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dimensions("dimC", "dimB", "dimA"));
+      runTask(COMPACTION_TASK.get().dataSource(dataSource).dimensions("dimC", "dimB", "dimA"));
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -191,7 +191,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
 
   private void loadAndVerifyDataWithSparseColumn()
   {
-    runTask(INDEX_TASK.get());
+    runTask(INDEX_TASK.get().dataSource(dataSource));
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
@@ -299,11 +299,11 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
     };
   }
 
-  private void runTask(TaskBuilder<?, ?> taskBuilder)
+  private void runTask(TaskBuilder<?, ?, ?> taskBuilder)
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskBuilder.dataSource(dataSource).withId(taskId))
+        o -> o.runTask(taskId, taskBuilder.withId(taskId))
     );
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);

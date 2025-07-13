@@ -24,7 +24,6 @@ import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -67,95 +66,67 @@ import java.util.stream.Stream;
  * @param <T> Type of task created by this builder.
  * @param <C> Type of tuning config used by this builder.
  * @see #ofTypeIndex()
- * @see #dataSchema(Consumer) to specify the {@code dataSchema}.
  * @see #tuningConfig(Consumer) to specify the {@code tuningConfig}.
  */
-public class TaskBuilder<T extends Task, C>
+@SuppressWarnings("unchecked")
+public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends Task>
 {
-  private InputSource inputSource = null;
-  private InputFormat inputFormat = null;
+  // Fields are package-protected to allow access by subclasses like Index, Compact
+  InputSource inputSource = null;
+  InputFormat inputFormat = null;
 
-  private final Map<String, Object> context = new HashMap<>();
+  final Map<String, Object> context = new HashMap<>();
 
-  private Boolean appendToExisting = null;
+  Boolean appendToExisting = null;
 
-  private String dataSource;
-  private Interval interval;
-  private DimensionsSpec dimensionsSpec;
+  final TuningConfigBuilder<C> tuningConfig;
 
-  private final BuilderType<T, C> type;
-  private final DataSchema.Builder dataSchema;
-  private final TuningConfigBuilder<C> tuningConfig;
-
-  private TaskBuilder(BuilderType<T, C> type)
+  private TaskBuilder()
   {
-    this.type = type;
-    this.dataSchema = DataSchema.builder();
-    this.tuningConfig = type.tuningConfigBuilder();
-  }
-
-  /**
-   * Initializes builder for a new {@link IndexTask}.
-   */
-  public static TaskBuilder<IndexTask, IndexTask.IndexTuningConfig> ofTypeIndex()
-  {
-    return new TaskBuilder<>(new Index());
-  }
-
-  /**
-   * Initializes builder for a new {@link ParallelIndexSupervisorTask}.
-   */
-  public static TaskBuilder<ParallelIndexSupervisorTask, ParallelIndexTuningConfig> ofTypeIndexParallel()
-  {
-    return new TaskBuilder<>(new ParallelIndex());
-  }
-
-  public static TaskBuilder<CompactionTask, CompactionTask.CompactionTuningConfig> ofTypeCompact()
-  {
-    return new TaskBuilder<>(new Compact());
-  }
-
-  public TaskBuilder<T, C> dataSource(String dataSource)
-  {
-    this.dataSource = dataSource;
-    this.dataSchema.withDataSource(dataSource);
-    return this;
+    this.tuningConfig = tuningConfigBuilder();
   }
 
   /**
    * Creates a raw Map-based payload for a {@code Task} that may be submitted to
    * the Overlord using {@code OverlordClient.runTask()}.
    */
-  public T withId(String taskId)
-  {
-    Preconditions.checkNotNull(taskId, "Task ID must not be null");
-    Preconditions.checkNotNull(type, "Task type must be specified");
-    Preconditions.checkNotNull(dataSource, "Datasource must not be null");
+  public abstract T withId(String taskId);
 
-    return type.buildTask(taskId, this);
+  abstract TuningConfigBuilder<C> tuningConfigBuilder();
+
+  /**
+   * Initializes builder for a new {@link IndexTask}.
+   */
+  public static Index ofTypeIndex()
+  {
+    return new Index();
   }
 
   /**
-   * Used by {@link CompactionTask}.
+   * Initializes builder for a new {@link ParallelIndexSupervisorTask}.
    */
-  public TaskBuilder<T, C> interval(Interval interval)
+  public static IndexParallel ofTypeIndexParallel()
   {
-    this.interval = interval;
-    return this;
+    return new IndexParallel();
   }
 
-  public TaskBuilder<T, C> inputSource(InputSource inputSource)
+  public static Compact ofTypeCompact()
+  {
+    return new Compact();
+  }
+
+  public B inputSource(InputSource inputSource)
   {
     this.inputSource = inputSource;
-    return this;
+    return (B) this;
   }
 
-  public TaskBuilder<T, C> inlineInputSourceWithData(String data)
+  public B inlineInputSourceWithData(String data)
   {
     return inputSource(new InlineInputSource(data));
   }
 
-  public TaskBuilder<T, C> druidInputSource(String dataSource, Interval interval)
+  public B druidInputSource(String dataSource, Interval interval)
   {
     return inputSource(
         new DruidInputSource(
@@ -182,7 +153,7 @@ public class TaskBuilder<T extends Task, C>
    * }
    * </pre>
    */
-  public TaskBuilder<T, C> localInputSourceWithFiles(String... resources)
+  public B localInputSourceWithFiles(String... resources)
   {
     try {
       final List<File> files = new ArrayList<>();
@@ -204,125 +175,132 @@ public class TaskBuilder<T extends Task, C>
     }
   }
 
-  public TaskBuilder<T, C> inputFormat(InputFormat inputFormat)
+  public B inputFormat(InputFormat inputFormat)
   {
     this.inputFormat = inputFormat;
-    return this;
+    return (B) this;
   }
 
-  public TaskBuilder<T, C> jsonInputFormat()
+  public B jsonInputFormat()
   {
     return inputFormat(
         new JsonInputFormat(null, null, null, null, null)
     );
   }
 
-  public TaskBuilder<T, C> csvInputFormatWithColumns(String... columns)
+  public B csvInputFormatWithColumns(String... columns)
   {
     return inputFormat(
         new CsvInputFormat(List.of(columns), null, null, false, 0, null)
     );
   }
 
-  public TaskBuilder<T, C> appendToExisting(boolean append)
+  public B appendToExisting(boolean append)
   {
     this.appendToExisting = append;
-    return this;
+    return (B) this;
   }
 
-  public TaskBuilder<T, C> dynamicPartitionWithMaxRows(int maxRowsPerSegment)
+  public B dynamicPartitionWithMaxRows(int maxRowsPerSegment)
   {
     tuningConfig.withPartitionsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, null));
-    return this;
+    return (B) this;
   }
 
-  public TaskBuilder<T, C> granularitySpec(GranularitySpec granularitySpec)
-  {
-    dataSchema.withGranularity(granularitySpec);
-    return this;
-  }
-
-  public TaskBuilder<T, C> granularitySpec(String segmentGranularity, String queryGranularity, Boolean rollup)
-  {
-    dataSchema.withGranularity(
-        new UniformGranularitySpec(
-            Granularity.fromString(segmentGranularity),
-            queryGranularity == null ? null : Granularity.fromString(queryGranularity),
-            rollup,
-            null
-        )
-    );
-    return this;
-  }
-
-  /**
-   * Sets {@code "granularitySpec": {"segmentGranularity": <arg>}}.
-   */
-  public TaskBuilder<T, C> segmentGranularity(String granularity)
-  {
-    return granularitySpec(granularity, null, null);
-  }
-
-  public TaskBuilder<T, C> isoTimestampColumn(String timestampColumn)
-  {
-    dataSchema.withTimestamp(new TimestampSpec(timestampColumn, "iso", null));
-    return this;
-  }
-
-  public TaskBuilder<T, C> timestampColumn(String timestampColumn)
-  {
-    dataSchema.withTimestamp(new TimestampSpec(timestampColumn, null, null));
-    return this;
-  }
-
-  /**
-   * Sets the given dimensions as string dimensions in the {@link DataSchema}.
-   *
-   * @see #dataSchema(Consumer) for more options
-   */
-  public TaskBuilder<T, C> dimensions(String... dimensions)
-  {
-    List<DimensionSchema> dimensionList = Stream.of(dimensions)
-                                                .map(StringDimensionSchema::new)
-                                                .collect(Collectors.toList());
-    dataSchema.withDimensions(dimensionList);
-    dimensionsSpec = new DimensionsSpec(dimensionList);
-
-    return this;
-  }
-
-  public TaskBuilder<T, C> metricAggregates(AggregatorFactory... aggregators)
-  {
-    dataSchema.withAggregators(aggregators);
-    return this;
-  }
-
-  public TaskBuilder<T, C> tuningConfig(Consumer<TuningConfigBuilder<C>> updateTuningConfig)
+  public B tuningConfig(Consumer<TuningConfigBuilder<C>> updateTuningConfig)
   {
     updateTuningConfig.accept(tuningConfig);
-    return this;
+    return (B) this;
   }
 
-  public TaskBuilder<T, C> dataSchema(Consumer<DataSchema.Builder> updateDataSchema)
-  {
-    updateDataSchema.accept(dataSchema);
-    return this;
-  }
-
-  public TaskBuilder<T, C> context(String key, Object value)
+  public B context(String key, Object value)
   {
     this.context.put(key, value);
-    return this;
+    return (B) this;
   }
 
-  public interface BuilderType<T extends Task, C>
+  public abstract static class IndexCommon<B extends TaskBuilder<B, C, T>, C, T extends Task>
+      extends TaskBuilder<B, C, T>
   {
-    T buildTask(String taskId, TaskBuilder<T, C> builder);
+    final DataSchema.Builder dataSchema = DataSchema.builder();
 
-    TuningConfigBuilder<C> tuningConfigBuilder();
+    public B dataSource(String dataSource)
+    {
+      dataSchema.withDataSource(dataSource);
+      return (B) this;
+    }
+
+    public B dataSchema(Consumer<DataSchema.Builder> updateDataSchema)
+    {
+      updateDataSchema.accept(dataSchema);
+      return (B) this;
+    }
+
+    public B isoTimestampColumn(String timestampColumn)
+    {
+      dataSchema.withTimestamp(new TimestampSpec(timestampColumn, "iso", null));
+      return (B) this;
+    }
+
+    public B timestampColumn(String timestampColumn)
+    {
+      dataSchema.withTimestamp(new TimestampSpec(timestampColumn, null, null));
+      return (B) this;
+    }
+
+    public B granularitySpec(GranularitySpec granularitySpec)
+    {
+      dataSchema.withGranularity(granularitySpec);
+      return (B) this;
+    }
+
+    public B granularitySpec(String segmentGranularity, String queryGranularity, Boolean rollup)
+    {
+      dataSchema.withGranularity(
+          new UniformGranularitySpec(
+              Granularity.fromString(segmentGranularity),
+              queryGranularity == null ? null : Granularity.fromString(queryGranularity),
+              rollup,
+              null
+          )
+      );
+      return (B) this;
+    }
+
+    /**
+     * Sets {@code "granularitySpec": {"segmentGranularity": <arg>}}.
+     */
+    public B segmentGranularity(String granularity)
+    {
+      return granularitySpec(granularity, null, null);
+    }
+
+    /**
+     * Sets the given dimensions as string dimensions in the {@link DataSchema}.
+     *
+     * @see #dataSchema(Consumer) for more options
+     */
+    public B dimensions(String... dimensions)
+    {
+      dataSchema.withDimensions(
+          Stream.of(dimensions)
+                .map(StringDimensionSchema::new)
+                .collect(Collectors.toList())
+      );
+      return (B) this;
+    }
+
+    public B metricAggregates(AggregatorFactory... aggregators)
+    {
+      dataSchema.withAggregators(aggregators);
+      return (B) this;
+    }
   }
 
-  private static class Index implements BuilderType<IndexTask, IndexTask.IndexTuningConfig>
+  /**
+   * Builder for {@link IndexTask} that uses a {@link IndexTask.IndexTuningConfig}.
+   */
+  public static class Index extends IndexCommon<Index, IndexTask.IndexTuningConfig, IndexTask>
   {
     @Override
     public TuningConfigBuilder<IndexTask.IndexTuningConfig> tuningConfigBuilder()
@@ -331,51 +309,52 @@ public class TaskBuilder<T extends Task, C>
     }
 
     @Override
-    public IndexTask buildTask(String taskId, TaskBuilder<IndexTask, IndexTask.IndexTuningConfig> builder)
+    public IndexTask withId(String taskId)
     {
-      Preconditions.checkNotNull(builder.inputSource, "'inputSource' must be specified");
+      Preconditions.checkNotNull(inputSource, "'inputSource' must be specified");
+      
       return new IndexTask(
           taskId,
           null,
           new IndexTask.IndexIngestionSpec(
-              builder.dataSchema.build(),
+              dataSchema.build(),
               new IndexTask.IndexIOConfig(
-                  builder.inputSource,
-                  builder.inputFormat,
-                  builder.appendToExisting,
+                  inputSource,
+                  inputFormat,
+                  appendToExisting,
                   null
               ),
-              builder.tuningConfig.build()
+              tuningConfig.build()
           ),
-          builder.context
+          context
       );
     }
   }
 
-  private static class ParallelIndex implements BuilderType<ParallelIndexSupervisorTask, ParallelIndexTuningConfig>
+  /**
+   * Builder for {@link ParallelIndexSupervisorTask} which uses a {@link ParallelIndexTuningConfig}.
+   */
+  public static class IndexParallel extends IndexCommon<IndexParallel, ParallelIndexTuningConfig, ParallelIndexSupervisorTask>
   {
     @Override
-    public ParallelIndexSupervisorTask buildTask(
-        String taskId,
-        TaskBuilder<ParallelIndexSupervisorTask, ParallelIndexTuningConfig> builder
-    )
+    public ParallelIndexSupervisorTask withId(String taskId)
     {
-      Preconditions.checkNotNull(builder.inputSource, "'inputSource' must be specified");
+      Preconditions.checkNotNull(inputSource, "'inputSource' must be specified");
       return new ParallelIndexSupervisorTask(
           taskId,
           null,
           null,
           new ParallelIndexIngestionSpec(
-              builder.dataSchema.build(),
+              dataSchema.build(),
               new ParallelIndexIOConfig(
-                  builder.inputSource,
-                  builder.inputFormat,
-                  builder.appendToExisting,
+                  inputSource,
+                  inputFormat,
+                  appendToExisting,
                   null
               ),
-              builder.tuningConfig.build()
+              tuningConfig.build()
           ),
-          builder.context
+          context
       );
     }
 
@@ -386,29 +365,55 @@ public class TaskBuilder<T extends Task, C>
     }
   }
 
-  private static class Compact implements BuilderType<CompactionTask, CompactionTask.CompactionTuningConfig>
+  /**
+   * Builder for a {@link CompactionTask} which uses a {@link CompactionTask.CompactionTuningConfig}.
+   */
+  public static class Compact extends TaskBuilder<Compact, CompactionTask.CompactionTuningConfig, CompactionTask>
   {
+    private String dataSource;
+    private Interval interval;
+    private DimensionsSpec dimensionsSpec;
+
+    public Compact dataSource(String dataSource)
+    {
+      this.dataSource = dataSource;
+      return this;
+    }
+
+    public Compact interval(Interval interval)
+    {
+      this.interval = interval;
+      return this;
+    }
+
+    public Compact dimensions(String... dimensions)
+    {
+      dimensionsSpec = new DimensionsSpec(
+          Stream.of(dimensions)
+                .map(StringDimensionSchema::new)
+                .collect(Collectors.toList())
+      );
+      return this;
+    }
+
     @Override
-    public CompactionTask buildTask(
-        String taskId,
-        TaskBuilder<CompactionTask, CompactionTask.CompactionTuningConfig> builder
-    )
+    public CompactionTask withId(String taskId)
     {
       return new CompactionTask(
           taskId,
           null,
-          builder.dataSource,
-          builder.interval,
+          dataSource,
+          interval,
           null,
           null,
-          builder.dimensionsSpec,
-          null,
-          null,
-          null,
+          dimensionsSpec,
           null,
           null,
           null,
-          builder.tuningConfig.build(),
+          null,
+          null,
+          null,
+          tuningConfig.build(),
           null,
           null,
           null
