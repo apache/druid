@@ -112,7 +112,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
         .dataSource(dataSource)
         .csvInputFormatWithColumns("time", "item", "value")
         .isoTimestampColumn("time")
-        .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+        .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
         .dimensions()
         .withId(taskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));

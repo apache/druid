@@ -78,7 +78,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     final Object task = createIndexTaskForInlineData(
         taskId,
-        Resources.CSV_DATA_10_DAYS
+        Resources.InlineData.CSV_10_DAYS
     );
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
@@ -106,7 +106,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
     Assertions.assertEquals(
-        Resources.CSV_DATA_10_DAYS,
+        Resources.InlineData.CSV_10_DAYS,
         cluster.runSql("SELECT * FROM %s", dataSource)
     );
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));

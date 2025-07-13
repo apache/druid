@@ -187,7 +187,7 @@ public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
                                  .dataSource(dataSource)
                                  .isoTimestampColumn("time")
                                  .csvInputFormatWithColumns("time", "item", "value")
-                                 .inlineInputSourceWithData(Resources.CSV_DATA_10_DAYS)
+                                 .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
                                  .segmentGranularity("DAY")
                                  .dimensions()
                                  .withId(taskId);

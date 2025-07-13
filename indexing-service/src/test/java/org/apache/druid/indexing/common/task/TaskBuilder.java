@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -92,7 +93,9 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
    */
   public abstract T withId(String taskId);
 
-  abstract TuningConfigBuilder<C> tuningConfigBuilder();
+  public abstract B dataSource(String dataSource);
+
+  protected abstract TuningConfigBuilder<C> tuningConfigBuilder();
 
   /**
    * Initializes builder for a new {@link IndexTask}.
@@ -224,6 +227,7 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
   {
     final DataSchema.Builder dataSchema = DataSchema.builder();
 
+    @Override
     public B dataSource(String dataSource)
     {
       dataSchema.withDataSource(dataSource);
@@ -373,7 +377,11 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
     private String dataSource;
     private Interval interval;
     private DimensionsSpec dimensionsSpec;
+    private Granularity segmentGranularity;
+    private ClientCompactionTaskGranularitySpec granularitySpec;
+    private CompactionIOConfig ioConfig;
 
+    @Override
     public Compact dataSource(String dataSource)
     {
       this.dataSource = dataSource;
@@ -396,6 +404,24 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
       return this;
     }
 
+    public Compact granularitySpec(ClientCompactionTaskGranularitySpec granularitySpec)
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Compact segmentGranularity(Granularity segmentGranularity)
+    {
+      this.segmentGranularity = segmentGranularity;
+      return this;
+    }
+
+    public Compact ioConfig(CompactionInputSpec inputSpec, boolean allowNonAlignedInterval)
+    {
+      this.ioConfig = new CompactionIOConfig(inputSpec, allowNonAlignedInterval, null);
+      return this;
+    }
+
     @Override
     public CompactionTask withId(String taskId)
     {
@@ -405,13 +431,13 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
           dataSource,
           interval,
           null,
-          null,
+          ioConfig,
           dimensionsSpec,
           null,
           null,
           null,
-          null,
-          null,
+          segmentGranularity,
+          granularitySpec,
           null,
           tuningConfig.build(),
           null,

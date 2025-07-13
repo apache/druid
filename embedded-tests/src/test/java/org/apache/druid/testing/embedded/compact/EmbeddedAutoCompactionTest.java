@@ -40,7 +40,6 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -48,7 +47,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -77,15 +75,11 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -104,81 +98,36 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  * Embedded mode of integration-tests originally present in {@code ITAutoCompactionTest}.
  */
-public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
+public class EmbeddedAutoCompactionTest extends EmbeddedCompactionTestBase
 {
   private static final Logger LOG = new Logger(EmbeddedAutoCompactionTest.class);
-  private static final Supplier<TaskBuilder.Index> INDEX_TASK =
-      () -> TaskBuilder
-          .ofTypeIndex()
-          .jsonInputFormat()
-          .localInputSourceWithFiles(
-              Resources.TINY_WIKI_1_JSON,
-              Resources.TINY_WIKI_2_JSON,
-              Resources.TINY_WIKI_JSON
-          )
-          .timestampColumn("timestamp")
-          .dimensions(
-              "page",
-              "language", "tags", "user", "unpatrolled", "newPage", "robot",
-              "anonymous", "namespace", "continent", "country", "region", "city"
-          )
-          .metricAggregates(
-              new CountAggregatorFactory("ingested_events"),
-              new DoubleSumAggregatorFactory("added", "added"),
-              new DoubleSumAggregatorFactory("deleted", "deleted"),
-              new DoubleSumAggregatorFactory("delta", "delta"),
-              new SketchMergeAggregatorFactory("thetaSketch", "user", null, null, null, null),
-              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", null, null, null, null, true),
-              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", null)
-          )
-          .dynamicPartitionWithMaxRows(3)
-          .granularitySpec("DAY", "SECOND", true)
-          .appendToExisting(false);
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK = Resources.Task.BASIC_INDEX;
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_GRANULARITY_SPEC =
       () -> INDEX_TASK.get().dimensions("language").dynamicPartitionWithMaxRows(10);
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_DIMENSION_SPEC =
       () -> INDEX_TASK.get().granularitySpec("DAY", "DAY", true);
 
-  private static final String SELECT_APPROX_COUNT_DISTINCT =
-      "SELECT"
-      + " APPROX_COUNT_DISTINCT_DS_THETA(\"thetaSketch\"),"
-      + " APPROX_COUNT_DISTINCT_DS_HLL(\"HLLSketchBuild\")"
-      + " FROM %s";
+  private static final String SELECT_APPROX_COUNT_DISTINCT = Resources.Query.SELECT_APPROX_COUNT_DISTINCT;
   private static final List<Pair<String, String>> INDEX_QUERIES_RESOURCE = List.of(
-      Pair.of(
-          "SELECT MIN(__time), MAX(__time) FROM %s",
-          "2013-08-31T01:02:33.000Z,2013-09-01T12:41:27.000Z"
-      ),
-      Pair.of(SELECT_APPROX_COUNT_DISTINCT, "5,5"),
-      Pair.of(
-          "SELECT EARLIEST(\"user\"), LATEST(\"user\") FROM %s WHERE __time < '2013-09-01'",
-          "nuclear,stringer"
-      ),
-      Pair.of(
-          "SELECT \"page\", COUNT(*) AS \"rows\", SUM(\"added\"), 10 * SUM(\"added\") AS added_times_ten"
-          + " FROM %s"
-          + " WHERE \"language\" = 'zh' AND __time < '2013-09-01'"
-          + " GROUP BY 1"
-          + " HAVING added_times_ten > 9000",
-          "Crimson Typhoon,1,905.0,9050.0"
-      )
+      Pair.of(Resources.Query.SELECT_MIN_MAX_TIME, "2013-08-31T01:02:33.000Z,2013-09-01T12:41:27.000Z"),
+      Pair.of(Resources.Query.SELECT_APPROX_COUNT_DISTINCT, "5,5"),
+      Pair.of(Resources.Query.SELECT_EARLIEST_LATEST_USER, "nuclear,stringer"),
+      Pair.of(Resources.Query.SELECT_COUNT_OF_CHINESE_PAGES, "Crimson Typhoon,1,905.0,9050.0")
   );
   private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS =
       () -> TaskBuilder
           .ofTypeIndexParallel()
           .jsonInputFormat()
-          .inlineInputSourceWithData(Resources.JSON_DATA_2_ROWS)
+          .inlineInputSourceWithData(Resources.InlineData.JSON_2_ROWS)
           .isoTimestampColumn("timestamp")
           .appendToExisting(true)
           .granularitySpec("DAY", "HOUR", true)
@@ -203,7 +152,7 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
       () -> TaskBuilder
           .ofTypeIndexParallel()
           .jsonInputFormat()
-          .inlineInputSourceWithData(Resources.JSON_DATA_1_ROW)
+          .inlineInputSourceWithData(Resources.InlineData.JSON_1_ROW)
           .isoTimestampColumn("timestamp")
           .granularitySpec("DAY", "HOUR", false)
           .appendToExisting(true)
@@ -239,9 +188,6 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
 
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
-      .addProperty("druid.manager.segments.useIncrementalCache", "always");
   private final EmbeddedBroker broker = new EmbeddedBroker()
       .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
 
@@ -1730,11 +1676,7 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
       taskBuilder.granularitySpec(granularitySpec);
     }
 
-    final String taskId = EmbeddedClusterApis.newTaskId(fullDatasourceName);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));
-    LOG.info("Submitted task[%s] to load data", taskId);
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator);
+    runTask(taskBuilder, fullDatasourceName);
   }
 
   private void verifyQuery(List<Pair<String, String>> queries)
@@ -1972,31 +1914,6 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 
-  private void verifySegmentsCount(int numExpectedSegments)
-  {
-    int segmentCount = getFullSegmentsMetadata(dataSource).size();
-    Assertions.assertEquals(numExpectedSegments, segmentCount, "Segment count mismatch");
-    Assertions.assertEquals(
-        String.valueOf(segmentCount),
-        cluster.runSql(
-            "SELECT COUNT(*) FROM sys.segments"
-            + " WHERE datasource='%s' AND is_overshadowed = 0 AND is_available = 1",
-            dataSource
-        ),
-        "Segment count mismatch in sys table"
-    );
-  }
-
-  private void checkCompactionIntervals(List<String> expectedIntervals)
-  {
-    // TODO: is waiting really needed here?
-    // If we have waited for all segments to be loaded, we can just move on from here
-    Assertions.assertEquals(
-        Set.copyOf(expectedIntervals),
-        Set.copyOf(getSegmentIntervals(dataSource))
-    );
-  }
-
   private void verifySegmentsCompacted(int expectedCompactedSegmentCount, Integer expectedMaxRowsPerSegment)
   {
     verifySegmentsCompacted(
@@ -2106,27 +2023,6 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(actualStatus.getIntervalCountCompacted(), intervalCountCompacted);
     Assertions.assertEquals(actualStatus.getIntervalCountSkipped(), intervalCountSkipped);
   }
-
-  private Set<DataSegment> getFullSegmentsMetadata(String dataSource)
-  {
-    return overlord
-        .bindings()
-        .segmentsMetadataStorage()
-        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE);
-  }
-  
-  private List<String> getSegmentIntervals(String dataSource)
-  {
-    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
-    final Set<Interval> sortedIntervals = new TreeSet<>(comparator);
-
-    final Set<DataSegment> allUsedSegments = getFullSegmentsMetadata(dataSource);
-    for (DataSegment segment : allUsedSegments) {
-      sortedIntervals.add(segment.getInterval());
-    }
-
-    return sortedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
-  }
   
   private List<TaskStatusPlus> getCompleteTasksForDataSource(String dataSource)
   {
@@ -2149,16 +2045,5 @@ public class EmbeddedAutoCompactionTest extends EmbeddedClusterTestBase
     return ImmutableList.copyOf(
         (CloseableIterator<TaskStatusPlus>) cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(state, dataSource, 0))
     ).stream().map(TaskStatusPlus::getId).collect(Collectors.toSet());
-  }
-
-  /**
-   * Deletes all the data for the given datasource so that compaction tasks for
-   * this datasource do not take up task slots unnecessarily.
-   */
-  private Closeable unloader(String dataSource)
-  {
-    return () -> {
-      overlord.bindings().segmentsMetadataStorage().markAllSegmentsAsUnused(dataSource);
-    };
   }
 }

@@ -25,19 +25,20 @@ import org.apache.druid.testing.embedded.compact.EmbeddedCompactionTaskTest;
 import org.junit.jupiter.api.Nested;
 
 /**
- * Re-runs various tests with {@code druid.centralizedDatasourceSchema.taskSchemaPublishDisbled}
+ * Re-runs various tests with {@code druid.coordinator.segmentMetadata.disableSegmentMetadataQueries}
  * set to true. This is a test-only config used to verify that schema is populated
- * correctly even when tasks fail to publish it.
+ * correctly even when metadata queries fail to fetch schema from Historicals.
  */
-public class EmbeddedCentralizedSchemaPublishFailureTest
+public class EmbeddedCentralizedSchemaMetadataQueryDisabledTest
 {
   private static EmbeddedDruidCluster configureCluster(EmbeddedDruidCluster cluster)
   {
     cluster.addCommonProperty("druid.centralizedDatasourceSchema.enabled", "true")
-           .addCommonProperty("druid.centralizedDatasourceSchema.taskSchemaPublishDisabled", "true")
            .addCommonProperty("druid.centralizedDatasourceSchema.backFillEnabled", "true")
            .addCommonProperty("druid.centralizedDatasourceSchema.backFillPeriod", "500")
-           .addCommonProperty("druid.coordinator.segmentMetadata.metadataRefreshPeriod", "PT0.1s");
+           .addCommonProperty("druid.coordinator.segmentMetadata.disableSegmentMetadataQueries", "true")
+           .addCommonProperty("druid.coordinator.segmentMetadata.metadataRefreshPeriod", "PT0.1s")
+           .addCommonProperty("druid.manager.segments.useIncrementalCache", "always");
 
     return cluster;
   }

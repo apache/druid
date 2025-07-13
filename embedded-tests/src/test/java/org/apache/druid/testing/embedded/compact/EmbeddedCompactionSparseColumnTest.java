@@ -34,15 +34,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedHistorical;
-import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +46,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
+public class EmbeddedCompactionSparseColumnTest extends EmbeddedCompactionTestBase
 {
   private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK =
       () -> TaskBuilder
@@ -94,22 +85,6 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
                     .withPartitionsSpec(new HashedPartitionsSpec(null, 1, null))
           );
 
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-
-  @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .addServer(overlord)
-                               .addServer(coordinator)
-                               .addServer(new EmbeddedIndexer())
-                               .addServer(new EmbeddedBroker())
-                               .addServer(new EmbeddedHistorical())
-                               .addServer(new EmbeddedRouter());
-  }
-
   @Test
   public void testCompactionPerfectRollUpWithoutDimensionSpec() throws Exception
   {
@@ -117,7 +92,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dataSource(dataSource));
+      runTask(COMPACTION_TASK.get(), dataSource);
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -144,7 +119,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dataSource(dataSource).dimensions("dimA", "dimB", "dimC"));
+      runTask(COMPACTION_TASK.get().dimensions("dimA", "dimB", "dimC"), dataSource);
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -170,7 +145,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dataSource(dataSource).dimensions("dimC", "dimB", "dimA"));
+      runTask(COMPACTION_TASK.get().dimensions("dimC", "dimB", "dimA"), dataSource);
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -191,7 +166,7 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
 
   private void loadAndVerifyDataWithSparseColumn()
   {
-    runTask(INDEX_TASK.get().dataSource(dataSource));
+    runTask(INDEX_TASK.get(), dataSource);
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
@@ -286,26 +261,5 @@ public class EmbeddedCompactionSparseColumnTest extends EmbeddedClusterTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Deletes all the data for the given datasource so that compaction tasks for
-   * this datasource do not take up task slots unnecessarily.
-   */
-  private Closeable unloader(String dataSource)
-  {
-    return () -> {
-      overlord.bindings().segmentsMetadataStorage().markAllSegmentsAsUnused(dataSource);
-    };
-  }
-
-  private void runTask(TaskBuilder<?, ?, ?> taskBuilder)
-  {
-    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskBuilder.withId(taskId))
-    );
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
   }
 }
