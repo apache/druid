@@ -62,6 +62,7 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Period;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
@@ -170,8 +171,7 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Override
   protected void setup() throws Exception
   {
-    cluster = createCluster();
-    cluster.start();
+    super.setup();
 
     // Initialize lookups
     cluster.callApi().onLeaderCoordinator(
@@ -187,11 +187,11 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
     );
 
     // Initialize the broker/data-servers later so that lookups are loaded on startup.
-    cluster.addServer(broker);
+    cluster.addServer(broker)
+           .addServer(indexer)
+           .addServer(historical);
     broker.start();
-    cluster.addServer(indexer);
     indexer.start();
-    cluster.addServer(historical);
     historical.start();
   }
 
@@ -323,21 +323,24 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Timeout(60)
   public void test_selectBroadcastJoin_dart()
   {
-    msqApis.runDartWithError(
-            "SELECT COUNT(*) FROM \"%s\"\n"
-            + "WHERE countryName IN (\n"
-            + "  SELECT countryName\n"
-            + "  FROM \"%s\"\n"
-            + "  WHERE countryName IS NOT NULL\n"
-            + "  GROUP BY 1\n"
-            + "  ORDER BY COUNT(*) DESC\n"
-            + "  LIMIT 1\n"
-            + ")",
-            CoreMatchers.instanceOf(ExecutionException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
-                + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].")),
-            dataSource
+    final String sql = "SELECT COUNT(*) FROM \"%s\"\n"
+                       + "WHERE countryName IN (\n"
+                       + "  SELECT countryName\n"
+                       + "  FROM \"%s\"\n"
+                       + "  WHERE countryName IS NOT NULL\n"
+                       + "  GROUP BY 1\n"
+                       + "  ORDER BY COUNT(*) DESC\n"
+                       + "  LIMIT 1\n"
+                       + ")";
+
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            RuntimeException.class,
+            () -> msqApis.runDartSql(sql, dataSource, dataSource)
+        ),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+            "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
+            + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm]."))
     );
   }
 

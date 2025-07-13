@@ -204,7 +204,7 @@ public class DataServerQueryHandler
   }
 
   /**
-   * Transform the {@link InputNumberDataSource}, which are only understood by MSQ tasks, back into a
+   * Transform {@link InputNumberDataSource}s, which are only understood by MSQ tasks, back into a
    * {@link TableDataSource}.
    */
   private DataSource transformDatasource(DataSource dataSource)
@@ -215,7 +215,7 @@ public class DataServerQueryHandler
         return new TableDataSource(dataSourceName);
       } else {
         throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
                             .build("Unknown InputNumberDataSource datasource with number[%s]. Queries with realtime sources "
                                    + "cannot join results with stage outputs. Use sortMerge join instead by setting [%s].",
                                    numberDataSource.getInputNumber(),

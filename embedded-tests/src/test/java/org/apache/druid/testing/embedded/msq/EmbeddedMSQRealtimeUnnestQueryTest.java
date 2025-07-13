@@ -220,7 +220,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
     );
     final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
 
-    // By default tasks do not include realtime data; count is zero.
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
         List.of(
