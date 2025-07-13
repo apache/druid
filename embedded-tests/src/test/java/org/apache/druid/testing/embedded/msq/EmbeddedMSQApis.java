@@ -80,11 +80,11 @@ public class EmbeddedMSQApis
 
   /**
    * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
-   * of the cluster. Waits for it to complete, then returns the query report.
+   * of the cluster, checks that the task has started and returns the {@link SqlTaskStatus}.
    *
    * @return The result of the SQL as a single CSV string.
    */
-  public MSQTaskReportPayload runTaskSql(String sql, Object... args)
+  public SqlTaskStatus submitTaskSql(String sql, Object... args)
   {
     final SqlTaskStatus taskStatus =
         FutureUtils.getUnchecked(
@@ -109,6 +109,19 @@ public class EmbeddedMSQApis
           taskStatus.getState()
       );
     }
+
+    return taskStatus;
+  }
+
+  /**
+   * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
+   * of the cluster. Waits for it to complete, then returns the query report.
+   *
+   * @return The result of the SQL as a single CSV string.
+   */
+  public MSQTaskReportPayload runTaskSql(String sql, Object... args)
+  {
+    SqlTaskStatus taskStatus = submitTaskSql(sql, args);
 
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
 
@@ -129,34 +142,5 @@ public class EmbeddedMSQApis
     }
 
     return taskReportPayload;
-  }
-
-  public void expectTaskFailure(String sql, String reason, Object... args)
-  {
-    final SqlTaskStatus taskStatus =
-        FutureUtils.getUnchecked(
-            cluster.anyBroker().submitSqlTask(
-                new ClientSqlQuery(
-                    StringUtils.format(sql, args),
-                    ResultFormat.CSV.name(),
-                    false,
-                    false,
-                    false,
-                    null,
-                    null
-                )
-            ),
-            true
-        );
-
-    if (taskStatus.getState() != TaskState.RUNNING) {
-      throw DruidException.defensive(
-          "Task[%s] had unexpected state[%s]",
-          taskStatus.getTaskId(),
-          taskStatus.getState()
-      );
-    }
-
-    cluster.callApi().waitForTaskToFail(taskStatus.getTaskId(), reason, overlord);
   }
 }

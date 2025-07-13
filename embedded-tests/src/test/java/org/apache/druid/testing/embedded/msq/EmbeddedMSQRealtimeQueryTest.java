@@ -21,10 +21,12 @@ package org.apache.druid.testing.embedded.msq;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
@@ -45,6 +47,7 @@ import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -363,10 +366,26 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    msqApis.expectTaskFailure(sql, "UnknownError: java.lang.RuntimeException: org.apache.druid.error.DruidException:"
-                                   + " Unknown InputNumberDataSource datasource with number[1]. "
-                                   + "Queries with realtime sources cannot join results with stage outputs. Use "
-                                   + "sortMerge join instead by setting [sqlJoinAlgorithm]."
+    SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
+
+    String taskId = taskStatus.getTaskId();
+    cluster.callApi().waitForTaskToFinish(taskId, overlord);
+
+    final TaskStatusResponse currentStatus = cluster.callApi().onLeaderOverlord(
+        o -> o.taskStatus(taskId)
+    );
+    Assertions.assertNotNull(currentStatus.getStatus());
+    Assertions.assertEquals(
+        TaskState.FAILED,
+        currentStatus.getStatus().getStatusCode(),
+        StringUtils.format("Task[%s] has unexpected status", taskId)
+    );
+
+    Assertions.assertTrue(
+        CoreMatchers.containsString(
+            "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
+            + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].")
+                    .matches(currentStatus.getStatus().getErrorMsg())
     );
   }
 
