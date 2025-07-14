@@ -65,6 +65,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -246,19 +247,20 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
             return closer.register(
                 DataServerQueryHandlerUtils.createYielder(
-                    FutureUtils.getUnchecked(queryFuture, true).map(preComputeManipulatorFn),
+                    queryFuture.get().map(preComputeManipulatorFn),
                     mappingFunction,
                     channelCounters
                 )
             );
           },
-          throwable -> !(throwable instanceof QueryInterruptedException
-                         && throwable.getCause() instanceof InterruptedException),
+          throwable -> !(throwable instanceof ExecutionException
+                         && throwable.getCause() instanceof QueryInterruptedException
+                         && throwable.getCause().getCause() instanceof InterruptedException),
           PER_SERVER_QUERY_NUM_TRIES
       );
     }
-    catch (QueryInterruptedException e) {
-      if (e.getCause() instanceof RpcException) {
+    catch (ExecutionException e) {
+      if (e.getCause() instanceof QueryInterruptedException && e.getCause().getCause() instanceof RpcException) {
         // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
         // we would also be unable to fetch the segment.
         responseContext.addMissingSegments(segmentDescriptors);
