@@ -12,7 +12,7 @@
         "intervals": [
           "2014-10-20T00:00:00.000Z/2014-11-03T00:00:00.000Z"
         ],
-        "id": "merged",
+        "id": "%%DATASOURCE%%_2014-11-02T00:00:00.000Z_2014-11-03T00:00:00.000Z_merged",
         "columns": {
           "location": {
             "typeSignature": "STRING",
@@ -75,6 +75,7 @@
         "aggregators": null,
         "timestampSpec": null,
         "queryGranularity": null,
+        "projections": null,
         "rollup":null
       }
     ]

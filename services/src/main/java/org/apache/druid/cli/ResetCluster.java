@@ -31,8 +31,9 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.HadoopTask;
+import org.apache.druid.indexer.HadoopTask;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -186,7 +187,7 @@ public class ResetCluster extends GuiceRunnable
       log.info("Deleting hadoopWorkingPath.");
       log.info("===========================================================================");
 
-      TaskConfig taskConfig = injector.getInstance(TaskConfig.class);
+      HadoopTaskConfig taskConfig = injector.getInstance(HadoopTaskConfig.class);
       HadoopTask.invokeForeignLoader(
           "org.apache.druid.indexer.HadoopWorkingDirCleaner",
           new String[]{

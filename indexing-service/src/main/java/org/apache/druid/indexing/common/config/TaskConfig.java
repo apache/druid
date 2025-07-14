@@ -80,9 +80,6 @@ public class TaskConfig implements TaskDirectory
   private final String hadoopWorkingPath;
 
   @JsonProperty
-  private final int defaultRowFlushBoundary;
-
-  @JsonProperty
   private final List<String> defaultHadoopCoordinates;
 
   @JsonProperty
@@ -114,7 +111,6 @@ public class TaskConfig implements TaskDirectory
       @JsonProperty("baseDir") String baseDir,
       @JsonProperty("baseTaskDir") String baseTaskDir,
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
-      @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
@@ -130,7 +126,6 @@ public class TaskConfig implements TaskDirectory
     this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
     // This is usually on HDFS or similar, so we can't use java.io.tmpdir
     this.hadoopWorkingPath = Configs.valueOrDefault(hadoopWorkingPath, "/tmp/druid-indexing");
-    this.defaultRowFlushBoundary = Configs.valueOrDefault(defaultRowFlushBoundary, 75000);
     this.defaultHadoopCoordinates = Configs.valueOrDefault(
         defaultHadoopCoordinates,
         DEFAULT_DEFAULT_HADOOP_COORDINATES
@@ -162,7 +157,6 @@ public class TaskConfig implements TaskDirectory
       String baseDir,
       File baseTaskDir,
       String hadoopWorkingPath,
-      int defaultRowFlushBoundary,
       List<String> defaultHadoopCoordinates,
       boolean restoreTasksOnRestart,
       Period gracefulShutdownTimeout,
@@ -177,7 +171,6 @@ public class TaskConfig implements TaskDirectory
     this.baseDir = baseDir;
     this.baseTaskDir = baseTaskDir;
     this.hadoopWorkingPath = hadoopWorkingPath;
-    this.defaultRowFlushBoundary = defaultRowFlushBoundary;
     this.defaultHadoopCoordinates = defaultHadoopCoordinates;
     this.restoreTasksOnRestart = restoreTasksOnRestart;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
@@ -229,18 +222,6 @@ public class TaskConfig implements TaskDirectory
   public File getTaskLockFile(String taskId)
   {
     return new File(getTaskDir(taskId), "lock");
-  }
-
-  @JsonProperty
-  public String getHadoopWorkingPath()
-  {
-    return hadoopWorkingPath;
-  }
-
-  @JsonProperty
-  public int getDefaultRowFlushBoundary()
-  {
-    return defaultRowFlushBoundary;
   }
 
   @JsonProperty
@@ -312,7 +293,6 @@ public class TaskConfig implements TaskDirectory
         baseDir,
         baseTaskDir,
         hadoopWorkingPath,
-        defaultRowFlushBoundary,
         defaultHadoopCoordinates,
         restoreTasksOnRestart,
         gracefulShutdownTimeout,
@@ -331,7 +311,6 @@ public class TaskConfig implements TaskDirectory
         baseDir,
         baseTaskDir,
         hadoopWorkingPath,
-        defaultRowFlushBoundary,
         defaultHadoopCoordinates,
         restoreTasksOnRestart,
         gracefulShutdownTimeout,

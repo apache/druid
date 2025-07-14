@@ -29,7 +29,6 @@ public class TaskConfigBuilder
   private String baseDir;
   private String baseTaskDir;
   private String hadoopWorkingPath;
-  private Integer defaultRowFlushBoundary;
   private List<String> defaultHadoopCoordinates;
   private boolean restoreTasksOnRestart;
   private Period gracefulShutdownTimeout;
@@ -55,12 +54,6 @@ public class TaskConfigBuilder
   public TaskConfigBuilder setHadoopWorkingPath(String hadoopWorkingPath)
   {
     this.hadoopWorkingPath = hadoopWorkingPath;
-    return this;
-  }
-
-  public TaskConfigBuilder setDefaultRowFlushBoundary(Integer defaultRowFlushBoundary)
-  {
-    this.defaultRowFlushBoundary = defaultRowFlushBoundary;
     return this;
   }
 
@@ -124,7 +117,6 @@ public class TaskConfigBuilder
         baseDir,
         baseTaskDir,
         hadoopWorkingPath,
-        defaultRowFlushBoundary,
         defaultHadoopCoordinates,
         restoreTasksOnRestart,
         gracefulShutdownTimeout,

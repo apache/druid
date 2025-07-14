@@ -30,7 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.HadoopIndexTask;
+import org.apache.druid.indexer.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;

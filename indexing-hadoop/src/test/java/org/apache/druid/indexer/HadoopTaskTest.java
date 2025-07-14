@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -54,7 +52,8 @@ public class HadoopTaskTest
         "taskId",
         "dataSource",
         ImmutableList.of(),
-        ImmutableMap.of()
+        ImmutableMap.of(),
+        new HadoopTaskConfig(null, null)
     )
     {
       @Override
@@ -114,7 +113,7 @@ public class HadoopTaskTest
     ).once();
     EasyMock.replay(toolbox);
 
-    final ClassLoader classLoader = task.buildClassLoader(toolbox);
+    final ClassLoader classLoader = task.buildClassLoader();
     assertClassLoaderIsSingular(classLoader);
 
     final Class<?> hadoopClazz = Class.forName("org.apache.hadoop.fs.FSDataInputStream", false, classLoader);

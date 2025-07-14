@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -32,16 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.druid.indexer.DataSegmentAndIndexZipFilePath;
-import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.HadoopDruidIndexerJob;
-import org.apache.druid.indexer.HadoopIngestionSpec;
-import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexer.JobHelper;
-import org.apache.druid.indexer.TaskMetricsGetter;
-import org.apache.druid.indexer.TaskMetricsUtils;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.path.SegmentMetadataPublisher;
@@ -53,7 +43,8 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
+import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -116,6 +107,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   private final AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
+  private final HadoopTaskConfig hadoopTaskConfig;
+
+  @JsonIgnore
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
   @JsonIgnore
@@ -135,6 +129,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   @JsonIgnore
   private String errorMsg;
+
 
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
@@ -156,16 +151,18 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       @JacksonInject ObjectMapper jsonMapper,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject HadoopTaskConfig hadoopTaskConfig
   )
   {
     super(
-        getOrMakeId(id, TYPE, getTheDataSource(spec)),
+        AbstractTask.getOrMakeId(id, TYPE, getTheDataSource(spec)),
         getTheDataSource(spec),
         hadoopDependencyCoordinates == null
         ? (hadoopCoordinates == null ? null : ImmutableList.of(hadoopCoordinates))
         : hadoopDependencyCoordinates,
-        context
+        context,
+        hadoopTaskConfig
     );
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
@@ -181,6 +178,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         this.spec.getIOConfig().getMetadataUpdateSpec() == null,
         "metadataUpdateSpec must be absent"
     );
+    this.hadoopTaskConfig = hadoopTaskConfig;
 
     this.classpathPrefix = classpathPrefix;
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMappper");
@@ -338,8 +336,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
       String hadoopJobIdFile = getHadoopJobIdFileName();
-      logExtensionsConfig();
-      final ClassLoader loader = buildClassLoader(toolbox);
+      HadoopTask.logExtensionsConfig();
+      final ClassLoader loader = buildClassLoader();
       boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
       HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
@@ -348,15 +346,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           new OverlordActionBasedUsedSegmentsRetriever(toolbox)
       );
 
-      Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
+      Object determinePartitionsInnerProcessingRunner = HadoopTask.getForeignClassloaderObject(
+          "org.apache.druid.indexer.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
           loader
       );
       determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
       String[] determinePartitionsInput = new String[]{
           toolbox.getJsonMapper().writeValueAsString(spec),
-          toolbox.getConfig().getHadoopWorkingPath(),
+          hadoopTaskConfig.getHadoopWorkingPath(),
           toolbox.getSegmentPusher().getPathForHadoop(),
           hadoopJobIdFile
       };
@@ -418,7 +416,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         lock.assertNotRevoked();
         version = lock.getVersion();
       } else {
-        Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
+        Iterable<TaskLock> locks = AbstractTask.getTaskLocks(toolbox.getTaskActionClient());
         final TaskLock myLock = Iterables.getOnlyElement(locks);
         version = myLock.getVersion();
       }
@@ -442,8 +440,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       log.info("Setting version to: %s", version);
 
-      Object innerProcessingRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
+      Object innerProcessingRunner = HadoopTask.getForeignClassloaderObject(
+          "org.apache.druid.indexer.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
           loader
       );
       buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
@@ -535,11 +533,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       try {
         ClassLoader loader = HadoopTask.buildClassLoader(
             getHadoopDependencyCoordinates(),
-            taskConfig.getDefaultHadoopCoordinates()
+            hadoopTaskConfig.getDefaultHadoopCoordinates()
         );
 
-        Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
-            "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
+        Object killMRJobInnerProcessingRunner = HadoopTask.getForeignClassloaderObject(
+            "org.apache.druid.indexer.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
             loader
         );
 
@@ -576,7 +574,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     final ClassLoader loader = Thread.currentThread().getContextClassLoader();
     try {
       final Class<?> clazz = loader.loadClass(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner"
+          "org.apache.druid.indexer.HadoopIndexTask$HadoopRenameSegmentIndexFilesRunner"
       );
       Object renameSegmentIndexFilesRunner = clazz.newInstance();
 
@@ -616,11 +614,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       ClassLoader loader = HadoopTask.buildClassLoader(
           getHadoopDependencyCoordinates(),
-          taskConfig.getDefaultHadoopCoordinates()
+          hadoopTaskConfig.getDefaultHadoopCoordinates()
       );
 
-      Object indexerGeneratorCleanupRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopIndexerGeneratorCleanupRunner",
+      Object indexerGeneratorCleanupRunner = HadoopTask.getForeignClassloaderObject(
+          "org.apache.druid.indexer.HadoopIndexTask$HadoopIndexerGeneratorCleanupRunner",
           loader
       );
 
@@ -833,7 +831,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
       final SegmentMetadataPublisher maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = new SegmentMetadataPublisher(INJECTOR.getInstance(IndexerMetadataStorageCoordinator.class));
+        maybeHandler = new SegmentMetadataPublisher(HadoopTask.INJECTOR.getInstance(IndexerMetadataStorageCoordinator.class));
       } else {
         maybeHandler = null;
       }

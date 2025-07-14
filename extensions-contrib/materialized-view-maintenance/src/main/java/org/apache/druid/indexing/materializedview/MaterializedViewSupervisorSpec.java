@@ -30,10 +30,11 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
-import org.apache.druid.indexing.common.task.HadoopIndexTask;
+import org.apache.druid.indexer.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -245,7 +246,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         objectMapper,
         context,
         authorizerMapper,
-        chatHandlerProvider
+        chatHandlerProvider,
+        new HadoopTaskConfig(null, null)
     );
 
     return task;
