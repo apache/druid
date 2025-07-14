@@ -105,6 +105,9 @@ public class ITSecurityBasicQuery
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
+    // Allow permissions sync across cluster to avoid flakes
+    Thread.sleep(SYNC_SLEEP);
+
     String queryLocal =
         StringUtils.format(
             "INSERT INTO %s\n"
