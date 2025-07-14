@@ -240,22 +240,25 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <groupId>org.apache.maven.plugins</groupId>
-                <configuration>
-                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                    <resources>
-                        <resource>
-                            <directory>src/main/resources</directory>
-                            <includes>hadoop.indexer.libs.version</includes>
-                            <filtering>true</filtering>
-                        </resource>
-                    </resources>
-                </configuration>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>hadoop.indexer.libs.version</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
     </build>
-
 </project>
