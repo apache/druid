@@ -19,21 +19,7 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartControllerModule;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
@@ -45,11 +31,8 @@ import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.segment.QueryableIndexCursorFactory;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -59,27 +42,16 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
-public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
+public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
 {
-  private static final Period TASK_DURATION = Period.hours(1);
-  private static final int TASK_COUNT = 2;
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -87,14 +59,12 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
 
-  private KafkaResource kafka;
-  private String topic;
   private EmbeddedMSQApis msqApis;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    kafka = new KafkaResource();
+    EmbeddedDruidCluster clusterWithKafka = super.createCluster();
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
@@ -105,21 +75,17 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
 
     historical.addProperty("druid.msq.dart.worker.heapFraction", "0.9")
-              .addProperty("druid.msq.dart.worker.concurrentQueries", "1")
-              .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
+              .addProperty("druid.msq.dart.worker.concurrentQueries", "1");
 
     indexer.setServerMemory(300_000_000) // to run 2x realtime and 2x MSQ tasks
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            // druid.processing.numThreads must be higher than # of MSQ tasks to avoid contention, because the realtime
            // server is contacted in such a way that the processing thread is blocked
            .addProperty("druid.processing.numThreads", "3")
-           .addProperty("druid.worker.capacity", "4")
-           .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
+           .addProperty("druid.worker.capacity", "4");
 
-    return EmbeddedDruidCluster
-        .withEmbeddedDerbyAndZookeeper()
+    return clusterWithKafka
         .addExtensions(
-            KafkaIndexTaskModule.class,
             DartControllerModule.class,
             DartWorkerModule.class,
             DartControllerMemoryManagementModule.class,
@@ -133,7 +99,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .useLatchableEmitter()
-        .addResource(kafka)
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(router)
@@ -146,66 +111,21 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
   void setUpEach()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    topic = dataSource = EmbeddedClusterApis.createTestDatasourceName();
+    dataSource = EmbeddedClusterApis.createTestDatasourceName();
 
-    // Create Kafka topic.
-    kafka.createTopicWithPartitions(topic, 2);
+    QueryableIndex index = TestIndex.getMMappedTestIndex();
 
-    // Submit a supervisor.
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor();
-    final Map<String, String> startSupervisorResult =
-        cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(kafkaSupervisorSpec));
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    submitSupervisor();
+    publishToKafka(index);
 
-    // Send data to Kafka.
-    final QueryableIndexCursorFactory cursorFactory =
-        new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
-    final RowSignature signature = cursorFactory.getRowSignature();
-    kafka.produceRecordsToTopic(
-        FrameTestUtil.readRowsFromCursorFactory(cursorFactory)
-                     .map(row -> {
-                       final Map<String, Object> rowMap = new LinkedHashMap<>();
-                       for (int i = 0; i < row.size(); i++) {
-                         rowMap.put(signature.getColumnName(i), row.get(i));
-                       }
-                       try {
-                         return new ProducerRecord<>(
-                             topic,
-                             ByteArrays.EMPTY_ARRAY,
-                             TestHelper.JSON_MAPPER.writeValueAsBytes(rowMap)
-                         );
-                       }
-                       catch (JsonProcessingException e) {
-                         throw new RuntimeException(e);
-                       }
-                     })
-                     .toList()
-    );
+    final int totalRows = index.getNumRows();
 
-    final int totalRows = TestIndex.getMMappedTestIndex().getNumRows();
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
         agg -> agg.hasSumAtLeast(totalRows)
     );
-  }
-
-  @AfterEach
-  void tearDownEach() throws ExecutionException, InterruptedException, IOException
-  {
-    final Map<String, String> terminateSupervisorResult =
-        cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(dataSource));
-    Assertions.assertEquals(Map.of("id", dataSource), terminateSupervisorResult);
-
-    // Cancel all running tasks, so we don't need to wait for them to hand off their segments.
-    try (final CloseableIterator<TaskStatusPlus> it = cluster.leaderOverlord().taskStatuses(null, null, null).get()) {
-      while (it.hasNext()) {
-        cluster.leaderOverlord().cancelTask(it.next().getId());
-      }
-    }
-
-    kafka.deleteTopic(topic);
   }
 
   @Test
@@ -233,10 +153,8 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
     );
   }
 
-
   @Test
   @Timeout(60)
-  @Disabled
   public void test_unnest_dart()
   {
     final String sql = StringUtils.format(
@@ -253,59 +171,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends EmbeddedClusterTestBase
         + "preferred\n"
         + "e",
         result
-    );
-  }
-
-  private KafkaSupervisorSpec createKafkaSupervisor()
-  {
-    final Period startDelay = Period.millis(10);
-    final Period supervisorRunPeriod = Period.millis(500);
-    final boolean useEarliestOffset = true;
-
-    return new KafkaSupervisorSpec(
-        dataSource,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("__time", "auto", null))
-                  .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
-                  .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
-                  .build(),
-        null,
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            new JsonInputFormat(null, null, null, null, null),
-            null,
-            TASK_COUNT,
-            TASK_DURATION,
-            kafka.consumerProperties(),
-            null,
-            null,
-            null,
-            startDelay,
-            supervisorRunPeriod,
-            useEarliestOffset,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
     );
   }
 }
