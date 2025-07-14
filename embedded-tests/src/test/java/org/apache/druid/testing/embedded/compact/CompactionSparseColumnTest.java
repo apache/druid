@@ -46,7 +46,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class EmbeddedCompactionSparseColumnTest extends EmbeddedCompactionTestBase
+public class CompactionSparseColumnTest extends CompactionTestBase
 {
   private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK =
       () -> TaskBuilder

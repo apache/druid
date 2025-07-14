@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
  * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
 @SuppressWarnings("resource")
-public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
+public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
 

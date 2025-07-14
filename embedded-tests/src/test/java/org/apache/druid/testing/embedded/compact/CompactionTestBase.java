@@ -42,7 +42,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-public abstract class EmbeddedCompactionTestBase extends EmbeddedClusterTestBase
+public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 {
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();

@@ -21,12 +21,12 @@ package org.apache.druid.testing.embedded.mariadb;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.indexing.EmbeddedIndexTaskTest;
+import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link EmbeddedIndexTaskTest}, but using a MariaDB metadata store instead of Derby.
+ * Same as {@link IndexTaskTest}, but using a MariaDB metadata store instead of Derby.
  */
-public class EmbeddedMariaDBMetadataStoreTest extends EmbeddedIndexTaskTest
+public class EmbeddedMariaDBMetadataStoreTest extends IndexTaskTest
 {
   @Override
   public EmbeddedDruidCluster createCluster()

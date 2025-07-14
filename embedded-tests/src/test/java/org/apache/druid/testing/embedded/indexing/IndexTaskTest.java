@@ -50,7 +50,7 @@ import java.util.stream.IntStream;
 /**
  * Simulation tests for batch {@link IndexTask} using inline datasources.
  */
-public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
+public class IndexTaskTest extends EmbeddedClusterTestBase
 {
   protected final EmbeddedBroker broker = new EmbeddedBroker();
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "25");

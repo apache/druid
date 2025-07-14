@@ -41,7 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-public class EmbeddedAutoCompactionUpgradeTest extends EmbeddedClusterTestBase
+public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()

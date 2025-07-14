@@ -55,7 +55,7 @@ import java.util.function.Function;
  * Embedded cluster test to verify leadership changes in Coordinator and Overlord.
  * Makes assertions similar to {@code ITHighAvailabilityTest}.
  */
-public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
+public class HighAvailabilityTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord1 = new EmbeddedOverlord();
   private final EmbeddedOverlord overlord2 = new EmbeddedOverlord();

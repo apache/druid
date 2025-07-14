@@ -106,9 +106,9 @@ import java.util.stream.Collectors;
 /**
  * Embedded mode of integration-tests originally present in {@code ITAutoCompactionTest}.
  */
-public class EmbeddedAutoCompactionTest extends EmbeddedCompactionTestBase
+public class AutoCompactionTest extends CompactionTestBase
 {
-  private static final Logger LOG = new Logger(EmbeddedAutoCompactionTest.class);
+  private static final Logger LOG = new Logger(AutoCompactionTest.class);
   private static final Supplier<TaskBuilder.Index> INDEX_TASK = Resources.Task.BASIC_INDEX;
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_GRANULARITY_SPEC =

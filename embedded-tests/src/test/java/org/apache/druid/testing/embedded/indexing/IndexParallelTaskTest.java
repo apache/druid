@@ -54,7 +54,7 @@ import java.util.Optional;
 /**
  * Runs tasks of "index_parallel" type using Indexers.
  */
-public class EmbeddedIndexParallelTaskTest extends EmbeddedClusterTestBase
+public class IndexParallelTaskTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()

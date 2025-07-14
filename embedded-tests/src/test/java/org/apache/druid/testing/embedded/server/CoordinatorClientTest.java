@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class EmbeddedCoordinatorClientTest extends EmbeddedClusterTestBase
+public class CoordinatorClientTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedBroker broker = new EmbeddedBroker();

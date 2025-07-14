@@ -60,7 +60,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-public class EmbeddedCompactionTaskTest extends EmbeddedCompactionTestBase
+public class CompactionTaskTest extends CompactionTestBase
 {
   private static final Supplier<TaskBuilder.Index> INDEX_TASK = Resources.Task.BASIC_INDEX;
 

@@ -20,8 +20,8 @@
 package org.apache.druid.testing.embedded.schema;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.compact.EmbeddedCompactionSparseColumnTest;
-import org.apache.druid.testing.embedded.compact.EmbeddedCompactionTaskTest;
+import org.apache.druid.testing.embedded.compact.CompactionSparseColumnTest;
+import org.apache.druid.testing.embedded.compact.CompactionTaskTest;
 import org.junit.jupiter.api.Nested;
 
 /**
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Nested;
  * set to true. This is a test-only config used to verify that schema is populated
  * correctly even when tasks fail to publish it.
  */
-public class EmbeddedCentralizedSchemaPublishFailureTest
+public class CentralizedSchemaPublishFailureTest
 {
   private static EmbeddedDruidCluster configureCluster(EmbeddedDruidCluster cluster)
   {
@@ -43,7 +43,7 @@ public class EmbeddedCentralizedSchemaPublishFailureTest
   }
 
   @Nested
-  public class CompactionSparseColumn extends EmbeddedCompactionSparseColumnTest
+  public class CompactionSparseColumn extends CompactionSparseColumnTest
   {
     @Override
     protected EmbeddedDruidCluster createCluster()
@@ -53,7 +53,7 @@ public class EmbeddedCentralizedSchemaPublishFailureTest
   }
 
   @Nested
-  public class CompactionTask extends EmbeddedCompactionTaskTest
+  public class CompactionTask extends CompactionTaskTest
   {
     @Override
     protected EmbeddedDruidCluster createCluster()

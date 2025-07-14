@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class EmbeddedConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
+public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
