@@ -23,6 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -35,7 +36,8 @@ import java.util.Properties;
  */
 public class RuntimeInfoModule implements DruidModule
 {
-  public static final String RUNTIMEINFOMODULE_ENABLED = "druid.testing.runtimeinfo.module.enabled";
+  private static final Logger LOG = new Logger(RuntimeInfoModule.class);
+
   public static final String SERVER_MEMORY_PROPERTY = "druid.testing.embedded.serverMemory";
   public static final String SERVER_DIRECT_MEMORY_PROPERTY = "druid.testing.embedded.serverDirectMemory";
   private static final int NUM_PROCESSORS = 2;
@@ -51,22 +53,29 @@ public class RuntimeInfoModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    if (!isModuleEnabled()) {
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo = makeRuntimeInfo();
+    if (runtimeInfo == null) {
       return;
     }
-    final long serverMemory = getMandatoryProperty(SERVER_MEMORY_PROPERTY);
-    final long serverDirectMemory = getMandatoryProperty(SERVER_DIRECT_MEMORY_PROPERTY);
-    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(
-        NUM_PROCESSORS,
-        serverDirectMemory,
-        serverMemory
-    );
     binder.bind(RuntimeInfo.class).toInstance(runtimeInfo);
   }
 
-  private boolean isModuleEnabled()
+  private DruidProcessingConfigTest.MockRuntimeInfo makeRuntimeInfo()
   {
-    return Boolean.parseBoolean(properties.getProperty(RUNTIMEINFOMODULE_ENABLED, "true"));
+    try {
+      final long serverMemory = getMandatoryProperty(SERVER_MEMORY_PROPERTY);
+      final long serverDirectMemory = getMandatoryProperty(SERVER_DIRECT_MEMORY_PROPERTY);
+      final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo = new DruidProcessingConfigTest.MockRuntimeInfo(
+          NUM_PROCESSORS,
+          serverDirectMemory,
+          serverMemory
+      );
+      return runtimeInfo;
+    }
+    catch (DruidException e) {
+      LOG.info("RuntimeInfo module disabled [%s]", e.getMessage());
+      return null;
+    }
   }
 
   private long getMandatoryProperty(String property)
@@ -84,4 +93,5 @@ public class RuntimeInfoModule implements DruidModule
           );
     }
   }
+
 }

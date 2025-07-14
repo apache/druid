@@ -25,26 +25,11 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.testing.embedded.RuntimeInfoModule;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class CliOverlordTest
 {
-  @BeforeClass
-  public static void beforeClass()
-  {
-    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
-  }
-
-  @AfterClass
-  public static void afterClass()
-  {
-    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
-  }
-
   @Test
   public void testSegmentMetadataCacheIsBound()
   {

@@ -61,11 +61,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.embedded.RuntimeInfoModule;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -81,18 +78,6 @@ import java.util.List;
 public class DumpSegmentTest extends InitializedNullHandlingTest
 {
   private final Closer closer;
-
-  @BeforeClass
-  public static void beforeClass()
-  {
-    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
-  }
-
-  @AfterClass
-  public static void afterClass()
-  {
-    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
-  }
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();

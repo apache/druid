@@ -16,10 +16,6 @@
 # limitations under the License.
 #--------------------------------------------------------------------
 
-# Utility script for running the new integration tests, since the Maven
-# commands are unwieldy. Allows straightforward usage of ITs on the desktop
-# and in various build scripts. Handles configuration of various kinds.
-
 set -e
 
 git grep junit-jupiter-engine '**/pom.xml' | cut -d: -f1 | while read pom ;do

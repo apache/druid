@@ -35,10 +35,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.embedded.RuntimeInfoModule;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -51,18 +48,6 @@ import java.util.Collections;
 
 public class ValidateSegmentsTest extends InitializedNullHandlingTest
 {
-  @BeforeClass
-  public static void beforeClass()
-  {
-    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
-  }
-
-  @AfterClass
-  public static void afterClass()
-  {
-    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
-  }
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 

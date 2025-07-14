@@ -46,11 +46,8 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
-import org.apache.druid.testing.embedded.RuntimeInfoModule;
 import org.joda.time.Duration;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -70,17 +67,6 @@ import static org.easymock.EasyMock.mock;
 
 public class CliPeonTest
 {
-  @BeforeClass
-  public static void beforeClass()
-  {
-    System.setProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED, "false");
-  }
-
-  @AfterClass
-  public static void afterClass()
-  {
-    System.clearProperty(RuntimeInfoModule.RUNTIMEINFOMODULE_ENABLED);
-  }
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();

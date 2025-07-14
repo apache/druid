@@ -27,6 +27,10 @@
   <name>druid-embedded-tests</name>
   <description>Unit tests that run an embedded Druid cluster</description>
 
+  <properties>
+    <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+  </properties>
+
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
