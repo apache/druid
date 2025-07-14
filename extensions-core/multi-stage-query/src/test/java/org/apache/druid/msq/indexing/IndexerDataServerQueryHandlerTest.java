@@ -29,7 +29,6 @@ import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.discovery.DruidServiceTestUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
@@ -73,7 +72,6 @@ import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -173,7 +171,8 @@ public class IndexerDataServerQueryHandlerTest
         )
     );
 
-    doReturn(Sequences.simple(ImmutableList.of(scanResultValue))).when(dataServerClient1).run(any(), any(), any(), any());
+    doReturn(Futures.immediateFuture(Sequences.simple(ImmutableList.of(scanResultValue))))
+        .when(dataServerClient1).run(any(), any(), any(), any());
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -211,7 +210,7 @@ public class IndexerDataServerQueryHandlerTest
               IndexerDataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
           )
       );
-      return Sequences.simple(ImmutableList.of(scanResultValue1));
+      return Futures.immediateFuture(Sequences.simple(ImmutableList.of(scanResultValue1)));
     }).when(dataServerClient1).run(any(), any(), any(), any());
 
     ScanResultValue scanResultValue2 = new ScanResultValue(
@@ -223,7 +222,8 @@ public class IndexerDataServerQueryHandlerTest
         )
     );
 
-    doReturn(Sequences.simple(ImmutableList.of(scanResultValue2))).when(dataServerClient2).run(any(), any(), any(), any());
+    doReturn(Futures.immediateFuture(Sequences.simple(ImmutableList.of(scanResultValue2))))
+        .when(dataServerClient2).run(any(), any(), any(), any());
 
     doReturn(Futures.immediateFuture(Boolean.FALSE))
         .when(coordinatorClient)
@@ -276,7 +276,7 @@ public class IndexerDataServerQueryHandlerTest
               IndexerDataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
           )
       );
-      return Sequences.empty();
+      return Futures.immediateFuture(Sequences.empty());
     }).when(dataServerClient1).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.TRUE))
         .when(coordinatorClient)
@@ -298,8 +298,8 @@ public class IndexerDataServerQueryHandlerTest
   @Test
   public void testServerNotFoundWithoutHandoffShouldThrowException()
   {
-    doThrow(
-        new QueryInterruptedException(new RpcException("Could not connect to server"))
+    doReturn(
+        Futures.immediateFailedFuture(new QueryInterruptedException(new RpcException("Could not connect to server")))
     ).when(dataServerClient1).run(any(), any(), any(), any());
 
     doReturn(Futures.immediateFuture(Boolean.FALSE))
@@ -323,8 +323,8 @@ public class IndexerDataServerQueryHandlerTest
   @Test
   public void testServerNotFoundButHandoffShouldReturnWithStatus() throws ExecutionException, InterruptedException
   {
-    doThrow(
-        new QueryInterruptedException(new RpcException("Could not connect to server"))
+    doReturn(
+        Futures.immediateFailedFuture(new QueryInterruptedException(new RpcException("Could not connect to server")))
     ).when(dataServerClient1).run(any(), any(), any(), any());
 
     doReturn(Futures.immediateFuture(Boolean.TRUE))
@@ -352,7 +352,7 @@ public class IndexerDataServerQueryHandlerTest
     doAnswer(invocation -> {
       ResponseContext responseContext = invocation.getArgument(1);
       responseContext.addMissingSegments(ImmutableList.of(segmentDescriptorWithFullInterval));
-      return Sequences.empty();
+      return Futures.immediateFuture(Sequences.empty());
     }).when(dataServerClient1).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, segmentDescriptorWithFullInterval);
 

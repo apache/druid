@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -103,18 +104,20 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                                .build();
 
     doReturn(
-        new DataServerQueryResult<>(
-            ImmutableList.of(
-                Yielders.each(
-                    Sequences.simple(
-                        ImmutableList.of(
-                            new Object[]{1L, "qwe"},
-                            new Object[]{1L, "tyu"}
+        Futures.immediateFuture(
+            new DataServerQueryResult<>(
+                ImmutableList.of(
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                new Object[]{1L, "qwe"},
+                                new Object[]{1L, "tyu"}
+                            )
                         )
-                    )
-                )),
-            ImmutableList.of(),
-            "foo"
+                    )),
+                ImmutableList.of(),
+                "foo"
+            )
         )).when(dataServerQueryHandler)
           .fetchRowsFromDataServer(any(), any(), any());
 
@@ -164,18 +167,20 @@ public class MSQLoadedSegmentTests extends MSQTestBase
           ScanQuery query = invocationOnMock.getArgument(0);
           ScanQuery.verifyOrderByForNativeExecution(query);
           Assert.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
-          return new DataServerQueryResult<>(
-              ImmutableList.of(
-                  Yielders.each(
-                      Sequences.simple(
-                          ImmutableList.of(
-                              new Object[]{1L, "qwe"},
-                              new Object[]{1L, "tyu"}
+          return Futures.immediateFuture(
+              new DataServerQueryResult<>(
+                  ImmutableList.of(
+                      Yielders.each(
+                          Sequences.simple(
+                              ImmutableList.of(
+                                  new Object[]{1L, "qwe"},
+                                  new Object[]{1L, "tyu"}
+                              )
                           )
-                      )
-                  )),
-              ImmutableList.of(),
-              "foo"
+                      )),
+                  ImmutableList.of(),
+                  "foo"
+              )
           );
         }
     )
@@ -225,17 +230,19 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                             .build();
 
     doReturn(
-        new DataServerQueryResult<>(
-            ImmutableList.of(
-                Yielders.each(
-                    Sequences.simple(
-                        ImmutableList.of(
-                            ResultRow.of(1L, 2L)
+        Futures.immediateFuture(
+            new DataServerQueryResult<>(
+                ImmutableList.of(
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                ResultRow.of(1L, 2L)
+                            )
                         )
-                    )
-                )),
-            ImmutableList.of(),
-            "foo"
+                    )),
+                ImmutableList.of(),
+                "foo"
+            )
         )
     )
         .when(dataServerQueryHandler)
@@ -285,17 +292,19 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                                             .build();
 
     doReturn(
-        new DataServerQueryResult<>(
-            ImmutableList.of(
-                Yielders.each(
-                    Sequences.simple(
-                        ImmutableList.of(
-                            ResultRow.of(1L, 2L)
+        Futures.immediateFuture(
+            new DataServerQueryResult<>(
+                ImmutableList.of(
+                    Yielders.each(
+                        Sequences.simple(
+                            ImmutableList.of(
+                                ResultRow.of(1L, 2L)
+                            )
                         )
-                    )
-                )),
-            ImmutableList.of(),
-            "foo"
+                    )),
+                ImmutableList.of(),
+                "foo"
+            )
         )
     )
         .when(dataServerQueryHandler)

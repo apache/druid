@@ -131,30 +131,29 @@ public class DataServerClient
 
     return FutureUtils.transform(
         resultStreamFuture,
-        resultStream ->
-            new BaseSequence<>(
-                new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
-                {
-                  @Override
-                  public JsonParserIterator<T> make()
-                  {
-                    return new JsonParserIterator<>(
-                        queryResultType,
-                        Futures.immediateFuture(resultStream),
-                        BASE_PATH,
-                        query,
-                        serviceLocation.getHost(),
-                        objectMapper
-                    );
-                  }
+        resultStream -> new BaseSequence<>(
+            new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
+            {
+              @Override
+              public JsonParserIterator<T> make()
+              {
+                return new JsonParserIterator<>(
+                    queryResultType,
+                    Futures.immediateFuture(resultStream),
+                    BASE_PATH,
+                    query,
+                    serviceLocation.getHost(),
+                    objectMapper
+                );
+              }
 
-                  @Override
-                  public void cleanup(JsonParserIterator<T> iterFromMake)
-                  {
-                    CloseableUtils.closeAndWrapExceptions(iterFromMake);
-                  }
-                }
-            )
+              @Override
+              public void cleanup(JsonParserIterator<T> iterFromMake)
+              {
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
+              }
+            }
+        )
     );
   }
 
