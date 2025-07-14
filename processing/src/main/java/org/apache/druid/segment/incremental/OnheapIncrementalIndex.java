@@ -143,6 +143,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // initialize them all with 0 rows
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
+      if (projections.containsKey(projectionSpec.getName())) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Found duplicate projection[%s], please remove and resubmit the ingestion.",
+                                projectionSpec.getName()
+                            );
+      }
 
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
           projectionSpec,
@@ -224,9 +232,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected AddToFactsResult addToFacts(
       IncrementalIndexRow key,
-      InputRowHolder inputRowHolder,
-      boolean skipMaxRowsInMemoryCheck
-  ) throws IndexSizeExceededException
+      InputRowHolder inputRowHolder
+  )
   {
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
@@ -258,16 +265,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final int rowIndex = indexIncrement.getAndIncrement();
       aggregators.put(rowIndex, aggs);
 
-      // Last ditch sanity checks
-      if ((numEntries.get() >= maxRowCount || totalSizeInBytes.get() >= maxBytesInMemory)
-          && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
-          && !skipMaxRowsInMemoryCheck) {
-        throw new IndexSizeExceededException(
-            "Maximum number of rows [%d] or max size in bytes [%d] reached",
-            maxRowCount,
-            maxBytesInMemory
-        );
-      }
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
