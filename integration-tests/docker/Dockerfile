@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG JDK_VERSION=17-slim-buster
+ARG JDK_VERSION=17-slim-bullseye
 FROM openjdk:$JDK_VERSION as druidbase
 
 # Bundle everything into one script so cleanup can reduce image size.
@@ -27,7 +27,6 @@ ARG ZK_VERSION
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
 RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && rm -f /root/base-setup.sh
 
-
 FROM druidbase
 ARG MYSQL_VERSION
 ARG MARIA_VERSION
@@ -36,14 +35,6 @@ ARG CONFLUENT_VERSION
 
 # Verify Java version
 RUN java -version
-
-RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
-
-# Setup metadata store
-# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
-      && echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root \
-      && /etc/init.d/mysql stop
 
 # Add Druid scripts and jars
 ADD bin/* /usr/local/druid/bin/
@@ -65,11 +56,17 @@ RUN if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ] ; \
 RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \
     -O /usr/local/druid/lib/kafka-protobuf-provider.jar
 
-# Add sample data
-# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-      && /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
-      && /etc/init.d/mysql stop
+# Setup metadata store
+ADD run-mysql.sh /run-mysql.sh
+RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
+RUN mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
+RUN ( \
+    bash /run-mysql.sh; \
+    echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root; \
+    /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd; \
+    mysqladmin shutdown \
+    )
+
 ADD test-data /test-data
 
 # Setup supervisord
@@ -77,9 +74,6 @@ ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Add druid configuration setup script
 ADD druid.sh /druid.sh
-
-# mysql
-ADD run-mysql.sh /run-mysql.sh
 
 # internal docker_ip:9092 endpoint is used to access Kafka from other Docker containers
 # external docker ip:9093 endpoint is used to access Kafka from test code
