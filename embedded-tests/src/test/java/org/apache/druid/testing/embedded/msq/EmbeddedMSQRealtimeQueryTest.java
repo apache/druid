@@ -99,8 +99,6 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
-
     kafka = new KafkaResource();
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
@@ -121,30 +119,32 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
            .addProperty("druid.processing.numThreads", "3")
            .addProperty("druid.worker.capacity", "4");
 
-    cluster.addExtension(KafkaIndexTaskModule.class)
-           .addExtension(DartControllerModule.class)
-           .addExtension(DartWorkerModule.class)
-           .addExtension(DartControllerMemoryManagementModule.class)
-           .addExtension(DartControllerModule.class)
-           .addExtension(DartWorkerMemoryManagementModule.class)
-           .addExtension(DartWorkerModule.class)
-           .addExtension(IndexerMemoryManagementModule.class)
-           .addExtension(MSQDurableStorageModule.class)
-           .addExtension(MSQIndexingModule.class)
-           .addExtension(MSQSqlModule.class)
-           .addExtension(SqlTaskModule.class)
-           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addCommonProperty("druid.msq.dart.enabled", "true")
-           .useLatchableEmitter()
-           .addResource(kafka)
-           .addServer(coordinator)
-           .addServer(overlord)
-           .addServer(indexer)
-           .addServer(broker)
-           .addServer(historical)
-           .addServer(router);
-
-    return cluster;
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .addExtensions(
+            KafkaIndexTaskModule.class,
+            DartControllerModule.class,
+            DartWorkerModule.class,
+            DartControllerMemoryManagementModule.class,
+            DartControllerModule.class,
+            DartWorkerMemoryManagementModule.class,
+            DartWorkerModule.class,
+            IndexerMemoryManagementModule.class,
+            MSQDurableStorageModule.class,
+            MSQIndexingModule.class,
+            MSQSqlModule.class,
+            SqlTaskModule.class
+        )
+        .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
+        .addCommonProperty("druid.msq.dart.enabled", "true")
+        .useLatchableEmitter()
+        .addResource(kafka)
+        .addServer(coordinator)
+        .addServer(overlord)
+        .addServer(indexer)
+        .addServer(broker)
+        .addServer(historical)
+        .addServer(router);
   }
 
   @BeforeEach

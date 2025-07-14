@@ -52,6 +52,19 @@ import java.sql.ResultSet;
  */
 public class PendingSegmentRecord
 {
+  /**
+   * Default lock version used by concurrent APPEND tasks.
+   */
+  public static final String DEFAULT_VERSION_FOR_CONCURRENT_APPEND = DateTimes.EPOCH.toString();
+
+  /**
+   * Suffix to use to construct fresh segment versions in the event of a clash.
+   * The chosen character {@code S} is just for visual ease so that two versions
+   * are not easily confused for each other.
+   * {@code 1970-01-01T00:00:00.000Z_1} vs {@code 1970-01-01T00:00:00.000ZS_1}.
+   */
+  public static final String CONCURRENT_APPEND_VERSION_SUFFIX = "S";
+
   private final SegmentIdWithShardSpec id;
   private final String sequenceName;
   private final String sequencePrevId;
