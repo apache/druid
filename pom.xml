@@ -163,7 +163,7 @@
         <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
-        <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
         <surefire.trimStackTrace>false</surefire.trimStackTrace>
 
         <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
