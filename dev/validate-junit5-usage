@@ -27,7 +27,11 @@ git grep junit-jupiter-engine '**/pom.xml' | cut -d: -f1 | while read pom ;do
 	echo "$m hasj4:$hasj4 hasVintage:$hasVintage"
 
 	if [ "$hasVintage" != "$hasj4" ];then
-		echo "Module [$m] either needs tests upgraded to junit5 or the vintage engine!"
+		echo "Module [$m] is configured to use junit5 but its configured is not valid!"
+		echo " has_junit4_tests[$hasj4] <> has_vintage_engine[$hasVintage] !"
+		echo
+		echo "The junit4/5 migration guide might be helpfull https://www.baeldung.com/junit-5-migration"
+		echo "Possibly usefull openrewrite docs: https://docs.openrewrite.org/recipes/java/testing/junit5/junit4to5migration"
 		exit 1
 	fi
 done
