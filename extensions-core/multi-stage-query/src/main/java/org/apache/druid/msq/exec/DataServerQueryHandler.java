@@ -216,9 +216,10 @@ public class DataServerQueryHandler
       } else {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Unknown InputNumberDataSource datasource with number[%s]. Queries with realtime sources "
-                                   + "cannot join results with stage outputs. Use sortMerge join instead by setting [%s].",
-                                   numberDataSource.getInputNumber(),
+                            .build(
+                                "Cannot handle joining two sources (like unions or broadcast joins) while "
+                                   + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
+                                   + "joins instead by setting [%s]",
                                    PlannerContext.CTX_SQL_JOIN_ALGORITHM
                             );
       }

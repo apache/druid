@@ -341,9 +341,13 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
             RuntimeException.class,
             () -> msqApis.runDartSql(sql, dataSource, dataSource)
         ),
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-            "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
-            + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm]."))
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString(
+                "Cannot handle joining two sources (like unions or broadcast joins) while "
+                + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
+                + "joins instead by setting [sqlJoinAlgorithm]"
+            )
+        )
     );
   }
 
@@ -383,9 +387,10 @@ public class EmbeddedMSQRealtimeQueryTest extends EmbeddedClusterTestBase
 
     Assertions.assertTrue(
         CoreMatchers.containsString(
-            "Unknown InputNumberDataSource datasource with number[1]. Queries with realtime sources "
-            + "cannot join results with stage outputs. Use sortMerge join instead by setting [sqlJoinAlgorithm].")
-                    .matches(currentStatus.getStatus().getErrorMsg())
+            "Cannot handle joining two sources (like unions or broadcast joins) while "
+            + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
+            + "joins instead by setting [sqlJoinAlgorithm]"
+        ).matches(currentStatus.getStatus().getErrorMsg())
     );
   }
 
