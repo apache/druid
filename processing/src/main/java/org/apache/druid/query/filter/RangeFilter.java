@@ -315,20 +315,17 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     } else if (matchValueType.isNumeric()) {
-      NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
+      final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
       if (rangeIndexes != null) {
-        Number lower = (Number) lowerEval.value();
-        Number upper = (Number) upperEval.value();
-
-        if (!lowerOpen && !upperOpen &&
-            lower != null && upper != null &&
-            Double.compare(lower.doubleValue(), upper.doubleValue()) == 0 &&
-            matchValueType.is(ValueType.DOUBLE)) {
-          float f = (float) lower.doubleValue();
-          lower = f;
-          upper = f;
+        final Number lower = (Number) lowerEval.value();
+        final Number upper = (Number) upperEval.value();
+        if (matchValueType.is(ValueType.DOUBLE)
+            && !lowerOpen && !upperOpen
+            && lower != null && upper != null
+            && Double.compare(lower.doubleValue(), upper.doubleValue()) == 0
+            && (float) lower.doubleValue() != lower.doubleValue()) {
+          return null;      // needMatcher = true, row predicate takes over
         }
-
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
