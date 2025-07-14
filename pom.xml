@@ -163,7 +163,7 @@
         <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
-        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+        <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
         <surefire.trimStackTrace>false</surefire.trimStackTrace>
 
         <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
@@ -1094,7 +1094,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.2</version>
+                <version>5.13.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

@@ -343,6 +343,21 @@ public class ControllerImpl implements Controller
     try (final Closer closer = Closer.create()) {
       reportPayload = runInternal(queryListener, closer);
     }
+    catch (Throwable e) {
+      log.info(e, "SomeException");
+      final MSQErrorReport errorReport = MSQErrorReport.fromFault(queryId(), null, null, UnknownFault.forException(e));
+      MSQStatusReport statusReport = new MSQStatusReport(
+          TaskState.FAILED, errorReport, null, null, 0, new HashMap<>(), 0, 0, null, null
+      );
+      MSQTaskReportPayload statusReport2 = new MSQTaskReportPayload(
+          statusReport,
+          null,
+          null,
+          null
+      );
+      queryListener.onQueryComplete(statusReport2);
+      throw e;
+    }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
     queryListener.onQueryComplete(reportPayload);
   }
