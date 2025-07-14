@@ -97,8 +97,8 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, usedSegments.size());
 
     final SegmentId segmentId2 = usedSegments.get(0).getId();
-    Assertions.assertEquals("1970-01-01T00:00:00.000Z", segmentId2.getVersion());
-    Assertions.assertEquals(1, segmentId2.getPartitionNum());
+    Assertions.assertEquals("1970-01-01T00:00:00.000ZS", segmentId2.getVersion());
+    Assertions.assertEquals(0, segmentId2.getPartitionNum());
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
     Assertions.assertEquals(

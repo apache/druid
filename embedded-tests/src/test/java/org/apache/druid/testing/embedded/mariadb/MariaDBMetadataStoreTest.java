@@ -17,26 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.mariadb;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link IndexTaskTest}, but using a MinIO metadata store through the S3 extension.
+ * Same as {@link IndexTaskTest}, but using a MariaDB metadata store instead of Derby.
  */
-public class EmbeddedMinIOStorageTest extends IndexTaskTest
+public class MariaDBMetadataStoreTest extends IndexTaskTest
 {
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+    return EmbeddedDruidCluster.withZookeeper()
                                .useLatchableEmitter()
-                               .addResource(new MinIOStorageResource())
+                               .addResource(new MariaDBMetadataResource())
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
