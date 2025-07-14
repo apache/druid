@@ -315,10 +315,20 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     } else if (matchValueType.isNumeric()) {
-      final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
+      NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
       if (rangeIndexes != null) {
-        final Number lower = (Number) lowerEval.value();
-        final Number upper = (Number) upperEval.value();
+        Number lower = (Number) lowerEval.value();
+        Number upper = (Number) upperEval.value();
+
+        if (!lowerOpen && !upperOpen &&
+            lower != null && upper != null &&
+            Double.compare(lower.doubleValue(), upper.doubleValue()) == 0 &&
+            matchValueType.is(ValueType.DOUBLE)) {
+          float f = (float) lower.doubleValue();
+          lower = f;
+          upper = f;
+        }
+
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
@@ -926,10 +936,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           return DruidPredicateMatch.of((lowerComparing >= 0) && (upperComparing > 0));
         };
       case CLOSED:
+        if (Double.compare(lowerDoubleBound, upperDoubleBound) == 0) {
+          final long dblBits = Double.doubleToLongBits(lowerDoubleBound);
+          final int  fltBits = Float.floatToIntBits((float) lowerDoubleBound);
+
+          return input -> {
+            long inDblBits = Double.doubleToLongBits(input);
+            if (inDblBits == dblBits) {
+              return DruidPredicateMatch.TRUE;
+            }
+            return DruidPredicateMatch.of(
+                Float.floatToIntBits((float) input) == fltBits
+            );
+          };
+        }
+
         return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return DruidPredicateMatch.of((lowerComparing >= 0) && (upperComparing >= 0));
+          int lowerComparing = Double.compare(input, lowerDoubleBound);
+          int upperComparing = Double.compare(upperDoubleBound, input);
+          return DruidPredicateMatch.of(lowerComparing >= 0 && upperComparing >= 0);
         };
       case LOWER_UNBOUNDED_UPPER_OPEN:
         return input -> {
