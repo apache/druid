@@ -19,20 +19,34 @@
 
 package org.apache.druid.indexer;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.loading.LocalDataSegmentPuller;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,6 +67,23 @@ public class HadoopTaskSerdeTest
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
+    );
+    jsonMapper.registerModules(new HadoopIndexTaskModule().getJacksonModules());
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
+            .addValue(IndexIO.class, testUtils.getTestIndexIO())
+            .addValue(ObjectMapper.class, jsonMapper)
+            .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(AuthConfig.class, new AuthConfig())
+            .addValue(AuthorizerMapper.class, null)
+            .addValue(RowIngestionMetersFactory.class, new DropwizardRowIngestionMetersFactory())
+            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+            .addValue(OverlordClient.class, TestUtils.OVERLORD_SERVICE_CLIENT)
+            .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
+            .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
+            .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
+            .addValue(HadoopTaskConfig.class, new HadoopTaskConfig(null, null))
     );
   }
 

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -41,7 +40,7 @@ public class HadoopTaskConfig
     try {
       DEFAULT_DEFAULT_HADOOP_COORDINATES =
           ImmutableList.copyOf(Lists.newArrayList(IOUtils.toString(
-              TaskConfig.class.getResourceAsStream("/" + HADOOP_LIB_VERSIONS),
+              HadoopTaskConfig.class.getResourceAsStream("/" + HADOOP_LIB_VERSIONS),
               StandardCharsets.UTF_8
           ).split(",")));
 
@@ -63,6 +62,7 @@ public class HadoopTaskConfig
       @JsonProperty("defaultHadoopCoordinates") @Nullable List<String> defaultHadoopCoordinates
   )
   {
+    // This is usually on HDFS or similar, so we can't use java.io.tmpdir
     this.hadoopWorkingPath = Configs.valueOrDefault(hadoopWorkingPath, "/tmp/druid-indexing");
     this.defaultHadoopCoordinates = Configs.valueOrDefault(
         defaultHadoopCoordinates,
