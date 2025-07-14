@@ -104,15 +104,6 @@ public class HadoopTaskTest
       }
     };
     final TaskToolbox toolbox = EasyMock.createStrictMock(TaskToolbox.class);
-    /*
-    EasyMock.expect(toolbox.getConfig()).andReturn(
-        new TaskConfigBuilder()
-            .setBaseDir(temporaryFolder.newFolder().toString())
-            .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
-            .build()
-    ).once();
-
-     */
     EasyMock.replay(toolbox);
 
     final ClassLoader classLoader = task.buildClassLoader();

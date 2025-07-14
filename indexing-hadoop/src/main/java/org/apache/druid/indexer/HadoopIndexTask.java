@@ -831,7 +831,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
       final SegmentMetadataPublisher maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = new SegmentMetadataPublisher(HadoopTask.INJECTOR.getInstance(IndexerMetadataStorageCoordinator.class));
+        maybeHandler = new SegmentMetadataPublisher(INJECTOR.getInstance(IndexerMetadataStorageCoordinator.class));
       } else {
         maybeHandler = null;
       }
