@@ -119,7 +119,7 @@ public class DataSourceMetadataQueryTest
   /**
    * Build an index using a row with the provided event timestamp.
    */
-  private IncrementalIndex buildIndex(final DateTime eventTimestamp) throws Exception
+  private IncrementalIndex buildIndex(final DateTime eventTimestamp)
   {
     final IncrementalIndex rtIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -136,7 +136,7 @@ public class DataSourceMetadataQueryTest
   }
 
   @Test
-  public void testMaxIngestedEventTimeIncrementalIndex() throws Exception
+  public void testMaxIngestedEventTimeIncrementalIndex()
   {
     final DateTime timestamp = DateTimes.of("2020-01-02T03:04:05.678Z");
     final IncrementalIndex rtIndex = buildIndex(timestamp);
@@ -165,7 +165,7 @@ public class DataSourceMetadataQueryTest
   }
 
   @Test
-  public void testMaxIngestedEventTimeQueryableIndex() throws Exception
+  public void testMaxIngestedEventTimeQueryableIndex()
   {
     final DateTime timestamp = DateTimes.of("2020-01-02T03:04:05.678Z");
     final QueryableIndex queryableIndex = TestIndex.persistAndMemoryMap(buildIndex(timestamp));
