@@ -41,12 +41,6 @@ on:
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
-  INPUTS_JDK: ${{ inputs.jdk }}
-  INPUTS_KEY: ${{ inputs.key }}
-  GITHUB_RUN_ID: ${{ github.run_id }}
-  GITHUB_RUN_NUMBER: ${{ github.run_number }}
-  GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
-  GITHUB_EVENT_REF: ${{ github.event_name }}-${{ github.event.number || github.ref_name }}
 
 jobs:
   execute:
@@ -71,11 +65,8 @@ jobs:
           pattern: ${{ inputs.artifacts_to_download }}
           merge-multiple: true
 
-      - name: Prepare GITHUB_ENV
-        run: |
-          set -x
-          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT module=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF >> $GITHUB_ENV
-          echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
+      - name: Calculate hash for artifact name
+        run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}

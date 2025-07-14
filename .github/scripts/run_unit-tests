@@ -22,4 +22,4 @@ OPTS+="-pl !integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases
 OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
 OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 
-mvn -B $OPTS test "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+mvn -B $OPTS test "$@"
