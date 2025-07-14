@@ -696,18 +696,13 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
       @Override
       public DruidObjectPredicate<String> makeStringPredicate()
       {
-        try {
-          index.add(
-              new MapBasedInputRow(
-                  timestamp,
-                  Collections.singletonList("billy"),
-                  ImmutableMap.of("billy", "v31234")
-              )
-          );
-        }
-        catch (IndexSizeExceededException isee) {
-          throw new RuntimeException(isee);
-        }
+        index.add(
+            new MapBasedInputRow(
+                timestamp,
+                Collections.singletonList("billy"),
+                ImmutableMap.of("billy", "v31234")
+            )
+        );
 
         return DruidObjectPredicate.alwaysTrue();
       }

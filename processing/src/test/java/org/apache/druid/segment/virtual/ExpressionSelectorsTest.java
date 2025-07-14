@@ -77,7 +77,6 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -637,7 +636,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_incrementalIndexStringSelector() throws IndexSizeExceededException
+  public void test_incrementalIndexStringSelector()
   {
     // This test covers a regression caused by ColumnCapabilites.isDictionaryEncoded not matching the value of
     // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
@@ -700,7 +699,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_incrementalIndexStringSelectorCast() throws IndexSizeExceededException
+  public void test_incrementalIndexStringSelectorCast()
   {
     IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
                                                           .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))

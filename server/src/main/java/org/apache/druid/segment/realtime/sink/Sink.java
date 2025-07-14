@@ -43,7 +43,6 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
@@ -171,7 +170,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     return currHydrant;
   }
 
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row)
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -187,7 +186,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return ALREADY_SWAPPED; // the hydrant was swapped without being replaced
       }
 
-      return index.add(row, skipMaxRowsInMemoryCheck);
+      return index.add(row);
     }
   }
 

@@ -59,7 +59,6 @@ import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -258,7 +257,7 @@ public class BatchAppenderator implements Appenderator
       final InputRow row,
       @Nullable final Supplier<Committer> committerSupplier,
       final boolean allowIncrementalPersists
-  ) throws IndexSizeExceededException, SegmentNotWritableException
+  ) throws SegmentNotWritableException
   {
 
     throwPersistErrorIfExists();
@@ -289,18 +288,9 @@ public class BatchAppenderator implements Appenderator
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
 
-    try {
-      addResult = sink.add(row, false); // allow incrememtal persis is always true for batch
-      sinkRowsInMemoryAfterAdd = addResult.getRowCount();
-      bytesInMemoryAfterAdd = addResult.getBytesInMemory();
-    }
-    catch (IndexSizeExceededException e) {
-      // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
-      // can't add the row (it just failed). This should never actually happen, though, because we check
-      // sink.canAddRow after returning from add.
-      log.error(e, "Sink for segment[%s] was unexpectedly full!", identifier);
-      throw e;
-    }
+    addResult = sink.add(row);
+    sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+    bytesInMemoryAfterAdd = addResult.getBytesInMemory();
 
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);

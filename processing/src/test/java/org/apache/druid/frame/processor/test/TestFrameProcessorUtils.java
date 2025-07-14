@@ -30,7 +30,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.util.List;
@@ -54,13 +53,8 @@ public final class TestFrameProcessorUtils
         .setMaxRowCount(1000)
         .build();
 
-    try {
-      for (InputRow inputRow : inputRows) {
-        index.add(inputRow);
-      }
-    }
-    catch (IndexSizeExceededException e) {
-      throw new RuntimeException(e);
+    for (InputRow inputRow : inputRows) {
+      index.add(inputRow);
     }
 
     return new IncrementalIndexCursorFactory(index);
