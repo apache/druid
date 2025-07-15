@@ -26,15 +26,17 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.pac4j.core.context.JEEContext;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.exception.http.WithLocationAction;
-import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
+import org.pac4j.jee.context.JEEContext;
+import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -46,11 +48,16 @@ public class Pac4jFilterTest
   private HttpServletRequest request;
   @Mock
   private HttpServletResponse response;
+  @Mock
+  private PrintWriter printWriter;
+
   private JEEContext context;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
+    // Mock the PrintWriter for the response
+    Mockito.when(response.getWriter()).thenReturn(printWriter);
     context = new JEEContext(request, response);
   }
 

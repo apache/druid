@@ -355,7 +355,7 @@
     <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
     <!-- Remove suppression once upgraded to 5.3.1. -->
     <notes><![CDATA[
-   file name: pac4j-core-4.5.7.jar
+   file name: pac4j-core-5.7.3.jar
    ]]></notes>
     <cve>CVE-2021-44878</cve>
   </suppress>
