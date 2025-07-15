@@ -830,7 +830,7 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22.1
+version: 9.37.2
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -850,7 +850,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22
+version: 10.8
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
