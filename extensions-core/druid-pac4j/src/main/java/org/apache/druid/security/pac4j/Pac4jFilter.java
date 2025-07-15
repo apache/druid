@@ -102,33 +102,33 @@ public class Pac4jFilter implements Filter
       DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
       try {
         securityLogic.perform(
-                context,
-                sessionStore,
-                pac4jConfig,
-                (ctx, session, profiles, parameters) -> {
-                  try {
-                    // Extract user ID from pac4j profiles and create AuthenticationResult
-                    if (profiles != null && !profiles.isEmpty()) {
-                      String uid = profiles.iterator().next().getId();
-                      if (uid != null) {
-                        AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
-                        servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-                        filterChain.doFilter(servletRequest, servletResponse);
-                      }
-                    } else {
-                      LOGGER.warn("No profiles found after OIDC auth.");
-                      // Don't continue the filter chain - let pac4j handle the authentication failure
-                    }
+            context,
+            sessionStore,
+            pac4jConfig,
+            (ctx, session, profiles, parameters) -> {
+              try {
+                // Extract user ID from pac4j profiles and create AuthenticationResult
+                if (profiles != null && !profiles.isEmpty()) {
+                  String uid = profiles.iterator().next().getId();
+                  if (uid != null) {
+                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+                    servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+                    filterChain.doFilter(servletRequest, servletResponse);
                   }
-                  catch (IOException | ServletException e) {
-                    throw new RuntimeException(e);
-                  }
-                  return null;
-                },
-                JEEHttpActionAdapter.INSTANCE,
-                null,
-                "none",  // Use "none" instead of authorizerName to avoid CSRF issues
-                null
+                } else {
+                  LOGGER.warn("No profiles found after OIDC auth.");
+                  // Don't continue the filter chain - let pac4j handle the authentication failure
+                }
+              }
+              catch (IOException | ServletException e) {
+                throw new RuntimeException(e);
+              }
+              return null;
+            },
+            JEEHttpActionAdapter.INSTANCE,
+            null,
+            "none",  // Use "none" instead of authorizerName to avoid CSRF issues
+            null
         );
       }
       catch (HttpAction e) {

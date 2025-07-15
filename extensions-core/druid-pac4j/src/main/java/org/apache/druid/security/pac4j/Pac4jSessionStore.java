@@ -63,15 +63,17 @@ public class Pac4jSessionStore implements SessionStore
 
   public Pac4jSessionStore(String cookiePassphrase)
   {
+    // Use AES-GCM for authenticated encryption to prevent padding oracle attacks
+    // and ensure both confidentiality and integrity of session data
     this.cryptoService = new CryptoService(
             cookiePassphrase,
             "AES",
-            "CBC",
-            "PKCS5Padding",
+            "GCM",
+            "NoPadding",
             "PBKDF2WithHmacSHA256",
-            128,
-            65536,
-            128
+            256,  // Increased salt size for better security
+            100000, // Increased iteration count for better key derivation
+            256   // Use 256-bit key for stronger encryption
     );
   }
 
@@ -118,7 +120,13 @@ public class Pac4jSessionStore implements SessionStore
     }
 
     cookie.setHttpOnly(true);
-    cookie.setSecure(isHttpsOrSecure(context));
+    // Always set secure flag for authentication cookies to prevent transmission over HTTP
+    // This ensures the cookie is only sent over HTTPS connections
+    boolean isSecure = isHttpsOrSecure(context);
+    if (!isSecure) {
+      LOGGER.warn("Setting authentication cookie over non-HTTPS connection. This is not recommended for production.");
+    }
+    cookie.setSecure(true); // Always set secure flag for authentication cookies
     cookie.setPath("/");
 
     if (context instanceof JEEContext) {
@@ -208,7 +216,7 @@ public class Pac4jSessionStore implements SessionStore
         }
       }
       catch (Exception e) {
-        LOGGER.debug("Failed to decrypt cookie value", e);
+        LOGGER.debug("Failed to decrypt cookie value: %s", e.getMessage());
         throw InvalidInput.exception(e, "Decryption failed. Check service logs.");
       }
     }
