@@ -245,43 +245,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.size = size;
   }
 
-  @Nullable
-  private static Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
-  {
-    if (loadSpec == null) {
-      return null;
-    }
-    // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
-    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
-    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
-      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
-    }
-    return result;
-  }
-
-  @Nullable
-  private static CompactionState prepareCompactionState(@Nullable CompactionState lastCompactionState)
-  {
-    if (lastCompactionState == null) {
-      return null;
-    }
-    return COMPACTION_STATE_INTERNER.intern(lastCompactionState);
-  }
-
-  /**
-   * Returns a list of strings with all empty strings removed and all strings interned.
-   * <p>
-   * The dimensions, metrics, and projections are stored as canonical string values to decrease memory required for
-   * storing large numbers of segments.
-   */
-  private static List<String> prepareWithInterner(List<String> list, Interner<List<String>> interner)
-  {
-    return interner.intern(list.stream()
-                               .filter(s -> !Strings.isNullOrEmpty(s))
-                               .map(STRING_INTERNER::intern)
-                               .collect(ImmutableList.toImmutableList()));
-  }
-
   /**
    * Get dataSource
    *
@@ -505,6 +468,44 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            '}';
   }
 
+
+  @Nullable
+  private static Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
+  {
+    if (loadSpec == null) {
+      return null;
+    }
+    // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
+    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
+    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
+      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
+    }
+    return result;
+  }
+
+  @Nullable
+  private static CompactionState prepareCompactionState(@Nullable CompactionState lastCompactionState)
+  {
+    if (lastCompactionState == null) {
+      return null;
+    }
+    return COMPACTION_STATE_INTERNER.intern(lastCompactionState);
+  }
+
+  /**
+   * Returns a list of strings with all empty strings removed and all strings interned.
+   * <p>
+   * The dimensions, metrics, and projections are stored as canonical string values to decrease memory required for
+   * storing large numbers of segments.
+   */
+  private static List<String> prepareWithInterner(List<String> list, Interner<List<String>> interner)
+  {
+    return interner.intern(list.stream()
+                               .filter(s -> !Strings.isNullOrEmpty(s))
+                               .map(STRING_INTERNER::intern)
+                               .collect(ImmutableList.toImmutableList()));
+  }
+
   /**
    * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
    */
@@ -542,7 +543,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
      * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
      */
     @Deprecated
-    public Builder()
+    private Builder()
     {
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
@@ -553,7 +554,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.size = -1;
     }
 
-    public Builder(SegmentId segmentId)
+    private Builder(SegmentId segmentId)
     {
       this.dataSource = segmentId.getDataSource();
       this.interval = segmentId.getInterval();
@@ -564,7 +565,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.lastCompactionState = null;
     }
 
-    public Builder(DataSegment segment)
+    private Builder(DataSegment segment)
     {
       this.dataSource = segment.getDataSource();
       this.interval = segment.getInterval();
