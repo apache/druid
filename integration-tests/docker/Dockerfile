@@ -41,9 +41,9 @@ RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /
 
 # Setup metadata store
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
+RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mariadb start \
       && echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root \
-      && /etc/init.d/mysql stop
+      && /etc/init.d/mariadb stop
 
 # Add Druid scripts and jars
 ADD bin/* /usr/local/druid/bin/
@@ -69,7 +69,7 @@ RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-pro
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
 RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
-      && /etc/init.d/mysql stop
+      && /etc/init.d/mariadb stop
 ADD test-data /test-data
 
 # Setup supervisord
