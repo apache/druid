@@ -70,6 +70,7 @@ jobs:
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
+        timeout-minutes: 60
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
