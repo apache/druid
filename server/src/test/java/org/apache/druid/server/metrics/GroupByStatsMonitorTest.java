@@ -31,13 +31,11 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 public class GroupByStatsMonitorTest
 {
@@ -83,20 +81,15 @@ public class GroupByStatsMonitorTest
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
-    Map<String, Long> resultMap = emitter.getEvents()
-                                         .stream()
-                                         .collect(Collectors.toMap(
-                                             event -> (String) event.toMap().get("metric"),
-                                             event -> (Long) event.toMap().get("value")
-                                         ));
-    Assert.assertEquals(7, resultMap.size());
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/used"));
-    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/queries"));
-    Assert.assertEquals(100, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
-    Assert.assertEquals(2, (long) resultMap.get("groupBy/spilledQueries"));
-    Assert.assertEquals(200, (long) resultMap.get("groupBy/spilledBytes"));
-    Assert.assertEquals(300, (long) resultMap.get("groupBy/mergeDictionarySize"));
+
+    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
+    emitter.verifyValue("mergeBuffer/used", 0L);
+    emitter.verifyValue("mergeBuffer/queries", 1L);
+    emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
+    emitter.verifyValue("groupBy/spilledQueries", 2L);
+    emitter.verifyValue("groupBy/spilledBytes", 200L);
+    emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
   }
 
   @Test

@@ -93,7 +93,7 @@ public class KubernetesPeonClientTest
     Pod peonPod = instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS);
 
     Assertions.assertNotNull(peonPod);
-    Assertions.assertEquals(1, serviceEmitter.getEvents().size());
+    Assertions.assertEquals(1, serviceEmitter.getNumEmittedEvents());
   }
 
   @Test

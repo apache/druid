@@ -37,7 +37,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
@@ -60,7 +60,13 @@ public class LatchableEmitter extends StubServiceEmitter
    */
   private final ScheduledExecutorService conditionEvaluateExecutor;
   private final Set<WaitCondition> waitConditions = new HashSet<>();
-  private final ReentrantReadWriteLock eventReadWriteLock = new ReentrantReadWriteLock(true);
+
+  private final ReentrantLock eventProcessingLock = new ReentrantLock();
+
+  /**
+   * Lists of events that have already been processed by {@link #evaluateWaitConditions(Event)}.
+   */
+  private final List<Event> processedEvents = new ArrayList<>();
 
   /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
@@ -75,27 +81,7 @@ public class LatchableEmitter extends StubServiceEmitter
   public void emit(Event event)
   {
     super.emit(event);
-    triggerConditionEvaluations();
-  }
-
-  @Override
-  public void flush()
-  {
-    // flush() or close() is typically not called in tests until the test is complete
-    // but acquire a lock all the same for the sake of completeness
-    eventReadWriteLock.writeLock().lock();
-    try {
-      super.flush();
-    }
-    finally {
-      eventReadWriteLock.writeLock().unlock();
-    }
-  }
-
-  @Override
-  public void close()
-  {
-    flush();
+    triggerConditionEvaluations(event);
   }
 
   /**
@@ -107,9 +93,9 @@ public class LatchableEmitter extends StubServiceEmitter
   public void waitForEvent(Predicate<Event> condition, long timeoutMillis)
   {
     final WaitCondition waitCondition = new WaitCondition(condition);
+    registerWaitCondition(waitCondition);
     waitConditions.add(waitCondition);
 
-    triggerConditionEvaluations();
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
@@ -158,12 +144,12 @@ public class LatchableEmitter extends StubServiceEmitter
     );
   }
 
-  private void triggerConditionEvaluations()
+  private void triggerConditionEvaluations(Event event)
   {
     if (conditionEvaluateExecutor == null) {
       throw new ISE("Cannot evaluate conditions as the 'conditionEvaluateExecutor' is null.");
     } else {
-      conditionEvaluateExecutor.submit(this::evaluateWaitConditions);
+      conditionEvaluateExecutor.submit(() -> evaluateWaitConditions(event));
     }
   }
 
@@ -171,9 +157,9 @@ public class LatchableEmitter extends StubServiceEmitter
    * Evaluates wait conditions. This method must be invoked on the
    * {@link #conditionEvaluateExecutor} so that it does not block {@link #emit(Event)}.
    */
-  private void evaluateWaitConditions()
+  private void evaluateWaitConditions(Event event)
   {
-    eventReadWriteLock.readLock().lock();
+    eventProcessingLock.lock();
     try {
       // Create a copy of the conditions for thread-safety
       final List<WaitCondition> conditionsToEvaluate = List.copyOf(waitConditions);
@@ -181,25 +167,41 @@ public class LatchableEmitter extends StubServiceEmitter
         return;
       }
 
-      List<Event> events = getEvents();
       for (WaitCondition condition : conditionsToEvaluate) {
-        final int currentNumberOfEvents = events.size();
-
-        // Do not use an iterator over the list to avoid concurrent modification exceptions
-        // Evaluate new events against this condition
-        for (int i = condition.processedUntil; i < currentNumberOfEvents; ++i) {
-          if (condition.predicate.test(events.get(i))) {
-            condition.countDownLatch.countDown();
-          }
+        if (condition.predicate.test(event)) {
+          condition.countDownLatch.countDown();
         }
-        condition.processedUntil = currentNumberOfEvents;
       }
     }
     catch (Exception e) {
       log.error(e, "Error while evaluating wait conditions");
     }
     finally {
-      eventReadWriteLock.readLock().unlock();
+      processedEvents.add(event);
+      eventProcessingLock.unlock();
+    }
+  }
+
+  /**
+   * Evaluates the given new condition for all past events and then adds it to
+   * {@link #waitConditions}.
+   */
+  private void registerWaitCondition(WaitCondition condition)
+  {
+    eventProcessingLock.lock();
+    try {
+      for (Event event : processedEvents) {
+        if (condition.predicate.test(event)) {
+          condition.countDownLatch.countDown();
+        }
+      }
+      waitConditions.add(condition);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Error while evaluating condition");
+    }
+    finally {
+      eventProcessingLock.unlock();
     }
   }
 

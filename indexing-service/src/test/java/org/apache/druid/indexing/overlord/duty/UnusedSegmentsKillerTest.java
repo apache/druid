@@ -52,7 +52,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -329,8 +328,8 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
 
     // Verify that the kill intervals are sorted with the oldest interval first
-    final Queue<StubServiceEmitter.ServiceMetricEventSnapshot> events =
-        emitter.getMetricEvents().get(TaskMetrics.RUN_DURATION);
+    final List<StubServiceEmitter.ServiceMetricEventSnapshot> events =
+        emitter.getMetricEvents(TaskMetrics.RUN_DURATION);
     final List<Interval> killIntervals = events.stream().map(event -> {
       final String taskId = (String) event.getUserDims().get(DruidMetrics.TASK_ID);
       String[] splits = taskId.split("_");

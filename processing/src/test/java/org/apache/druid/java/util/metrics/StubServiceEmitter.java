@@ -74,14 +74,20 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     return new ArrayList<>(events);
   }
 
-  /**
-   * Gets all the metric events emitted since the previous {@link #flush()}.
-   *
-   * @return Map from metric name to list of events emitted for that metric.
-   */
-  public Map<String, Queue<ServiceMetricEventSnapshot>> getMetricEvents()
+  public int getNumEmittedEvents()
   {
-    return metricEvents;
+    return events.size();
+  }
+
+  /**
+   * Gets all the metric events emitted for the given metric name since the previous {@link #flush()}.
+   *
+   * @return List of events emitted for the given metric.
+   */
+  public List<ServiceMetricEventSnapshot> getMetricEvents(String metricName)
+  {
+    final Queue<ServiceMetricEventSnapshot> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? List.of() : List.copyOf(metricEventQueue);
   }
 
   /**

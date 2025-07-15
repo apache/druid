@@ -25,10 +25,6 @@ import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-import java.util.Queue;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,26 +61,19 @@ public class HttpPostEmitterMonitorTest
 
     assertTrue(monitor.doMonitor(stubServiceEmitter));
 
-    final Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
-
-    assertMetricValue(metricEvents, "emitter/successfulSending/maxTimeMs", 0);
-    assertMetricValue(metricEvents, "emitter/events/emitted/delta", 100L);
-    assertMetricValue(metricEvents, "emitter/successfulSending/minTimeMs", 0);
-    assertMetricValue(metricEvents, "emitter/buffers/emitQueue", 30);
-    assertMetricValue(metricEvents, "emitter/failedSending/minTimeMs", 0);
-    assertMetricValue(metricEvents, "emitter/buffers/allocated/delta", 20);
-    assertMetricValue(metricEvents, "emitter/batchFilling/maxTimeMs", 0);
-    assertMetricValue(metricEvents, "emitter/buffers/dropped/delta", 10);
-    assertMetricValue(metricEvents, "emitter/batchFilling/minTimeMs", 0);
-    assertMetricValue(metricEvents, "emitter/events/emitQueue", 200L);
-    assertMetricValue(metricEvents, "emitter/events/large/emitQueue", 75L);
-    assertMetricValue(metricEvents, "emitter/buffers/reuseQueue", 15);
-    assertMetricValue(metricEvents, "emitter/buffers/failed/delta", 5);
-    assertMetricValue(metricEvents, "emitter/failedSending/maxTimeMs", 0L);
-  }
-
-  private void assertMetricValue(Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
-  {
-    assertEquals(metricEvents.get(metricName).peek().getMetricEvent().getValue().doubleValue(), expectedValue.doubleValue());
+    stubServiceEmitter.verifyValue("emitter/successfulSending/maxTimeMs", 0);
+    stubServiceEmitter.verifyValue("emitter/events/emitted/delta", 100L);
+    stubServiceEmitter.verifyValue("emitter/successfulSending/minTimeMs", 0);
+    stubServiceEmitter.verifyValue("emitter/buffers/emitQueue", 30);
+    stubServiceEmitter.verifyValue("emitter/failedSending/minTimeMs", 0);
+    stubServiceEmitter.verifyValue("emitter/buffers/allocated/delta", 20);
+    stubServiceEmitter.verifyValue("emitter/batchFilling/maxTimeMs", 0);
+    stubServiceEmitter.verifyValue("emitter/buffers/dropped/delta", 10);
+    stubServiceEmitter.verifyValue("emitter/batchFilling/minTimeMs", 0);
+    stubServiceEmitter.verifyValue("emitter/events/emitQueue", 200L);
+    stubServiceEmitter.verifyValue("emitter/events/large/emitQueue", 75L);
+    stubServiceEmitter.verifyValue("emitter/buffers/reuseQueue", 15);
+    stubServiceEmitter.verifyValue("emitter/buffers/failed/delta", 5);
+    stubServiceEmitter.verifyValue("emitter/failedSending/maxTimeMs", 0);
   }
 }

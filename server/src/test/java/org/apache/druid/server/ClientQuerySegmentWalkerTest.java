@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -987,10 +986,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
-    List<Event> events = emitter.getEvents();
+    List<StubServiceEmitter.ServiceMetricEventSnapshot> events =
+        emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC);
 
-    for (Event event : events) {
-      EventMap map = event.toMap();
+    for (StubServiceEmitter.ServiceMetricEventSnapshot event : events) {
+      EventMap map = event.getMetricEvent().toMap();
       if (ClientQuerySegmentWalker.ROWS_COUNT_METRIC.equals(map.get("metric"))) {
         Assert.assertTrue(map.containsKey("host"));
         Assert.assertTrue(map.containsKey("service"));
@@ -1038,23 +1038,26 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
-    List<Event> events = emitter.getEvents();
+    List<StubServiceEmitter.ServiceMetricEventSnapshot> events
+        = emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC);
 
-    for (Event event : events) {
-      EventMap map = event.toMap();
-      if (ClientQuerySegmentWalker.ROWS_COUNT_METRIC.equals(map.get("metric"))) {
-        Assert.assertTrue(map.containsKey("host"));
-        Assert.assertTrue(map.containsKey("service"));
-        Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-        Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-        Assert.assertEquals(3, map.get("value"));
-      } else if (ClientQuerySegmentWalker.BYTES_COUNT_METRIC.equals(map.get("metric"))) {
-        Assert.assertTrue(map.containsKey("host"));
-        Assert.assertTrue(map.containsKey("service"));
-        Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-        Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-        Assert.assertEquals(43L, map.get("value"));
-      }
+    for (StubServiceEmitter.ServiceMetricEventSnapshot event : events) {
+      EventMap map = event.getMetricEvent().toMap();
+      Assert.assertTrue(map.containsKey("host"));
+      Assert.assertTrue(map.containsKey("service"));
+      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assert.assertEquals(3, map.get("value"));
+    }
+
+    events = emitter.getMetricEvents(ClientQuerySegmentWalker.BYTES_COUNT_METRIC);
+    for (StubServiceEmitter.ServiceMetricEventSnapshot event : events) {
+      EventMap map = event.getMetricEvent().toMap();
+      Assert.assertTrue(map.containsKey("host"));
+      Assert.assertTrue(map.containsKey("service"));
+      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assert.assertEquals(43L, map.get("value"));
     }
   }
 
