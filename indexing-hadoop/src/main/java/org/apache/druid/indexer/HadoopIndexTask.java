@@ -81,7 +81,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("DataFlowIssue")
+@SuppressWarnings("NP_NONNULL_PARAM_VIOLATION")
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   public static final String TYPE = "index_hadoop";
