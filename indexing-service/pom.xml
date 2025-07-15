@@ -44,11 +44,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-indexing-hadoop</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
         </dependency>
@@ -274,28 +269,6 @@
         </dependency>
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>hadoop3</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-client-api</artifactId>
-                    <version>${hadoop.compile.version}</version>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-            <properties>
-                <hadoop-task-libs>
-                    org.apache.hadoop:hadoop-client-api:${hadoop.compile.version},org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}
-                </hadoop-task-libs>
-            </properties>
-        </profile>
-    </profiles>
-
     <build>
         <plugins>
             <plugin>
@@ -308,31 +281,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <groupId>org.apache.maven.plugins</groupId>
-                <configuration>
-                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                    <resources>
-                        <resource>
-                            <directory>src/main/resources</directory>
-                            <includes>hadoop.indexer.libs.version</includes>
-                            <filtering>true</filtering>
-                        </resource>
-                    </resources>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <!-- Tested in integration tests, but we lack unit tests.
-                             (The newer async implementation does have unit tests.) -->
-                        <exclude>org/apache/druid/indexing/seekablestream/SeekableStreamIndexTaskClientSyncImpl.class</exclude>
-                    </excludes>
-                </configuration>
             </plugin>
         </plugins>
     </build>

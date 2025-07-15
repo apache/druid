@@ -17,16 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
@@ -54,7 +51,8 @@ public class HadoopTaskTest
         "taskId",
         "dataSource",
         ImmutableList.of(),
-        ImmutableMap.of()
+        ImmutableMap.of(),
+        new HadoopTaskConfig(null, null)
     )
     {
       @Override
@@ -106,15 +104,9 @@ public class HadoopTaskTest
       }
     };
     final TaskToolbox toolbox = EasyMock.createStrictMock(TaskToolbox.class);
-    EasyMock.expect(toolbox.getConfig()).andReturn(
-        new TaskConfigBuilder()
-            .setBaseDir(temporaryFolder.newFolder().toString())
-            .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
-            .build()
-    ).once();
     EasyMock.replay(toolbox);
 
-    final ClassLoader classLoader = task.buildClassLoader(toolbox);
+    final ClassLoader classLoader = task.buildClassLoader();
     assertClassLoaderIsSingular(classLoader);
 
     final Class<?> hadoopClazz = Class.forName("org.apache.hadoop.fs.FSDataInputStream", false, classLoader);
