@@ -47,6 +47,7 @@ import static org.mockito.ArgumentMatchers.any;
 @RunWith(MockitoJUnitRunner.class)
 public class Pac4jFilterTest
 {
+  private static final String DRUID_AUTHENTICATION_RESULT = "Druid-Authentication-Result";
 
   @Mock
   private HttpServletRequest request;
@@ -93,7 +94,7 @@ public class Pac4jFilterTest
   public void testDoFilterWithAlreadyAuthenticatedRequest() throws IOException, ServletException
   {
     // Mock request with existing authentication result
-    Mockito.when(request.getAttribute("druid.authentication.result")).thenReturn("already-authenticated");
+    Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn("already-authenticated");
     
     // Call doFilter
     pac4jFilter.doFilter(request, response, filterChain);
@@ -106,7 +107,7 @@ public class Pac4jFilterTest
   public void testDoFilterWithNullAuthenticationResult() throws IOException, ServletException
   {
     // Mock request without authentication result
-    Mockito.when(request.getAttribute("druid.authentication.result")).thenReturn(null);
+    Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
     Mockito.when(request.getRequestURI()).thenReturn("/some/path");
     
     // This will attempt to do authentication, which may throw due to missing pac4j config
@@ -119,7 +120,7 @@ public class Pac4jFilterTest
     }
     
     // Verify that the authentication attribute was checked
-    Mockito.verify(request).getAttribute("druid.authentication.result");
+    Mockito.verify(request).getAttribute(DRUID_AUTHENTICATION_RESULT);
     Mockito.verify(request).getRequestURI();
   }
 
@@ -127,7 +128,7 @@ public class Pac4jFilterTest
   public void testDoFilterWithCallbackPath() throws IOException, ServletException
   {
     // Mock request for callback path
-    Mockito.when(request.getAttribute("druid.authentication.result")).thenReturn(null);
+    Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
     Mockito.when(request.getRequestURI()).thenReturn("/callback");
     Mockito.when(request.getSession()).thenReturn(session);
     Mockito.when(session.getAttribute("pac4j.originalUrl")).thenReturn("/original");
@@ -149,7 +150,7 @@ public class Pac4jFilterTest
   public void testDoFilterWithCallbackPathAndNoOriginalUrl() throws IOException, ServletException
   {
     // Mock request for callback path without original URL
-    Mockito.when(request.getAttribute("druid.authentication.result")).thenReturn(null);
+    Mockito.when(request.getAttribute(DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
     Mockito.when(request.getRequestURI()).thenReturn("/callback");
     Mockito.when(request.getSession()).thenReturn(session);
     Mockito.when(session.getAttribute("pac4j.originalUrl")).thenReturn(null);

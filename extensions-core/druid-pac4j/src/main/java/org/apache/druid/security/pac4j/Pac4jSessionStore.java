@@ -63,17 +63,15 @@ public class Pac4jSessionStore implements SessionStore
 
   public Pac4jSessionStore(String cookiePassphrase)
   {
-    // Use AES-CBC with improved security parameters (larger salt, higher iterations, 256-bit key)
-    // while maintaining compatibility with the existing CryptoService implementation
     this.cryptoService = new CryptoService(
             cookiePassphrase,
             "AES",
             "CBC",
             "PKCS5Padding",
             "PBKDF2WithHmacSHA256",
-            256,  // Increased salt size for better security
-            100000, // Increased iteration count for better key derivation
-            256   // Use 256-bit key for stronger encryption
+            128,
+            65536,
+            128
     );
   }
 
@@ -104,7 +102,13 @@ public class Pac4jSessionStore implements SessionStore
     Object profile = value;
     Cookie cookie;
 
-    if (value == null) {
+    // Check if value is null, empty string, or empty collection
+    boolean isEmpty = value == null || 
+                     (value instanceof String && ((String) value).isEmpty()) ||
+                     (value instanceof java.util.Collection && ((java.util.Collection<?>) value).isEmpty()) ||
+                     (value instanceof java.util.Map && ((java.util.Map<?, ?>) value).isEmpty());
+
+    if (isEmpty) {
       cookie = new Cookie(PAC4J_SESSION_PREFIX + key, "");
       cookie.setMaxAge(0);
     } else {
