@@ -25,19 +25,19 @@ sidebar_label: "Query context reference"
 
 The query context provides runtime configuration for individual queries in Apache Druid. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
 
-Note that setting query context will override both the default value and the runtime properties value in the format of
+Query context overrides both the default value and the runtime properties value in the format of
 `druid.query.default.context.{property_key}`. 
 
 This reference contains context parameters organized by their scope: 
 
 - **General parameters**: Applies to all query types.
-- **Parameters by query type**: Applies to the specific type of query, such as TopN, Timeseries, or GroupBy.
-- **Vectorization parameters**: Controls vectorized query execution for supported query types.
+- **Parameters by query type**: Applies to a specific type of query, such as TopN.
+- **Vectorization parameters**: Controls vectorized query execution for supported queries.
 
 To learn how to set query context, see [Set query context](./set-query-context.md).
 
-If you're looking for query context parameters used specifically with Druid SQL, check out the [SQL query context](sql-query-context.md). 
-For context parameters related to Multi-Stage Queries (MSQ), see the [MSQ context parameters](../multi-stage-query/reference/#context-parameters).
+For reference on query context parameters specific to Druid SQL, visit [SQL query context](sql-query-context.md). 
+For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters).
 
 
 ## General parameters

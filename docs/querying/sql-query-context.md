@@ -28,14 +28,14 @@ sidebar_label: "SQL query context"
  This document describes the SQL language.
 :::
 
-In Apache Druid, you can control how your queries run by using query context parameters. These are key-value pairs that let you adjust things like timeouts, caching, and how queries are prioritized.
+In Apache Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
 
-If you're writing [Druid SQL queries](./sql.md), these parameters help you customize query behavior to better fit your needs. To explore available context parameters, refer to [Query context reference](query-context-reference.md). For more information on different approaches to set query context, see [Set query context](../querying/set-query-context.md).
+For additional context parameters supported for all query types, refer to [Query context reference](query-context-reference.md). To learn how to set the query context, see [Set query context](../querying/set-query-context.md).
 
 You can also override the default values for these parameters by setting a runtime property like this:
 `druid.query.default.context.{query_context_key}`. For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
 
-The table below lists some of the query context parameters you can use when working with Druid SQL.
+The table below lists the query context parameters you can use with Druid SQL.
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|

@@ -24,7 +24,7 @@ sidebar_label: "Set query context"
   -->
   
 
-The query context gives you fine-grained control over how Apache Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set query context to handle specific requirements and optimize performance.
+The query context gives you fine-grained control over how Apache Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set the query context to handle specific requirements and optimize performance.
 
 Common use cases for the query context include:
 - Override default timeouts for long-running queries or complex aggregations.
@@ -34,8 +34,9 @@ Common use cases for the query context include:
 - Set priorities to ensure critical queries get computational resources first.
 - Adjust memory limits for queries that process large datasets.
 
-Druid provides several ways to set query context, and the method you use depends on how and where you're submitting your query.
-This guide lists how to set query context for each method of submitting queries.
+The way you set the query context depends on how you submit the query to Druid, whether using the web console or API.
+It also depends on whether your query is Druid SQL or a JSON-based native query.
+This topic shows you how to set the query context for each application.
 
 Before you begin, identify which context parameters you need to configure in order to establish your query context as query context carriers. For available parameters and their descriptions, see [Query context reference](query-context-reference.md).
 
@@ -43,9 +44,9 @@ Before you begin, identify which context parameters you need to configure in ord
 
 The most straightforward method to configure query context parameters is via the Druid web console. In web console, you can set up context parameters for both Druid SQL and native queries.
 
-The following steps outline how to define query context parameters:
+The following steps show you how to set the query context using the web console:
 
-1. Open the **Query** tab in the web console.
+1. In the web console, select **Query** from the top-level navigation.
 
 1. **Click** the **Engine** selector next to the **Run** button to choose the appropriate query type:
 
@@ -54,10 +55,10 @@ The following steps outline how to define query context parameters:
 - Selects the **SQL (task) engine** for Multi-stage queries (MSQ).
 - Selects the **Auto engine** to let the console detect the query type automatically. You just paste your query into the **Query** view, and the web console chooses the right engine for you.
 
-2. Enter the query you want to run in the web console.
+2. Enter the query you want to run.
 
 3. Select **Edit context** from the menu.
-4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs:
+4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs. For example:
    ```json
    {
      "timeout": 300000,
@@ -90,7 +91,7 @@ The following example sets the `sqlTimeZone` parameter:
    }
    ```
 
-Druid will execute your query with the specified context parameters and return the results.
+Druid executes your query using the specified context parameters and return the results.
 
 You can set multiple context parameters in a single request:
 
@@ -177,7 +178,7 @@ SET statements work with SELECT, INSERT, and REPLACE queries.
 For more details on how to use the SET command in your SQL query, see [SET](sql.md#set).
 
 :::info
- You cannot use SET statements when using Druid SQL JDBC connections.
+You cannot use SET statements in JDBC connections.
 :::
 
 
@@ -185,7 +186,7 @@ For more details on how to use the SET command in your SQL query, see [SET](sql.
 
 For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [Druid Web Console](./set-query-context.md#druid-web-console).
 
-Here's an example of how to set up context parameters using JSON for native queries:
+The following example shows a native query that sets the query context to limit the query runtime, set the query priority, and disable caching:
 
 ```json
 {
@@ -229,7 +230,7 @@ Here's an example of how to set up context parameters using JSON for native quer
 }
 ```
 
-For more information about native query structure and how to submit native queries, see [Native queries](querying.md).
+For more information about native queries, see [Native queries](querying.md).
 
 
 ## Learn more
