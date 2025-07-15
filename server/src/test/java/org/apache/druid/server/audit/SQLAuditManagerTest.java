@@ -43,6 +43,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -91,14 +92,14 @@ public class SQLAuditManagerTest
     final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
+    Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
     Assert.assertEquals(1, metricEvents.size());
 
-    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
+    Queue<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    ServiceMetricEvent metric = auditMetricEvents.get(0).getMetricEvent();
+    ServiceMetricEvent metric = auditMetricEvents.peek().getMetricEvent();
 
     final AuditEntry dbEntry = lookupAuditEntryForKey("testKey");
     Assert.assertNotNull(dbEntry);
@@ -120,14 +121,14 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, dbEntry);
 
     // Verify emitted metrics
-    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
+    Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
     Assert.assertEquals(1, metricEvents.size());
 
-    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
+    Queue<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    ServiceMetricEvent metric = auditMetricEvents.get(0).getMetricEvent();
+    ServiceMetricEvent metric = auditMetricEvents.peek().getMetricEvent();
     Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
     Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
     Assert.assertNull(metric.getUserDims().get("payload"));

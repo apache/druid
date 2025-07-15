@@ -15,4 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find /var/lib/mysql -type f -exec touch {} \; && /usr/bin/pidproxy /var/run/mysqld/mysqld.pid /usr/bin/mysqld_safe --bind-address=0.0.0.0
+(mysqld --bind-address=0.0.0.0 || true) & # there might already be a mysqld running, so we ignore the error
+/usr/bin/pidproxy /var/run/mysqld/mysqld.pid /usr/bin/mysqld_safe --bind-address=0.0.0.0
+echo "Waiting for MySQL to be ready...";
+for i in {30..0}; do
+  mysqladmin ping --silent && break;
+  sleep 1; \
+done; \
+if [ "$i" = 0 ]; then
+  echo "MySQL did not start"; exit 1;
+fi;

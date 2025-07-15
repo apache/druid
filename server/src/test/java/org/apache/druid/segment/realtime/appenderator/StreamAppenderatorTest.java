@@ -78,6 +78,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -162,7 +163,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       ).get();
       Assert.assertEquals(
           ImmutableMap.of("x", "3"),
-          (Map<String, String>) segmentsAndCommitMetadata.getCommitMetadata()
+          segmentsAndCommitMetadata.getCommitMetadata()
       );
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
@@ -2278,7 +2279,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
+    Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
     int segments = segmentIds.size();
     Assert.assertEquals(4, events.size());
     Assert.assertTrue(events.containsKey("query/cpu/time"));

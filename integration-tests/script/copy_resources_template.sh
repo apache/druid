@@ -28,14 +28,21 @@ rm -rf $SHARED_DIR/docker
 mkdir -p $SHARED_DIR
 cp -R docker $SHARED_DIR/docker
 
-pushd ../
-rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
-# using parallel build here may not yield significant speedups
-mvn -B -Pskip-static-checks,skip-tests -Dweb.console.skip=true install -Pintegration-test
-mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
-mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
-mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
-popd
+if [ -z "$DRUID_INTEGRATION_TEST_SKIP_MAVEN_BUILD_DOCKER" ] || [ "$DRUID_INTEGRATION_TEST_SKIP_MAVEN_BUILD_DOCKER" = "false" ]
+then
+  pushd ../
+  rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
+  # using parallel build here may not yield significant speedups
+  mvn -B -Pskip-static-checks,skip-tests -Dweb.console.skip=true install -Pintegration-test
+  mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
+  mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
+  mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
+  popd
+else
+  cp -R ../distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
+  cp -R ../distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
+  cp -R ../distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
+fi
 
 # Make directoriess if they dont exist
 mkdir -p $SHARED_DIR/hadoop_xml
