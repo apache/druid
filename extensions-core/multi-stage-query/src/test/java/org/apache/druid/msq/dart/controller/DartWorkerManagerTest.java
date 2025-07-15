@@ -116,20 +116,20 @@ public class DartWorkerManagerTest
   @Test
   public void test_launchWorkersIfNeeded()
   {
-    workerManager.launchWorkersIfNeeded(0); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(1); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(2); // Does nothing, equal to WORKERS.size()
+    workerManager.launchWorkersIfNeeded(0, null); // Does nothing, less than WORKERS.size()
+    workerManager.launchWorkersIfNeeded(1, null); // Does nothing, less than WORKERS.size()
+    workerManager.launchWorkersIfNeeded(2, null); // Does nothing, equal to WORKERS.size()
     Assert.assertThrows(
         DruidException.class,
-        () -> workerManager.launchWorkersIfNeeded(3)
+        () -> workerManager.launchWorkersIfNeeded(3, null)
     );
   }
 
   @Test
   public void test_waitForWorkers()
   {
-    workerManager.launchWorkersIfNeeded(2);
-    workerManager.waitForWorkers(IntSet.of(0, 1)); // Returns immediately
+    workerManager.launchWorkersIfNeeded(2, null);
+    workerManager.waitForWorkers(IntSet.of(0, 1), null); // Returns immediately
   }
 
   @Test

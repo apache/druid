@@ -244,7 +244,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   }
 
   @Override
-  public void launchWorkersIfNeeded(final int taskCount) throws InterruptedException
+  public void launchWorkersIfNeeded(final int taskCount, WorkerFailureListener workerFailureListener)
+      throws InterruptedException
   {
     synchronized (taskIds) {
       retryInactiveTasksIfNeeded(taskCount);
@@ -259,7 +260,20 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
         }
-
+        // add failed tasks to retry the queue
+        if (workerFailureListener != null) {
+          for (TaskTracker taskTracker : taskTrackers.values()) {
+            if (taskTracker.isRetrying()) {
+              workerFailureListener.onFailure(
+                  taskTracker.msqWorkerTask,
+                  new WorkerFailedFault(
+                      taskTracker.msqWorkerTask.getId(),
+                      taskTracker.statusRef.get().getErrorMsg()
+                  )
+              );
+            }
+          }
+        }
         taskIds.wait();
       }
     }
@@ -301,7 +315,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   }
 
   @Override
-  public void waitForWorkers(Set<Integer> workerNumbers) throws InterruptedException
+  public void waitForWorkers(Set<Integer> workerNumbers, WorkerFailureListener workerFailureListener)
+      throws InterruptedException
   {
     synchronized (taskIds) {
       while (!fullyStartedTasks.containsAll(workerNumbers)) {
@@ -309,6 +324,20 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
         }
+        if (workerFailureListener != null) {
+          for (TaskTracker taskTracker : taskTrackers.values()) {
+            if (taskTracker.isRetrying() && workerNumbers.contains(taskTracker.workerNumber)) {
+              workerFailureListener.onFailure(
+                  taskTracker.msqWorkerTask,
+                  new WorkerFailedFault(
+                      taskTracker.msqWorkerTask.getId(),
+                      taskTracker.statusRef.get().getErrorMsg()
+                  )
+              );
+            }
+          }
+        }
+
         taskIds.wait();
       }
     }
@@ -579,10 +608,10 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
             maxTaskStartDelayMillis
         ));
       } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
+        tracker.enableRetrying();
         removeWorkerFromFullyStartedWorkers(tracker);
         TaskStatus taskStatus = tracker.statusRef.get();
         log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, taskStatus.getErrorMsg());
-        tracker.enableRetrying();
         workerFailureListener.onFailure(
             tracker.msqWorkerTask,
             new WorkerFailedFault(taskId, taskStatus.getErrorMsg())
@@ -595,6 +624,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   {
     synchronized (taskIds) {
       fullyStartedTasks.remove(tracker.msqWorkerTask.getWorkerNumber());
+      taskIds.notifyAll();
     }
   }
 
@@ -616,7 +646,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         if (tracker == null) {
           throw new ISE("Did not find taskTracker for latest taskId[%s]", latestTaskId);
         }
-        // if task is not failed donot retry
+        // if the task is not failed, no need to retry
         if (!tracker.isComplete()) {
           return taskHistory;
         }
@@ -657,6 +687,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
         return taskHistory;
       });
+      // remove the worker from the relaunch set
       iterator.remove();
     }
   }
@@ -881,6 +912,11 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       } else {
         return Math.max(0, currentFullyStartingTime - startTimeMillis);
       }
+    }
+
+    public int getWorkerNumber()
+    {
+      return workerNumber;
     }
   }
 }

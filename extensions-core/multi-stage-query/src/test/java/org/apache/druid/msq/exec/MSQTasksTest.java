@@ -238,7 +238,7 @@ public class MSQTasksTest
 
     try {
       msqWorkerTaskLauncher.start();
-      msqWorkerTaskLauncher.launchWorkersIfNeeded(numTasks);
+      msqWorkerTaskLauncher.launchWorkersIfNeeded(numTasks, null);
       fail();
     }
     catch (Exception e) {

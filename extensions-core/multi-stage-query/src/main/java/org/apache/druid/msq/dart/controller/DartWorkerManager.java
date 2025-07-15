@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.WorkerCount;
@@ -95,7 +96,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public void launchWorkersIfNeeded(int workerCount)
+  public void launchWorkersIfNeeded(int workerCount, WorkerFailureListener workerFailureListener)
   {
     // Nothing to do, just validate the count.
     if (workerCount > workerIds.size()) {
@@ -108,7 +109,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public void waitForWorkers(Set<Integer> workerNumbers)
+  public void waitForWorkers(Set<Integer> workerNumbers, WorkerFailureListener workerFailureListener)
   {
     // Nothing to wait for, just validate the numbers.
     for (final int workerNumber : workerNumbers) {
