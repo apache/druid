@@ -181,13 +181,14 @@ public class LatchableEmitter extends StubServiceEmitter
         return;
       }
 
+      List<Event> events = getEvents();
       for (WaitCondition condition : conditionsToEvaluate) {
-        final int currentNumberOfEvents = getEvents().size();
+        final int currentNumberOfEvents = events.size();
 
         // Do not use an iterator over the list to avoid concurrent modification exceptions
         // Evaluate new events against this condition
         for (int i = condition.processedUntil; i < currentNumberOfEvents; ++i) {
-          if (condition.predicate.test(getEvents().get(i))) {
+          if (condition.predicate.test(events.get(i))) {
             condition.countDownLatch.countDown();
           }
         }

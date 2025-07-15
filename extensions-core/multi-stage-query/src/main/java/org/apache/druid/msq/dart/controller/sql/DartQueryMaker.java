@@ -405,6 +405,15 @@ public class DartQueryMaker implements QueryMaker
               controller.queryId()
           );
         }
+        catch (Throwable e) {
+          log.error(
+              e,
+              "Controller failed for sqlQueryId[%s], controllerHost[%s]",
+              plannerContext.getSqlQueryId(),
+              controller.queryId()
+          );
+          throw e;
+        }
         finally {
           controllerRegistry.deregister(controllerHolder);
           Thread.currentThread().setName(threadName);
