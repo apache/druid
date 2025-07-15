@@ -51,6 +51,7 @@ import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.jetbrains.annotations.Nullable;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
@@ -505,8 +506,8 @@ public class MSQWorkerTaskLauncherRetryTests
           taskid,
           "group-id",
           "type",
-          new DateTime(),
-          new DateTime(),
+          DateTime.now(DateTimeZone.UTC),
+          DateTime.now(DateTimeZone.UTC),
           taskState,
           RunnerTaskState.RUNNING,
           1000L,
