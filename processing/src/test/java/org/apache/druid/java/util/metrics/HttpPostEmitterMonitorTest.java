@@ -25,8 +25,8 @@ import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,7 +65,7 @@ public class HttpPostEmitterMonitorTest
 
     assertTrue(monitor.doMonitor(stubServiceEmitter));
 
-    final Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
+    final Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
 
     assertMetricValue(metricEvents, "emitter/successfulSending/maxTimeMs", 0);
     assertMetricValue(metricEvents, "emitter/events/emitted/delta", 100L);
@@ -83,8 +83,8 @@ public class HttpPostEmitterMonitorTest
     assertMetricValue(metricEvents, "emitter/failedSending/maxTimeMs", 0L);
   }
 
-  private void assertMetricValue(Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
+  private void assertMetricValue(Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
   {
-    assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue().doubleValue(), expectedValue.doubleValue());
+    assertEquals(metricEvents.get(metricName).peek().getMetricEvent().getValue().doubleValue(), expectedValue.doubleValue());
   }
 }
