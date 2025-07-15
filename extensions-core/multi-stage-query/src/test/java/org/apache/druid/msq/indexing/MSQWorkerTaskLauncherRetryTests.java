@@ -49,7 +49,6 @@ import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
-import org.jetbrains.annotations.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -57,6 +56,7 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
