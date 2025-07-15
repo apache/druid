@@ -464,14 +464,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @VisibleForTesting
-  public List<StorageLocation> getLocations()
+  List<StorageLocation> getLocations()
   {
     return locations;
   }
 
   /**
-   * Checks whether a segment is already cached.
+   * Checks whether a segment is already cached. This method does not confirm if the segment is actually mounted in
+   * the location, or even that the segment files in some location are valid, just that some files exist in the
+   * specified location
    */
+  @VisibleForTesting
   boolean isSegmentCached(final DataSegment segment)
   {
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
