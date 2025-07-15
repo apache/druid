@@ -272,11 +272,8 @@ public class MSQWorkerTaskLauncherRetryTests
 
   private static class TestOverlordClient implements OverlordClient
   {
-
-
     private final ConcurrentSkipListSet<Integer> unknownLocationWorkers = new ConcurrentSkipListSet<>();
     private final ConcurrentSkipListSet<Integer> failedWorkers = new ConcurrentSkipListSet<>();
-
 
     public TestOverlordClient()
     {
