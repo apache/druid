@@ -78,30 +78,31 @@ setupConfig()
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
       setKey $DRUID_SERVICE "$var" "$val"
   done
+  if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
+    setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
+  fi
 }
 
 setupData()
 {
+  # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
+  if [ -n "$DRUID_SERVICE" ]; then
+    echo "DRUID_SERVICE is set, skipping data setup"
+    return
+  fi
+  # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
+
+  bash /run-mysql.sh
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
   if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "upgrade" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "centralized-datasource-schema" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-task-schema-publish-disabled" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-coordinator-metadata-query-disabled" ]; then
-    # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-    find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-      && cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid \
-      && /etc/init.d/mysql stop
-  fi
-
-  if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
-    setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
+    cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid
   fi
 
   # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
   if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
-    # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-    find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-        && echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid \
-        && cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid \
-        && /etc/init.d/mysql stop
+    echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid
+    cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid
   fi
 }
