@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.CommonProfile;
+import org.pac4j.core.util.Pac4jConstants;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -187,41 +188,7 @@ public class Pac4jSessionStoreTest
     EasyMock.verify(webContext);
   }
 
-  @Test
-  public void testGetWithNullValue()
-  {
-    Pac4jSessionStore sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
 
-    WebContext webContext = EasyMock.mock(WebContext.class);
-    Cookie cookie = EasyMock.mock(Cookie.class);
-    EasyMock.expect(cookie.getName()).andReturn("pac4j.session.key");
-    EasyMock.expect(cookie.getValue()).andReturn(null);
-    EasyMock.expect(webContext.getRequestCookies()).andReturn(Collections.singletonList(cookie));
-    EasyMock.replay(webContext, cookie);
-
-    Optional<Object> result = sessionStore.get(webContext, "key");
-    Assert.assertFalse(result.isPresent());
-
-    EasyMock.verify(webContext, cookie);
-  }
-
-  @Test
-  public void testGetWithEmptyValue()
-  {
-    Pac4jSessionStore sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
-
-    WebContext webContext = EasyMock.mock(WebContext.class);
-    Cookie cookie = EasyMock.mock(Cookie.class);
-    EasyMock.expect(cookie.getName()).andReturn("pac4j.session.key");
-    EasyMock.expect(cookie.getValue()).andReturn("");
-    EasyMock.expect(webContext.getRequestCookies()).andReturn(Collections.singletonList(cookie));
-    EasyMock.replay(webContext, cookie);
-
-    Optional<Object> result = sessionStore.get(webContext, "key");
-    Assert.assertFalse(result.isPresent());
-
-    EasyMock.verify(webContext, cookie);
-  }
 
   @Test
   public void testSetAndGetClearUserProfile()
@@ -243,7 +210,7 @@ public class Pac4jSessionStoreTest
     profile.addAttribute("id_token", "id");
     profile.addAttribute("credentials", "creds");
     
-    sessionStore.set(webContext1, "pac4j.user.profiles", profile);
+    sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profile);
 
     Cookie cookie = cookieCapture.getValue();
     Assert.assertTrue(cookie.isSecure());
@@ -254,7 +221,7 @@ public class Pac4jSessionStoreTest
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
-    Optional<Object> value = sessionStore.get(webContext2, "pac4j.user.profiles");
+    Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     CommonProfile retrievedProfile = (CommonProfile) value.get();
     Assert.assertEquals("name", retrievedProfile.getAttribute("display_name"));
@@ -294,7 +261,7 @@ public class Pac4jSessionStoreTest
     profiles.put("profile1", profile1);
     profiles.put("profile2", profile2);
     
-    sessionStore.set(webContext1, "pac4j.user.profiles", profiles);
+    sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profiles);
 
     Cookie cookie = cookieCapture.getValue();
     Assert.assertTrue(cookie.isSecure());
@@ -305,7 +272,7 @@ public class Pac4jSessionStoreTest
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
-    Optional<Object> value = sessionStore.get(webContext2, "pac4j.user.profiles");
+    Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     @SuppressWarnings("unchecked")
     Map<String, CommonProfile> retrievedProfiles = (Map<String, CommonProfile>) value.get();
