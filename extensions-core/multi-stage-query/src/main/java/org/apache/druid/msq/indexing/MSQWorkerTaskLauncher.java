@@ -649,7 +649,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         // if the task is not failed, no need to retry
         if (!tracker.isComplete()) {
           log.info(
-              "Did not realunch worker[%d] with task id[%s] because it is still running",
+              "Did not relaunch worker[%d] with task id[%s] because the task is still running",
               tracker.workerNumber,
               latestTaskId
           );
