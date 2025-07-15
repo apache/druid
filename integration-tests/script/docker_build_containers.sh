@@ -29,7 +29,7 @@ else
   11 | 17 | 21)
     echo "Build druid-cluster with Java $DRUID_INTEGRATION_TEST_JVM_RUNTIME"
     docker build -t druid/cluster \
-      --build-arg JDK_VERSION=$DRUID_INTEGRATION_TEST_JVM_RUNTIME-slim-buster \
+      --build-arg JDK_VERSION=$DRUID_INTEGRATION_TEST_JVM_RUNTIME-slim-bullseye \
       --build-arg ZK_VERSION \
       --build-arg KAFKA_VERSION \
       --build-arg CONFLUENT_VERSION \
