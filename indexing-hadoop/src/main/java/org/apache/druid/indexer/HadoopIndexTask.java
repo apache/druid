@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.path.SegmentMetadataPublisher;
@@ -81,7 +82,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@SuppressWarnings("NP_NONNULL_PARAM_VIOLATION")
+@SuppressFBWarnings({"NP_NONNULL_PARAM_VIOLATION", "NP_STORE_INTO_NONNULL_FIELD"})
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   public static final String TYPE = "index_hadoop";
