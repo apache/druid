@@ -26,7 +26,7 @@ sidebar_label: "Query context reference"
 The query context provides runtime configuration for individual queries in Apache Druid. Each parameter in the query context controls a specific aspect of query behavior—from execution timeouts and resource limits to caching policies and processing strategies.
 
 Note that setting query context will override both the default value and the runtime properties value in the format of
-`druid.query.default.context.{property_key}` (if set). 
+`druid.query.default.context.{property_key}`. 
 
 This reference contains context parameters organized by their scope: 
 
