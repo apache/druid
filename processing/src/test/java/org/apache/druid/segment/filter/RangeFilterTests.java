@@ -454,15 +454,19 @@ public class RangeFilterTests
       );
       assertFilterMatches(
           new RangeFilter("d0", ColumnType.FLOAT, 120.0245f, 120.0245f, false, false, null),
-          ImmutableList.of()
+          ImmutableList.of("3")
       );
       assertFilterMatches(
           new RangeFilter("d0", ColumnType.FLOAT, 60.0f, 60.0f, false, false, null),
           ImmutableList.of("4")
       );
       assertFilterMatches(
+          new RangeFilter("d0", ColumnType.DOUBLE, 60.0f, 60.0f, false, false, null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
           new RangeFilter("f0", ColumnType.DOUBLE, 10.1, 10.1, false, false, null),
-          ImmutableList.of()
+          ImmutableList.of("1")
       );
       assertFilterMatches(
           new RangeFilter("f0", ColumnType.FLOAT, 10.1f, 10.1f, false, false, null),
@@ -533,22 +537,6 @@ public class RangeFilterTests
       assertFilterMatches(
           new RangeFilter("l0", ColumnType.FLOAT, 12344.0f, 12345.5f, false, false, null),
           ImmutableList.of("5")
-      );
-      assertFilterMatches(
-          new RangeFilter("d0", ColumnType.FLOAT, 60.0f, 60.0f, false, false, null),
-          ImmutableList.of("4")
-      );
-      assertFilterMatches(
-          new RangeFilter("d0", ColumnType.DOUBLE, 60.0f, 60.0f, false, false, null),
-          ImmutableList.of("4")
-      );
-      assertFilterMatches(
-          new RangeFilter("f0", ColumnType.FLOAT, 10.1f, 10.1f, false, false, null),
-          ImmutableList.of("1")
-      );
-      assertFilterMatches(
-          new RangeFilter("f0", ColumnType.DOUBLE, 10.1, 10.1, false, false, null),
-          ImmutableList.of("1")
       );
     }
 

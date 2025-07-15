@@ -42,6 +42,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -317,15 +318,31 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     } else if (matchValueType.isNumeric()) {
       final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
       if (rangeIndexes != null) {
-        final Number lower = (Number) lowerEval.value();
-        final Number upper = (Number) upperEval.value();
-        if (matchValueType.is(ValueType.DOUBLE)
-            && !lowerOpen && !upperOpen
-            && lower != null && upper != null
-            && Double.compare(lower.doubleValue(), upper.doubleValue()) == 0
-            && (float) lower.doubleValue() != lower.doubleValue()) {
-          return null;      // needMatcher = true, row predicate takes over
+        Number lower = (Number) lowerEval.value();
+        Number upper = (Number) upperEval.value();
+
+        ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
+        if (capabilities == null) {
+          return null;
         }
+        ColumnType colType = capabilities.toColumnType();
+
+        // equality fast-path
+        if (!lowerOpen && !upperOpen && hasLowerBound() && hasUpperBound()) {
+          boolean sameWidth = (Objects.equals(colType, ColumnType.FLOAT) && matchValueType.is(ValueType.FLOAT))
+                              || (Objects.equals(colType, ColumnType.DOUBLE) && matchValueType.is(ValueType.DOUBLE));
+          if (sameWidth) {
+            if (colType.equals(ColumnType.FLOAT)) {
+              float key = (float) lowerEval.asDouble();
+              return rangeIndexes.forRange(key, false, key, false);
+            } else {
+              return null; // we cannot guess if that double is already casted float, delegating to predicate
+            }
+          }
+          // skip bitmap, let row predicate cast both sides
+          return null;
+        }
+
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
