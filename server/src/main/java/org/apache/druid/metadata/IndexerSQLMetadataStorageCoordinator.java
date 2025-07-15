@@ -1204,7 +1204,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             newVersionSegmentToParent.put(newVersionSegmentId, oldSegment.getId());
             upgradedFromSegmentIdMap.put(newVersionSegmentId.toString(), oldSegment.getId().toString());
             allSegmentsToInsert.add(DataSegment.builder(oldSegment)
-                                               .dataSource(newVersionSegmentId.getDataSource())
                                                .interval(newVersionSegmentId.getInterval())
                                                .version(newVersionSegmentId.getVersion())
                                                .shardSpec(pendingSegment.getId().getShardSpec())
