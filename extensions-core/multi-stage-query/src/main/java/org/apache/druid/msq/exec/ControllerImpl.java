@@ -281,8 +281,8 @@ public class ControllerImpl implements Controller
 
   private WorkerSketchFetcher workerSketchFetcher;
 
-  // WorkerNumber -> WorkOrders which need to be retried and our determined by the controller.
-  // Map is always populated in the main controller thread by addToRetryQueue, and pruned in retryFailedTasks.
+  // WorkerNumber -> WorkOrders which need to be retried and are determined by the controller.
+  // Map is always populated in the main controller thread by addToRetryQueue and pruned in retryFailedTasks.
   private final Map<Integer, Set<WorkOrder>> workOrdersToRetry = new HashMap<>();
 
   // Time at which the query started.
@@ -427,7 +427,7 @@ public class ControllerImpl implements Controller
       exceptionEncountered = e;
     }
 
-    // Fetch final counters in separate try, in case runQueryUntilDone threw an exception.
+    // Fetch final counters in a separate try, in case runQueryUntilDone threw an exception.
     try {
       countersSnapshot = getFinalCountersSnapshot(queryKernel);
     }
@@ -746,13 +746,11 @@ public class ControllerImpl implements Controller
         querySpec,
         queryKernelConfig,
         (failedTask, fault) -> {
-          if (queryKernelConfig.isFaultTolerant() && ControllerQueryKernel.isRetriableFault(fault)) {
-            addToKernelManipulationQueue(kernel -> {
-              addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-            });
-          } else {
-            throw new MSQException(fault);
-          }
+          throwIfNonRetriableFault(fault);
+          // since this is called from the task launcher thread, we need to add it to the kernel manipulation queue so that only the controller thread can manipulate the kernel.
+          addToKernelManipulationQueue(kernel -> {
+            addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
+          });
         }
     );
 
@@ -1379,13 +1377,20 @@ public class ControllerImpl implements Controller
       final boolean retryOnFailure
   )
   {
-    // Sorted copy of target worker numbers to ensure consistent iteration order.
+    // Sorted copy of target worker numbers to ensure a consistent iteration order.
     final List<Integer> workersCopy = Ordering.natural().sortedCopy(workers);
     final List<String> workerIds = getWorkerIds();
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
 
     try {
-      workerManager.waitForWorkers(workers);
+      workerManager.waitForWorkers(
+          workers,
+          (workerTask, fault) -> {
+            throwIfNonRetriableFault(fault);
+            // no need to add it to the kernel manipulation queue since this is the main controller thread calling this function.
+            addToRetryQueue(queryKernel, workerTask.getWorkerNumber(), fault);
+          }
+      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -2368,7 +2373,14 @@ public class ControllerImpl implements Controller
       }
 
       // wait till the workers identified above are fully ready
-      workerManager.waitForWorkers(workersNeedToBeFullyStarted);
+      workerManager.waitForWorkers(
+          workersNeedToBeFullyStarted,
+          (workerTask, fault) -> {
+            throwIfNonRetriableFault(fault);
+            // no need to add it to the kernel manipulation queue since this is the main controller thread calling this function.
+            addToRetryQueue(queryKernel, workerTask.getWorkerNumber(), fault);
+          }
+      );
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
         contactWorkersForStage(
@@ -2439,7 +2451,7 @@ public class ControllerImpl implements Controller
       workerTaskLauncherFuture.addListener(
           () ->
               addToKernelManipulationQueue(queryKernel -> {
-                // Throw an exception in the main loop, if anything went wrong.
+                // Throw an exception in the main loop if anything went wrong.
                 FutureUtils.getUncheckedImmediately(workerTaskLauncherFuture);
               }),
           Execs.directExecutor()
@@ -2529,7 +2541,7 @@ public class ControllerImpl implements Controller
         );
 
         for (final StageId stageId : newStageIds) {
-          // Allocate segments, if this is the final stage of an ingestion.
+          // Allocate segments if this is the final stage of ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
               && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
               && (((DataSourceMSQDestination) querySpec.getDestination()).getTerminalStageSpec() instanceof SegmentGenerationStageSpec)) {
@@ -2547,7 +2559,14 @@ public class ControllerImpl implements Controller
               stageDef.doesShuffle() ? stageDef.getShuffleSpec().kind() : "none"
           );
 
-          workerManager.launchWorkersIfNeeded(workerCount);
+          workerManager.launchWorkersIfNeeded(
+              workerCount,
+              (workerTask, fault) -> {
+                throwIfNonRetriableFault(fault);
+                // no need to add it to the kernel manipulation queue since this is the main controller thread calling this function.
+                addToRetryQueue(this.queryKernel, workerTask.getWorkerNumber(), fault);
+              }
+          );
           stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
           startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
         }
@@ -2845,6 +2864,13 @@ public class ControllerImpl implements Controller
           }
         }
       }
+    }
+  }
+
+  private void throwIfNonRetriableFault(MSQFault fault)
+  {
+    if (!queryKernelConfig.isFaultTolerant() || !ControllerQueryKernel.isRetriableFault(fault)) {
+      throw new MSQException(fault);
     }
   }
 
