@@ -2,7 +2,7 @@
 id: dart
 title: "Dart query engine"
 sidebar_label: "Dart"
-description: Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine
+description: Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 :::info[Experimental]
 
-Dart is experimental. For production use, we recommend using the other SQL query engines.
+Dart is experimental. For production use, we recommend using the other available query engines.
 
 :::
 
@@ -21,14 +21,25 @@ You can query batch or realtime datasources with Dart.
 
 ## Enable Dart
 
-In your `broker/runtime.properties` file, add the following line:
+To enable Dart, add the following line to your `broker/runtime.properties` and `historical/runtime.properties` files:
 
 ```
 druid.msq.dart.enabled = true
 ```
 
-### Optional configs
+### Additional configs
 
+There are additional configs that provide some control over Dart's resource consumption.
+
+For Brokers, you can set the following configs:
+
+- `druid.msq.dart.controller.concurrentQueries`: The maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Defaults to 1.
+- `druid.msq.dart.query.context.targetPartitionsPerWorker`: The number of partitions per worker to create during a shuffle. We recommend setting this to the number of threads available on workers to fully take advantage of multi-threaded processing of shuffled data.
+
+For Historicals, you can set the following configs:
+
+- `druid.msq.dart.worker.concurrentQueries`: The maximum number of query workers that can run concurrently on that Historical. Default is equal to the number of merge buffers because each query needs one merge buffer. Ideally, this should be equal to or larger than the sum of the `concurrentQueries` setting on yourl Brokers.
+- `druid.msq.dart.worker.heapFraction`: The maximum amount of heap available for use across all Dart queries as a decimal. The default is 0.35, 35% of heap.
 
 
 ## Run a Dart query
