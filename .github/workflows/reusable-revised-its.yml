@@ -176,6 +176,7 @@ jobs:
 
       - name: Run IT
         id: run-it
+        timeout-minutes: 60
         env:
           BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
           DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
