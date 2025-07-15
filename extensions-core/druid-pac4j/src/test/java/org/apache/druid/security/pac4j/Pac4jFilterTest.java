@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.pac4j;
 
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,8 +36,6 @@ import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -116,7 +113,8 @@ public class Pac4jFilterTest
     // but we're mainly testing the basic flow
     try {
       pac4jFilter.doFilter(request, response, filterChain);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Expected due to mock limitations, but we verified the basic flow
     }
     
@@ -137,7 +135,8 @@ public class Pac4jFilterTest
     // This will attempt to do callback logic
     try {
       pac4jFilter.doFilter(request, response, filterChain);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Expected due to mock limitations
     }
     
@@ -158,7 +157,8 @@ public class Pac4jFilterTest
     // This will attempt to do callback logic
     try {
       pac4jFilter.doFilter(request, response, filterChain);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Expected due to mock limitations
     }
     
@@ -195,3 +195,4 @@ public class Pac4jFilterTest
     Assert.assertNotNull(filter);
   }
 }
+

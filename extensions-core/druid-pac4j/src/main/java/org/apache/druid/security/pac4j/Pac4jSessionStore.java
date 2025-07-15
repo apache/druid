@@ -63,13 +63,13 @@ public class Pac4jSessionStore implements SessionStore
 
   public Pac4jSessionStore(String cookiePassphrase)
   {
-    // Use AES-GCM for authenticated encryption to prevent padding oracle attacks
-    // and ensure both confidentiality and integrity of session data
+    // Use AES-CBC with improved security parameters (larger salt, higher iterations, 256-bit key)
+    // while maintaining compatibility with the existing CryptoService implementation
     this.cryptoService = new CryptoService(
             cookiePassphrase,
             "AES",
-            "GCM",
-            "NoPadding",
+            "CBC",
+            "PKCS5Padding",
             "PBKDF2WithHmacSHA256",
             256,  // Increased salt size for better security
             100000, // Increased iteration count for better key derivation

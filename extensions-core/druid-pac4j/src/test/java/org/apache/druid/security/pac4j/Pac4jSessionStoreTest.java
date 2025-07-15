@@ -25,7 +25,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
-import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.core.profile.definition.CommonProfileDefinition;
 import org.pac4j.core.util.Pac4jConstants;
@@ -403,3 +402,4 @@ public class Pac4jSessionStoreTest
     EasyMock.verify(webContext);
   }
 }
+
