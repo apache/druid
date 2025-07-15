@@ -26,8 +26,6 @@ import org.junit.Test;
 import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.profile.CommonProfile;
-import org.pac4j.core.profile.definition.CommonProfileDefinition;
-import org.pac4j.core.util.Pac4jConstants;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -239,13 +237,13 @@ public class Pac4jSessionStoreTest
 
     CommonProfile profile = new CommonProfile();
     profile.setId("profile1");
-    profile.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name");
+    profile.addAttribute("display_name", "name");
     profile.addAttribute("access_token", "token");
     profile.addAttribute("refresh_token", "refresh");
     profile.addAttribute("id_token", "id");
     profile.addAttribute("credentials", "creds");
     
-    sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profile);
+    sessionStore.set(webContext1, "pac4j.user.profiles", profile);
 
     Cookie cookie = cookieCapture.getValue();
     Assert.assertTrue(cookie.isSecure());
@@ -256,10 +254,10 @@ public class Pac4jSessionStoreTest
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
-    Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
+    Optional<Object> value = sessionStore.get(webContext2, "pac4j.user.profiles");
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     CommonProfile retrievedProfile = (CommonProfile) value.get();
-    Assert.assertEquals("name", retrievedProfile.getAttribute(CommonProfileDefinition.DISPLAY_NAME));
+    Assert.assertEquals("name", retrievedProfile.getAttribute("display_name"));
     
     // Verify sensitive data was removed
     Assert.assertNull(retrievedProfile.getAttribute("access_token"));
@@ -284,19 +282,19 @@ public class Pac4jSessionStoreTest
 
     CommonProfile profile1 = new CommonProfile();
     profile1.setId("profile1");
-    profile1.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name1");
+    profile1.addAttribute("display_name", "name1");
     profile1.addAttribute("access_token", "token1");
     
     CommonProfile profile2 = new CommonProfile();
     profile2.setId("profile2");
-    profile2.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name2");
+    profile2.addAttribute("display_name", "name2");
     profile2.addAttribute("refresh_token", "refresh2");
     
     Map<String, CommonProfile> profiles = new HashMap<>();
     profiles.put("profile1", profile1);
     profiles.put("profile2", profile2);
     
-    sessionStore.set(webContext1, Pac4jConstants.USER_PROFILES, profiles);
+    sessionStore.set(webContext1, "pac4j.user.profiles", profiles);
 
     Cookie cookie = cookieCapture.getValue();
     Assert.assertTrue(cookie.isSecure());
@@ -307,7 +305,7 @@ public class Pac4jSessionStoreTest
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
 
-    Optional<Object> value = sessionStore.get(webContext2, Pac4jConstants.USER_PROFILES);
+    Optional<Object> value = sessionStore.get(webContext2, "pac4j.user.profiles");
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     @SuppressWarnings("unchecked")
     Map<String, CommonProfile> retrievedProfiles = (Map<String, CommonProfile>) value.get();
