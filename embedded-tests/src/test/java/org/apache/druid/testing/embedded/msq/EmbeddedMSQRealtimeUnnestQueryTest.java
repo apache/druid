@@ -35,7 +35,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -111,7 +110,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
   void setUpEach()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    dataSource = EmbeddedClusterApis.createTestDatasourceName();
 
     QueryableIndex index = TestIndex.getMMappedTestIndex();
 
@@ -138,7 +136,7 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
         + "LIMIT 5",
         dataSource
     );
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,

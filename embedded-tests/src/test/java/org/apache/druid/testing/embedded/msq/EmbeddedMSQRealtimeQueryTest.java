@@ -139,11 +139,8 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
   }
 
   @BeforeAll
-  @Override
-  protected void setup() throws Exception
+  protected void setupLookups() throws Exception
   {
-    super.setup();
-
     // Initialize lookups
     cluster.callApi().onLeaderCoordinator(
         c -> c.updateAllLookups(Map.of())
@@ -170,7 +167,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
   void setUpEach()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    dataSource = EmbeddedClusterApis.createTestDatasourceName();
     submitSupervisor();
     publishToKafka(TestIndex.getMMappedWikipediaIndex());
 
@@ -187,7 +183,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
   public void test_selectCount_task_default()
   {
     final String sql = StringUtils.format("SELECT COUNT(*) FROM \"%s\"", dataSource);
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     // By default tasks do not include realtime data; count is zero.
     BaseCalciteQueryTest.assertResultsEquals(
@@ -207,7 +203,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -333,7 +329,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -382,7 +378,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         LOOKUP_TABLE
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -445,7 +441,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         LOOKUP_TABLE
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -500,7 +496,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -546,7 +542,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -593,7 +589,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         LOOKUP_TABLE
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,

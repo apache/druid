@@ -74,7 +74,7 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
   }
 
   @BeforeEach
-  void setUp()
+  void setupCreateKafkaTopic()
   {
     // Create Kafka topic.
     topic = EmbeddedClusterApis.createTestDatasourceName();

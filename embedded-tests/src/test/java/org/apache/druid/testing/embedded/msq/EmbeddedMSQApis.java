@@ -119,7 +119,7 @@ public class EmbeddedMSQApis
    *
    * @return The result of the SQL as a single CSV string.
    */
-  public MSQTaskReportPayload runTaskSql(String sql, Object... args)
+  public MSQTaskReportPayload runTaskSqlAndGetReport(String sql, Object... args)
   {
     SqlTaskStatus taskStatus = submitTaskSql(sql, args);
 
