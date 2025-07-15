@@ -49,7 +49,7 @@ public interface WorkerManager
    * Launch additional workers, if needed, to bring the number of running workers up to {@code workerCount}.
    * Blocks until the requested workers are launched. If enough workers are already running, this method does nothing.
    */
-  void launchWorkersIfNeeded(int workerCoun, @Nullable WorkerFailureListener failureListener) throws InterruptedException;
+  void launchWorkersIfNeeded(int workerCount, @Nullable WorkerFailureListener failureListener) throws InterruptedException;
 
   /**
    * Blocks until workers with the provided worker numbers (indexes into {@link #getWorkerIds()} are ready to be

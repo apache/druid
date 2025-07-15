@@ -244,18 +244,18 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   }
 
   @Override
-  public void launchWorkersIfNeeded(final int taskCount, WorkerFailureListener workerFailureListener)
+  public void launchWorkersIfNeeded(final int workerCount, WorkerFailureListener workerFailureListener)
       throws InterruptedException
   {
     synchronized (taskIds) {
-      retryInactiveTasksIfNeeded(taskCount);
+      retryInactiveTasksIfNeeded(workerCount);
 
-      if (taskCount > desiredTaskCount) {
-        desiredTaskCount = taskCount;
+      if (workerCount > desiredTaskCount) {
+        desiredTaskCount = workerCount;
         taskIds.notifyAll();
       }
 
-      while (taskIds.size() < taskCount || !allTasksStarted(taskCount)) {
+      while (taskIds.size() < workerCount || !allTasksStarted(workerCount)) {
         if (stopFuture.isDone() || stopFuture.isCancelled()) {
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
