@@ -351,16 +351,6 @@
   </suppress>
 
   <suppress>
-    <!-- 4.5.5 is a fixed version as per https://nvd.nist.gov/vuln/detail/CVE-2021-44878. -->
-    <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
-    <!-- Remove suppression once upgraded to 5.3.1. -->
-    <notes><![CDATA[
-   file name: pac4j-core-5.7.3.jar
-   ]]></notes>
-    <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
     <!-- package-lock.json?d3-color -->
     <notes><![CDATA[
    file name: d3-color:2.0.0
