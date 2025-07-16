@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -28,13 +28,13 @@ import com.google.inject.Injector;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.Initialization;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -59,16 +59,19 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
   private static final ExtensionsLoader EXTENSIONS_LOADER = ExtensionsLoader.instance(INJECTOR);
 
   private final List<String> hadoopDependencyCoordinates;
+  private final HadoopTaskConfig hadoopTaskConfig;
 
   protected HadoopTask(
       String id,
       String dataSource,
       List<String> hadoopDependencyCoordinates,
-      Map<String, Object> context
+      Map<String, Object> context,
+      HadoopTaskConfig hadoopTaskConfig
   )
   {
     super(id, dataSource, context, IngestionMode.HADOOP);
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
+    this.hadoopTaskConfig = hadoopTaskConfig;
   }
 
   public List<String> getHadoopDependencyCoordinates()
@@ -79,7 +82,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
   // This could stand to have a more robust detection methodology.
   // Right now it just looks for `druid.*\.jar`
   // This is only used for classpath isolation in the runTask isolation stuff, so it shooouuullldddd be ok.
-  /** {@link #buildClassLoader(TaskToolbox)} has outdated javadocs referencing this field, TODO update */
+  /** {@link #buildClassLoader()} has outdated javadocs referencing this field, TODO update */
   @SuppressWarnings("unused")
   protected static final Predicate<URL> IS_DRUID_URL = new Predicate<>()
   {
@@ -126,12 +129,11 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
    * sanity in a ClassLoader where all jars (which are isolated by extension ClassLoaders in the Druid framework) are
    * jumbled together into one ClassLoader for Hadoop and Hadoop-like tasks (Spark for example).
    *
-   * @param toolbox The toolbox to pull the default coordinates from if not present in the task
    * @return An isolated URLClassLoader not tied by parent chain to the ApplicationClassLoader
    */
-  protected ClassLoader buildClassLoader(final TaskToolbox toolbox)
+  protected ClassLoader buildClassLoader()
   {
-    return buildClassLoader(hadoopDependencyCoordinates, toolbox.getConfig().getDefaultHadoopCoordinates());
+    return buildClassLoader(hadoopDependencyCoordinates, hadoopTaskConfig.getDefaultHadoopCoordinates());
   }
 
   public static ClassLoader buildClassLoader(final List<String> hadoopDependencyCoordinates,
