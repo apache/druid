@@ -116,7 +116,6 @@ public class WorkerTaskManagerTest
   {
     TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(FileUtils.createTempDir().toString())
-        .setDefaultRowFlushBoundary(0)
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
         .build();
 

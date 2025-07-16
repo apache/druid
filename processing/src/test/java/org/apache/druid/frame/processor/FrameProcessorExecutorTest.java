@@ -36,6 +36,7 @@ import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
 import org.apache.druid.frame.processor.test.FailingFrameProcessor;
+import org.apache.druid.frame.processor.test.FutureWaitingProcessor;
 import org.apache.druid.frame.processor.test.InfiniteFrameProcessor;
 import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.processor.test.SuperBlasterFrameProcessor;
@@ -413,6 +414,70 @@ public class FrameProcessorExecutorTest
       Assert.assertTrue(future.isCancelled());
       Assert.assertFalse(processor.didGetInterrupt());
       Assert.assertFalse(processor.didCleanup());
+    }
+
+    @Test
+    public void test_awaitAll_withFutures() throws Exception
+    {
+      // Test a processor that waits for futures to complete using ReturnOrAwait.awaitAll(Collection<ListenableFuture>)
+      final SettableFuture<String> future1 = SettableFuture.create();
+      final SettableFuture<String> future2 = SettableFuture.create();
+
+      // Start the processor
+      final FutureWaitingProcessor futureWaitingProcessor = new FutureWaitingProcessor(future1, future2);
+      final ListenableFuture<List<String>> processorFuture = exec.runFully(futureWaitingProcessor, null);
+
+      // Processor should be waiting for futures
+      Assert.assertFalse("Processor should be waiting", processorFuture.isDone());
+
+      // Complete the futures
+      future1.set("result1");
+      future2.set("result2");
+
+      // Processor should complete now
+      Assert.assertEquals(List.of("result1", "result2"), processorFuture.get());
+      Assert.assertTrue(futureWaitingProcessor.isCleanedUp());
+    }
+
+    @Test
+    public void test_awaitAll_withFutures_canceled()
+    {
+      // Test cancellation of a future that a processor is waiting for
+      final SettableFuture<String> future1 = SettableFuture.create();
+      final SettableFuture<String> future2 = SettableFuture.create();
+
+      // Start the processor
+      final FutureWaitingProcessor futureWaitingProcessor = new FutureWaitingProcessor(future1, future2);
+      final ListenableFuture<List<String>> processorFuture = exec.runFully(futureWaitingProcessor, null);
+
+      // Resolve one, cancel one
+      future1.set("result1");
+      future2.cancel(true);
+
+      // Verify exception
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, processorFuture::get);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(CancellationException.class));
+    }
+
+    @Test
+    public void test_awaitAll_withFutures_error()
+    {
+      // Test errors on a future that a processor is waiting for
+      final SettableFuture<String> future1 = SettableFuture.create();
+      final SettableFuture<String> future2 = SettableFuture.create();
+
+      // Start the processor
+      final FutureWaitingProcessor futureWaitingProcessor = new FutureWaitingProcessor(future1, future2);
+      final ListenableFuture<List<String>> processorFuture = exec.runFully(futureWaitingProcessor, null);
+
+      // Resolve one, fail out one
+      future1.set("result1");
+      future2.setException(new RuntimeException("oops"));
+
+      // Verify exception
+      final ExecutionException e = Assert.assertThrows(ExecutionException.class, processorFuture::get);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RuntimeException.class));
+      MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
     }
   }
 

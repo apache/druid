@@ -17,13 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.HadoopIOConfig;
-import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -69,7 +67,8 @@ public class HadoopIndexTaskTest
         jsonMapper,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
 
     Assert.assertEquals(
