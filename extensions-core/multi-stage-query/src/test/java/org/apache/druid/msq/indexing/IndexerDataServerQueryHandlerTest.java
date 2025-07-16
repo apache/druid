@@ -138,6 +138,7 @@ public class IndexerDataServerQueryHandlerTest
     );
     target = spy(
         new IndexerDataServerQueryHandler(
+            1,
             DATASOURCE1,
             new ChannelCounters(),
             mock(ServiceClientFactory.class),

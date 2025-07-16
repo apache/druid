@@ -258,9 +258,8 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         ),
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString(
-                "Cannot handle joining two sources (like unions or broadcast joins) while "
-                + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
-                + "joins instead by setting [sqlJoinAlgorithm]"
+                "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
+                + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
             )
         )
     );
@@ -302,9 +301,8 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
     Assertions.assertTrue(
         CoreMatchers.containsString(
-            "Cannot handle joining two sources (like unions or broadcast joins) while "
-            + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
-            + "joins instead by setting [sqlJoinAlgorithm]"
+            "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
+            + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
         ).matches(currentStatus.getStatus().getErrorMsg())
     );
   }

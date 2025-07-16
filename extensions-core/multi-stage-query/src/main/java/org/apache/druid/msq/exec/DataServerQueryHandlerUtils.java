@@ -26,9 +26,12 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.RestrictedInputNumberDataSource;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
@@ -53,24 +56,29 @@ public class DataServerQueryHandlerUtils
    * Performs necessary transforms to a query destined for data servers. Does not update the list of segments; callers
    * should do this themselves using {@link Queries#withSpecificSegments(Query, List)}.
    *
-   * @param query      the query
-   * @param dataSource datasource name
+   * @param query          the query
+   * @param dataSourceName datasource name
    */
-  public static <R, T extends Query<R>> Query<R> prepareQuery(final T query, final String dataSource)
+  public static <R, T extends Query<R>> Query<R> prepareQuery(
+      final T query,
+      final int inputNumber,
+      final String dataSourceName
+  )
   {
     // MSQ changes the datasource to an inputNumber datasource. This needs to be changed back for data servers
     // to understand.
-
-    // BUG: This transformation is incorrect; see https://github.com/apache/druid/issues/18198. It loses decorations
-    // such as join, unnest, etc.
-    return query.withDataSource(new TableDataSource(dataSource));
+    return query.withDataSource(transformDatasource(query.getDataSource(), inputNumber, dataSourceName));
   }
 
   /**
-   * Transform {@link InputNumberDataSource}s, which are only understood by MSQ tasks, back into a
-   * {@link TableDataSource}.
+   * Transforms {@link InputNumberDataSource} and {@link RestrictedInputNumberDataSource}, which are only understood
+   * by MSQ tasks, back into {@link TableDataSource} and {@link RestrictedDataSource} recursivly.
    */
-  private static DataSource transformDatasource(DataSource dataSource, int inputNumber, String dataSourceName)
+  static DataSource transformDatasource(
+      final DataSource dataSource,
+      final int inputNumber,
+      final String dataSourceName
+  )
   {
     if (dataSource instanceof InputNumberDataSource) {
       InputNumberDataSource numberDataSource = (InputNumberDataSource) dataSource;
@@ -80,10 +88,24 @@ public class DataServerQueryHandlerUtils
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
                             .build(
-                                "Cannot handle joining two sources (like unions or broadcast joins) while "
-                                + "querying realtime sources with MSQ. If using broadcast joins, use sortMerge "
-                                + "joins instead by setting [%s]",
-                                PlannerContext.CTX_SQL_JOIN_ALGORITHM
+                                "Cannot handle stage with multiple sources while querying realtime data. "
+                                + "If using broadcast joins, try setting[%s] to[%s] in your query context.",
+                                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                                JoinAlgorithm.SORT_MERGE.toString()
+                            );
+      }
+    } else if (dataSource instanceof RestrictedInputNumberDataSource) {
+      RestrictedInputNumberDataSource restrictedDatasource = (RestrictedInputNumberDataSource) dataSource;
+      if (restrictedDatasource.getInputNumber() == inputNumber) {
+        return RestrictedDataSource.create(new TableDataSource(dataSourceName), restrictedDatasource.getPolicy());
+      } else {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "Cannot handle stage with multiple sources while querying realtime data. "
+                                + "If using broadcast joins, try setting[%s] to[%s] in your query context.",
+                                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                                JoinAlgorithm.SORT_MERGE.toString()
                             );
       }
     } else {

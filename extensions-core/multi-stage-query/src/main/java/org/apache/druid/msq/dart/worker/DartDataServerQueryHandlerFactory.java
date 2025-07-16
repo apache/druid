@@ -55,6 +55,7 @@ public class DartDataServerQueryHandlerFactory implements DataServerQueryHandler
   )
   {
     return new DartDataServerQueryHandler(
+        inputNumber,
         dataSourceName,
         channelCounters,
         serviceClientFactory,
