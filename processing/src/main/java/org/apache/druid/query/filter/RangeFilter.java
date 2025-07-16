@@ -952,7 +952,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       case CLOSED:
         if (Double.compare(lowerDoubleBound, upperDoubleBound) == 0) {
           final long dblBits = Double.doubleToLongBits(lowerDoubleBound);
-          final int  fltBits = Float.floatToIntBits((float) lowerDoubleBound);
+          final int fltBits = Float.floatToIntBits((float) lowerDoubleBound);
 
           return input -> {
             long inDblBits = Double.doubleToLongBits(input);
