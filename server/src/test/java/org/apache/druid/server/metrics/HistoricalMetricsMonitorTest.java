@@ -23,18 +23,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Map;
 
 public class HistoricalMetricsMonitorTest extends EasyMockSupport
@@ -95,54 +92,26 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
     monitor.doMonitor(serviceEmitter);
     EasyMock.verify(druidServerConfig, segmentManager, segmentLoadDropMgr);
 
-    final List<Event> events = serviceEmitter.getEvents();
-
-    Assert.assertEquals(ImmutableMap.<String, Object>of(
-        "metric", "segment/max",
-        "value", maxSize
-    ), asMap(events.get(0)));
-
-    Assert.assertEquals(ImmutableMap.<String, Object>of(
-        "dataSource", dataSource,
-        "metric", "segment/pendingDelete",
-        "priority", String.valueOf(priority),
-        "tier", tier,
-        "value", dataSegment.getSize()
-    ), asMap(events.get(1)));
-
-    Assert.assertEquals(ImmutableMap.<String, Object>of(
-        "metric", "segment/used",
-        "value", dataSegment.getSize(),
-        "tier", tier,
-        "priority", String.valueOf(priority),
-        "dataSource", dataSource
-    ), asMap(events.get(2)));
-
-    Assert.assertEquals(ImmutableMap.<String, Object>of(
-        "metric", "segment/usedPercent",
-        "value", dataSegment.getSize() * 1.0D / maxSize,
-        "tier", tier,
-        "priority", String.valueOf(priority),
-        "dataSource", dataSource
-    ), asMap(events.get(3)));
-
-    Assert.assertEquals(ImmutableMap.<String, Object>of(
-        "metric", "segment/count",
-        "value", 1L,
-        "tier", tier,
-        "priority", String.valueOf(priority),
-        "dataSource", dataSource
-    ), asMap(events.get(4)));
-  }
-
-  private Map<String, Object> asMap(Event event)
-  {
-    final Map<String, Object> map = event.toMap();
-    Assert.assertNotNull(map.remove("feed"));
-    Assert.assertNotNull(map.remove("timestamp"));
-    Assert.assertNotNull(map.remove("service"));
-    Assert.assertNotNull(map.remove("host"));
-
-    return map;
+    serviceEmitter.verifyValue("segment/max", maxSize);
+    serviceEmitter.verifyValue(
+        "segment/pendingDelete",
+        Map.of("tier", tier, "dataSource", dataSource, "priority", String.valueOf(priority)),
+        dataSegment.getSize()
+    );
+    serviceEmitter.verifyValue(
+        "segment/used",
+        Map.of("tier", tier, "priority", String.valueOf(priority), "dataSource", dataSource),
+        dataSegment.getSize()
+    );
+    serviceEmitter.verifyValue(
+        "segment/usedPercent",
+        Map.of("tier", tier, "priority", String.valueOf(priority), "dataSource", dataSource),
+        dataSegment.getSize() * 1.0D / maxSize
+    );
+    serviceEmitter.verifyValue(
+        "segment/count",
+        Map.of("tier", tier, "priority", String.valueOf(priority), "dataSource", dataSource),
+        1L
+    );
   }
 }
