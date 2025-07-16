@@ -61,7 +61,7 @@ Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To 
   curl --location 'http://HOST:PORT/druid/v2/sql' \
 --header 'Content-Type: application/json' \
 --data '{
-  "query": "SET engine = '\''msq-dart'\'';\nSELECT\n  user,\n  isRobot\nFROM wikipedia",
+  "query":   ""SET engine = 'msq-dart';\nSELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
   ...
   ...
 }'
@@ -74,7 +74,8 @@ Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To 
   curl --location 'http://HOST:PORT/druid/v2/sql' \
   --header 'Content-Type: application/json' \
   --data '{
-  "query": "SELECT\n  user,\n  isRobot\nFROM wikipedia",
+  "query":   "SELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
+
   ...
   ...
   "context": {
@@ -86,3 +87,9 @@ Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To 
 
   </TabItem>
   </Tabs>
+
+  ## Known issues and limitations
+
+  - If you encounter an issue where Dart can't find a segment, try rerunning your query. 
+  - If your data includes HLL Sketches for realtime data, Dart returns a NPE.
+  - When a Dart query fails on a Historical with an error about no workers running for a query, it gets stuck retrying the query. If the query doesn't get canceled, it can cause other queries to fail.
