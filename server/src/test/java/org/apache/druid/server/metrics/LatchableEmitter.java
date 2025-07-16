@@ -182,7 +182,8 @@ public class LatchableEmitter extends StubServiceEmitter
       }
     }
     catch (Exception e) {
-      log.error(e, "Error while evaluating wait conditions");
+      log.error(e, "Error while evaluating wait conditions for event[%s]", event.toMap());
+      throw new ISE(e, "Error while evaluating wait conditions for event[%s]", event.toMap());
     }
     finally {
       processedEvents.add(event);
