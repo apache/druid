@@ -38,4 +38,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build the Docker image
-        run: DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
+        run: |
+          source .github/scripts/distribution_checks_env.sh
+          DOCKER_BUILDKIT=1 docker build -t $DRUID_DIST_IMAGE_NAME -f distribution/docker/Dockerfile .
+      - name: Save Docker image to archive
+        run: |
+          source .github/scripts/distribution_checks_env.sh
+          echo "Saving image $DRUID_DIST_IMAGE_NAME in archive druid-dist-container.tar.gz"
+          docker save "$DRUID_DIST_IMAGE_NAME" | gzip > druid-dist-container.tar.gz
+      - name: Cache Docker image
+        id: docker_dist_container
+        uses: actions/cache@v4
+        with:
+          key: druid-dist-container.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-dist-container.tar.gz

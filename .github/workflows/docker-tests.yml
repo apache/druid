@@ -1,0 +1,50 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Docker Tests using Distribution Image"
+on:
+  workflow_call:
+
+jobs:
+  run-docker-test:
+    name: Run Docker Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve Docker container
+        id: docker-restore
+        uses: actions/cache/restore@v4
+        with:
+          key: druid-dist-container.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-dist-container.tar.gz
+      - name: Stop and remove Druid Docker containers
+        run: |
+          echo "Force stopping all Druid containers and pruning"
+          docker ps -aq --filter "ancestor=apache/druid" | xargs -r docker rm -f
+          docker system prune -af --volumes
+      - name: Load Docker image
+        run: |
+          docker load --input druid-dist-container.tar.gz
+          docker images
+      - name: Get Docker image name env
+        run: |
+          source .github/workflows/distribution_checks_env.sh
+          echo "DRUID_DIST_IMAGE_NAME=$DRUID_DIST_IMAGE_NAME" >> $GITHUB_ENV
+      - name: Run the test
+        uses: ./.github/workflows/worker.yml
+        with:
+          script: .github/scripts/run_unit-tests -Dtest=*DockerTest -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
+          jdk: 17
+          key: "test-jdk17-docker"

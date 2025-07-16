@@ -17,42 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded;
+package org.apache.druid.testing.embedded.docker;
 
-import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.testing.DruidContainer;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.junit.jupiter.api.Nested;
 
 /**
- * {@link EmbeddedResource} for an embedded zookeeper cluster that can be
- * added to an {@link EmbeddedDruidCluster}.
+ * Runs some basic ingestion tests using {@link DruidContainers} to verify
+ * backward compatibility with old Druid images.
  */
-public class EmbeddedZookeeper implements EmbeddedResource
+public class IngestionBackwardCompatibilityDockerTest
 {
-  private final CuratorTestBase zk = new CuratorTestBase();
-
-  @Override
-  public void start() throws Exception
+  @Nested
+  public class Apache31 extends IngestionDockerTest
   {
-    zk.setupServerAndCurator();
-  }
-
-  @Override
-  public void stop()
-  {
-    zk.tearDownServerAndCurator();
-  }
-
-  @Override
-  public void onStarted(EmbeddedDruidCluster cluster)
-  {
-    cluster.addCommonProperty(
-        "druid.zk.service.host",
-        cluster.getEmbeddedConnectUri(zk.getConnectString())
-    );
-  }
-
-  @Override
-  public String toString()
-  {
-    return "EmbeddedZookeeper";
+    @Override
+    public EmbeddedDruidCluster createCluster()
+    {
+      coordinator.withImage(DruidContainer.Image.APACHE_31);
+      overlordLeader.withImage(DruidContainer.Image.APACHE_31);
+      return super.createCluster();
+    }
   }
 }

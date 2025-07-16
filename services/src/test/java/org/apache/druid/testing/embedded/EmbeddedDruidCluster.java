@@ -24,9 +24,12 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
@@ -35,7 +38,6 @@ import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -77,13 +79,13 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
 
-  private final List<EmbeddedDruidServer> servers = new ArrayList<>();
+  private final List<EmbeddedDruidServer<?>> servers = new ArrayList<>();
   private final List<EmbeddedResource> resources = new ArrayList<>();
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
+  private boolean hasDruidContainers = false;
   private boolean startedFirstDruidServer = false;
-  private EmbeddedZookeeper zookeeper;
 
   private EmbeddedDruidCluster()
   {
@@ -100,9 +102,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public static EmbeddedDruidCluster withZookeeper()
   {
-    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
-    cluster.addEmbeddedZookeeper();
-    return cluster;
+    return new EmbeddedDruidCluster().addResource(new EmbeddedZookeeper());
   }
 
   /**
@@ -131,12 +131,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return new EmbeddedDruidCluster();
   }
 
-  private void addEmbeddedZookeeper()
-  {
-    this.zookeeper = new EmbeddedZookeeper();
-    resources.add(zookeeper);
-  }
-
   /**
    * Configures this cluster to use a {@link LatchableEmitter}. This method is a
    * shorthand for the following:
@@ -152,6 +146,15 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
     extensionModules.add(LatchableEmitterModule.class);
+    return this;
+  }
+
+  /**
+   * Configures this cluster to allow the use of {@code DruidContainer}-based services.
+   */
+  public EmbeddedDruidCluster useDruidContainers()
+  {
+    this.hasDruidContainers = true;
     return this;
   }
 
@@ -184,9 +187,8 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    * cluster has started must be started explicitly by calling
    * {@link EmbeddedDruidServer#start()}.
    */
-  public EmbeddedDruidCluster addServer(EmbeddedDruidServer server)
+  public EmbeddedDruidCluster addServer(EmbeddedDruidServer<?> server)
   {
-    server.onAddedToCluster(commonProperties);
     servers.add(server);
     resources.add(server);
     if (startedFirstDruidServer) {
@@ -221,6 +223,11 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return this;
   }
 
+  public Properties getCommonProperties()
+  {
+    return commonProperties;
+  }
+
   /**
    * The test directory used by this cluster. Each Druid service creates a
    * sub-folder inside this directory to write out task logs or segments.
@@ -231,13 +238,35 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   }
 
   /**
-   * The embedded Zookeeper server used by this cluster, if any.
-   *
-   * @throws NullPointerException if this cluster has no embedded zookeeper.
+   * Hostname to be used for embedded services (both Druid or external).
+   * Using this hostname ensures that the underlying service is reachable by both
+   * EmbeddedDruidServers and DruidContainers.
    */
-  public EmbeddedZookeeper getZookeeper()
+  public String getEmbeddedServiceHostname()
   {
-    return Objects.requireNonNull(zookeeper, "No embedded zookeeper configured for this cluster");
+    return hasDruidContainers ? DruidNode.getDefaultHost() : "localhost";
+  }
+
+  /**
+   * Replaces {@code localhost} or {@code 127.0.0.1} in the given connectUri
+   * with {@link #getEmbeddedServiceHostname()}. Using the embedded URI ensures
+   * that the underlying service is reachable by both EmbeddedDruidServers and
+   * DruidContainers.
+   */
+  public String getEmbeddedConnectUri(String connectUri)
+  {
+    if (!hasDruidContainers) {
+      return connectUri;
+    } else if (connectUri.contains("localhost")) {
+      return StringUtils.replace(connectUri, "localhost", getEmbeddedServiceHostname());
+    } else if (connectUri.contains("127.0.0.1")) {
+      return StringUtils.replace(connectUri, "127.0.0.1", getEmbeddedServiceHostname());
+    } else {
+      throw new IAE(
+          "Connect URI[%s] must contain 'localhost' or '127.0.0.1' to be reachable.",
+          connectUri
+      );
+    }
   }
 
   /**
