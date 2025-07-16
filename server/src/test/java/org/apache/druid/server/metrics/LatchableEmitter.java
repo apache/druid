@@ -20,7 +20,6 @@
 package org.apache.druid.server.metrics;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -34,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -55,10 +53,6 @@ public class LatchableEmitter extends StubServiceEmitter
 
   public static final String TYPE = "latching";
 
-  /**
-   * Single-threaded executor to evaluate conditions.
-   */
-  private final ScheduledExecutorService conditionEvaluateExecutor;
   private final Set<WaitCondition> waitConditions = new HashSet<>();
 
   private final ReentrantLock eventProcessingLock = new ReentrantLock();
@@ -71,17 +65,16 @@ public class LatchableEmitter extends StubServiceEmitter
   /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host, ScheduledExecutorFactory executorFactory)
+  public LatchableEmitter(String service, String host)
   {
     super(service, host);
-    this.conditionEvaluateExecutor = executorFactory.create(1, "LatchingEmitter-eval-%d");
   }
 
   @Override
   public void emit(Event event)
   {
     super.emit(event);
-    triggerConditionEvaluations(event);
+    evaluateWaitConditions(event);
   }
 
   @Override
@@ -169,18 +162,8 @@ public class LatchableEmitter extends StubServiceEmitter
     );
   }
 
-  private void triggerConditionEvaluations(Event event)
-  {
-    if (conditionEvaluateExecutor == null) {
-      throw new ISE("Cannot evaluate conditions as the 'conditionEvaluateExecutor' is null.");
-    } else {
-      conditionEvaluateExecutor.submit(() -> evaluateWaitConditions(event));
-    }
-  }
-
   /**
-   * Evaluates wait conditions. This method must be invoked on the
-   * {@link #conditionEvaluateExecutor} so that it does not block {@link #emit(Event)}.
+   * Evaluates wait conditions for the given event.
    */
   private void evaluateWaitConditions(Event event)
   {
@@ -238,8 +221,6 @@ public class LatchableEmitter extends StubServiceEmitter
   {
     private final Predicate<Event> predicate;
     private final CountDownLatch countDownLatch;
-
-    private int processedUntil;
 
     private WaitCondition(Predicate<Event> predicate)
     {
