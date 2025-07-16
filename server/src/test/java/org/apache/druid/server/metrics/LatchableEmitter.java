@@ -84,6 +84,21 @@ public class LatchableEmitter extends StubServiceEmitter
     triggerConditionEvaluations(event);
   }
 
+  @Override
+  public void flush()
+  {
+    // TODO: some locking here and in close()
+    super.flush();
+    processedEvents.clear();
+  }
+
+  @Override
+  public void close()
+  {
+    super.close();
+    processedEvents.clear();
+  }
+
   /**
    * Waits until an event that satisfies the given predicate is emitted.
    *
@@ -94,7 +109,6 @@ public class LatchableEmitter extends StubServiceEmitter
   {
     final WaitCondition waitCondition = new WaitCondition(condition);
     registerWaitCondition(waitCondition);
-    waitConditions.add(waitCondition);
 
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
@@ -193,9 +207,13 @@ public class LatchableEmitter extends StubServiceEmitter
       for (Event event : processedEvents) {
         if (condition.predicate.test(event)) {
           condition.countDownLatch.countDown();
+          break;
         }
       }
-      waitConditions.add(condition);
+
+      if (condition.countDownLatch.getCount() > 0) {
+        waitConditions.add(condition);
+      }
     }
     catch (Exception e) {
       throw new ISE(e, "Error while evaluating condition");

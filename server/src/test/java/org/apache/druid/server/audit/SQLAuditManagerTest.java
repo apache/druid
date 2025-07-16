@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.joda.time.DateTime;
@@ -90,11 +91,10 @@ public class SQLAuditManagerTest
     final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents
-        = serviceEmitter.getMetricEvents("config/audit");
+    List<ServiceMetricEvent> auditMetricEvents = serviceEmitter.getMetricEvents("config/audit");
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    StubServiceEmitter.ServiceMetricEventSnapshot metric = auditMetricEvents.get(0);
+    ServiceMetricEvent metric = auditMetricEvents.get(0);
 
     final AuditEntry dbEntry = lookupAuditEntryForKey("testKey");
     Assert.assertNotNull(dbEntry);
@@ -116,12 +116,12 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, dbEntry);
 
     // Verify emitted metrics
-    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents
+    List<ServiceMetricEvent> auditMetricEvents
         = serviceEmitter.getMetricEvents("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    StubServiceEmitter.ServiceMetricEventSnapshot metric = auditMetricEvents.get(0);
+    ServiceMetricEvent metric = auditMetricEvents.get(0);
     Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
     Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
     Assert.assertNull(metric.getUserDims().get("payload"));
