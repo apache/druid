@@ -15,7 +15,7 @@ Dart is experimental. For production use, we recommend using the other available
 :::
 
 
-Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine. For example, a good query to use for Dart is a GROUP BY query that has intermediate results consisting of hundreds of millions of rows. Dart is able to compute these types of queries quickly because its multi-threaded workers perform in-memory shuffles using locally cached data. 
+Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine. For example, use Dart for GROUP BY queries that have intermediate results consisting of hundreds of millions of rows. Dart works well for these sorts of queries  because its multi-threaded workers perform in-memory shuffles using locally cached data. There's no time spent hitting deep storage.
 
 You can query batch or realtime datasources with Dart.
 
@@ -61,7 +61,7 @@ Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To 
   curl --location 'http://HOST:PORT/druid/v2/sql' \
 --header 'Content-Type: application/json' \
 --data '{
-  "query":   ""SET engine = 'msq-dart';\nSELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
+  "query":   "SET engine = 'msq-dart';\nSELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
   ...
   ...
 }'
@@ -87,6 +87,12 @@ Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To 
 
   </TabItem>
   </Tabs>
+
+  ### Get the query status
+
+  ### Cancel a query
+
+  
 
   ## Known issues and limitations
 
