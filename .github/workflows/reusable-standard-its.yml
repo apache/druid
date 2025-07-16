@@ -93,7 +93,9 @@ jobs:
 
       - name: Verify shared logs existence
         run: |
+          echo "Checking if shared directory itself exists or not"
           ls -l ~
+          echo "Checking if shared logs director was populated or not"
           ls -l ~/shared
 
       - name: Collect docker logs on failure
