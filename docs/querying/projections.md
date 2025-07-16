@@ -2,7 +2,7 @@
 id: projections
 title: Query projections
 sidebar_label: Projections
-description: .
+description: Speed up your queries by defining projections that pre-aggreate data for you.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -33,7 +33,7 @@ Projections are experimental. We don't recommend them for production use.
 
   :::
 
-Projections are a type of aggregation that is computed and stored as part of your datasource in a segment. When using rollups to preaggregate rows are based on a specific granularity, the source rows are no longer available. Projections, on the other hand, don't affect the source dimensions. They remain part of your datasource and are queryable.
+Projections are a type of aggregation that is computed and stored as part of your datasource in a segment. When using rollups to pre-aggregate rows are based on a specific granularity, the source rows are no longer available. Projections, on the other hand, don't affect the source dimensions. They remain part of your datasource and are queryable.
 
 The pre-aggregated data can speed up queries by reducing the number of rows that need to be processed for any shape that matches a projection. Thus, we recommend you build projections for commonly used queries. For example, you define the following projection in your datasource:
 
