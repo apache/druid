@@ -165,7 +165,7 @@ public class Projections
         return false;
       }
       ProjectionMatch that = (ProjectionMatch) o;
-      return cursorBuildSpec.equals(that.cursorBuildSpec) && remapColumns.equals(that.remapColumns);
+      return Objects.equals(cursorBuildSpec, that.cursorBuildSpec) && Objects.equals(remapColumns, that.remapColumns);
     }
 
     @Override
