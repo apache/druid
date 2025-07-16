@@ -251,6 +251,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
         resource.onStarted(this);
       }
       catch (Exception e) {
+        log.warn(e, "Failed to start resource[%s]. Stopping cluster.", resource);
         // Clean up the resources that have already been started
         stop();
         throw e;
