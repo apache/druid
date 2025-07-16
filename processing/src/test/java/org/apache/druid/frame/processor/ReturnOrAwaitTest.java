@@ -19,24 +19,27 @@
 
 package org.apache.druid.frame.processor;
 
+import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import nl.jqno.equalsverifier.EqualsVerifier;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collections;
 
 public class ReturnOrAwaitTest
 {
   @Test
   public void testToString()
   {
-    Assert.assertEquals("await=any{0, 1}", ReturnOrAwait.awaitAny(IntSet.of(0, 1)).toString());
-    Assert.assertEquals("await=all{0, 1}", ReturnOrAwait.awaitAll(2).toString());
+    Assert.assertEquals("await channels=any{0, 1}", ReturnOrAwait.awaitAny(IntSet.of(0, 1)).toString());
+    Assert.assertEquals("await channels=all{0, 1}", ReturnOrAwait.awaitAll(2).toString());
     Assert.assertEquals("return=xyzzy", ReturnOrAwait.returnObject("xyzzy").toString());
-  }
 
-  @Test
-  public void testEquals()
-  {
-    EqualsVerifier.forClass(ReturnOrAwait.class).usingGetClass().verify();
+    MatcherAssert.assertThat(
+        ReturnOrAwait.awaitAllFutures(Collections.singletonList(Futures.immediateFuture(1))).toString(),
+        CoreMatchers.startsWith("await futures=[com.google.")
+    );
   }
 }

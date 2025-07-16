@@ -253,7 +253,6 @@ public class WorkerImpl implements Worker
       throws Exception
   {
     context.registerWorker(this, workerCloser);
-    workerCloser.register(context.dataServerQueryHandlerFactory());
     this.workerClient = workerCloser.register(new ExceptionWrappingWorkerClient(context.makeWorkerClient()));
     final FrameProcessorExecutor workerExec = new FrameProcessorExecutor(makeProcessingPool());
 
