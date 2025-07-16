@@ -27,9 +27,92 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-Projections are a type of aggregation that is computed and stored as part of a segment. The pre-aggregated data can speed up queries by reducing the number of rows that need to be processed for any query shape that matches a projection. 
+  :::info[Experimental]
 
- Druid attempts to match your query to the aggregations. If there's a match, Druid uses the projection, speeding up query processing..
+Projections are experimental. We don't recommend them for production use.
+
+  :::
+
+Projections are a type of aggregation that is computed and stored as part of your datasource in a segment. When using rollups to preaggregate rows are based on a specific granularity, the source rows are no longer available. Projections, on the other hand, don't affect the source dimensions. They remain part of your datasource and are queryable.
+
+The pre-aggregated data can speed up queries by reducing the number of rows that need to be processed for any shape that matches a projection. Thus, we recommend you build projections for commonly used queries. For example, you define the following projection in your datasource:
+
+
+<details>
+<summary>Show the projection</summary>
+
+```json
+
+     "projections": [
+        {
+          "type": "aggregate",
+          "name": "channel_page_hourly_distinct_user_added_deleted",
+          "groupingColumns": [
+            {
+              "type": "long",
+              "name": "__gran"
+            },
+            {
+              "type": "string",
+              "name": "channel"
+            },
+            {
+              "type": "string",
+              "name": "page"
+            }
+          ],
+          "virtualColumns": [
+            {
+              "type": "expression",
+              "expression": "timestamp_floor(__time, 'PT1H')",
+              "name": "__gran",
+              "outputType": "LONG"
+            }
+          ],
+          "aggregators": [
+            {
+              "type": "HLLSketchBuild",
+              "name": "distinct_users",
+              "fieldName": "user"
+            },
+            {
+              "type": "longSum",
+              "name": "sum_added",
+              "fieldName": "added"
+            },
+            {
+              "type": "longSum",
+              "name": "sum_deleted",
+              "fieldName": "deleted"
+            }
+          ]
+        }
+     ]
+```
+
+</details>
+
+A query targeting the aggregated dimensions grouped in the same way uses the projection, for example:
+
+<details>
+<summary>Show the query</summary>
+
+```sql
+SELECT
+  TIME_FLOOR(__time, 'PT1H') AS __gran,
+  channel,
+  page,
+  APPROX_COUNT_DISTINCT_DS(user) AS distinct_users,
+  SUM(added) AS sum_added,
+  SUM(deleted) AS sum_deleted
+FROM your_datasource
+GROUP BY
+  TIME_FLOOR(__time, 'PT1H'),
+  channel,
+  page
+```
+
+</details>
 
 ## Create a projection
 
@@ -49,11 +132,21 @@ In addition to the columns in your datasource, a projection has three components
 
 Note that any projection dimension you create becomes part of your datasource. You need to reingest the data to remove a projection from your datasource. Alternatively, you can use a query context parameter to avoid using projections for a specific query.
 
+### Limitations
+
+When creating a projection, keep the following limitations in mind:
+
+- If your projection includes source columns that are type `float`, you need to use double aggregations, like `doubleSum`,  in the projection.
+- The aggregator in your projection must match the aggregator in the query for a projection to get used. For example, the output type of the `cardinality` aggregator is different at ingestion time (string) and at query time (long)
+- Since the source columns for a projection are unaffected by a projection, storage requirements can increase.
+- 
+
 ### As part of your ingestion
 
 To create a projection at ingestion time, use the [`projectionsSpec` block in your ingestion spec](../ingestion/ingestion-spec.md#projections).
 
-<details><summary>Show the ingestion spec</summary>
+<details>
+<summary>Show the ingestion spec</summary>
 
 ```json
 
@@ -189,3 +282,4 @@ To use compaction on a datasource that includes projections, you need to set the
 
   </TabItem>
 </Tabs>
+
