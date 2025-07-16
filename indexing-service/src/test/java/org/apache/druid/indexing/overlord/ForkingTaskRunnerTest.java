@@ -538,7 +538,6 @@ public class ForkingTaskRunnerTest
   public static TaskConfigBuilder makeDefaultTaskConfigBuilder()
   {
     return new TaskConfigBuilder()
-        .setDefaultHadoopCoordinates(ImmutableList.of())
         .setGracefulShutdownTimeout(new Period("PT0S"))
         .setDirectoryLockTimeout(new Period("PT10S"))
         .setShuffleDataLocations(ImmutableList.of());

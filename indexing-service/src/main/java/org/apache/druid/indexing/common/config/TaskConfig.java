@@ -21,20 +21,14 @@ package org.apache.druid.indexing.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.TaskDirectory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
@@ -47,25 +41,7 @@ import java.util.List;
  */
 public class TaskConfig implements TaskDirectory
 {
-  private static final Logger log = new Logger(TaskConfig.class);
-  private static final String HADOOP_LIB_VERSIONS = "hadoop.indexer.libs.version";
-  public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES;
   public static final String ALLOW_HADOOP_TASK_EXECUTION_KEY = "druid.indexer.task.allowHadoopTaskExecution";
-
-  static {
-    try {
-      DEFAULT_DEFAULT_HADOOP_COORDINATES =
-          ImmutableList.copyOf(Lists.newArrayList(IOUtils.toString(
-              TaskConfig.class.getResourceAsStream("/" + HADOOP_LIB_VERSIONS),
-              StandardCharsets.UTF_8
-          ).split(",")));
-
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Unable to read file %s from classpath ", HADOOP_LIB_VERSIONS);
-    }
-  }
-
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
@@ -76,15 +52,6 @@ public class TaskConfig implements TaskDirectory
 
   @JsonProperty
   private final File baseTaskDir;
-
-  @JsonProperty
-  private final String hadoopWorkingPath;
-
-  @JsonProperty
-  private final int defaultRowFlushBoundary;
-
-  @JsonProperty
-  private final List<String> defaultHadoopCoordinates;
 
   @JsonProperty
   private final boolean restoreTasksOnRestart;
@@ -117,9 +84,6 @@ public class TaskConfig implements TaskDirectory
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
       @JsonProperty("baseTaskDir") String baseTaskDir,
-      @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
-      @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
-      @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
@@ -133,13 +97,6 @@ public class TaskConfig implements TaskDirectory
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
     this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
-    // This is usually on HDFS or similar, so we can't use java.io.tmpdir
-    this.hadoopWorkingPath = Configs.valueOrDefault(hadoopWorkingPath, "/tmp/druid-indexing");
-    this.defaultRowFlushBoundary = Configs.valueOrDefault(defaultRowFlushBoundary, 75000);
-    this.defaultHadoopCoordinates = Configs.valueOrDefault(
-        defaultHadoopCoordinates,
-        DEFAULT_DEFAULT_HADOOP_COORDINATES
-    );
     this.restoreTasksOnRestart = restoreTasksOnRestart;
     this.gracefulShutdownTimeout = Configs.valueOrDefault(
         gracefulShutdownTimeout,
@@ -167,9 +124,6 @@ public class TaskConfig implements TaskDirectory
   private TaskConfig(
       String baseDir,
       File baseTaskDir,
-      String hadoopWorkingPath,
-      int defaultRowFlushBoundary,
-      List<String> defaultHadoopCoordinates,
       boolean restoreTasksOnRestart,
       Period gracefulShutdownTimeout,
       Period directoryLockTimeout,
@@ -183,9 +137,6 @@ public class TaskConfig implements TaskDirectory
   {
     this.baseDir = baseDir;
     this.baseTaskDir = baseTaskDir;
-    this.hadoopWorkingPath = hadoopWorkingPath;
-    this.defaultRowFlushBoundary = defaultRowFlushBoundary;
-    this.defaultHadoopCoordinates = defaultHadoopCoordinates;
     this.restoreTasksOnRestart = restoreTasksOnRestart;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
     this.directoryLockTimeout = directoryLockTimeout;
@@ -237,24 +188,6 @@ public class TaskConfig implements TaskDirectory
   public File getTaskLockFile(String taskId)
   {
     return new File(getTaskDir(taskId), "lock");
-  }
-
-  @JsonProperty
-  public String getHadoopWorkingPath()
-  {
-    return hadoopWorkingPath;
-  }
-
-  @JsonProperty
-  public int getDefaultRowFlushBoundary()
-  {
-    return defaultRowFlushBoundary;
-  }
-
-  @JsonProperty
-  public List<String> getDefaultHadoopCoordinates()
-  {
-    return defaultHadoopCoordinates;
   }
 
   @JsonProperty
@@ -325,9 +258,6 @@ public class TaskConfig implements TaskDirectory
     return new TaskConfig(
         baseDir,
         baseTaskDir,
-        hadoopWorkingPath,
-        defaultRowFlushBoundary,
-        defaultHadoopCoordinates,
         restoreTasksOnRestart,
         gracefulShutdownTimeout,
         directoryLockTimeout,
@@ -345,9 +275,6 @@ public class TaskConfig implements TaskDirectory
     return new TaskConfig(
         baseDir,
         baseTaskDir,
-        hadoopWorkingPath,
-        defaultRowFlushBoundary,
-        defaultHadoopCoordinates,
         restoreTasksOnRestart,
         gracefulShutdownTimeout,
         directoryLockTimeout,

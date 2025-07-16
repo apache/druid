@@ -17,29 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.frame.processor;
+package org.apache.druid.indexer;
 
-import com.google.common.util.concurrent.Futures;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.initialization.DruidModule;
 
 import java.util.Collections;
+import java.util.List;
 
-public class ReturnOrAwaitTest
+public class HadoopIndexTaskModule implements DruidModule
 {
-  @Test
-  public void testToString()
+  @Override
+  public void configure(Binder binder)
   {
-    Assert.assertEquals("await channels=any{0, 1}", ReturnOrAwait.awaitAny(IntSet.of(0, 1)).toString());
-    Assert.assertEquals("await channels=all{0, 1}", ReturnOrAwait.awaitAll(2).toString());
-    Assert.assertEquals("return=xyzzy", ReturnOrAwait.returnObject("xyzzy").toString());
+    JsonConfigProvider.bind(binder, "druid.indexer.task", HadoopTaskConfig.class);
+  }
 
-    MatcherAssert.assertThat(
-        ReturnOrAwait.awaitAllFutures(Collections.singletonList(Futures.immediateFuture(1))).toString(),
-        CoreMatchers.startsWith("await futures=[com.google.")
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return Collections.<Module>singletonList(
+        new SimpleModule(getClass().getSimpleName())
+            .registerSubtypes(
+                new NamedType(HadoopIndexTask.class, HadoopIndexTask.TYPE)
+            )
     );
   }
 }

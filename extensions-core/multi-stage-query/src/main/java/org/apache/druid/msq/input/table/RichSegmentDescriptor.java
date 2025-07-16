@@ -93,6 +93,14 @@ public class RichSegmentDescriptor extends SegmentDescriptor
     return fullInterval;
   }
 
+  /**
+   * Returns a plain descriptor, with the {@link #fullInterval} field dropped.
+   */
+  public SegmentDescriptor toPlainDescriptor()
+  {
+    return new SegmentDescriptor(getInterval(), getVersion(), getPartitionNumber());
+  }
+
   @Override
   public boolean equals(Object o)
   {
