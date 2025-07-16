@@ -70,7 +70,8 @@ public class HadoopIndexTaskTest
         jsonMapper,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
 
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder().setConfig(new TaskConfigBuilder().build());
