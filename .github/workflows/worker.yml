@@ -78,6 +78,7 @@ jobs:
           set -x
           ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT key=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF run_url=$GITHUB_RUN_URL >> $GITHUB_ENV
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
+          ./.github/scripts/collect_jstacks &
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
@@ -95,3 +96,4 @@ jobs:
             **/core.[0-9]*
             **/TEST-*.xml
             **/target/jacoco*.exec
+            **/target/jstack*
