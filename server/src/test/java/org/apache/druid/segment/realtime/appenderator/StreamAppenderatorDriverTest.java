@@ -43,7 +43,6 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -424,16 +423,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       Set<DataSegment> allSegments = new HashSet<>(segmentsToPublish);
       int id = 0;
       for (DataSegment segment : segmentsToPublish) {
-        DataSegment upgradedSegment = new DataSegment(
-            SegmentId.of(DATA_SOURCE, Intervals.ETERNITY, UPGRADED_VERSION, id),
-            segment.getLoadSpec(),
-            segment.getDimensions(),
-            segment.getMetrics(),
-            new NumberedShardSpec(id, 0),
-            null,
-            segment.getBinaryVersion(),
-            segment.getSize()
-        );
+        DataSegment upgradedSegment = DataSegment.builder(segment)
+                                                 .shardSpec(new NumberedShardSpec(id, 0))
+                                                 .dataSource(DATA_SOURCE)
+                                                 .interval(Intervals.ETERNITY)
+                                                 .version(UPGRADED_VERSION)
+                                                 .lastCompactionState(null)
+                                                 .build();
+
         id++;
         allSegments.add(upgradedSegment);
       }
