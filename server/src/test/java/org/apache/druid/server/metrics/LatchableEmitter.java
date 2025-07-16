@@ -87,16 +87,27 @@ public class LatchableEmitter extends StubServiceEmitter
   @Override
   public void flush()
   {
-    // TODO: some locking here and in close()
-    super.flush();
-    processedEvents.clear();
+    eventProcessingLock.lock();
+    try {
+      super.flush();
+      processedEvents.clear();
+    }
+    finally {
+      eventProcessingLock.unlock();
+    }
   }
 
   @Override
   public void close()
   {
-    super.close();
-    processedEvents.clear();
+    eventProcessingLock.lock();
+    try {
+      super.close();
+      processedEvents.clear();
+    }
+    finally {
+      eventProcessingLock.unlock();
+    }
   }
 
   /**
