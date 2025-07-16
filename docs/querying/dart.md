@@ -1,7 +1,7 @@
 ---
 id: dart
-title: "Dart query engine"
-sidebar_label: "Dart"
+title: "SQL queries using the Dart query engine"
+sidebar_label: "Dart query engine"
 description: Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine.
 ---
 
