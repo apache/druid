@@ -86,10 +86,6 @@ setupConfig()
 setupData()
 {
   # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
-#  if [ -n "$DRUID_SERVICE" ]; then
-#    echo "DRUID_SERVICE is set, skipping data setup"
-#    return
-#  fi
   if [ ! -f /usr/lib/druid/conf/metadata-storage.conf ]; then
     # Only metadata storage server need to set up data.
     echo "Skip setup data. Metadata store is not configured."
