@@ -135,7 +135,10 @@ public class DataSchema
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
     computeAndValidateOutputFieldNames(this.dimensionsSpec, this.aggregators);
-    validateProjections(this.projections, this.granularitySpec);
+    validateProjections(
+        this.projections,
+        this.granularitySpec instanceof UniformGranularitySpec ? this.granularitySpec.getSegmentGranularity() : null
+    );
 
     if (this.granularitySpec.isRollup() && this.aggregators.length == 0) {
       log.warn(
@@ -445,9 +448,9 @@ public class DataSchema
     }
   }
 
-  private static void validateProjections(
+  public static void validateProjections(
       @Nullable List<AggregateProjectionSpec> projections,
-      GranularitySpec granularitySpec
+      @Nullable Granularity segmentGranularity
   )
   {
     if (projections != null) {
@@ -462,13 +465,13 @@ public class DataSchema
           continue;
         }
         final Granularity projectionGranularity = schema.getGranularity();
-        if (granularitySpec instanceof UniformGranularitySpec) {
-          if (granularitySpec.getSegmentGranularity().isFinerThan(projectionGranularity)) {
+        if (segmentGranularity != null) {
+          if (segmentGranularity.isFinerThan(projectionGranularity)) {
             throw InvalidInput.exception(
                 "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
                 projection.getName(),
                 projectionGranularity,
-                granularitySpec.getSegmentGranularity()
+                segmentGranularity
             );
           }
         }
