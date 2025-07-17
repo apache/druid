@@ -571,7 +571,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         new TaskConfigBuilder()
             .setBaseDir(new File(directory, "baseDir").getPath())
             .setBaseTaskDir(new File(directory, "baseTaskDir").getPath())
-            .setDefaultRowFlushBoundary(50000)
             .setRestoreTasksOnRestart(true)
             .build();
     final TestDerbyConnector derbyConnector = derby.getConnector();

@@ -26,16 +26,17 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.JsonParserIterator;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedServiceLocator;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -43,30 +44,27 @@ import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 
 import java.io.InputStream;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Client to query data servers given a query.
  */
 public class DataServerClient
 {
-  private static final String BASE_PATH = "/druid/v2/";
   private static final Logger log = new Logger(DataServerClient.class);
+  private static final String BASE_PATH = "/druid/v2/";
+  private static final Duration CANCELLATION_TIMEOUT = Duration.standardSeconds(5);
+
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
   private final ServiceLocation serviceLocation;
-  private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       ServiceLocation serviceLocation,
-      ObjectMapper objectMapper,
-      ScheduledExecutorService queryCancellationExecutor
+      ObjectMapper objectMapper
   )
   {
     this.serviceClient = serviceClientFactory.makeClient(
@@ -76,13 +74,23 @@ public class DataServerClient
     );
     this.serviceLocation = serviceLocation;
     this.objectMapper = objectMapper;
-    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
-  public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType, Closer closer)
+  /**
+   * Issue a query. Returns a future that resolves when the server starts sending its response.
+   *
+   * @param query           query to run
+   * @param responseContext response context to populate
+   * @param queryResultType type of result object
+   * @param closer          closer; this call will register a query canceler with this closer
+   */
+  public <T> ListenableFuture<Sequence<T>> run(
+      final Query<T> query,
+      final ResponseContext responseContext,
+      final JavaType queryResultType,
+      final Closer closer
+  )
   {
-    final String cancelPath = BASE_PATH + query.getId();
-
     RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, BASE_PATH);
     final boolean isSmile = objectMapper.getFactory() instanceof SmileFactory;
     if (isSmile) {
@@ -114,64 +122,72 @@ public class DataServerClient
           public void onFailure(Throwable t)
           {
             if (resultStreamFuture.isCancelled()) {
-              cancelQuery(query, cancelPath);
+              cancelQuery(query.getId());
             }
           }
         },
         Execs.directExecutor()
     );
 
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
-        {
-          @Override
-          public JsonParserIterator<T> make()
-          {
-            return new JsonParserIterator<>(
-                queryResultType,
-                resultStreamFuture,
-                BASE_PATH,
-                query,
-                serviceLocation.getHost(),
-                objectMapper
-            );
-          }
+    return FutureUtils.transform(
+        resultStreamFuture,
+        resultStream -> new BaseSequence<>(
+            new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
+            {
+              @Override
+              public JsonParserIterator<T> make()
+              {
+                return new JsonParserIterator<>(
+                    queryResultType,
+                    Futures.immediateFuture(resultStream),
+                    BASE_PATH,
+                    query,
+                    serviceLocation.getHost(),
+                    objectMapper
+                );
+              }
 
-          @Override
-          public void cleanup(JsonParserIterator<T> iterFromMake)
-          {
-            CloseableUtils.closeAndWrapExceptions(iterFromMake);
-          }
-        }
+              @Override
+              public void cleanup(JsonParserIterator<T> iterFromMake)
+              {
+                CloseableUtils.closeAndWrapExceptions(iterFromMake);
+              }
+            }
+        )
     );
   }
 
-  private void cancelQuery(Query<?> query, String cancelPath)
+  private void cancelQuery(final String queryId)
   {
-    Runnable cancelRunnable = () -> {
-      Future<StatusResponseHolder> cancelFuture = serviceClient.asyncRequest(
-          new RequestBuilder(HttpMethod.DELETE, cancelPath),
-          StatusResponseHandler.getInstance());
+    if (queryId == null) {
+      throw DruidException.defensive("Null queryId");
+    }
 
-      Runnable checkRunnable = () -> {
-        try {
-          if (!cancelFuture.isDone()) {
-            log.error("Error cancelling query[%s]", query);
+    final String cancelPath = BASE_PATH + queryId;
+
+    final ListenableFuture<Void> cancelFuture = serviceClient.asyncRequest(
+        new RequestBuilder(HttpMethod.DELETE, cancelPath).timeout(CANCELLATION_TIMEOUT),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+
+    Futures.addCallback(
+        cancelFuture,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(final Void result)
+          {
+            // Do nothing on successful cancellation.
           }
-          StatusResponseHolder response = cancelFuture.get();
-          if (response.getStatus().getCode() >= 500) {
-            log.error("Error cancelling query[%s]: queryable node returned status[%d] [%s].",
-                      query,
-                      response.getStatus().getCode(),
-                      response.getStatus().getReasonPhrase());
+
+          @Override
+          public void onFailure(final Throwable t)
+          {
+            log.noStackTrace()
+               .warn(t, "Failed to cancel query[%s] on server[%s]", queryId, serviceLocation.getHostAndPort());
           }
-        }
-        catch (ExecutionException | InterruptedException e) {
-          log.error(e, "Error cancelling query[%s]", query);
-        }
-      };
-      queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
-    };
-    queryCancellationExecutor.submit(cancelRunnable);
+        },
+        Execs.directExecutor()
+    );
   }
 }

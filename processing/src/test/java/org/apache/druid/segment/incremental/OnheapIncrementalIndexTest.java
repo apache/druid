@@ -53,6 +53,76 @@ public class OnheapIncrementalIndexTest
   }
 
   @Test
+  public void testProjectionHappyPath()
+  {
+    // arrange
+    DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
+                                                  .setDimensions(ImmutableList.of(
+                                                      new StringDimensionSchema("string"),
+                                                      new LongDimensionSchema("long")
+                                                  ))
+                                                  .build();
+    AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(new StringDimensionSchema("string")),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long"),
+            new DoubleSumAggregatorFactory("double", "double")
+        }
+    );
+    // act & assert
+    IncrementalIndex index = IndexBuilder.create()
+                                         .schema(IncrementalIndexSchema.builder()
+                                                                       .withDimensionsSpec(dimensionsSpec)
+                                                                       .withRollup(true)
+                                                                       .withMetrics(aggregatorFactory)
+                                                                       .withProjections(ImmutableList.of(projectionSpec))
+                                                                       .build())
+                                         .buildIncrementalIndex();
+    Assert.assertNotNull(index.getProjection("proj"));
+  }
+
+  @Test
+  public void testProjectionDuplicatedName()
+  {
+    // arrange
+    DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
+    AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
+    AggregateProjectionSpec projectionSpec1 = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(),
+        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
+    );
+    AggregateProjectionSpec projectionSpec2 = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(),
+        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
+    );
+    // act & assert
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> IndexBuilder.create()
+                          .schema(IncrementalIndexSchema.builder()
+                                                        .withDimensionsSpec(dimensionsSpec)
+                                                        .withRollup(true)
+                                                        .withMetrics(aggregatorFactory)
+                                                        .withProjections(ImmutableList.of(
+                                                            projectionSpec1,
+                                                            projectionSpec2
+                                                        ))
+                                                        .build())
+                          .buildIncrementalIndex()
+    );
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Assert.assertEquals("Found duplicate projection[proj], please remove and resubmit the ingestion.", e.getMessage());
+  }
+
+  @Test
   public void testSpecEqualsAndHashCode()
   {
     EqualsVerifier.forClass(OnheapIncrementalIndex.Spec.class)
@@ -226,8 +296,11 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
                                                               ),
-                                                              new AggregatorFactory[] {
-                                                                  new LongSumAggregatorFactory("sum_double", "sum_double")
+                                                              new AggregatorFactory[]{
+                                                                  new LongSumAggregatorFactory(
+                                                                      "sum_double",
+                                                                      "sum_double"
+                                                                  )
                                                               }
                                                           )
                                                       )
@@ -272,7 +345,7 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
                                                               ),
-                                                              new AggregatorFactory[] {
+                                                              new AggregatorFactory[]{
                                                                   new LongSumAggregatorFactory("sum_long", "long"),
                                                                   new DoubleSumAggregatorFactory("sum_double", "double")
                                                               }
@@ -322,7 +395,7 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new LongDimensionSchema("long")
                                                               ),
-                                                              new AggregatorFactory[] {
+                                                              new AggregatorFactory[]{
                                                                   new LongSumAggregatorFactory("v0_sum", "v0")
                                                               }
                                                           )

@@ -780,8 +780,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals(2, taskCountAfterScaleOut);
     Assert.assertTrue(
         dynamicActionEmitter
-            .getMetricEvents()
-            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
@@ -840,8 +839,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     Assert.assertTrue(
         dynamicActionEmitter
-            .getMetricEvents()
-            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
@@ -1103,8 +1101,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     Assert.assertTrue(
         dynamicActionEmitter
-            .getMetricEvents()
-            .get(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)

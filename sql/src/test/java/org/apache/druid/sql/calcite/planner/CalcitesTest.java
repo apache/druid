@@ -40,10 +40,29 @@ public class CalcitesTest extends CalciteTestBase
     assertEquals("'foo'", Calcites.escapeStringLiteral("foo"));
     assertEquals("'foo bar'", Calcites.escapeStringLiteral("foo bar"));
     assertEquals("U&'foö bar'", Calcites.escapeStringLiteral("foö bar"));
-    assertEquals("U&'foo \\0026\\0026 bar'", Calcites.escapeStringLiteral("foo && bar"));
+    assertEquals("'foo && bar'", Calcites.escapeStringLiteral("foo && bar"));
     assertEquals("U&'foo \\005C bar'", Calcites.escapeStringLiteral("foo \\ bar"));
     assertEquals("U&'foo\\0027s bar'", Calcites.escapeStringLiteral("foo's bar"));
     assertEquals("U&'друид'", Calcites.escapeStringLiteral("друид"));
+  }
+
+  @Test
+  public void testEscapeStringLiteralAllAscii()
+  {
+    final StringBuilder sb = new StringBuilder();
+    for (int i = 0; i <= 127; i++) {
+      sb.append((char) i);
+    }
+    final String allAscii = sb.toString();
+    final String result = Calcites.escapeStringLiteral(allAscii);
+
+    // Verify the result is properly escaped and contains all ASCII characters
+    assertEquals(
+        "U&'\\0000\\0001\\0002\\0003\\0004\\0005\\0006\\0007\\0008\\0009\\000A\\000B\\000C\\000D\\000E\\000F\\0010"
+        + "\\0011\\0012\\0013\\0014\\0015\\0016\\0017\\0018\\0019\\001A\\001B\\001C\\001D\\001E\\001F !\"#$%&\\0027()"
+        + "*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\005C]^_`abcdefghijklmnopqrstuvwxyz{|}~\\007F'",
+        result
+    );
   }
 
   @Test

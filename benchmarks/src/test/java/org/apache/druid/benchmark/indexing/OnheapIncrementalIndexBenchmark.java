@@ -51,7 +51,6 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -253,13 +252,8 @@ public class OnheapIncrementalIndexBenchmark
           indexExecutor.submit(
               () -> {
                 currentlyRunning.incrementAndGet();
-                try {
-                  for (int i = 0; i < elementsPerAddTask; i++) {
-                    incrementalIndex.add(getLongRow(timestamp + i, 1, DIMENSION_COUNT));
-                  }
-                }
-                catch (IndexSizeExceededException e) {
-                  throw new RuntimeException(e);
+                for (int i = 0; i < elementsPerAddTask; i++) {
+                  incrementalIndex.add(getLongRow(timestamp + i, 1, DIMENSION_COUNT));
                 }
                 currentlyRunning.decrementAndGet();
                 someoneRan.set(true);

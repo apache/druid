@@ -94,10 +94,10 @@ public class CpuAcctDeltaMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertFalse(monitor.doMonitor(emitter));
     // First should just cache
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
     Assert.assertTrue(cpuacct.delete());
     TestUtils.copyResource("/cpuacct.usage_all", cpuacct);
     Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(2 * 128 + 1, emitter.getEvents().size());
+    Assert.assertEquals(2 * 128 + 1, emitter.getNumEmittedEvents());
   }
 }

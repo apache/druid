@@ -94,7 +94,7 @@ public class TaskCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(9, emitter.getEvents().size());
+    Assert.assertEquals(9, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
     emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);

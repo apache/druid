@@ -37,7 +37,6 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -278,7 +277,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
   IndexableAdapter adapter2;
 
   @Before
-  public void setUp() throws IndexSizeExceededException
+  public void setUp()
   {
     long timestamp = 0L;
     for (Map<String, Object> event : events1) {

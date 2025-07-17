@@ -22,123 +22,138 @@
 // This file was modified to make the list of keywords more closely adhere to what is found in DruidSQL
 
 import ace from 'ace-builds/src-noconflict/ace';
+import { dedupe } from 'druid-query-toolkit';
 
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
+import type { AvailableFunctions } from '../helpers';
 
-ace.define(
-  'ace/mode/dsql_highlight_rules',
-  ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function (acequire: any, exports: any) {
-    'use strict';
+export function initAceDsqlMode(availableSqlFunctions: AvailableFunctions | undefined) {
+  ace.define(
+    'ace/mode/dsql_highlight_rules',
+    ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
+    function (acequire: any, exports: any) {
+      'use strict';
 
-    const oop = acequire('../lib/oop');
-    const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
+      const oop = acequire('../lib/oop');
+      const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    const SqlHighlightRules = function (this: any) {
-      // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
-      const keywords = SQL_KEYWORDS.join('|').replace(/\s/g, '|');
+      const SqlHighlightRules = function (this: any) {
+        // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
+        const keywords = SQL_KEYWORDS.join('|').replace(/\s/g, '|');
 
-      // Stuff like: 'true|false'
-      const builtinConstants = SQL_CONSTANTS.join('|');
+        // Stuff like: 'true|false'
+        const builtinConstants = SQL_CONSTANTS.join('|');
 
-      // Stuff like: 'avg|count|first|last|max|min'
-      const builtinFunctions = SQL_DYNAMICS.concat(Object.keys(SQL_FUNCTIONS)).join('|');
+        // Stuff like: 'avg|count|first|last|max|min'
+        const builtinFunctions = dedupe([
+          ...SQL_DYNAMICS,
+          ...Array.from(SQL_FUNCTIONS.keys()),
+          ...(availableSqlFunctions?.keys() || []),
+        ]).join('|');
 
-      // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      const dataTypes = Object.keys(SQL_DATA_TYPES).join('|');
+        // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
+        const dataTypes = Array.from(SQL_DATA_TYPES.keys()).join('|');
 
-      const keywordMapper = this.createKeywordMapper(
-        {
-          'support.function': builtinFunctions,
-          'keyword': keywords,
-          'constant.language': builtinConstants,
-          'storage.type': dataTypes,
-        },
-        'identifier',
-        true,
-      );
+        const keywordMapper = this.createKeywordMapper(
+          {
+            'support.function': builtinFunctions,
+            'keyword': keywords,
+            'constant.language': builtinConstants,
+            'storage.type': dataTypes,
+          },
+          'identifier',
+          true,
+        );
 
-      this.$rules = {
-        start: [
-          {
-            token: 'comment.issue',
-            regex: '--:ISSUE:.*$',
-          },
-          {
-            token: 'comment',
-            regex: '--.*$',
-          },
-          {
-            token: 'comment',
-            start: '/\\*',
-            end: '\\*/',
-          },
-          {
-            token: 'variable.column', // " quoted reference
-            regex: '".*?"',
-          },
-          {
-            token: 'string', // ' string literal
-            regex: "'.*?'",
-          },
-          {
-            token: 'constant.numeric', // float
-            regex: '[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b',
-          },
-          {
-            token: keywordMapper,
-            regex: '[a-zA-Z_$][a-zA-Z0-9_$]*\\b',
-          },
-          {
-            token: 'keyword.operator',
-            regex: '\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|=',
-          },
-          {
-            token: 'paren.lparen',
-            regex: '[\\(]',
-          },
-          {
-            token: 'paren.rparen',
-            regex: '[\\)]',
-          },
-          {
-            token: 'text',
-            regex: '\\s+',
-          },
-        ],
+        this.$rules = {
+          start: [
+            {
+              token: 'comment.issue',
+              regex: '--:ISSUE:.*$',
+            },
+            {
+              token: 'comment',
+              regex: '--.*$',
+            },
+            {
+              token: 'comment',
+              start: '/\\*',
+              end: '\\*/',
+            },
+            {
+              token: 'variable.column', // " quoted reference
+              regex: '".*?"',
+            },
+            {
+              token: 'string', // ' string literal
+              regex: "'.*?'",
+            },
+            {
+              token: 'constant.numeric', // float
+              regex: '[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b',
+            },
+            {
+              token: keywordMapper,
+              regex: '[a-zA-Z_$][a-zA-Z0-9_$]*\\b',
+            },
+            {
+              token: 'keyword.operator',
+              regex: '\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|=',
+            },
+            {
+              token: 'paren.lparen',
+              regex: '[\\(]',
+            },
+            {
+              token: 'paren.rparen',
+              regex: '[\\)]',
+            },
+            {
+              token: 'text',
+              regex: '\\s+',
+            },
+          ],
+        };
+        this.normalizeRules();
       };
-      this.normalizeRules();
-    };
 
-    oop.inherits(SqlHighlightRules, TextHighlightRules);
+      oop.inherits(SqlHighlightRules, TextHighlightRules);
 
-    exports.SqlHighlightRules = SqlHighlightRules;
-  },
-);
+      exports.SqlHighlightRules = SqlHighlightRules;
+    },
+  );
 
-ace.define(
-  'ace/mode/dsql',
-  ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/dsql_highlight_rules'],
-  function (acequire: any, exports: any) {
-    'use strict';
+  ace.define(
+    'ace/mode/dsql',
+    [
+      'require',
+      'exports',
+      'module',
+      'ace/lib/oop',
+      'ace/mode/text',
+      'ace/mode/dsql_highlight_rules',
+    ],
+    function (acequire: any, exports: any) {
+      'use strict';
 
-    const oop = acequire('../lib/oop');
-    const TextMode = acequire('./text').Mode;
-    const SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
+      const oop = acequire('../lib/oop');
+      const TextMode = acequire('./text').Mode;
+      const SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
 
-    const Mode = function (this: any) {
-      this.HighlightRules = SqlHighlightRules;
-      this.$behaviour = this.$defaultBehaviour;
-      this.$id = 'ace/mode/dsql';
+      const Mode = function (this: any) {
+        this.HighlightRules = SqlHighlightRules;
+        this.$behaviour = this.$defaultBehaviour;
+        this.$id = 'ace/mode/dsql';
 
-      this.lineCommentStart = '--';
-      this.getCompletions = () => {
-        return [];
+        this.lineCommentStart = '--';
+        this.getCompletions = () => {
+          return [];
+        };
       };
-    };
-    oop.inherits(Mode, TextMode);
+      oop.inherits(Mode, TextMode);
 
-    exports.Mode = Mode;
-  },
-);
+      exports.Mode = Mode;
+    },
+  );
+}

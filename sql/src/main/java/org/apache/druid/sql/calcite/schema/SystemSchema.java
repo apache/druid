@@ -51,7 +51,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -156,6 +156,7 @@ public class SystemSchema extends AbstractSchema
       .add("shard_spec", ColumnType.STRING)
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
+      .add("projections", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
       .add("replication_factor", ColumnType.LONG)
       .build();
@@ -173,6 +174,7 @@ public class SystemSchema extends AbstractSchema
           SEGMENTS_SIGNATURE.indexOf("shard_spec"),
           SEGMENTS_SIGNATURE.indexOf("dimensions"),
           SEGMENTS_SIGNATURE.indexOf("metrics"),
+          SEGMENTS_SIGNATURE.indexOf("projections"),
           SEGMENTS_SIGNATURE.indexOf("last_compaction_state")
       }
   );
@@ -237,7 +239,7 @@ public class SystemSchema extends AbstractSchema
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
-      final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
+      final CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
@@ -253,7 +255,7 @@ public class SystemSchema extends AbstractSchema
             serverInventoryView,
             authorizerMapper,
             overlordClient,
-            coordinatorDruidLeaderClient
+            coordinatorClient
         ),
         SERVER_SEGMENTS_TABLE,
         new ServerSegmentsTable(serverView, authorizerMapper),
@@ -372,6 +374,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
+                segment.getProjections(),
                 segment.getLastCompactionState(),
                 // If the segment is unpublished, we won't have this information yet.
                 // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
@@ -411,6 +414,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getShardSpec(),
                 segment.getDimensions(),
                 segment.getMetrics(),
+                segment.getProjections(),
                 null, // unpublished segments from realtime tasks will not be compacted yet
                 REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
             };
@@ -531,21 +535,21 @@ public class SystemSchema extends AbstractSchema
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
-    private final DruidLeaderClient coordinatorLeaderClient;
+    private final CoordinatorClient coordinatorClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        DruidLeaderClient coordinatorLeaderClient
+        CoordinatorClient coordinatorClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
-      this.coordinatorLeaderClient = coordinatorLeaderClient;
+      this.coordinatorClient = coordinatorClient;
     }
 
     @Override
@@ -574,7 +578,7 @@ public class SystemSchema extends AbstractSchema
       String tmpOverlordLeader = "";
 
       try {
-        tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
+        tmpCoordinatorLeader = FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString();
       }
       catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders

@@ -60,7 +60,7 @@ public class DruidConnectionStateListenerTest
   public void test_doMonitor_init()
   {
     listener.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue("zk/connected", 0);
   }
 
@@ -69,7 +69,7 @@ public class DruidConnectionStateListenerTest
   {
     listener.stateChanged(null, ConnectionState.CONNECTED);
     listener.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("zk/connected", 1);
   }
@@ -79,7 +79,7 @@ public class DruidConnectionStateListenerTest
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
     listener.doMonitor(emitter);
-    Assert.assertEquals(2, emitter.getEvents().size()); // 2 because stateChanged emitted an alert
+    Assert.assertEquals(2, emitter.getNumEmittedEvents()); // 2 because stateChanged emitted an alert
 
     emitter.verifyValue("zk/connected", 0);
   }
@@ -88,7 +88,7 @@ public class DruidConnectionStateListenerTest
   public void test_suspendedAlert()
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
-    Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
 
     final AlertEvent alert = emitter.getAlerts().get(0);
     Assert.assertEquals("alerts", alert.getFeed());
@@ -99,10 +99,10 @@ public class DruidConnectionStateListenerTest
   public void test_reconnectedMetric()
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
-    Assert.assertEquals(1, emitter.getEvents().size()); // the first stateChanged emits an alert
+    Assert.assertEquals(1, emitter.getNumEmittedEvents()); // the first stateChanged emits an alert
 
     listener.stateChanged(null, ConnectionState.RECONNECTED);
-    Assert.assertEquals(2, emitter.getEvents().size()); // the second stateChanged emits a metric
+    Assert.assertEquals(2, emitter.getNumEmittedEvents()); // the second stateChanged emits a metric
 
     long observedReconnectTime = emitter.getValue("zk/reconnect/time", null).longValue();
     Assert.assertTrue(observedReconnectTime >= 0);
