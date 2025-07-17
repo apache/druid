@@ -50,6 +50,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Rule;
@@ -255,19 +256,14 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                    .size(0)
                    .build();
 
-    realtimeSegment1 = new DataSegment(
-        DATASOURCE3,
-        Intervals.of("2012/2013"),
-        "version3",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    realtimeSegment1 = DataSegment.builder(SegmentId.of(DATASOURCE3, Intervals.of("2012/2013"), "version3", null))
+                                  .shardSpec(new NumberedShardSpec(2, 3))
+                                  .dimensions(ImmutableList.of("dim1", "dim2"))
+                                  .metrics(ImmutableList.of("met1", "met2"))
+                                  .projections(ImmutableList.of("proj1", "proj2"))
+                                  .binaryVersion(1)
+                                  .size(100L)
+                                  .build();
   }
 
   public void tearDown() throws Exception
@@ -302,18 +298,13 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public DataSegment newSegment(String datasource, int partitionId)
   {
-    return new DataSegment(
-        datasource,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    return DataSegment.builder(SegmentId.of(datasource, Intervals.of("2012/2013"), "version1", partitionId))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .dimensions(ImmutableList.of("dim1", "dim2"))
+                      .metrics(ImmutableList.of("met1", "met2"))
+                      .projections(ImmutableList.of("proj1", "proj2"))
+                      .binaryVersion(1)
+                      .size(100L)
+                      .build();
   }
 }

@@ -30,10 +30,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
+import org.apache.druid.indexer.HadoopIndexTask;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -259,7 +260,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), task1);
     runningVersion.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "test_version1");
@@ -273,7 +275,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), task2);
     runningVersion.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), "test_version2");

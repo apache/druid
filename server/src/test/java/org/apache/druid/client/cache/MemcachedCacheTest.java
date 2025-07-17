@@ -19,7 +19,6 @@
 
 package org.apache.druid.client.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -50,11 +49,9 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -206,16 +203,13 @@ public class MemcachedCacheTest extends CacheTestBase<MemcachedCache>
     final MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig);
     final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
 
-    while (serviceEmitter.getEvents().isEmpty()) {
+    while (serviceEmitter.getNumEmittedEvents() <= 0) {
       Thread.sleep(memcachedCacheConfig.getTimeout());
       cache.doMonitor(serviceEmitter);
     }
 
-    Assert.assertFalse(serviceEmitter.getEvents().isEmpty());
-    ObjectMapper mapper = new DefaultObjectMapper();
-    for (Event event : serviceEmitter.getEvents()) {
-      log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
-    }
+    Assert.assertTrue(serviceEmitter.getNumEmittedEvents() > 0);
+    Assert.assertFalse(serviceEmitter.getMetricEvents("query/cache/memcached/total").isEmpty());
   }
 
   @Test
