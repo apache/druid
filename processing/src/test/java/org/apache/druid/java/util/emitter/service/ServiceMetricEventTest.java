@@ -344,4 +344,21 @@ public class ServiceMetricEventTest
     // But the event copy still has the original dimensions
     Assert.assertEquals(Map.of("dim1", "v1"), event1Copy.getUserDims());
   }
+
+  @Test
+  public void test_copy_doesNotContainNullDimValues()
+  {
+    final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent
+        .builder()
+        .setDimension("dim1", (Object) null)
+        .setMetric("m1", 100);
+
+    final ServiceMetricEvent event1 = eventBuilder.build("coordinator", "localhost");
+    final ServiceMetricEvent event1Copy = event1.copy();
+
+    Assert.assertTrue(event1.toMap().containsKey("dim1"));
+    Assert.assertNull(event1.toMap().get("dim1"));
+    Assert.assertEquals(Map.of(), event1.getUserDims());
+    Assert.assertEquals(Map.of(), event1Copy.getUserDims());
+  }
 }

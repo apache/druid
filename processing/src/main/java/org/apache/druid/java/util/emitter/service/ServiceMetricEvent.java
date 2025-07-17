@@ -33,6 +33,7 @@ import org.joda.time.DateTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -92,7 +93,7 @@ public class ServiceMetricEvent implements Event
 
   public Map<String, Object> getUserDims()
   {
-    return ImmutableMap.copyOf(userDims);
+    return nonNullCopyUserDims();
   }
 
   public String getMetric()
@@ -130,7 +131,23 @@ public class ServiceMetricEvent implements Event
    */
   public ServiceMetricEvent copy()
   {
-    return new ServiceMetricEvent(createdTime, serviceDims, Map.copyOf(userDims), feed, metric, value);
+    return new ServiceMetricEvent(createdTime, serviceDims, nonNullCopyUserDims(), feed, metric, value);
+  }
+
+  /**
+   * Creates a non-null copy of {@link #userDims} containing only non-null keys
+   * and values.
+   */
+  private Map<String, Object> nonNullCopyUserDims()
+  {
+    if (userDims == null) {
+      return Map.of();
+    }
+
+    return userDims.entrySet()
+                   .stream()
+                   .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   /**
