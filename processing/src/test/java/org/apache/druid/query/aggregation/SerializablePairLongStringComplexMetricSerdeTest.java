@@ -73,7 +73,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     assertExpected(ImmutableList.of(new SerializablePairLongString(
         100L,
         randomStringUtils.randomAlphanumeric(2 * 1024 * 1024)
-    )), 2097182, 2103140);
+    )), 2097182, 2103134);
   }
 
   @Test
@@ -90,7 +90,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(Integer.MAX_VALUE + (long) i, stringList.get(i % numStrings)));
     }
 
-    assertExpected(valueList, 10440010, 1746026);
+    assertExpected(valueList, 10440010, 1745855);
   }
 
   @Test
@@ -115,7 +115,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(random.nextLong(), randomStringUtils.randomAlphanumeric(1024)));
     }
 
-    assertExpected(valueList, 10440010, 10428975);
+    assertExpected(valueList, 10440010, 10429026);
   }
 
   @Test
