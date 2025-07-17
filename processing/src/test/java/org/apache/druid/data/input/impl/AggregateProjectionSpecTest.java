@@ -77,7 +77,18 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         )
     );
 
-    Assertions.assertEquals("projection name cannot be null", t.getMessage());
+    Assertions.assertEquals("projection name cannot be null or empty", t.getMessage());
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionSpec(
+            "",
+            VirtualColumns.EMPTY,
+            List.of(new StringDimensionSchema("string")),
+            null
+        )
+    );
+    Assertions.assertEquals("projection name cannot be null or empty", t.getMessage());
   }
 
   @Test

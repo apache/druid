@@ -29,12 +29,14 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.SortedSet;
 
 class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
@@ -152,6 +154,48 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testInvalidName()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                null,
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
+        t.getMessage()
+    );
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
+        t.getMessage()
+    );
+  }
+
+  @Test
   void testInvalidGrouping()
   {
     Throwable t = Assertions.assertThrows(
@@ -189,6 +233,48 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     Assertions.assertEquals(
         "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidOrdering()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "no order",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                null
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema[no order] ordering must not be null",
+        t.getMessage()
+    );
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
         t.getMessage()
     );
   }

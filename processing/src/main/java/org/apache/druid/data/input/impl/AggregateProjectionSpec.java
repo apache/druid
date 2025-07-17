@@ -73,8 +73,8 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    if (name == null) {
-      throw InvalidInput.exception("projection name cannot be null");
+    if (name == null || name.isEmpty()) {
+      throw InvalidInput.exception("projection name cannot be null or empty");
     }
     this.name = name;
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {

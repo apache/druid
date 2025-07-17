@@ -182,8 +182,8 @@ public class AggregateProjectionMetadata
         @JsonProperty("ordering") List<OrderBy> ordering
     )
     {
-      if (name == null) {
-        throw DruidException.defensive("projection schema name cannot be null");
+      if (name == null || name.isEmpty()) {
+        throw DruidException.defensive("projection schema name cannot be null or empty");
       }
       this.name = name;
       if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
