@@ -112,7 +112,12 @@ As part of this feature, [new metrics](#overlord-kill-task-metrics) have been ad
 
 [#18028](https://github.com/apache/druid/pull/18028)
 
-### Dart improvements
+### Preferred tier selection 
+You can now configure the Broker service to prefer  Historicals on a specific tier. This can help ensure Druid executes queries within the same availability zone if you have Druid deployed across multiple availability zones.
+
+[#18136](https://github.com/apache/druid/pull/18136)
+
+### Dart improvements NEED TO WRITE
 
 Dart specific endpoints have been removed and folded into SqlResource. [#18003](https://github.com/apache/druid/pull/18003)
 Added a new engine QueryContext parameter. The value can be native or msq-dart. The value determines the engine used to run the query. The default value is native. [#18003](https://github.com/apache/druid/pull/18003)
@@ -139,6 +144,8 @@ The web console supports using SET statements to specify query context parameter
 
 - You can now assign tiered replications to tiers that aren't currently online [#18050](https://github.com/apache/druid/pull/18050)
 - You can now filter tasks by the error in the Task view [#18057](https://github.com/apache/druid/pull/18057)
+- Improved SQL autocomplete and added JSON autocomplete [#18126](https://github.com/apache/druid/pull/18126)
+- Updated the web console to use the Overlord APIs instead of Coordinator APIs when managing segments, such as marking them as unused [#18172](https://github.com/apache/druid/pull/18172)
 
 ### Ingestion
 
@@ -181,6 +188,7 @@ You can use a segment metadata query to find the list of projections attached to
 
 #### Other querying improvements
 
+- You can now perform big decimal aggregations using the MSQ task engine [#18164](https://github.com/apache/druid/pull/18164)
 - Changed `MV_OVERLAP` and `MV_CONTAINS` functions now aligns more closely with the native `inType` filter [#18084](https://github.com/apache/druid/pull/18084)
 - Improved query handling when some segments are missing on Historicals. Druid no longer incorrectly returns partial results [#18025](https://github.com/apache/druid/pull/18025)
 
@@ -207,6 +215,8 @@ The following Coordinator APIs are now available:
 
 - Added the optional `taskCountStart`  property to the lag based auto scaler. Use it to specify the initial task count for the supervisor to be submitted with [#17900](https://github.com/apache/druid/pull/17900)
 - Added audit logs for the following `BasicAuthorizerResource` update methods: `authorizerUserUpdateListener`, `authorizerGroupMappingUpdateListener`, `authorizerUpdateListener` (deprecated) [#17916](https://github.com/apache/druid/pull/17916)
+- Added support for streaming task logs to Indexers [#18170](https://github.com/apache/druid/pull/18170)
+- Improved how MSQ task engine tasks get canceled, speeding it up and freeing up resources sooner [#18095](https://github.com/apache/druid/pull/18095)
 
 ### Data management
 
@@ -269,17 +279,39 @@ The following metrics that correspond to Kafka metrics have been added:
 
 [#18028](https://github.com/apache/druid/pull/18028)
 
+#### MSQ task engine metrics
+
+The MSQ task engine now supports the following metrics:
+
+- `query/time`: Reported by controller and worker at the end of the query.
+- `query/cpu/time`: Reported by each worker at the end of the query.
+
+Additionally, MSQ task engine metrics now include the following dimensions:
+
+- `queryId`
+- `sqlQueryId`
+- `engine`: Denotes the engine used for the query, `msq-dart` or `msq-task`.
+- `dartQueryId`: (Dart only)
+- `type`: Always `msq`
+- `dataSource`
+- `interval`
+- `duration`
+- `success`
+
+[#18121](https://github.com/apache/druid/pull/18121)
+
 #### Other metrics and monitoring improvements
 
 - Added the `description` dimension for the `task/run/time` metric 
 - Added a metric for how long it takes to complete an autoscale action: `task/autoScaler/scaleActionTime` [#17971](https://github.com/apache/druid/pull/17971)
 - Added a `taskType` dimension to Overlord-emitted task count metrics  [#18032](https://github.com/apache/druid/pull/18032)
 - Added the following groupBy metrics to the Prometheus emitter: `mergeBuffer/used`, `mergeBuffer/acquisitionTimeNs`, `mergeBuffer/acquisition`, `groupBy/spilledQueries`, `groupBy/spilledBytes`, and `groupBy/mergeDictionarySize` [#17929](https://github.com/apache/druid/pull/17929)
-- Changed the logging level for query cancelations from `warn` to `info` to reduce noise [#18046](https://github.com/apache/druid/pull/18046)
-- Changed query logging so that SQL queries that can't be3 parsed are no longer logged and don't emit metrics [#18102](https://github.com/apache/druid/pull/18102)
+- Changed the logging level for query cancellation from `warn` to `info` to reduce noise [#18046](https://github.com/apache/druid/pull/18046)
+- Changed query logging so that SQL queries that can't be parsed are no longer logged and don't emit metrics [#18102](https://github.com/apache/druid/pull/18102)
 - Changed the logging level for lifecycle from `debug` to `info` [#17884](https://github.com/apache/druid/pull/17884)
 - Added  `groupId` and `tasks` to Overlord logs [#17980](https://github.com/apache/druid/pull/17980)
 - You can now use the `druid.request.logging.rollPeriod` to configure the log rotation period (default 1 day) [#17976](https://github.com/apache/druid/pull/17976)
+- Improved metric emission on the Broker to include per-query result-level caching (`query/resultCache/hit` returning `1` means the cache was used) [#18063](https://github.com/apache/druid/pull/18063)
 
 ### Extensions
 
@@ -303,7 +335,7 @@ You can restore the previous behavior by setting the query context parameter `us
 
 #### `IS_INCREMENTAL_HANDOFF_SUPPORTED` config removed
 
-Removed the `IS_INCREMENTAL_HANDOFF_SUPPORTED` context reference from supervisors, as incremental publishing has been the default behavior since version 0.16.0. This context was originally introduced to support rollback to LegacyKafkaIndexTaskRunner in versions earlier than 0.16.0, which has since been removed.
+Removed the `IS_INCREMENTAL_HANDOFF_SUPPORTED` context reference from supervisors, as incremental publishing has been the default behavior since version 0.16.0. This context was originally introduced to support rollback to `LegacyKafkaIndexTaskRunner` in versions earlier than 0.16.0, which has since been removed.
 
 #### `useMaxMemoryEstimates` config removed 
 
@@ -315,12 +347,13 @@ Removed the `useMaxMemoryEstimates` config. When set to false, Druid used a much
 
 ### Developer notes
 
-- Some maven plugins no longer use hardcoded version numbers. Instead, they now pull from the Apache parent [#18138](https://github.com/apache/druid/pull/18138)
+- Some maven plugins no longer use hard-coded version numbers. Instead, they now pull from the Apache parent [#18138](https://github.com/apache/druid/pull/18138)
 
 #### Dependency updates
 
 The following dependencies have had their versions bumped:
 
+- `apache.kafka` from `3.9.0` to `3.9.1` [#18178](https://github.com/apache/druid/pull/18178)
 - `aws.sdk` for Java from `1.12.638` to  `1.12.784` [#18068](https://github.com/apache/druid/pull/18068)
 - `fabric8` from `6.7.2` to `6.13.1`. The updated `fabric8` version uses `Vert.x` as an HTTP client instead of  `OkHttp` [#17913](https://github.com/apache/druid/pull/17913)
 - Curator from `5.5.0` to `5.8.0` [#17857](https://github.com/apache/druid/pull/17857)
