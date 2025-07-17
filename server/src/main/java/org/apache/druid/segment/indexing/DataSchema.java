@@ -462,13 +462,15 @@ public class DataSchema
           continue;
         }
         final Granularity projectionGranularity = schema.getGranularity();
-        if (granularitySpec.getSegmentGranularity().isFinerThan(projectionGranularity)) {
-          throw InvalidInput.exception(
-              "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
-              projection.getName(),
-              projectionGranularity,
-              granularitySpec.getSegmentGranularity()
-          );
+        if (granularitySpec instanceof UniformGranularitySpec) {
+          if (granularitySpec.getSegmentGranularity().isFinerThan(projectionGranularity)) {
+            throw InvalidInput.exception(
+                "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
+                projection.getName(),
+                projectionGranularity,
+                granularitySpec.getSegmentGranularity()
+            );
+          }
         }
       }
     }
