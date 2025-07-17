@@ -30,19 +30,19 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.SortedSet;
 
-public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
+class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerde() throws JsonProcessingException
+  void testSerde() throws JsonProcessingException
   {
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
@@ -66,7 +66,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         12345
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         spec,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionMetadata.class)
     );
@@ -74,7 +74,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 
 
   @Test
-  public void testComparator()
+  void testComparator()
   {
     SortedSet<AggregateProjectionMetadata> metadataBest = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     AggregateProjectionMetadata good = new AggregateProjectionMetadata(
@@ -144,17 +144,17 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     metadataBest.add(betterLessGroupingColumns);
     metadataBest.add(evenBetterMoreAggs);
     metadataBest.add(best);
-    Assert.assertEquals(best, metadataBest.first());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(best, metadataBest.first());
+    Assertions.assertArrayEquals(
         new AggregateProjectionMetadata[]{best, evenBetterMoreAggs, betterLessGroupingColumns, good},
         metadataBest.toArray()
     );
   }
 
   @Test
-  public void testInvalidGrouping()
+  void testInvalidGrouping()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
@@ -168,9 +168,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             0
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
@@ -184,17 +187,20 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             0
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testEqualsAndHashcode()
+  void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.class).usingGetClass().verify();
   }
 
   @Test
-  public void testEqualsAndHashcodeSchema()
+  void testEqualsAndHashcodeSchema()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
                   .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")

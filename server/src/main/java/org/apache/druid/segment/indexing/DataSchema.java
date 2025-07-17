@@ -37,12 +37,15 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -131,12 +134,31 @@ public class DataSchema
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
     computeAndValidateOutputFieldNames(this.dimensionsSpec, this.aggregators);
 
+
     if (this.granularitySpec.isRollup() && this.aggregators.length == 0) {
       log.warn(
           "Rollup is enabled for dataSource [%s] but no metricsSpec has been provided. "
           + "Are you sure this is what you want?",
           dataSource
       );
+    }
+
+    if (this.projections != null) {
+      for (AggregateProjectionSpec projection : this.projections) {
+        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
+        if (schema.getTimeColumnName() == null) {
+          continue;
+        }
+        final Granularity projectionGranularity = schema.getGranularity();
+        if (this.granularitySpec.getSegmentGranularity().isFinerThan(projectionGranularity)) {
+          throw InvalidInput.exception(
+              "Projection[%s] has granularity[%s] must be finer than or equal to segment granularity[%s]",
+              projection.getName(),
+              projectionGranularity,
+              this.granularitySpec.getSegmentGranularity()
+          );
+        }
+      }
     }
   }
 
