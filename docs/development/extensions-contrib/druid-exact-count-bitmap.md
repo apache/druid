@@ -1,6 +1,6 @@
 ---
 id: druid-exact-count-bitmap
-title: "Exact Count"
+title: "Exact Count Bitmap"
 ---
 
 <!--
