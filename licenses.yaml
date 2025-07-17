@@ -2118,13 +2118,13 @@ name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.9.11
 libraries:
   - org.apache.maven: maven-artifact
 notices:
   - maven-artifact: |
       Maven Artifact
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2001-2025 The Apache Software Foundation
 ---
 
 name: Maven Artifact Resolver Connector Basic
