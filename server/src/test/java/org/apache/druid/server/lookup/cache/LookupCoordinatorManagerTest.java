@@ -142,7 +142,7 @@ public class LookupCoordinatorManagerTest
   @After
   public void tearDown()
   {
-    Assert.assertEquals(0, SERVICE_EMITTER.getEvents().size());
+    Assert.assertEquals(0, SERVICE_EMITTER.getNumEmittedEvents());
     SERVICE_EMITTER.flush();
   }
 

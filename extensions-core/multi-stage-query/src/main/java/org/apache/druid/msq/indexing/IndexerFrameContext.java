@@ -50,7 +50,7 @@ public class IndexerFrameContext implements FrameContext
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
-  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+  private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public IndexerFrameContext(
       StageId stageId,
@@ -59,7 +59,7 @@ public class IndexerFrameContext implements FrameContext
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
       ResourceHolder<ProcessingBuffers> processingBuffers,
-      DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
+      IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters,
       WorkerStorageParameters storageParameters
   )

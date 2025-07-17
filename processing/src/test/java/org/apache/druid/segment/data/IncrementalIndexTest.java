@@ -66,7 +66,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -170,7 +169,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         .build();
   }
 
-  public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
+  public static void populateIndex(long timestamp, IncrementalIndex index)
   {
     index.add(
         new MapBasedInputRow(
@@ -515,14 +514,9 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                     throw new RuntimeException(e);
                   }
                   currentlyRunning.incrementAndGet();
-                  try {
-                    for (int i = 0; i < elementsPerThread; i++) {
-                      index.add(getLongRow(timestamp + i, dimensionCount));
-                      someoneRan.incrementAndGet();
-                    }
-                  }
-                  catch (IndexSizeExceededException e) {
-                    throw new RuntimeException(e);
+                  for (int i = 0; i < elementsPerThread; i++) {
+                    index.add(getLongRow(timestamp + i, dimensionCount));
+                    someoneRan.incrementAndGet();
                   }
                   currentlyRunning.decrementAndGet();
                 }
@@ -655,7 +649,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDynamicSchemaRollup() throws IndexSizeExceededException
+  public void testDynamicSchemaRollup()
   {
     final IncrementalIndex index = indexCreator.createIndex(
         (builder, args) -> builder
@@ -690,7 +684,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowWithExistingMetricsAndWithoutMetric() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowWithExistingMetricsAndWithoutMetric()
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new CountAggregatorFactory("count"),
@@ -756,7 +750,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowWithExistingMetricsAndWithoutMetricUsingAggregatorWithDifferentReturnType() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowWithExistingMetricsAndWithoutMetricUsingAggregatorWithDifferentReturnType()
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new CountAggregatorFactory("count"),
@@ -823,7 +817,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowWithOnlyExistingMetrics() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowWithOnlyExistingMetrics()
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new CountAggregatorFactory("count"),
@@ -875,7 +869,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowsWithNoMetrics() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowsWithNoMetrics()
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new CountAggregatorFactory("count"),
@@ -922,7 +916,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowWithMixedTypeMetrics() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowWithMixedTypeMetrics()
   {
     if (isPreserveExistingMetrics) {
       expectedException.expect(ParseException.class);
@@ -972,7 +966,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSchemaRollupWithRowsWithNonRolledUpSameColumnName() throws IndexSizeExceededException
+  public void testSchemaRollupWithRowsWithNonRolledUpSameColumnName()
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new CountAggregatorFactory("count"),

@@ -21,9 +21,13 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -301,16 +305,74 @@ public class KubernetesPeonClient
             if (maybePod.isPresent()) {
               return maybePod.get();
             }
-            throw new KubernetesResourceNotFoundException(
-                "K8s pod with label: job-name="
-                + jobName
-                + " not found");
+
+            // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
+            List<Event> events = getPeonEvents(client, jobName);
+
+            if (events.isEmpty()) {
+              throw new KubernetesResourceNotFoundException("K8s pod with label[job-name=%s] not found", jobName);
+            } else {
+              Event latestEvent = events.get(events.size() - 1);
+              throw new KubernetesResourceNotFoundException(
+                  "Job[%s] failed to create pods. Message[%s]", jobName, latestEvent.getMessage());
+            }
           },
-          DruidK8sConstants.IS_TRANSIENT, quietTries, maxTries
+          this::shouldRetryStartingPeonPod, quietTries, maxTries
       );
+    }
+    catch (KubernetesResourceNotFoundException e) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(e, e.getMessage());
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
+    }
+  }
+
+  /**
+   * Determines if this exception, specifically when containing Kubernetes job event messages, permits a retry attempt.
+   * <p>
+   * The method checks the exception message against a predefined list of Kubernetes event messages.
+   * These substrings, found in {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES},
+   * represent Kubernetes event that indicate a retry for starting the Peon Pod would likely be futile.
+   */
+  private boolean shouldRetryStartingPeonPod(Throwable e)
+  {
+    if (!(e instanceof KubernetesResourceNotFoundException)) {
+      return false;
+    }
+
+    String errorMessage = e.getMessage();
+    for (String blacklistedMessage : DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES) {
+      if (errorMessage.contains(blacklistedMessage)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private List<Event> getPeonEvents(KubernetesClient client, String jobName)
+  {
+    ObjectReference objectReference = new ObjectReferenceBuilder()
+        .withApiVersion("batch/v1")
+        .withKind("Job")
+        .withName(jobName)
+        .withNamespace(this.namespace)
+        .build();
+
+    try {
+      return client.v1()
+                   .events()
+                   .inNamespace(this.namespace)
+                   .withInvolvedObject(objectReference)
+                   .list()
+                   .getItems();
+    }
+    catch (KubernetesClientException e) {
+      log.warn("Failed to get events for job[%s]; %s", jobName, e.getMessage());
+      return List.of();
     }
   }
 

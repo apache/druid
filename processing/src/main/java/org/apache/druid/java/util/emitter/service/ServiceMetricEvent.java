@@ -126,6 +126,14 @@ public class ServiceMetricEvent implements Event
   }
 
   /**
+   * Creates an immutable copy of this metric event. This is used only in tests.
+   */
+  public ServiceMetricEvent copy()
+  {
+    return new ServiceMetricEvent(createdTime, serviceDims, Map.copyOf(userDims), feed, metric, value);
+  }
+
+  /**
    * Builder for a {@link ServiceMetricEvent}. This builder can be used for
    * building only one event.
    */

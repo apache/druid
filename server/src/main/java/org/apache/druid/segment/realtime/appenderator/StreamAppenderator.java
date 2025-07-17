@@ -68,7 +68,6 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -206,10 +205,10 @@ public class StreamAppenderator implements Appenderator
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
-   *
+   * <p>
    * The sinkTimeline is set to the sink timeline of the provided SinkQuerySegmentWalker.
    * If the SinkQuerySegmentWalker is null, a new sink timeline is initialized.
-   *
+   * <p>
    * It is used by UnifiedIndexerAppenderatorsManager which allows queries on data associated with multiple
    * Appenderators.
    */
@@ -303,7 +302,7 @@ public class StreamAppenderator implements Appenderator
       final InputRow row,
       @Nullable final Supplier<Committer> committerSupplier,
       final boolean allowIncrementalPersists
-  ) throws IndexSizeExceededException, SegmentNotWritableException
+  ) throws SegmentNotWritableException
   {
     throwPersistErrorIfExists();
 
@@ -323,18 +322,9 @@ public class StreamAppenderator implements Appenderator
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
 
-    try {
-      addResult = sink.add(row, !allowIncrementalPersists);
-      sinkRowsInMemoryAfterAdd = addResult.getRowCount();
-      bytesInMemoryAfterAdd = addResult.getBytesInMemory();
-    }
-    catch (IndexSizeExceededException e) {
-      // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
-      // can't add the row (it just failed). This should never actually happen, though, because we check
-      // sink.canAddRow after returning from add.
-      log.error(e, "Sink for segment[%s] was unexpectedly full!", identifier);
-      throw e;
-    }
+    addResult = sink.add(row);
+    sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+    bytesInMemoryAfterAdd = addResult.getBytesInMemory();
 
     final long currTs = System.currentTimeMillis();
     metrics.reportMessageGap(currTs - row.getTimestampFromEpoch());
@@ -878,7 +868,6 @@ public class StreamAppenderator implements Appenderator
    * @param identifier    sink identifier
    * @param sink          sink to push
    * @param useUniquePath true if the segment should be written to a path with a unique identifier
-   *
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
@@ -1125,7 +1114,7 @@ public class StreamAppenderator implements Appenderator
    * Unannounces the given base segment and all its upgraded versions.
    *
    * @param baseSegment base segment
-   * @param sink sink corresponding to the base segment
+   * @param sink        sink corresponding to the base segment
    * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
   private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
@@ -1138,17 +1127,15 @@ public class StreamAppenderator implements Appenderator
 
       final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment = baseSegmentToUpgradedSegments.remove(baseId);
       for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
-        final DataSegment newSegment = new DataSegment(
-            newId.getDataSource(),
-            newId.getInterval(),
-            newId.getVersion(),
-            baseSegment.getLoadSpec(),
-            baseSegment.getDimensions(),
-            baseSegment.getMetrics(),
-            newId.getShardSpec(),
-            baseSegment.getBinaryVersion(),
-            baseSegment.getSize()
-        );
+        final DataSegment newSegment = DataSegment.builder(newId.asSegmentId())
+                                                  .shardSpec(newId.getShardSpec())
+                                                  .loadSpec(baseSegment.getLoadSpec())
+                                                  .dimensions(baseSegment.getDimensions())
+                                                  .metrics(baseSegment.getMetrics())
+                                                  .projections(baseSegment.getProjections())
+                                                  .binaryVersion(baseSegment.getBinaryVersion())
+                                                  .size(baseSegment.getSize())
+                                                  .build();
         unannounceSegment(newSegment);
         upgradedSegmentToBaseSegment.remove(newId);
       }
@@ -1192,17 +1179,15 @@ public class StreamAppenderator implements Appenderator
 
   private DataSegment getUpgradedSegment(DataSegment baseSegment, SegmentIdWithShardSpec upgradedVersion)
   {
-    return new DataSegment(
-        upgradedVersion.getDataSource(),
-        upgradedVersion.getInterval(),
-        upgradedVersion.getVersion(),
-        baseSegment.getLoadSpec(),
-        baseSegment.getDimensions(),
-        baseSegment.getMetrics(),
-        upgradedVersion.getShardSpec(),
-        baseSegment.getBinaryVersion(),
-        baseSegment.getSize()
-    );
+    return DataSegment.builder(upgradedVersion.asSegmentId())
+                      .shardSpec(upgradedVersion.getShardSpec())
+                      .loadSpec(baseSegment.getLoadSpec())
+                      .dimensions(baseSegment.getDimensions())
+                      .metrics(baseSegment.getMetrics())
+                      .projections(baseSegment.getProjections())
+                      .binaryVersion(baseSegment.getBinaryVersion())
+                      .size(baseSegment.getSize())
+                      .build();
   }
 
   private void lockBasePersistDirectory()
@@ -1443,7 +1428,7 @@ public class StreamAppenderator implements Appenderator
    * Update the state of the appenderator when adding a sink.
    *
    * @param identifier sink identifier
-   * @param sink sink to be added
+   * @param sink       sink to be added
    */
   private void addSink(SegmentIdWithShardSpec identifier, Sink sink)
   {
@@ -1632,7 +1617,6 @@ public class StreamAppenderator implements Appenderator
    *
    * @param indexToPersist hydrant to persist
    * @param identifier     the segment this hydrant is going to be part of
-   *
    * @return the number of rows persisted
    */
   private int persistHydrant(FireHydrant indexToPersist, SegmentIdWithShardSpec identifier)

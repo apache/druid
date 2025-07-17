@@ -74,7 +74,7 @@ public class TaskSlotCountStatsMonitorTest
     final TaskSlotCountStatsMonitor monitor = new TaskSlotCountStatsMonitor(statsProvider);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getEvents().size());
+    Assert.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue("taskSlot/total/count", 1L);
     emitter.verifyValue("taskSlot/idle/count", 1L);
     emitter.verifyValue("taskSlot/used/count", 1L);
