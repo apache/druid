@@ -86,13 +86,24 @@ setupConfig()
 setupData()
 {
   # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
-  if [ -n "$DRUID_SERVICE" ]; then
-    echo "DRUID_SERVICE is set, skipping data setup"
+#  if [ -n "$DRUID_SERVICE" ]; then
+#    echo "DRUID_SERVICE is set, skipping data setup"
+#    return
+#  fi
+  if [ ! -f /usr/lib/druid/conf/metadata-storage.conf ]; then
+    # Only metadata storage server need to set up data.
+    echo "Skip setup data. Metadata store is not configured."
     return
   fi
-  # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
 
-  bash /run-mysql.sh
+  service mariadb start
+  for i in {30..0}; do
+    mysqladmin ping --silent && break;
+    sleep 1; \
+  done; \
+  if [ "$i" = 0 ]; then
+    echo "MySQL did not start"; exit 1;
+  fi;
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
@@ -105,4 +116,5 @@ setupData()
     echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid
     cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid
   fi
+  service mariadb stop
 }

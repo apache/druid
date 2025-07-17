@@ -57,14 +57,20 @@ RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-pro
     -O /usr/local/druid/lib/kafka-protobuf-provider.jar
 
 # Setup metadata store
-ADD run-mysql.sh /run-mysql.sh
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
-RUN mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
+#RUN mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
 RUN ( \
-    bash /run-mysql.sh; \
+    service mariadb start; \
+    for i in {30..0}; do \
+      mysqladmin ping --silent && break; \
+      sleep 1; \
+    done; \
+    if [ "$i" = 0 ]; then \
+      echo "MySQL did not start"; exit 1; \
+    fi; \
     echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root; \
     /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd; \
-    mysqladmin shutdown \
+    service mariadb stop \
     )
 
 ADD test-data /test-data
