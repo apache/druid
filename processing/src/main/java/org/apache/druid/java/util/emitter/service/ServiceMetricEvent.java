@@ -151,20 +151,34 @@ public class ServiceMetricEvent implements Event
       return this;
     }
 
+    /**
+     * Adds a dimension to be emitted with this metric event, only if the given
+     * value is not null.
+     *
+     * @throws IAE if the dimension name is null.
+     */
     public Builder setDimensionIfNotNull(String dim, Object value)
     {
       if (dim == null) {
         throw new IAE("Dimension name cannot be null");
-      } else if (value == null) {
-        throw new IAE("Value of dimension[%s] cannot be null", dim);
       }
 
-      userDims.put(dim, value);
+      if (value != null) {
+        userDims.put(dim, value);
+      }
       return this;
     }
 
+    /**
+     * Adds a dimension to be emitted with this metric event.
+     *
+     * @throws IAE if the dimension name or the given value is null.
+     */
     public Builder setDimension(String dim, Object value)
     {
+      if (value == null) {
+        throw new IAE("Value of dimension[%s] cannot be null", dim);
+      }
       return setDimensionIfNotNull(dim, value);
     }
 
