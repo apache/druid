@@ -37,7 +37,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -162,12 +161,7 @@ public class SchemalessIndexTest
           }
         }
 
-        try {
-          theIndex.add(new MapBasedInputRow(timestamp, dims, event));
-        }
-        catch (IndexSizeExceededException e) {
-          throw new RuntimeException(e);
-        }
+        theIndex.add(new MapBasedInputRow(timestamp, dims, event));
 
         count++;
       }

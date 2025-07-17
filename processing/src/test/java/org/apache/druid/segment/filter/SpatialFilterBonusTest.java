@@ -114,7 +114,7 @@ public class SpatialFilterBonusTest
     return argumentArrays;
   }
 
-  private static IncrementalIndex makeIncrementalIndex() throws IOException
+  private static IncrementalIndex makeIncrementalIndex()
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(

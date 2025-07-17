@@ -592,7 +592,7 @@ public class TestIndex
           int lineCount = 0;
 
           @Override
-          public boolean processLine(String line) throws IOException
+          public boolean processLine(String line)
           {
             if (!runOnce) {
               startTime.set(System.currentTimeMillis());

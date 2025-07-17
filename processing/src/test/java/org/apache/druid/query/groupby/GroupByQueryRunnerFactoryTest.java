@@ -139,7 +139,7 @@ public class GroupByQueryRunnerFactoryTest
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
-  private Segment createSegment() throws Exception
+  private Segment createSegment()
   {
     IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))

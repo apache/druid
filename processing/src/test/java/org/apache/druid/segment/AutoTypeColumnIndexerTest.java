@@ -32,7 +32,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -125,7 +124,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootString() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootString()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -178,7 +177,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootLong() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootLong()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -238,7 +237,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootDouble() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootDouble()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -299,7 +298,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootStringArray() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootStringArray()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -347,7 +346,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootVariant() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootVariant()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -391,7 +390,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryNested() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryNested()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -431,7 +430,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion()
   {
     // coerce nested column to STRING type, throwing parse exceptions for nested data
     // and casting anything else to string
