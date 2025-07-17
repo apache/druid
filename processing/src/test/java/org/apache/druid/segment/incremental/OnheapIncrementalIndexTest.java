@@ -117,9 +117,8 @@ public class OnheapIncrementalIndexTest
                                                         .build())
                           .buildIncrementalIndex()
     );
-    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("Found duplicate projection[proj], please remove and resubmit the ingestion.", e.getMessage());
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+    Assert.assertEquals("duplicate projection[proj]", e.getMessage());
   }
 
   @Test

@@ -428,7 +428,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> schema.getParser()
     );
-    
+
     Assertions.assertEquals(
         "Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.",
         t.getMessage()
@@ -579,6 +579,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   void testSerde() throws Exception
   {
+    // deserialize, then serialize, then deserialize of DataSchema.
     String jsonStr = "{"
                      + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
                      + "\"parser\":{"
@@ -604,30 +605,63 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DataSchema.class
     );
 
-    Assertions.assertEquals(actual.getDataSource(), IdUtilsTest.VALID_ID_CHARS);
+    Assertions.assertEquals(IdUtilsTest.VALID_ID_CHARS, actual.getDataSource());
     Assertions.assertEquals(
-        actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
             DimensionsSpec.builder().setDimensionExclusions(Arrays.asList("__time", "metric1", "xXx", "col1")).build(),
             null,
             null,
             null
-        )
+        ),
+        actual.getParser().getParseSpec()
     );
     Assertions.assertArrayEquals(
-        actual.getAggregators(),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1")
-        }
+        },
+        actual.getAggregators()
     );
     Assertions.assertEquals(
-        actual.getGranularitySpec(),
         new ArbitraryGranularitySpec(
             new DurationGranularity(86400000, null),
             ImmutableList.of(Intervals.of("2014/2015"))
-        )
+        ),
+        actual.getGranularitySpec()
     );
+    Assertions.assertNull(actual.getProjections());
+  }
+
+  @Test
+  public void testSerdeWithProjections() throws Exception
+  {
+    // serialize, then deserialize of DataSchema with projections.
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "ab_count_projection",
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("a"),
+            new LongDimensionSchema("b")
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count")
+        }
+    );
+    DataSchema original = DataSchema.builder()
+                                    .withDataSource("datasource")
+                                    .withTimestamp(new TimestampSpec(null, null, null))
+                                    .withDimensions(DimensionsSpec.EMPTY)
+                                    .withAggregators(new CountAggregatorFactory("rows"))
+                                    .withProjections(ImmutableList.of(projectionSpec))
+                                    .withGranularity(ARBITRARY_GRANULARITY)
+                                    .build();
+    DataSchema serdeResult = jsonMapper.readValue(jsonMapper.writeValueAsString(original), DataSchema.class);
+
+    Assertions.assertEquals("datasource", serdeResult.getDataSource());
+    Assertions.assertArrayEquals(new AggregatorFactory[]{new CountAggregatorFactory("rows")}, serdeResult.getAggregators());
+    Assertions.assertEquals(ImmutableList.of(projectionSpec), serdeResult.getProjections());
+    Assertions.assertEquals(ImmutableList.of("ab_count_projection"), serdeResult.getProjectionNames());
+    Assertions.assertEquals(jsonMapper.writeValueAsString(original), jsonMapper.writeValueAsString(serdeResult));
   }
 
   @Test
@@ -826,6 +860,46 @@ class DataSchemaTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testInvalidProjectionDupeNames()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource("dataSource")
+                        .withGranularity(
+                            new UniformGranularitySpec(
+                                Granularities.HOUR,
+                                Granularities.NONE,
+                                false,
+                                List.of(Intervals.of("2014/2015"))
+                            )
+                        )
+                        .withProjections(
+                            List.of(
+                                new AggregateProjectionSpec(
+                                    "some projection",
+                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "g")),
+                                    List.of(new LongDimensionSchema("g")),
+                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
+                                ),
+                                new AggregateProjectionSpec(
+                                    "some projection",
+                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.MINUTE, "g")),
+                                    List.of(new LongDimensionSchema("g")),
+                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
+                                )
+                            )
+                        )
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "projection[some projection] is already defined, projection names must be unique",
+        t.getMessage()
+    );
+  }
+
+  @Test
   void testInvalidProjectionGranularity()
   {
     Throwable t = Assertions.assertThrows(
@@ -872,8 +946,9 @@ class DataSchemaTest extends InitializedNullHandlingTest
     );
 
     Assertions.assertEquals(
-        "Projection[bad granularity] has granularity[{type=period, period=P1D, timeZone=UTC, origin=null}]"
-        + " must be finer than or equal to segment granularity[{type=period, period=PT1H, timeZone=UTC, origin=null}]",
+        "projection[bad granularity] has granularity[{type=period, period=P1D, timeZone=UTC, origin=null}]"
+        + " which must be finer than or equal to segment granularity[{type=period, period=PT1H, timeZone=UTC,"
+        + " origin=null}]",
         t.getMessage()
     );
   }
