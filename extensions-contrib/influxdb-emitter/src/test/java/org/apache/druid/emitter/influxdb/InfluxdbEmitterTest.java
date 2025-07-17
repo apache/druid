@@ -216,7 +216,7 @@ public class InfluxdbEmitterTest
         null
     );
     InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
-    String expected = "druid_metric,service=druid/historical,hostname=localhost,taskType=index,dataSource=wikipedia druid_time=1234 1509357600000000000"
+    String expected = "druid_metric,service=druid/historical,hostname=localhost,dataSource=wikipedia,taskType=index druid_time=1234 1509357600000000000"
                       + "\n";
     String actual = influxdbEmitter.transformForInfluxSystems(event);
     Assert.assertEquals(expected, actual);

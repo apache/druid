@@ -41,6 +41,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -150,7 +152,7 @@ public class InfluxdbEmitter implements Emitter
     String metricTag = parts.length == 2 ? "" : ",metric=druid_" + metric;
     tag.append(metricTag);
     tag.append(StringUtils.format(",hostname=%s", getValue("host", event).split(":")[0]));
-    ImmutableSet<String> dimNames = ImmutableSet.copyOf(event.getUserDims().keySet());
+    Set<String> dimNames = new TreeSet<>(event.getUserDims().keySet());
     for (String dimName : dimNames) {
       if (this.dimensionWhiteList.contains(dimName)) {
         tag.append(StringUtils.format(",%1$s=%2$s", dimName, sanitize(String.valueOf(event.getUserDims().get(dimName)))));
