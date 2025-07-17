@@ -22,9 +22,9 @@ package org.apache.druid.java.util.emitter.service;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
@@ -33,10 +33,9 @@ import org.joda.time.DateTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /**
- *
+ * Immutable metric event emitted by a Druid {@link ServiceEmitter}.
  */
 @PublicApi
 public class ServiceMetricEvent implements Event
@@ -53,6 +52,9 @@ public class ServiceMetricEvent implements Event
   private final String metric;
   private final Number value;
 
+  /**
+   * Creates an immutable metric event.
+   */
   private ServiceMetricEvent(
       DateTime createdTime,
       ImmutableMap<String, String> serviceDims,
@@ -64,7 +66,7 @@ public class ServiceMetricEvent implements Event
   {
     this.createdTime = createdTime != null ? createdTime : DateTimes.nowUtc();
     this.serviceDims = serviceDims;
-    this.userDims = userDims;
+    this.userDims = userDims == null ? Map.of() : Map.copyOf(userDims);
     this.feed = feed;
     this.metric = metric;
     this.value = value;
@@ -93,7 +95,7 @@ public class ServiceMetricEvent implements Event
 
   public Map<String, Object> getUserDims()
   {
-    return nonNullCopyUserDims();
+    return userDims;
   }
 
   public String getMetric()
@@ -117,37 +119,8 @@ public class ServiceMetricEvent implements Event
         .putAll(serviceDims)
         .put("metric", metric)
         .put("value", value)
-        .putAll(
-            Maps.filterEntries(
-                userDims,
-                input -> input.getKey() != null
-            )
-        )
+        .putAll(userDims)
         .build();
-  }
-
-  /**
-   * Creates an immutable copy of this metric event. This is used only in tests.
-   */
-  public ServiceMetricEvent copy()
-  {
-    return new ServiceMetricEvent(createdTime, serviceDims, nonNullCopyUserDims(), feed, metric, value);
-  }
-
-  /**
-   * Creates a non-null copy of {@link #userDims} containing only non-null keys
-   * and values.
-   */
-  private Map<String, Object> nonNullCopyUserDims()
-  {
-    if (userDims == null) {
-      return Map.of();
-    }
-
-    return userDims.entrySet()
-                   .stream()
-                   .filter(entry -> entry.getKey() != null && entry.getValue() != null)
-                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   /**
@@ -170,22 +143,29 @@ public class ServiceMetricEvent implements Event
 
     public Builder setDimension(String dim, String[] values)
     {
+      if (dim == null) {
+        throw new IAE("Dimension name cannot be null");
+      }
+
       userDims.put(dim, Arrays.asList(values));
       return this;
     }
 
     public Builder setDimensionIfNotNull(String dim, Object value)
     {
-      if (value != null) {
-        userDims.put(dim, value);
+      if (dim == null) {
+        throw new IAE("Dimension name cannot be null");
+      } else if (value == null) {
+        throw new IAE("Value of dimension[%s] cannot be null", dim);
       }
+
+      userDims.put(dim, value);
       return this;
     }
 
     public Builder setDimension(String dim, Object value)
     {
-      userDims.put(dim, value);
-      return this;
+      return setDimensionIfNotNull(dim, value);
     }
 
     public Object getDimension(String dim)
