@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.hadoop;
+package org.apache.druid.indexer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;

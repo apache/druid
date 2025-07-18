@@ -1203,18 +1203,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final SegmentId newVersionSegmentId = pendingSegment.getId().asSegmentId();
             newVersionSegmentToParent.put(newVersionSegmentId, oldSegment.getId());
             upgradedFromSegmentIdMap.put(newVersionSegmentId.toString(), oldSegment.getId().toString());
-            allSegmentsToInsert.add(
-                new DataSegment(
-                    pendingSegment.getId().asSegmentId(),
-                    oldSegment.getLoadSpec(),
-                    oldSegment.getDimensions(),
-                    oldSegment.getMetrics(),
-                    pendingSegment.getId().getShardSpec(),
-                    oldSegment.getLastCompactionState(),
-                    oldSegment.getBinaryVersion(),
-                    oldSegment.getSize()
-                )
-            );
+            allSegmentsToInsert.add(DataSegment.builder(oldSegment)
+                                               .interval(newVersionSegmentId.getInterval())
+                                               .version(newVersionSegmentId.getVersion())
+                                               .shardSpec(pendingSegment.getId().getShardSpec())
+                                               .build());
           }
         }
     );
@@ -2548,18 +2541,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Set<DataSegment> segmentsWithAllocationInfo = new HashSet<>();
     for (SegmentId id : overlappingSegmentIds) {
       final int corePartitions = versionIntervalToNumCorePartitions.get(id.getVersion()).get(id.getInterval());
-      segmentsWithAllocationInfo.add(
-          new DataSegment(
-              id,
-              null,
-              null,
-              null,
-              new NumberedShardSpec(id.getPartitionNum(), corePartitions),
-              null,
-              null,
-              1
-          )
-      );
+      segmentsWithAllocationInfo.add(DataSegment.builder(id)
+                                                .shardSpec(new NumberedShardSpec(id.getPartitionNum(), corePartitions))
+                                                .size(1)
+                                                .build());
     }
     return segmentsWithAllocationInfo;
   }

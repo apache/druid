@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ExtensionsConfig;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -294,7 +294,7 @@ public class PullDependencies implements Runnable
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
 
       if (!noDefaultHadoop && hadoopCoordinates.isEmpty()) {
-        hadoopCoordinates.addAll(TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
+        hadoopCoordinates.addAll(HadoopTaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
       }
 
       log.info("Start downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
