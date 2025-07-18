@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -35,8 +36,10 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleAnnouncements;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -50,6 +53,7 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartDataSegmentProvider;
+import org.apache.druid.msq.dart.worker.DartDataServerQueryHandlerFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
@@ -58,6 +62,8 @@ import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -155,6 +161,20 @@ public class DartWorkerModule implements DruidModule
     public Outbox<ControllerMessage> createOutbox()
     {
       return new OutboxImpl<>();
+    }
+
+    @Provides
+    public DartDataServerQueryHandlerFactory createDataServerQueryHandlerFactory(
+        @EscalatedGlobal ServiceClientFactory serviceClientFactory,
+        @Smile ObjectMapper smileMapper,
+        QueryToolChestWarehouse queryToolChestWarehouse
+    )
+    {
+      return new DartDataServerQueryHandlerFactory(
+          serviceClientFactory,
+          smileMapper,
+          queryToolChestWarehouse
+      );
     }
   }
 
