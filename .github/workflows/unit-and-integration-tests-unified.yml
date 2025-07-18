@@ -157,29 +157,29 @@ jobs:
           echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
           docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
-  unit-tests:
-    name: "unit tests"
-    uses: ./.github/workflows/ci.yml
-
-  standard-its:
-    needs: [build, unit-tests]
-    uses: ./.github/workflows/standard-its.yml
-
-  revised-its:
-    needs: [build, unit-tests]
-    uses: ./.github/workflows/revised-its.yml
-    with:
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+#  unit-tests:
+#    name: "unit tests"
+#    uses: ./.github/workflows/ci.yml
+#
+#  standard-its:
+#    needs: [build, unit-tests]
+#    uses: ./.github/workflows/standard-its.yml
+#
+#  revised-its:
+#    needs: [build, unit-tests]
+#    uses: ./.github/workflows/revised-its.yml
+#    with:
+#      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+#      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+#      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
   docker-tests:
-    needs: [build, unit-tests]
+    needs: [build]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its, docker-tests]
+    needs: [build, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:

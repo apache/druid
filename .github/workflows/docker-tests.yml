@@ -46,7 +46,28 @@ jobs:
           java-version: 17
           cache: 'maven'
       - name: Run *DockerTest*
+        id: run-it
         run: |
           source .github/scripts/distribution_checks_env.sh
           .github/scripts/run_unit-tests -Dtest=*DockerTest* -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
         timeout-minutes: 60
+
+      - name: Collect docker logs on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          mkdir docker-logs
+          for c in $(docker ps -a --format="{{.Names}}")
+          do
+            docker logs $c > ./docker-logs/$c.log
+          done
+
+      - name: Tar docker logs
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: tar cvzf ./docker-logs.tgz ./docker-logs
+
+      - name: Upload docker logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-docker-logs
+          path: docker-logs.tgz

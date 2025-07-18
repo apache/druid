@@ -53,3 +53,8 @@ jobs:
           key: druid-dist-container.tar.gz-${{ github.sha }}
           path: |
             ./druid-dist-container.tar.gz
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ github.sha }}
+          path: druid-dist-container.tar.gz
