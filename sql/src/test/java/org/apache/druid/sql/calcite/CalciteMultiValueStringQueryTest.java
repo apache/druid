@@ -44,6 +44,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -2257,6 +2258,39 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         "v0",
                         DefaultDimensionSpec.of("dim3"),
                         "^b.*"
+                    )
+                )
+                .columns("v0")
+                .columnTypes(ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrefixFilterScan()
+  {
+    testQuery(
+        "SELECT MV_FILTER_PREFIX(dim3, 'b') FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new PrefixFilteredVirtualColumn(
+                        "v0",
+                        DefaultDimensionSpec.of("dim3"),
+                        "b"
                     )
                 )
                 .columns("v0")
