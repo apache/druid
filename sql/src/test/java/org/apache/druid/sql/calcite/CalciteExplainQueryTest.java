@@ -233,7 +233,9 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 
     final String explainSql = "EXPLAIN PLAN FOR SELECT"
                               + " MV_FILTER_ONLY(\"dim1\", ARRAY['true', 'false']),"
-                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false'])"
+                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false']),"
+                              + " MV_FILTER_REGEX(\"dim1\", '^true$'),"
+                              + " MV_FILTER_PREFIX(\"dim1\", 'tr')"
                               + " FROM druid.foo";
 
     // Test plan as default expressions

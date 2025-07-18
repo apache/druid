@@ -459,15 +459,10 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      RexNode patternNode = call.getOperands().get(1);
-      if (!(patternNode instanceof RexLiteral)) {
+      final String pattern = RexLiteral.stringValue(call.getOperands().get(1));
+      if (pattern == null) {
         return null;
       }
-      DruidLiteral patternLiteral = Expressions.calciteLiteralToDruidLiteral(plannerContext, patternNode);
-      if (patternLiteral == null || patternLiteral.value() == null) {
-        return null;
-      }
-      String pattern = (String) patternLiteral.value();
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "filter((x) -> regexp_like(x, \"" + pattern + "\"), " + args.get(0).getExpression() + ")";
       if (druidExpressions.get(0).isSimpleExtraction()) {
