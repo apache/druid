@@ -45,6 +45,6 @@ jobs:
       - name: Run the test
         uses: ./.github/workflows/worker.yml
         with:
-          script: .github/scripts/run_unit-tests -Dtest=*DockerTest -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
+          script: .github/scripts/run_unit-tests -Dtest=*DockerTest* -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
           jdk: 17
           key: "test-jdk17-docker"
