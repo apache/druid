@@ -468,10 +468,8 @@ public class MultiValueStringOperatorConversions
         return null;
       }
       String pattern = (String) patternLiteral.value();
-      String escapedPattern = pattern.replace("\\", "\\\\").replace("\"", "\\\"");
-
       final DruidExpression.ExpressionGenerator builder = (args) ->
-          "filter((x) -> regexp_like(x, \"" + escapedPattern + "\"), " + args.get(0).getExpression() + ")";
+          "filter((x) -> regexp_like(x, \"" + pattern + "\"), " + args.get(0).getExpression() + ")";
       if (druidExpressions.get(0).isSimpleExtraction()) {
         DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
@@ -482,7 +480,7 @@ public class MultiValueStringOperatorConversions
                 druidExpressions.get(0)
                                 .getSimpleExtraction()
                                 .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                escapedPattern
+                pattern
             )
         );
 
@@ -554,10 +552,8 @@ public class MultiValueStringOperatorConversions
         return null;
       }
       String prefix = (String) prefixLiteral.value();
-      String escapedPrefix = prefix.replace("\\", "\\\\").replace("\"", "\\\"");
-
       final DruidExpression.ExpressionGenerator builder = (args) ->
-          "filter((x) -> (x != null && substring(x, 0, " + prefix.length() + ") == \"" + escapedPrefix + "\"), " + args.get(0).getExpression() + ")";
+          "filter((x) -> (x != null && substring(x, 0, " + prefix.length() + ") == \"" + prefix + "\"), " + args.get(0).getExpression() + ")";
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
         DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
@@ -647,6 +643,7 @@ public class MultiValueStringOperatorConversions
       return false;
     }
   }
+
 
   private MultiValueStringOperatorConversions()
   {
