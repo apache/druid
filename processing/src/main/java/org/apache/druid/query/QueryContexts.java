@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -40,14 +41,80 @@ import java.util.stream.Collectors;
 @PublicApi
 public class QueryContexts
 {
-  public static final String FINALIZE_KEY = "finalize";
-  public static final String PRIORITY_KEY = "priority";
-  public static final String LANE_KEY = "lane";
-  public static final String TIMEOUT_KEY = "timeout";
-  public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
-  public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
-  public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
-  public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  public static final SettingEntry<String> QUERY_ID = SettingEntry.newStringEntry()
+                                                                  .name("queryId")
+                                                                  .defaultValue(null)
+                                                                  .description(
+                                                                      "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
+                                                                  .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<String> SUB_QUERY_ID = SettingEntry.newStringEntry()
+                                                                      .name("subQueryId")
+                                                                      .defaultValue(null)
+                                                                      .description(
+                                                                          "Unique identifier for the sub-query, that is used to map the global shared resources (specifically merge buffers) to the sub-query's runtime")
+                                                                      .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<String> SQL_QUERY_ID = SettingEntry.newStringEntry()
+                                                                      .name("sqlQueryId")
+                                                                      .defaultValue(null)
+                                                                      .description(
+                                                                          "Unique identifier for the SQL query, that is used to map the global shared resources (specifically merge buffers) to the SQL query's runtime")
+                                                                      .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Integer> PRIORITY = SettingEntry.newIntegerEntry()
+                                                                   .name("priority")
+                                                                   .defaultValue(0)
+                                                                   .description(
+                                                                       "Query priority. Queries with higher priority get precedence for resource allocation")
+                                                                   .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Boolean> FINALIZE = SettingEntry.newBooleanEntry()
+                                                                   .name("finalize")
+                                                                   .defaultValue(null)
+                                                                   .description(
+                                                                           "Flag indicating whether to \"finalize\" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false`")
+                                                                   .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<String> LANE = SettingEntry.newStringEntry()
+                                                              .name("lane")
+                                                              .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Long> TIMEOUT = SettingEntry.newLongEntry()
+                                                               .name("timeout")
+                                                               .defaultValue(TimeUnit.MINUTES.toMillis(5))
+                                                               .description(
+                                                                   "Query timeout in milliseconds. Queries that take longer than this timeout are cancelled")
+                                                               .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Long> DEFAULT_TIMEOUT = SettingEntry.newLongEntry()
+                                                                       .name("defaultTimeout")
+                                                                       .defaultValue(TimeUnit.MINUTES.toMillis(5))
+                                                                       .description(
+                                                                           "Default timeout in milliseconds for queries that don't specify a timeout")
+                                                                       .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Long> MAX_SCATTER_GATHER_BYTES = SettingEntry.newLongEntry()
+                                                                                .name("maxScatterGatherBytes")
+                                                                                .defaultValue(Long.MAX_VALUE)
+                                                                                .description(
+                                                                                    "Maximum number of bytes to gather from all data servers in a cluster for a single query. This limit is enforced to prevent queries from exhausting memory")
+                                                                                .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Long> MAX_QUEUED_BYTES = SettingEntry.newLongEntry()
+                                                                        .name("maxQueuedBytes")
+                                                                        .defaultValue(Long.MAX_VALUE)
+                                                                        .description(
+                                                                            "Maximum number of bytes to queue for each query. This limit is enforced to prevent queries from exhausting memory")
+                                                                        .register(QueryContextParameterRegistry.getInstance());
+
+  public static final SettingEntry<Boolean> BROKER_PARALLEL_MERGE = SettingEntry.newBooleanEntry()
+                                                                               .name("enableParallelMerge")
+                                                                               .defaultValue(true)
+                                                                               .description(
+                                                                                   "Enable parallel merge for broker queries to improve performance by processing segments concurrently")
+                                                                               .register(QueryContextParameterRegistry.getInstance());
+
   public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
   public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
   public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
@@ -83,7 +150,13 @@ public class QueryContexts
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
-  public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
+
+  public static final SettingEntry<Boolean> USE_RESULT_LEVEL_CACHE = SettingEntry.newBooleanEntry()
+                                                                                 .name("useResultLevelCache")
+                                                                                 .defaultValue(true)
+                                                                                 .description("Flag indicating whether to leverage the result level cache for this query. When set to false, it disables reading from the query cache for this query. When set to true, Druid uses `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the result-level query cache")
+                                                                                 .register(QueryContextParameterRegistry.getInstance());
+
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
@@ -98,7 +171,7 @@ public class QueryContexts
   public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
-   *
+   * <p>
    * Controls the rewrite of:
    * <pre>
    *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
@@ -120,14 +193,24 @@ public class QueryContexts
 
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
-  public static final String QUERY_RESOURCE_ID = "queryResourceId";
+  public static final SettingEntry<String> QUERY_RESOURCE_ID = SettingEntry.newStringEntry()
+                                                                           .name("queryResourceId")
+                                                                           .defaultValue(null)
+                                                                           .description(
+                                                                               "Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the query's runtime")
+                                                                           .register(QueryContextParameterRegistry.getInstance());
 
   // SQL query context keys
-  public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // Dart
-  public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  public static final SettingEntry<String> DART_QUERY_ID = SettingEntry.newStringEntry()
+                                                                       .name("dartQueryId")
+                                                                       .defaultValue(null)
+                                                                       .description(
+                                                                           "Unique identifier for the Dart query, used to manage query resources and execution tracking")
+                                                                       .register(QueryContextParameterRegistry.getInstance());
+  public static final String CTX_DART_QUERY_ID = DART_QUERY_ID.name;
   public static final String CTX_FULL_REPORT = "fullReport";
 
   // SQL statement resource specific keys
@@ -145,15 +228,12 @@ public class QueryContexts
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
-  public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
   public static final int DEFAULT_VECTOR_SIZE = 512;
-  public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
-  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
@@ -314,7 +394,7 @@ public class QueryContexts
       catch (NumberFormatException ignored) {
 
         // Attempt to handle trivial decimal values: 12.00, etc.
-        // This mimics how Jackson will convert "12.00" to a Integer on request.
+        // This mimics how Jackson will convert "12.00" to an Integer on request.
         try {
           return new BigDecimal((String) value).intValueExact();
         }
@@ -416,12 +496,13 @@ public class QueryContexts
 
   public static HumanReadableBytes getAsHumanReadableBytes(
       final String key,
-      final Object value,
-      final HumanReadableBytes defaultValue
+      final Object value
   )
   {
     if (null == value) {
-      return defaultValue;
+      return null;
+    } else if (value instanceof HumanReadableBytes) {
+      return (HumanReadableBytes) value;
     } else if (value instanceof Number) {
       return HumanReadableBytes.valueOf(Numbers.parseLong(value));
     } else if (value instanceof String) {
@@ -434,6 +515,16 @@ public class QueryContexts
     }
 
     throw badTypeException(key, "a human readable number", value);
+  }
+
+  public static HumanReadableBytes getAsHumanReadableBytes(
+      final String key,
+      final Object value,
+      final HumanReadableBytes defaultValue
+  )
+  {
+    HumanReadableBytes result = getAsHumanReadableBytes(key, value);
+    return result == null ? defaultValue : result;
   }
 
   /**

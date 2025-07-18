@@ -464,7 +464,7 @@ public class SqlResource
   public static Response handleExceptionBeforeStatementCreated(final Exception e, final QueryContext queryContext)
   {
     if (e instanceof DruidException) {
-      final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
+      final String sqlQueryId = queryContext.getString(QueryContexts.SQL_QUERY_ID.name);
       return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
           (DruidException) e,
           MediaType.APPLICATION_JSON_TYPE,

@@ -46,6 +46,6 @@ public class NoQueryLaningStrategy implements QueryLaningStrategy
   @Override
   public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    return Optional.ofNullable(query.getQuery().context().getLane());
+    return Optional.ofNullable(query.getQuery().context().lane.value());
   }
 }

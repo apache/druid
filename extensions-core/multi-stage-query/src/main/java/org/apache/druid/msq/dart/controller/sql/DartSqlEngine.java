@@ -244,17 +244,17 @@ public class DartSqlEngine implements SqlEngine
       contextMap.putIfAbsent(entry.getKey(), entry.getValue());
     }
     /**
-     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#CTX_SQL_QUERY_ID}
+     * Dart queryId must be globally unique, so we cannot use the user-provided {@link QueryContexts#SQL_QUERY_ID.name}
      * or {@link BaseQuery#QUERY_ID}. Instead we generate a UUID in {@link DartSqlResource#doPost}, overriding whatever
      * the user may have provided. This becomes the {@link Controller#queryId()}.
      *
-     * The user-provided {@link QueryContexts#CTX_SQL_QUERY_ID} is still registered with the {@link SqlLifecycleManager}
+     * The user-provided {@link QueryContexts#SQL_QUERY_ID.name} is still registered with the {@link SqlLifecycleManager}
      * for purposes of query cancellation.
      *
      * The user-provided {@link BaseQuery#QUERY_ID} is ignored.
      */
     final String dartQueryId = UUID.randomUUID().toString();
-    contextMap.put(QueryContexts.CTX_DART_QUERY_ID, dartQueryId);
+    contextMap.put(QueryContexts.DART_QUERY_ID.name, dartQueryId);
   }
 
   @Override
@@ -322,7 +322,7 @@ public class DartSqlEngine implements SqlEngine
   @Override
   public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
   {
-    final Object dartQueryId = plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID);
+    final Object dartQueryId = plannerContext.queryContext().getValue(QueryContexts.DART_QUERY_ID);
     if (dartQueryId instanceof String) {
       final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
       if (holder != null) {
@@ -331,7 +331,7 @@ public class DartSqlEngine implements SqlEngine
     } else {
       log.warn(
           "%s[%s] for query[%s] is not a string, cannot cancel.",
-          QueryContexts.CTX_DART_QUERY_ID,
+          QueryContexts.DART_QUERY_ID.name,
           dartQueryId,
           plannerContext.getSqlQueryId()
       );
