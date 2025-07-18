@@ -229,13 +229,13 @@ case $CMD in
     usage
     ;;
   "ci" )
-    mvn -q clean install -P dist $MAVEN_IGNORE
+    mvn -q clean install -P dist,bundle-contrib-exts $MAVEN_IGNORE
     ;;
   "build" )
-    mvn -B clean install -P dist $MAVEN_IGNORE -T1.0C $*
+    mvn -B clean install -P dist,bundle-contrib-exts $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
-    mvn -B install -P dist $MAVEN_IGNORE -pl :distribution
+    mvn -B install -P dist,bundle-contrib-exts $MAVEN_IGNORE -pl :distribution
     ;;
   "tools" )
     mvn -B install -pl :druid-it-tools
