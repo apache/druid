@@ -37,6 +37,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -489,7 +490,11 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
-      throw new IAE("Cannot add row[%s] because it is below the minTimestamp[%s]", row, DateTimes.utc(minTimestamp));
+      throw DruidException.defensive(
+          "Cannot add row[%s] because it is below the minTimestamp[%s]",
+          row,
+          DateTimes.utc(minTimestamp)
+      );
     }
 
     final List<String> rowDimensions = row.getDimensions();

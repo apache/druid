@@ -212,6 +212,24 @@ public class MSQInsertTest extends MSQTestBase
                                         new LongSumAggregatorFactory("sum_added", "added")
                                     }
                                 )
+                            ),
+                            new DatasourceProjectionMetadata(
+                                new AggregateProjectionSpec(
+                                    "channel_delta_daily",
+                                    VirtualColumns.create(
+                                        Granularities.toVirtualColumn(
+                                            Granularities.DAY,
+                                            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                        )
+                                    ),
+                                    ImmutableList.of(
+                                        new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                        new StringDimensionSchema("channel")
+                                    ),
+                                    new AggregatorFactory[]{
+                                        new LongSumAggregatorFactory("sum_delta", "delta")
+                                    }
+                                )
                             )
                         )
                     )
@@ -529,6 +547,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("user", ColumnType.STRING)
                                             .add("added", ColumnType.LONG)
                                             .add("deleted", ColumnType.LONG)
+                                            .add("delta", ColumnType.LONG)
                                             .build();
     AggregateProjectionMetadata expectedProjection = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
@@ -551,6 +570,27 @@ public class MSQInsertTest extends MSQTestBase
         ),
         16
     );
+    AggregateProjectionMetadata expectedProjection2 = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "channel_delta_daily",
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    Granularities.DAY,
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ),
+            ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel"),
+            new AggregatorFactory[] {
+                new LongSumAggregatorFactory("sum_delta", "delta")
+            },
+            ImmutableList.of(
+                OrderBy.ascending(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                OrderBy.ascending("channel")
+            )
+        ),
+        11
+    );
 
     testIngestQuery().setSql(" insert into foo2 SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
@@ -558,12 +598,13 @@ public class MSQInsertTest extends MSQTestBase
                              + "  page,\n"
                              + "  user,\n"
                              + "  added,\n"
-                             + "  deleted\n"
+                             + "  deleted,\n"
+                             + "  delta\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
                              + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}]'\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}]'\n"
                              + "  )\n"
                              + ") PARTITIONED by day ")
                      .setExpectedDataSource("foo2")
@@ -575,29 +616,29 @@ public class MSQInsertTest extends MSQTestBase
                          "test",
                          0
                      )))
-                     .setExpectedProjections(ImmutableList.of(expectedProjection))
+                     .setExpectedProjections(List.of(expectedProjection, expectedProjection2))
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{1466985600000L, "#en.wikipedia", "Bailando 2015", "181.230.118.178", 2L, 0L},
-                             new Object[]{1466985600000L, "#en.wikipedia", "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L},
-                             new Object[]{1466985600000L, "#pl.wikipedia", "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L},
-                             new Object[]{1466985600000L, "#sv.wikipedia", "Salo Toraut", "Lsjbot", 31L, 0L},
-                             new Object[]{1466985660000L, "#ceb.wikipedia", "Neqerssuaq", "Lsjbot", 4150L, 0L},
-                             new Object[]{1466985660000L, "#en.wikipedia", "Panama Canal", "Mariordo", 496L, 0L},
-                             new Object[]{1466985660000L, "#es.wikipedia", "Sumo (banda)", "181.110.165.189", 0L, 173L},
-                             new Object[]{1466985660000L, "#sh.wikipedia", "El Terco, Bachíniva", "Kolega2357", 0L, 1L},
-                             new Object[]{1466985720000L, "#ru.wikipedia", "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L},
-                             new Object[]{1466985720000L, "#sh.wikipedia", "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L},
-                             new Object[]{1466989320000L, "#es.wikipedia", "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L},
-                             new Object[]{1466989320000L, "#id.wikipedia", "Ibnu Sina", "Ftihikam", 106L, 0L},
-                             new Object[]{1466989320000L, "#sh.wikipedia", "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L},
-                             new Object[]{1466989320000L, "#zh.wikipedia", "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L},
-                             new Object[]{1466992920000L, "#de.wikipedia", "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L},
-                             new Object[]{1466992920000L, "#pt.wikipedia", "Dobromir Zhechev", "Ceresta", 1926L, 0L},
-                             new Object[]{1466992920000L, "#sh.wikipedia", "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L},
-                             new Object[]{1466992920000L, "#zh.wikipedia", "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L},
-                             new Object[]{1466992980000L, "#de.wikipedia", "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L},
-                             new Object[]{1466992980000L, "#en.wikipedia", "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L}
+                             new Object[]{1466985600000L, "#en.wikipedia", "Bailando 2015", "181.230.118.178", 2L, 0L, 2L},
+                             new Object[]{1466985600000L, "#en.wikipedia", "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L, -2L},
+                             new Object[]{1466985600000L, "#pl.wikipedia", "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L, 270L},
+                             new Object[]{1466985600000L, "#sv.wikipedia", "Salo Toraut", "Lsjbot", 31L, 0L, 31L},
+                             new Object[]{1466985660000L, "#ceb.wikipedia", "Neqerssuaq", "Lsjbot", 4150L, 0L, 4150L},
+                             new Object[]{1466985660000L, "#en.wikipedia", "Panama Canal", "Mariordo", 496L, 0L, 496L},
+                             new Object[]{1466985660000L, "#es.wikipedia", "Sumo (banda)", "181.110.165.189", 0L, 173L, -173L},
+                             new Object[]{1466985660000L, "#sh.wikipedia", "El Terco, Bachíniva", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{1466985720000L, "#ru.wikipedia", "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L, 196L},
+                             new Object[]{1466985720000L, "#sh.wikipedia", "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{1466989320000L, "#es.wikipedia", "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L, 4L},
+                             new Object[]{1466989320000L, "#id.wikipedia", "Ibnu Sina", "Ftihikam", 106L, 0L, 106L},
+                             new Object[]{1466989320000L, "#sh.wikipedia", "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{1466989320000L, "#zh.wikipedia", "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L, 18L},
+                             new Object[]{1466992920000L, "#de.wikipedia", "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L, 2560L},
+                             new Object[]{1466992920000L, "#pt.wikipedia", "Dobromir Zhechev", "Ceresta", 1926L, 0L, 1926L},
+                             new Object[]{1466992920000L, "#sh.wikipedia", "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{1466992920000L, "#zh.wikipedia", "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L, 1986L},
+                             new Object[]{1466992980000L, "#de.wikipedia", "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L, 364L},
+                             new Object[]{1466992980000L, "#en.wikipedia", "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L, -463L}
                          )
                      )
                      .setExpectedCountersForStageWorkerChannel(
@@ -611,6 +652,77 @@ public class MSQInsertTest extends MSQTestBase
                          1, 0
                      )
                      .verifyResults();
+
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithCatalogProjectionsInvalidGranularity(
+      String contextName,
+      Map<String, Object> context
+  ) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+
+    testIngestQuery().setSql(" insert into foo2 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added,\n"
+                             + "  deleted,\n"
+                             + "  delta\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by hour")
+                     .setExpectedValidationErrorMatcher(
+                         DruidExceptionMatcher.invalidInput().expectMessageIs(
+                             "projection[channel_delta_daily] has granularity[{type=period, period=P1D, timeZone=UTC, origin=null}] which must be finer than or equal to segment granularity[{type=period, period=PT1H, timeZone=UTC, origin=null}]"
+                         )
+                     )
+                     .verifyPlanningErrors();
+
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithCatalogProjectionsMissingColumn(
+      String contextName,
+      Map<String, Object> context
+  ) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+
+    testIngestQuery().setSql(" insert into foo2 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day")
+                     .setExpectedExecutionErrorMatcher(
+                         CoreMatchers.allOf(
+                             CoreMatchers.instanceOf(ISE.class),
+                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                                 "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table")
+                             )
+                         )
+                     )
+                     .verifyExecutionError();
 
   }
 

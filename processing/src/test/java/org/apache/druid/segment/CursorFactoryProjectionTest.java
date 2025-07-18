@@ -198,6 +198,21 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           }
       ),
       new AggregateProjectionSpec(
+          "b_hourly_c_sum_non_time_ordered",
+          VirtualColumns.create(
+              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+          ),
+          Arrays.asList(
+              new StringDimensionSchema("b"),
+              new LongDimensionSchema("__gran")
+          ),
+          new AggregatorFactory[]{
+              new CountAggregatorFactory("chocula"),
+              new LongSumAggregatorFactory("_c_sum", "c"),
+              new LongLastAggregatorFactory("_c_last", "c", null)
+          }
+      ),
+      new AggregateProjectionSpec(
           "bf_daily_c_sum",
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.DAY, "__gran")
@@ -1101,6 +1116,60 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}, results.get(2).getArray());
     }
   }
+
+  @Test
+  public void testQueryGranularityFitsProjectionGranularityNotTimeOrdered()
+  {
+    final GroupByQuery.Builder queryBuilder =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.ETERNITY)
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("b")
+                  .setGranularity(Granularities.HOUR);
+    } else {
+      queryBuilder.setGranularity(Granularities.ALL)
+                  .setDimensions(
+                      DefaultDimensionSpec.of("__gran", ColumnType.LONG),
+                      DefaultDimensionSpec.of("b")
+                  )
+                  .setVirtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"));
+    }
+    final GroupByQuery query = queryBuilder.build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(segmentSortedByTime ? 8 : 5, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(5, results.size());
+    Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
+        new Object[]{TIMESTAMP.getMillis(), "aa", 8L},
+        new Object[]{TIMESTAMP.getMillis(), "bb", 6L},
+        new Object[]{TIMESTAMP.getMillis(), "cc", 2L},
+        new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aa", 1L},
+        new Object[]{TIMESTAMP.plusHours(1).getMillis(), "dd", 2L}
+    );
+    for (ResultRow row : results) {
+      Assert.assertTrue("missing row" + row.toString(), resultsInNoParticularOrder.contains(row.getArray()));
+    }
+  }
+
 
   @Test
   public void testQueryGranularityLargerProjectionGranularity()
