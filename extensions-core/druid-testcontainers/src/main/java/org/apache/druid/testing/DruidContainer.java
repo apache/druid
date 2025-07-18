@@ -129,6 +129,7 @@ public class DruidContainer extends GenericContainer<DruidContainer>
     catch (Throwable t) {
       final Throwable rootCause = Throwables.getRootCause(t);
       log.error(rootCause, "Error while starting container");
+      throw new RuntimeException(rootCause);
     }
   }
 
