@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -35,8 +36,10 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.DruidLiteral;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -413,6 +416,92 @@ public class MultiValueStringOperatorConversions
     }
   }
 
+  public static class FilterRegex implements SqlOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_REGEX")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "'MV_FILTER_REGEX(string, pattern)'",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.family(SqlTypeFamily.CHARACTER)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlFunction calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      RexNode patternNode = call.getOperands().get(1);
+      if (!(patternNode instanceof RexLiteral)) {
+        return null;
+      }
+      DruidLiteral patternLiteral = Expressions.calciteLiteralToDruidLiteral(plannerContext, patternNode);
+      if (patternLiteral == null || patternLiteral.value() == null) {
+        return null;
+      }
+      String pattern = (String) patternLiteral.value();
+      String escapedPattern = pattern.replace("\\", "\\\\").replace("\"", "\\\"");
+
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "filter((x) -> regexp_like(x, \"" + escapedPattern + "\"), " + args.get(0).getExpression() + ")";
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            builder,
+            druidExpressions,
+            (name, outputType, expression, macroTable) -> new RegexFilteredVirtualColumn(
+                name,
+                druidExpressions.get(0)
+                                .getSimpleExtraction()
+                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                escapedPattern
+            )
+        );
+
+        // If in a join context, create the VC immediately
+        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
+          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+        }
+
+        return druidExpression;
+      }
+
+      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
+    }
+  }
+
   public static class FilterOnly extends ListFilter
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
@@ -470,7 +559,6 @@ public class MultiValueStringOperatorConversions
       return false;
     }
   }
-
 
   private MultiValueStringOperatorConversions()
   {

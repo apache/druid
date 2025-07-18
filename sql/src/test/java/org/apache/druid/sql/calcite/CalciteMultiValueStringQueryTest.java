@@ -44,6 +44,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
@@ -2238,6 +2239,39 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"d", false, false},
             new Object[]{"", false, false},
             new Object[]{null, false, null}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPatternFilterScan()
+  {
+    testQuery(
+        "SELECT MV_FILTER_REGEX(dim3, '^b.*') FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new RegexFilteredVirtualColumn(
+                        "v0",
+                        DefaultDimensionSpec.of("dim3"),
+                        "^b.*"
+                    )
+                )
+                .columns("v0")
+                .columnTypes(ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
         )
     );
   }

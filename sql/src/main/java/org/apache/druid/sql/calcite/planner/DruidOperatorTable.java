@@ -284,6 +284,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
                    .add(new MultiValueStringOperatorConversions.FilterOnly())
                    .add(new MultiValueStringOperatorConversions.FilterNone())
+                   .add(new MultiValueStringOperatorConversions.FilterRegex())
                    .add(new MultiValueStringToArrayOperatorConversion())
                    .build();
 
