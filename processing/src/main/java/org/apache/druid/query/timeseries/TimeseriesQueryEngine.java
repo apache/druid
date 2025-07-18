@@ -21,6 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -337,7 +338,9 @@ public class TimeseriesQueryEngine
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setPreferredOrdering(
-                           query.isDescending() ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder()
+                           query.getGranularity().equals(Granularities.ALL)
+                           ? ImmutableList.of()
+                           : query.isDescending() ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder()
                        )
                        .setQueryMetrics(queryMetrics)
                        .build()

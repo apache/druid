@@ -21,6 +21,9 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -29,6 +32,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -200,5 +204,41 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                   .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testSchemaMatchSimple()
+  {
+    // arrange
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "some_projection",
+            null,
+            VirtualColumns.EMPTY,
+            Arrays.asList("a", "b"),
+            new AggregatorFactory[]{new LongSumAggregatorFactory("a_projection", "a")},
+            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("b"))
+        ),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPreferredOrdering(ImmutableList.of())
+                                                     .setAggregators(ImmutableList.of(new LongSumAggregatorFactory(
+                                                         "a",
+                                                         "a"
+                                                     )))
+                                                     .build();
+    // act & assert
+    Projections.ProjectionMatch projectionMatch = spec.getSchema()
+                                                      .matches(cursorBuildSpec, (projectionName, columnName) -> true);
+    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
+                       .setPhysicalColumns(ImmutableSet.of("a_projection"))
+                       .setPreferredOrdering(ImmutableList.of())
+                       .build(),
+        ImmutableMap.of("a", "a_projection")
+    );
+    Assert.assertEquals(expected, projectionMatch);
   }
 }

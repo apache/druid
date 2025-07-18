@@ -30,7 +30,7 @@ RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh
 FROM druidbase
 ARG MYSQL_VERSION
 ARG MARIA_VERSION
-ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
+ARG MYSQL_DRIVER_CLASSNAME
 ARG CONFLUENT_VERSION
 
 # Verify Java version
@@ -44,27 +44,35 @@ COPY extensions/ /usr/local/druid/extensions/
 # Download the MySQL Java connector
 # target path must match the exact path referenced in environment-configs/common
 # alternatively: Download the MariaDB Java connector, and pretend it is the mysql connector
-RUN if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ] ; \
-    then wget -q "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/$MYSQL_VERSION/mysql-connector-j-$MYSQL_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-j.jar; \
-    elif [ "$MYSQL_DRIVER_CLASSNAME" = "org.mariadb.jdbc.Driver" ] ; \
-    then wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-j.jar; \
-    fi
+RUN ( \
+    if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ]; then  \
+      wget -q "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/$MYSQL_VERSION/mysql-connector-j-$MYSQL_VERSION.jar"  -O /usr/local/druid/lib/mysql-connector-j.jar; \
+    elif [ "$MYSQL_DRIVER_CLASSNAME" = "org.mariadb.jdbc.Driver" ]; then \
+      wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" -O /usr/local/druid/lib/mysql-connector-j.jar; \
+    else \
+      echo "Unknown MySQL driver class name: $MYSQL_DRIVER_CLASSNAME"; \
+      exit 1; \
+    fi \
+    )
 
 # download kafka protobuf provider
 RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \
     -O /usr/local/druid/lib/kafka-protobuf-provider.jar
 
 # Setup metadata store
-ADD run-mysql.sh /run-mysql.sh
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
-RUN mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
 RUN ( \
-    bash /run-mysql.sh; \
+    service mariadb start; \
+    for i in {30..0}; do \
+      mysqladmin ping --silent && break; \
+      sleep 1; \
+    done; \
+    if [ "$i" = 0 ]; then \
+      echo "MySQL did not start"; exit 1; \
+    fi; \
     echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root; \
     /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd; \
-    mysqladmin shutdown \
+    service mariadb stop \
     )
 
 ADD test-data /test-data
