@@ -36,6 +36,7 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -416,7 +417,7 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-  public static class FilterRegex implements SqlOperatorConversion
+  public static class RegexFilter implements SqlOperatorConversion
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder("MV_FILTER_REGEX")
@@ -482,6 +483,93 @@ public class MultiValueStringOperatorConversions
                                 .getSimpleExtraction()
                                 .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 escapedPattern
+            )
+        );
+
+        // If in a join context, create the VC immediately
+        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
+          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+        }
+
+        return druidExpression;
+      }
+
+      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
+    }
+  }
+
+  public static class PrefixFilter implements SqlOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_PREFIX")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "'MV_FILTER_PREFIX(string, prefix)'",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.family(SqlTypeFamily.CHARACTER)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlFunction calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      RexNode prefixNode = call.getOperands().get(1);
+      if (!(prefixNode instanceof RexLiteral)) {
+        return null;
+      }
+      DruidLiteral prefixLiteral = Expressions.calciteLiteralToDruidLiteral(plannerContext, prefixNode);
+      if (prefixLiteral == null || prefixLiteral.value() == null) {
+        return null;
+      }
+      String prefix = (String) prefixLiteral.value();
+      String escapedPrefix = prefix.replace("\\", "\\\\").replace("\"", "\\\"");
+
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "filter((x) -> (x != null && substring(x, 0, " + prefix.length() + ") == \"" + escapedPrefix + "\"), " + args.get(0).getExpression() + ")";
+
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            builder,
+            druidExpressions,
+            (name, outputType, expression, macroTable) -> new PrefixFilteredVirtualColumn(
+                name,
+                druidExpressions.get(0)
+                                .getSimpleExtraction()
+                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                prefix
             )
         );
 
