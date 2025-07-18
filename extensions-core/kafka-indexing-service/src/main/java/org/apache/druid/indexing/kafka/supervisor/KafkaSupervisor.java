@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -266,11 +267,20 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     }
 
     if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
-      log.warn(
-          "Kafka partitions[%s] do not match task partitions[%s]",
-          latestSequenceFromStream.keySet(),
-          highestCurrentOffsets.keySet()
-      );
+      Set<KafkaTopicPartition> kafkaPartitions = latestSequenceFromStream.keySet();
+      Set<KafkaTopicPartition> taskPartitions = highestCurrentOffsets.keySet();
+
+      List<Integer> missingTaskPartitions = Sets.difference(kafkaPartitions, taskPartitions)
+                                                .stream()
+                                                .map(KafkaTopicPartition::partition)
+                                                .collect(Collectors.toList());
+      List<Integer> missingKafkaPartitions = Sets.difference(taskPartitions, kafkaPartitions)
+                                                 .stream()
+                                                 .map(KafkaTopicPartition::partition)
+                                                 .collect(Collectors.toList());
+
+      log.warn("Mismatched kafka and task partitions: Missing Task Partitions %s, Missing Kafka Partitions %s",
+               missingTaskPartitions, missingKafkaPartitions);
     }
 
     return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
