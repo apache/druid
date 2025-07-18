@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -29,6 +30,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
@@ -41,6 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
 {
   private static final long MEMORY_POSITION = 1;
@@ -51,8 +55,27 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
   @Mock
   public ColumnValueSelector writeSelector;
 
+  private final FrameType frameType;
+
   private WritableMemory memory;
   private FieldWriter fieldWriter;
+
+  public FloatArrayFieldReaderTest(FrameType frameType)
+  {
+    this.frameType = frameType;
+  }
+
+  @Parameterized.Parameters(name = "frameType = {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    for (FrameType frameType : FrameType.values()) {
+      if (frameType.isRowBased()) {
+        constructors.add(new Object[]{frameType});
+      }
+    }
+    return constructors;
+  }
 
   //CHECKSTYLE.OFF: Regexp
   private static final Object[] FLOATS_ARRAY_1 = new Object[]{
@@ -110,7 +133,7 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = NumericArrayFieldWriter.getFloatArrayFieldWriter(writeSelector);
+    fieldWriter = NumericArrayFieldWriter.getFloatArrayFieldWriter(writeSelector, frameType);
   }
 
   @After
@@ -123,28 +146,28 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_null()
   {
     writeToMemory(null, MEMORY_POSITION);
-    Assert.assertTrue(new FloatArrayFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(new FloatArrayFieldReader(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(FLOATS_ARRAY_1, MEMORY_POSITION);
-    Assert.assertFalse(new FloatArrayFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new FloatArrayFieldReader(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_emptyArray()
   {
     writeToMemory(new Object[]{}, MEMORY_POSITION);
-    Assert.assertFalse(new FloatArrayFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new FloatArrayFieldReader(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_arrayWithSingleNullElement()
   {
     writeToMemory(new Object[]{null}, MEMORY_POSITION);
-    Assert.assertFalse(new FloatArrayFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new FloatArrayFieldReader(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -153,7 +176,8 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
     long sz = writeToMemory(null, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new FloatArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
+        new FloatArrayFieldReader(frameType)
+            .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     Assert.assertTrue(readSelector.isNull());
   }
@@ -164,7 +188,8 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
     long sz = writeToMemory(FLOATS_ARRAY_1, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new FloatArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
+        new FloatArrayFieldReader(frameType)
+            .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(FLOATS_LIST_1, readSelector.getObject());
   }
@@ -179,7 +204,8 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(sz, sz2)
     );
 
-    final ColumnValueSelector<?> readSelector = new FloatArrayFieldReader().makeColumnValueSelector(memory, pointer);
+    final ColumnValueSelector<?> readSelector =
+        new FloatArrayFieldReader(frameType).makeColumnValueSelector(memory, pointer);
     pointer.setPointer(0);
     assertResults(FLOATS_LIST_1, readSelector.getObject());
     pointer.setPointer(1);
@@ -192,7 +218,8 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
     long sz = writeToMemory(new Object[]{}, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new FloatArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
+        new FloatArrayFieldReader(frameType)
+            .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(Collections.emptyList(), readSelector.getObject());
   }
@@ -203,7 +230,8 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
     long sz = writeToMemory(new Object[]{null}, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new FloatArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
+        new FloatArrayFieldReader(frameType)
+            .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(Collections.singletonList(null), readSelector.getObject());
   }

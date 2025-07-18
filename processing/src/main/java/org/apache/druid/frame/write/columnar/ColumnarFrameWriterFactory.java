@@ -120,6 +120,6 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   @Override
   public FrameType frameType()
   {
-    return FrameType.COLUMNAR;
+    return FrameType.latestColumnar();
   }
 }

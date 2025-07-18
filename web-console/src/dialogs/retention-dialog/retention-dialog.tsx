@@ -30,6 +30,8 @@ import { Api } from '../../singletons';
 import { filterMap, getApiArray, queryDruidSql, swapElements } from '../../utils';
 import { SnitchDialog } from '..';
 
+import { RETENTION_RULE_COMPLETIONS } from './retention-rule-completions';
+
 import './retention-dialog.scss';
 
 const CLUSTER_DEFAULT_FAKE_DATASOURCE = '_default';
@@ -130,7 +132,7 @@ ORDER BY 1`,
         {currentTab === 'form' ? (
           defaultRules.map((rule, index) => <RuleEditor key={index} rule={rule} tiers={tiers} />)
         ) : (
-          <JsonInput value={defaultRules} />
+          <JsonInput value={defaultRules} jsonCompletions={RETENTION_RULE_COMPLETIONS} />
         )}
       </FormGroup>
     ) : undefined;
@@ -206,6 +208,7 @@ ORDER BY 1`,
             onChange={setCurrentRules}
             setError={setJsonError}
             height="100%"
+            jsonCompletions={RETENTION_RULE_COMPLETIONS}
           />
           {defaultRuleRender}
         </>

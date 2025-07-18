@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
@@ -98,7 +99,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   )
   {
     super(
-        StringUtils.format("KinesisSupervisor-%s", spec.getDataSchema().getDataSource()),
+        StringUtils.format("KinesisSupervisor-%s", spec.getId()),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -168,6 +169,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KinesisIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
@@ -249,9 +251,14 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof KinesisIndexTask;
+    if (task instanceof KinesisIndexTask) {
+      final String supervisorId = ((KinesisIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -263,6 +270,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<String, Long> partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
     return new KinesisSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
@@ -274,7 +282,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents(),
         includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
+        includeOffsets ? aggregatePartitionLags(partitionLag).getTotalLag() : null
     );
   }
 
@@ -387,7 +395,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionTimeLags);
+    return aggregatePartitionLags(partitionTimeLags);
   }
 
   @Override

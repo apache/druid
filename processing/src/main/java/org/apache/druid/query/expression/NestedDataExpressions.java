@@ -138,18 +138,13 @@ public class NestedDataExpressions
         public ExprEval eval(ObjectBinding bindings)
         {
           ExprEval arg = args.get(0).eval(bindings);
-          Object obj;
-
-          if (arg.value() == null) {
-            throw JsonMergeExprMacro.this.validationFailed(
-              "invalid input expected %s but got %s instead",
-                ExpressionType.STRING,
-                arg.type()
-            );
+          String argAsJson = getArgAsJson(arg);
+          if (argAsJson == null) {
+            return ExprEval.ofComplex(ExpressionType.NESTED_DATA, null);
           }
-
+          Object obj;
           try {
-            obj = jsonMapper.readValue(getArgAsJson(arg), Object.class);
+            obj = jsonMapper.readValue(argAsJson, Object.class);
           }
           catch (JsonProcessingException e) {
             throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", arg.asString());
@@ -159,12 +154,13 @@ public class NestedDataExpressions
 
           for (int i = 1; i < args.size(); i++) {
             ExprEval argSub = args.get(i).eval(bindings);
-            
+            String str = getArgAsJson(argSub);
+            if (str == null) {
+              return ExprEval.ofComplex(ExpressionType.NESTED_DATA, null);
+            }
             try {
-              String str = getArgAsJson(argSub);
-              if (str != null) {
-                obj = updater.readValue(str);
-              }
+              obj = updater.readValue(str);
+              updater = jsonMapper.readerForUpdating(obj);
             }
             catch (JsonProcessingException e) {
               throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", argSub.asString());
@@ -181,6 +177,7 @@ public class NestedDataExpressions
           return ExpressionType.NESTED_DATA;
         }
 
+        @Nullable
         private String getArgAsJson(ExprEval arg)
         {
           if (arg.value() == null) {

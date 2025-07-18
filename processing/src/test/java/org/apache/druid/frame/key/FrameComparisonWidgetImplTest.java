@@ -30,7 +30,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -51,7 +50,6 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   public void setUp()
   {
     final CursorFactory rowBasedAdapterWithoutComplexColumn = new RowBasedSegment<>(
-        SegmentId.dummy("test"),
         Sequences.simple(ByteRowKeyComparatorTest.KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN),
         columnName -> {
           final int idx = ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE.getColumnNames().indexOf(columnName);
@@ -62,17 +60,16 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE
-    ).asCursorFactory();
+    ).as(CursorFactory.class);
 
     frameWithoutComplexColumns = Iterables.getOnlyElement(
         FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithoutComplexColumn)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .frames()
                             .toList()
     );
 
     final CursorFactory rowBasedAdapterWithComplexColumn = new RowBasedSegment<>(
-        SegmentId.dummy("test"),
         Sequences.simple(ByteRowKeyComparatorTest.ALL_KEY_OBJECTS),
         columnName -> {
           final int idx = ByteRowKeyComparatorTest.SIGNATURE.getColumnNames().indexOf(columnName);
@@ -83,11 +80,11 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.SIGNATURE
-    ).asCursorFactory();
+    ).as(CursorFactory.class);
 
     frameWithComplexColumns = Iterables.getOnlyElement(
         FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithComplexColumn)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .frames()
                             .toList()
     );
@@ -177,7 +174,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           keyColumns.size()
       );
       Assert.assertEquals(
-          KeyTestUtils.createKey(signature, expectedKeyArray),
+          KeyTestUtils.createKey(signature, FrameType.latestRowBased(), expectedKeyArray),
           widget.readKey(i)
       );
     }
@@ -203,6 +200,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
       Assert.assertEquals(
           KeyTestUtils.createKey(
               ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE,
+              FrameType.latestRowBased(),
               ByteRowKeyComparatorTest.KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN.get(i)
           ),
           widget.readKey(i)
@@ -234,6 +232,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
               i,
               KeyTestUtils.createKey(
                   ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE,
+                  FrameType.latestRowBased(),
                   ByteRowKeyComparatorTest.KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN.get(i)
               )
           )
@@ -243,6 +242,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     // Check some other comparators.
     final RowKey firstKey = KeyTestUtils.createKey(
         ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE,
+        FrameType.latestRowBased(),
         ByteRowKeyComparatorTest.KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN.get(0)
     );
 
@@ -338,7 +338,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
       final Object[] expectedKeyArray = new Object[keyColumns.size()];
       System.arraycopy(ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(i), 0, expectedKeyArray, 0, keyColumns.size());
       Assert.assertEquals(
-          KeyTestUtils.createKey(signature, expectedKeyArray),
+          KeyTestUtils.createKey(signature, FrameType.latestRowBased(), expectedKeyArray),
           widget.readKey(i)
       );
     }
@@ -366,7 +366,11 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
 
     for (int i = 0; i < frameWithComplexColumns.numRows(); i++) {
       Assert.assertEquals(
-          KeyTestUtils.createKey(ByteRowKeyComparatorTest.SIGNATURE, ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)),
+          KeyTestUtils.createKey(
+              ByteRowKeyComparatorTest.SIGNATURE,
+              FrameType.latestRowBased(),
+              ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)
+          ),
           widget.readKey(i)
       );
     }
@@ -400,6 +404,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
               i,
               KeyTestUtils.createKey(
                   ByteRowKeyComparatorTest.SIGNATURE,
+                  FrameType.latestRowBased(),
                   ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)
               )
           )
@@ -409,6 +414,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
     // Check some other comparators.
     final RowKey firstKey = KeyTestUtils.createKey(
         ByteRowKeyComparatorTest.SIGNATURE,
+        FrameType.latestRowBased(),
         ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(0)
     );
 
@@ -424,6 +430,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
 
     final RowKey eighthKey = KeyTestUtils.createKey(
         ByteRowKeyComparatorTest.SIGNATURE,
+        FrameType.latestRowBased(),
         ByteRowKeyComparatorTest.ALL_KEY_OBJECTS.get(7)
     );
 
@@ -444,7 +451,8 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
             keyColumn ->
                 FieldReaders.create(
                     keyColumn.columnName(),
-                    rowSignature.getColumnType(keyColumn.columnName()).get()
+                    rowSignature.getColumnType(keyColumn.columnName()).get(),
+                    FrameType.latestRowBased()
                 )
         ).collect(Collectors.toList())
     );

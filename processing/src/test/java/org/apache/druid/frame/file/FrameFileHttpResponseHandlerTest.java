@@ -99,7 +99,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     file = FrameTestUtil.writeFrameFile(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(maxRowsPerFrame)
-                            .frameType(FrameType.ROW_BASED) // No particular reason to test with both frame types
+                            .frameType(FrameType.latestRowBased())
                             .frames(),
         temporaryFolder.newFile()
     );

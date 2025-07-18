@@ -120,7 +120,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`topic`|String|The Kafka topic to read from. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
+|`topic`|String|The Kafka topic to read from. Note that once this value is established for a supervisor, updating it is not supported. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
 |`topicPattern`|String|Multiple Kafka topics to read from, passed as a regex pattern. See [Ingest from multiple topics](#ingest-from-multiple-topics) for more information.|Yes if `topic` isn't set.||
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes. At the minimum, you must set the `bootstrap.servers` property to establish the initial connection to the Kafka cluster.||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
@@ -132,6 +132,14 @@ For configuration properties shared across all streaming ingestion methods, refe
 :::info
 If you enable multi-topic ingestion for a datasource, downgrading to a version older than
 28.0.0 will cause the ingestion for that datasource to fail.
+:::
+
+:::info
+Migrating an existing supervisor to use `topicPattern` instead of `topic` is not supported. It is also not supported to change the `topicPattern` of an existing supervisor to a different regex pattern.
+You can force the migration by doing the following:
+1. Suspend the supervisor.
+2. Reset the offsets.
+3. Submit updated supervisor.
 :::
 
 You can ingest data from one or multiple topics.

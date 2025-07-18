@@ -40,7 +40,7 @@ public class ReadableConcatFrameChannelTest extends InitializedNullHandlingTest
     final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
     final List<Frame> frames =
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(11)
                             .frames()
                             .toList();

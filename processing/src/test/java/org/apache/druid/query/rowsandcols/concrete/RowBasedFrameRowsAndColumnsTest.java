@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.concrete;
 
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriters;
@@ -63,7 +64,8 @@ public class RowBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
     }
 
     final RowSignature signature = sigBob.build();
-    final FrameWriter frameWriter = FrameWriters.makeRowBasedFrameWriterFactory(
+    final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
+        FrameType.latestRowBased(),
         memFactory,
         signature,
         Collections.emptyList(),

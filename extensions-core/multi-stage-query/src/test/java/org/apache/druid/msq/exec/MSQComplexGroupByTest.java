@@ -19,16 +19,14 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -49,6 +47,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
@@ -72,7 +71,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MSQComplexGroupByTest extends MSQTestBase
 {
@@ -118,7 +119,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
     dataFileSignatureJsonString = queryFramework().queryJsonMapper().writeValueAsString(dataFileSignature);
 
     dataFileExternalDataSource = new ExternalDataSource(
-        new LocalInputSource(null, null, ImmutableList.of(dataFile), SystemFields.none()),
+        new LocalInputSource(null, null, List.of(dataFile), SystemFields.none()),
         new JsonInputFormat(null, null, null, null, null),
         dataFileSignature
     );
@@ -143,83 +144,25 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(context)
-                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(Set.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
                                                           .add("obj", ColumnType.NESTED_DATA)
                                                           .add("cnt", ColumnType.LONG)
                                                           .build())
-                     .setExpectedResultRows(ImmutableList.of(
+                     .setExpectedResultRows(List.of(
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 500,
-                                     "b", ImmutableMap.of(
-                                         "x", "e",
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", "a"
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 100,
-                                     "b", ImmutableMap.of(
-                                         "x", "a",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 700,
-                                     "b", ImmutableMap.of(
-                                         "x", "g",
-                                         "y", 1.1,
-                                         "z", Arrays.asList(9, null, 9, 9)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 200,
-                                     "b", ImmutableMap.of(
-                                         "x", "b",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(2, 4, 6)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
+                                 Map.of(
                                      "a", 600,
-                                     "b", ImmutableMap.of(
+                                     "b", Map.of(
                                          "x", "f",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(6, 7, 8, 9)
+                                         "z", List.of(6, 7, 8, 9)
                                      ),
+                                     "c", 12.3,
                                      "v", "b"
                                  )
                              ),
@@ -228,13 +171,14 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 400,
-                                     "b", ImmutableMap.of(
-                                         "x", "d",
+                                 Map.of(
+                                     "a", 200,
+                                     "b", Map.of(
+                                         "x", "b",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(3, 4)
+                                         "z", List.of(2, 4, 6)
                                      ),
+                                     "c", List.of("a", "b"),
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -242,7 +186,70 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          },
                          new Object[]{
                              0L,
-                             StructuredData.wrap(ImmutableMap.of("a", 300)),
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 400,
+                                     "b", Map.of(
+                                         "x", "d",
+                                         "y", 1.1,
+                                         "z", List.of(3, 4)
+                                     ),
+                                     "c", Map.of("a", 1),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 500,
+                                     "b", Map.of(
+                                         "x", "e",
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", "hello",
+                                     "v", "a"
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 TestHelper.makeMap(
+                                     "a", 700,
+                                     "b", Map.of(
+                                         "x", "g",
+                                         "y", 1.1,
+                                         "z", Arrays.asList(9, null, 9, 9)
+                                     ),
+                                     "c", null,
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 100,
+                                     "b", Map.of(
+                                         "x", "a",
+                                         "y", 1.1,
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", List.of(100),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(Map.of("a", 300)),
                              1L
                          }
                      ))
@@ -271,7 +278,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
-                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(Set.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
@@ -279,76 +286,18 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                           .add("cnt", ColumnType.LONG)
                                                           .build())
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedResultRows(ImmutableList.of(
+                     .setExpectedResultRows(List.of(
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 500,
-                                     "b", ImmutableMap.of(
-                                         "x", "e",
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", "a"
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 100,
-                                     "b", ImmutableMap.of(
-                                         "x", "a",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(1, 2, 3, 4)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 700,
-                                     "b", ImmutableMap.of(
-                                         "x", "g",
-                                         "y", 1.1,
-                                         "z", Arrays.asList(9, null, 9, 9)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 200,
-                                     "b", ImmutableMap.of(
-                                         "x", "b",
-                                         "y", 1.1,
-                                         "z", ImmutableList.of(2, 4, 6)
-                                     ),
-                                     "v", Collections.emptyList()
-                                 )
-                             ),
-                             1L
-                         },
-                         new Object[]{
-                             0L,
-                             StructuredData.wrap(
-                                 ImmutableMap.of(
+                                 Map.of(
                                      "a", 600,
-                                     "b", ImmutableMap.of(
+                                     "b", Map.of(
                                          "x", "f",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(6, 7, 8, 9)
+                                         "z", List.of(6, 7, 8, 9)
                                      ),
+                                     "c", 12.3,
                                      "v", "b"
                                  )
                              ),
@@ -357,13 +306,14 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          new Object[]{
                              0L,
                              StructuredData.wrap(
-                                 ImmutableMap.of(
-                                     "a", 400,
-                                     "b", ImmutableMap.of(
-                                         "x", "d",
+                                 Map.of(
+                                     "a", 200,
+                                     "b", Map.of(
+                                         "x", "b",
                                          "y", 1.1,
-                                         "z", ImmutableList.of(3, 4)
+                                         "z", List.of(2, 4, 6)
                                      ),
+                                     "c", List.of("a", "b"),
                                      "v", Collections.emptyList()
                                  )
                              ),
@@ -371,7 +321,70 @@ public class MSQComplexGroupByTest extends MSQTestBase
                          },
                          new Object[]{
                              0L,
-                             StructuredData.wrap(ImmutableMap.of("a", 300)),
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 400,
+                                     "b", Map.of(
+                                         "x", "d",
+                                         "y", 1.1,
+                                         "z", List.of(3, 4)
+                                     ),
+                                     "c", Map.of("a", 1),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 500,
+                                     "b", Map.of(
+                                         "x", "e",
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", "hello",
+                                     "v", "a"
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 TestHelper.makeMap(
+                                     "a", 700,
+                                     "b", Map.of(
+                                         "x", "g",
+                                         "y", 1.1,
+                                         "z", Arrays.asList(9, null, 9, 9)
+                                     ),
+                                     "c", null,
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(
+                                 Map.of(
+                                     "a", 100,
+                                     "b", Map.of(
+                                         "x", "a",
+                                         "y", 1.1,
+                                         "z", List.of(1, 2, 3, 4)
+                                     ),
+                                     "c", List.of(100),
+                                     "v", Collections.emptyList()
+                                 )
+                             ),
+                             1L
+                         },
+                         new Object[]{
+                             0L,
+                             StructuredData.wrap(Map.of("a", 300)),
                              1L
                          }
                      ))
@@ -399,8 +412,8 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(ImmutableMap.of())
-                     .setExpectedMSQSpec(MSQSpec
+                     .setQueryContext(Map.of())
+                     .setExpectedMSQSpec(LegacyMSQSpec
                                              .builder()
                                              .query(newScanQueryBuilder()
                                                         .dataSource(dataFileExternalDataSource)
@@ -411,7 +424,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .orderBy(Collections.singletonList(OrderBy.ascending("obj")))
                                                         .build()
                                              )
-                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                             .columnMappings(new ColumnMappings(List.of(
                                                  new ColumnMapping("obj", "obj")
                                              )))
                                              .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -420,13 +433,13 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedResultRows(ImmutableList.of(
-                         new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}"},
-                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}"},
-                         new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}"},
-                         new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}"},
-                         new Object[]{"{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}"},
-                         new Object[]{"{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}"},
+                     .setExpectedResultRows(List.of(
+                         new Object[]{"{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"c\":12.3,\"v\":\"b\"}"},
+                         new Object[]{"{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}"},
+                         new Object[]{"{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"c\":{\"a\":1},\"v\":[]}"},
+                         new Object[]{"{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"c\":\"hello\",\"v\":\"a\"}"},
+                         new Object[]{"{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"c\":null,\"v\":[]}"},
+                         new Object[]{"{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":[100],\"v\":[]}"},
                          new Object[]{"{\"a\":300}"}
                      ))
                      .verifyResults();
@@ -457,9 +470,9 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
-                         MSQSpec
+                         LegacyMSQSpec
                              .builder()
                              .query(
                                  GroupByQuery
@@ -488,7 +501,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                      .setGranularity(Granularities.ALL)
                                      .setLimitSpec(new DefaultLimitSpec(
-                                         ImmutableList.of(
+                                         List.of(
                                              new OrderByColumnSpec(
                                                  "a0",
                                                  OrderByColumnSpec.Direction.ASCENDING,
@@ -500,7 +513,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      .setContext(modifiedContext)
                                      .build()
                              )
-                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                             .columnMappings(new ColumnMappings(List.of(
                                  new ColumnMapping("a0", "distinct_obj")
                              )))
                              .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -509,7 +522,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(modifiedContext)
-                     .setExpectedResultRows(ImmutableList.of(
+                     .setExpectedResultRows(Collections.singletonList(
                          new Object[]{7L}
                      ))
                      .verifyResults();
@@ -524,7 +537,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                  .add("cObj", ColumnType.NESTED_DATA)
                                                  .build();
     DataSource dataFileExternalDataSource2 = new ExternalDataSource(
-        new LocalInputSource(null, null, ImmutableList.of(dataFile), SystemFields.none()),
+        new LocalInputSource(null, null, List.of(dataFile), SystemFields.none()),
         new JsonInputFormat(null, null, null, null, null),
         dataFileSignature
     );
@@ -549,9 +562,9 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
-                     .setQueryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setQueryContext(Map.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
                      .setExpectedMSQSpec(
-                         MSQSpec
+                         LegacyMSQSpec
                              .builder()
                              .query(
                                  GroupByQuery
@@ -580,7 +593,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                      .setGranularity(Granularities.ALL)
                                      .setLimitSpec(new DefaultLimitSpec(
-                                         ImmutableList.of(
+                                         List.of(
                                              new OrderByColumnSpec(
                                                  "a0",
                                                  OrderByColumnSpec.Direction.ASCENDING,
@@ -592,7 +605,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                      .setContext(modifiedContext)
                                      .build()
                              )
-                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                             .columnMappings(new ColumnMappings(List.of(
                                  new ColumnMapping("a0", "distinct_obj")
                              )))
                              .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -601,7 +614,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(modifiedContext)
-                     .setExpectedResultRows(ImmutableList.of(
+                     .setExpectedResultRows(Collections.singletonList(
                          new Object[]{1L}
                      ))
                      .verifyResults();

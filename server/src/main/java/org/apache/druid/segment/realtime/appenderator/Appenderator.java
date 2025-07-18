@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -77,7 +76,7 @@ public interface Appenderator extends QuerySegmentWalker
       SegmentIdWithShardSpec identifier,
       InputRow row,
       Supplier<Committer> committerSupplier
-  ) throws IndexSizeExceededException, SegmentNotWritableException
+  ) throws SegmentNotWritableException
   {
     return add(identifier, row, committerSupplier, true);
   }
@@ -107,7 +106,6 @@ public interface Appenderator extends QuerySegmentWalker
    *
    * @return {@link AppenderatorAddResult}
    *
-   * @throws IndexSizeExceededException  if this row cannot be added because it is too large
    * @throws SegmentNotWritableException if the requested segment is known, but has been closed
    */
   AppenderatorAddResult add(
@@ -116,7 +114,7 @@ public interface Appenderator extends QuerySegmentWalker
       @Nullable Supplier<Committer> committerSupplier,
       boolean allowIncrementalPersists
   )
-      throws IndexSizeExceededException, SegmentNotWritableException;
+      throws SegmentNotWritableException;
 
   /**
    * Returns a list of all currently active segments.
@@ -219,6 +217,16 @@ public interface Appenderator extends QuerySegmentWalker
    * in background thread then it does not cause any problems.
    */
   void closeNow();
+
+  /**
+   * Sets thread context for task threads on Indexers. Since the {@link Appenderator}
+   * and the underlying threadpools for persist, push, publish are freshly
+   * created for each task ID, this context need not be cleared.
+   */
+  default void setTaskThreadContext()
+  {
+
+  }
 
   /**
    * Result of {@link Appenderator#add} containing following information

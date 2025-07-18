@@ -80,7 +80,6 @@ import java.util.Set;
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
-    @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
     @Type(name = NoopTask.TYPE, value = NoopTask.class),
     @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })

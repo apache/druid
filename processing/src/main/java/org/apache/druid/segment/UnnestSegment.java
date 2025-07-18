@@ -24,14 +24,14 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class UnnestSegment extends WrappedSegmentReference
+public class UnnestSegment extends WrappedSegment
 {
   private final VirtualColumn unnestColumn;
   @Nullable
   private final DimFilter filter;
 
   public UnnestSegment(
-      SegmentReference delegate,
+      Segment delegate,
       VirtualColumn unnestColumn,
       @Nullable DimFilter filter
   )
@@ -40,20 +40,22 @@ public class UnnestSegment extends WrappedSegmentReference
     this.unnestColumn = unnestColumn;
     this.filter = filter;
   }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new UnnestCursorFactory(delegate.asCursorFactory(), unnestColumn, filter);
-  }
-
+  
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
-    if (TopNOptimizationInspector.class.equals(clazz)) {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new UnnestCursorFactory(delegate.as(CursorFactory.class), unnestColumn, filter);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(filter == null);
     }
-    return super.as(clazz);
+    return null;
+  }
+
+  @Override
+  public String getDebugString()
+  {
+    return "unnest->" + delegate.getDebugString();
   }
 }

@@ -25,7 +25,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
@@ -217,7 +217,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         ))
         .setExpectedDataSource("foo1")
         .setExpectedMSQSpec(
-            MSQSpec
+            LegacyMSQSpec
                 .builder()
                 .query(expectedQuery)
                 .columnMappings(new ColumnMappings(
@@ -226,7 +226,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("v1", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
@@ -311,7 +311,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         ))
         .setExpectedDataSource("foo1")
         .setExpectedMSQSpec(
-            MSQSpec
+            LegacyMSQSpec
                 .builder()
                 .query(expectedQuery)
                 .columnMappings(new ColumnMappings(
@@ -320,7 +320,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("agent_category", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(runtimeContext)
@@ -369,7 +369,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-US")}
         ))
         .setExpectedMSQSpec(
-            MSQSpec
+            LegacyMSQSpec
                 .builder()
                 .query(expectedQuery)
                 .columnMappings(new ColumnMappings(

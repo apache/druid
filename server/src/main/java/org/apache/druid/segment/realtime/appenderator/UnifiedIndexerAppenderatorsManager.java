@@ -45,7 +45,8 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -59,7 +60,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -108,11 +108,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
   private final QueryProcessingPool queryProcessingPool;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final WorkerConfig workerConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final PolicyEnforcer policyEnforcer;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter serviceEmitter;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
@@ -122,22 +122,22 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @Inject
   public UnifiedIndexerAppenderatorsManager(
       QueryProcessingPool queryProcessingPool,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       WorkerConfig workerConfig,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       ObjectMapper objectMapper,
       ServiceEmitter serviceEmitter,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider
   )
   {
     this.queryProcessingPool = queryProcessingPool;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.workerConfig = workerConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
+    this.policyEnforcer = policyEnforcer;
     this.objectMapper = objectMapper;
     this.serviceEmitter = serviceEmitter;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
@@ -153,6 +153,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -166,9 +167,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -193,9 +194,15 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
-      );
+      )
+      {
+        @Override
+        public void setTaskThreadContext()
+        {
+          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+        }
+      };
 
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
@@ -207,6 +214,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -214,7 +222,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -224,7 +231,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = Appenderators.createBatch(
+      Appenderator appenderator = new BatchAppenderator(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -235,9 +242,15 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           wrapIndexMerger(indexMerger),
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates,
           centralizedDatasourceSchemaConfig
-      );
+      )
+      {
+        @Override
+        public void setTaskThreadContext()
+        {
+          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+        }
+      };
       datasourceBundle.addAppenderator(taskId, appenderator);
       return appenderator;
     }
@@ -288,8 +301,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
-    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
-    final TableDataSource table = analysis.getBaseTableDataSource();
+    final TableDataSource table = ExecutionVertex.of(query).getBaseTableDataSource();
 
     final DatasourceBundle bundle;
 
@@ -357,7 +369,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           queryProcessingPool,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
-          cachePopulatorStats
+          cachePopulatorStats,
+          policyEnforcer
       );
     }
 

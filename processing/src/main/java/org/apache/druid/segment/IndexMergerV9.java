@@ -130,7 +130,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final @Nullable AggregatorFactory[] metricAggs,
+      final @Nullable Metadata segmentMetadata,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensionsWithTime, // has both explicit and implicit dimensions, as well as __time
@@ -144,43 +144,11 @@ public class IndexMergerV9 implements IndexMerger
     progress.start();
     progress.progress();
 
-    List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
-
     // Merged dimensions without __time.
     List<String> mergedDimensions =
         mergedDimensionsWithTime.stream()
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
-
-    Metadata segmentMetadata;
-    if (metricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
-      for (int i = 0; i < metricAggs.length; i++) {
-        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
-      }
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          combiningMetricAggs
-      );
-    } else {
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          null
-      );
-    }
-
-    if (segmentMetadata != null
-        && segmentMetadata.getOrdering() != null
-        && segmentMetadata.getOrdering()
-                          .stream()
-                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
-      throw DruidException.defensive(
-          "sortOrder[%s] must include[%s]",
-          segmentMetadata.getOrdering(),
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    }
-
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
@@ -302,8 +270,12 @@ public class IndexMergerV9 implements IndexMerger
 
       progress.stopSection(section);
 
-      if (segmentMetadata != null && !CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
-        segmentMetadata = makeProjections(
+      // Recompute the projections.
+      final Metadata finalMetadata;
+      if (segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        finalMetadata = segmentMetadata;
+      } else {
+        finalMetadata = makeProjections(
             v9Smoosher,
             segmentMetadata.getProjections(),
             adapters,
@@ -330,7 +302,7 @@ public class IndexMergerV9 implements IndexMerger
           mergers,
           dimensionsSpecInspector
       );
-      makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
+      makeMetadataBinary(v9Smoosher, progress, finalMetadata);
 
       v9Smoosher.close();
       progress.stop();
@@ -533,12 +505,27 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < dimensions.size(); i++) {
         final String dimension = dimensions.get(i);
-        DimensionMergerV9 merger = mergers.get(i);
+        final DimensionMergerV9 merger = mergers.get(i);
         merger.writeIndexes(rowNumConversions);
-        if (!merger.hasOnlyNulls()) {
-          ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-          makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
+        final ColumnDescriptor columnDesc;
+        if (merger.hasOnlyNulls()) {
+          // synthetic null column descriptor if merger participates in generic null column stuff
+          // always write a null column if hasOnlyNulls is true. This is correct regardless of how storeEmptyColumns is
+          // set because:
+          // - if storeEmptyColumns is true, the base table also does this,
+          // - if storeEmptyColumns is false, the base table omits the column from the dimensions list as if it does not
+          //   exist, however for projections the dimensions list is always populated by the projection schema, so a
+          //   column always needs to exist to not run into null pointer exceptions.
+          columnDesc = ColumnDescriptor
+              .builder()
+              .setValueType(columnFormats.get(dimension).getLogicalType().getType())
+              .addSerde(new NullColumnPartSerde(rowCount, indexSpec.getBitmapSerdeFactory()))
+              .build();
+        } else {
+          // use merger descriptor, merger either has values or handles it own null column storage details
+          columnDesc = merger.makeColumnDescriptor();
         }
+        makeColumn(smoosher, Projections.getProjectionSmooshV9FileName(spec, dimension), columnDesc);
       }
 
       progress.stopSection(section2);
@@ -662,6 +649,7 @@ public class IndexMergerV9 implements IndexMerger
   {
     makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsTypes, metWriters, indexSpec, "");
   }
+
   private void makeMetricsColumns(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
@@ -1130,6 +1118,9 @@ public class IndexMergerV9 implements IndexMerger
     );
   }
 
+  /**
+   * The indexes here must have the same {@link Metadata}, otherwise an error would be thrown.
+   */
   @Override
   public File merge(
       List<IndexableAdapter> indexes,
@@ -1189,12 +1180,18 @@ public class IndexMergerV9 implements IndexMerger
     List<List<IndexableAdapter>> currentPhases = getMergePhases(indexes, maxColumnsToMerge);
     List<File> currentOutputs = new ArrayList<>();
 
-    log.debug("base outDir: " + outDir);
+    log.debug("Base outDir[%s]", outDir);
 
     try {
       int tierCounter = 0;
       while (true) {
-        log.info("Merging %d phases, tiers finished processed so far: %d.", currentPhases.size(), tierCounter);
+        log.info(
+            "Merging phases[%,d] (indexes[%,d], maxColumnsToMerge[%,d]), tiers finished processed so far[%,d].",
+            currentPhases.size(),
+            indexes.size(),
+            maxColumnsToMerge,
+            tierCounter
+        );
         for (List<IndexableAdapter> phase : currentPhases) {
           final File phaseOutDir;
           final boolean isFinalPhase = currentPhases.size() == 1;
@@ -1206,8 +1203,8 @@ public class IndexMergerV9 implements IndexMerger
             phaseOutDir = FileUtils.createTempDir();
             tempDirs.add(phaseOutDir);
           }
-          log.info("Merging phase with %d indexes.", phase.size());
-          log.debug("phase outDir: " + phaseOutDir);
+          log.info("Merging phase with index count[%,d].", phase.size());
+          log.debug("Phase outDir[%s]", phaseOutDir);
 
           File phaseOutput = merge(
               phase,
@@ -1356,9 +1353,28 @@ public class IndexMergerV9 implements IndexMerger
       rowMergerFn = MergingRowIterator::new;
     }
 
+    List<Metadata> metadataList = Lists.transform(indexes, IndexableAdapter::getMetadata);
+    AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
+    for (int i = 0; i < sortedMetricAggs.length; i++) {
+      combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
+    }
+    final Metadata segmentMetadata = Metadata.merge(metadataList, combiningMetricAggs);
+
+    if (segmentMetadata != null
+        && segmentMetadata.getOrdering() != null
+        && segmentMetadata.getOrdering()
+                          .stream()
+                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
+      throw DruidException.defensive(
+          "sortOrder[%s] must include[%s]",
+          segmentMetadata.getOrdering(),
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    }
+
     return makeIndexFiles(
         indexes,
-        sortedMetricAggs,
+        segmentMetadata,
         outDir,
         progress,
         mergedDimensionsWithTime,

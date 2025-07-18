@@ -19,10 +19,18 @@
 
 package org.apache.druid.server;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Scopes;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -45,7 +53,10 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
@@ -72,6 +83,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@LazySingleton
 public class QueryLifecycleTest
 {
   private static final String DATASOURCE = "some_datasource";
@@ -85,19 +97,40 @@ public class QueryLifecycleTest
                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
                                               .aggregators(new CountAggregatorFactory("chocula"))
                                               .build();
-  QueryRunnerFactoryConglomerate conglomerate;
-  QuerySegmentWalker texasRanger;
-  GenericQueryMetricsFactory metricsFactory;
-  ServiceEmitter emitter;
-  RequestLogger requestLogger;
-  AuthorizerMapper authzMapper;
-  DefaultQueryConfig queryConfig;
-
   QueryToolChest toolChest;
+  @Bind
+  QueryRunnerFactoryConglomerate conglomerate;
+
   QueryRunner runner;
+  @Bind
+  QuerySegmentWalker texasRanger;
+  @Bind
+  GenericQueryMetricsFactory metricsFactory;
+  @Bind
+  ServiceEmitter emitter;
+  @Bind
+  RequestLogger requestLogger;
+
+  Authorizer authorizer;
+  @Bind
+  AuthorizerMapper authzMapper;
+
+  DefaultQueryConfig queryConfig;
+  @Bind(lazy = true)
+  Supplier<DefaultQueryConfig> queryConfigSupplier;
+
+  @Bind(lazy = true)
+  AuthConfig authConfig;
+  @Bind(lazy = true)
+  PolicyEnforcer policyEnforcer;
+
   QueryMetrics metrics;
   AuthenticationResult authenticationResult;
-  Authorizer authorizer;
+
+  @Inject
+  QueryLifecycleFactory queryLifecycleFactory;
+
+  Injector injector;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -113,29 +146,25 @@ public class QueryLifecycleTest
     authorizer = EasyMock.createMock(Authorizer.class);
     authzMapper = new AuthorizerMapper(ImmutableMap.of(AUTHORIZER, authorizer));
     queryConfig = EasyMock.createMock(DefaultQueryConfig.class);
+    queryConfigSupplier = () -> queryConfig;
 
     toolChest = EasyMock.createMock(QueryToolChest.class);
     runner = EasyMock.createMock(QueryRunner.class);
     metrics = EasyMock.createNiceMock(QueryMetrics.class);
     authenticationResult = EasyMock.createMock(AuthenticationResult.class);
+    authConfig = new AuthConfig();
+    policyEnforcer = NoopPolicyEnforcer.instance();
+
+    injector = Guice.createInjector(
+        BoundFieldModule.of(this),
+        binder -> binder.bindScope(LazySingleton.class, Scopes.SINGLETON)
+    );
   }
 
-  private QueryLifecycle createLifecycle(AuthConfig authConfig)
+  private QueryLifecycle createLifecycle()
   {
-    long nanos = System.nanoTime();
-    long millis = System.currentTimeMillis();
-    return new QueryLifecycle(
-        conglomerate,
-        texasRanger,
-        metricsFactory,
-        emitter,
-        requestLogger,
-        authzMapper,
-        queryConfig,
-        authConfig,
-        millis,
-        nanos
-    );
+    injector.injectMembers(this);
+    return queryLifecycleFactory.factorize();
   }
 
   @After
@@ -171,7 +200,7 @@ public class QueryLifecycleTest
 
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
   }
 
@@ -189,7 +218,7 @@ public class QueryLifecycleTest
     EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.DENY);
   }
 
@@ -223,10 +252,10 @@ public class QueryLifecycleTest
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
     replayAll();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder()
+                           .setAuthorizeQueryContextParams(true)
+                           .build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, authorizationResult);
   }
 
@@ -248,16 +277,14 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).once();
-    // We're expecting the data source in the query to still be TableDataSource.
-    // Any other DataSource would throw AssertionError.
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
-        queryMatchDataSource(TableDataSource.create(DATASOURCE)),
-        EasyMock.anyObject()
-    )).andReturn(runner).once();
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(runner)
+            .once();
+    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, authorizationResult);
   }
 
@@ -277,13 +304,21 @@ public class QueryLifecycleTest
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
-            .andReturn(toolChest).once();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
     EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).once();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
-    Assert.assertThrows(Exception.class, () -> lifecycle.runSimple(query, authenticationResult, authorizationResult));
+    QueryLifecycle lifecycle = createLifecycle();
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> lifecycle.runSimple(query, authenticationResult, authorizationResult)
+    );
+    Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(
+        "You do not have permission to run a segmentMetadata query on table[some_datasource].",
+        e.getMessage()
+    );
   }
 
   @Test
@@ -302,7 +337,7 @@ public class QueryLifecycleTest
     EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(AuthConfig.newBuilder().build());
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, authorizationResult);
   }
 
@@ -342,49 +377,7 @@ public class QueryLifecycleTest
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
-    lifecycle.runSimple(query, authenticationResult, authorizationResult);
-  }
-
-  @Test
-  public void testRunSimple_queryWithRestrictedDataSource_policyRestrictionMightHaveBeenRemoved()
-  {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(
-        "No restriction found on table [some_datasource], but had policy [RowFilterPolicy{rowFilter=some-column IS NULL}] before.");
-
-    DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
-    Policy originalFilterPolicy = RowFilterPolicy.from(originalFilterOnRDS);
-    DataSource restrictedDataSource = RestrictedDataSource.create(
-        TableDataSource.create(DATASOURCE),
-        originalFilterPolicy
-    );
-
-    // The query is built on a restricted data source, but we didn't find any policy, which could be one of:
-    // 1. policy restriction might have been removed
-    // 2. some bug in the system
-    // In this case, we throw an exception to be safe.
-    AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
-        DATASOURCE,
-        Optional.empty()
-    ));
-
-    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(restrictedDataSource)
-                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
-                                        .aggregators(new CountAggregatorFactory("chocula"))
-                                        .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
-    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(runner).anyTimes();
-    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
-    replayAll();
-
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.runSimple(query, authenticationResult, authorizationResult);
   }
 
@@ -419,10 +412,46 @@ public class QueryLifecycleTest
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+        NoRestrictionPolicy.class.getName(),
+        RowFilterPolicy.class.getName()
+    ));
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
+    // Success, query has a RowFilterPolicy, and is allowed by PolicyEnforcer.
     lifecycle.execute();
+  }
+
+  @Test
+  public void testAuthorized_withPolicyRestriction_failedSecurityValidation()
+  {
+    // Test the path broker receives a native json query from external client, should add restriction on data source
+    Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
+    Access access = Access.allowWithRestriction(rowFilterPolicy);
+
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATASOURCE)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+            .andReturn(access).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest).anyTimes();
+    replayAll();
+
+    policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
+    QueryLifecycle lifecycle = createLifecycle();
+    lifecycle.initialize(query);
+    // Fail, only NoRestrictionPolicy is allowed.
+    DruidException e = Assert.assertThrows(DruidException.class, () -> lifecycle.authorize(authenticationResult));
+    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assert.assertEquals("Failed security validation with dataSource [some_datasource]", e.getMessage());
   }
 
   @Test
@@ -456,10 +485,8 @@ public class QueryLifecycleTest
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
     replayAll();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
     lifecycle.execute();
@@ -504,10 +531,8 @@ public class QueryLifecycleTest
                                         .context(userContext)
                                         .build();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
@@ -520,7 +545,7 @@ public class QueryLifecycleTest
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowAccessWithNoRestriction());
   }
@@ -559,14 +584,12 @@ public class QueryLifecycleTest
                                         .context(ImmutableMap.of("foo", "bar"))
                                         .build();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
@@ -595,11 +618,11 @@ public class QueryLifecycleTest
                                         .context(userContext)
                                         .build();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .setUnsecuredContextKeys(ImmutableSet.of("foo", "baz"))
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder()
+                           .setAuthorizeQueryContextParams(true)
+                           .setUnsecuredContextKeys(ImmutableSet.of("foo", "baz"))
+                           .build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
@@ -612,7 +635,7 @@ public class QueryLifecycleTest
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowAccessWithNoRestriction());
   }
@@ -645,12 +668,12 @@ public class QueryLifecycleTest
                                         .context(userContext)
                                         .build();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      // We have secured keys, just not what the user gave.
-                                      .setSecuredContextKeys(ImmutableSet.of("foo2", "baz2"))
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder()
+                           .setAuthorizeQueryContextParams(true)
+                           // We have secured keys, just not what the user gave.
+                           .setSecuredContextKeys(ImmutableSet.of("foo2", "baz2"))
+                           .build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
@@ -663,7 +686,7 @@ public class QueryLifecycleTest
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
@@ -703,16 +726,16 @@ public class QueryLifecycleTest
                                         .context(userContext)
                                         .build();
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      // We have secured keys. User used one of them.
-                                      .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder()
+                           .setAuthorizeQueryContextParams(true)
+                           // We have secured keys. User used one of them.
+                           .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
+                           .build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
@@ -758,10 +781,10 @@ public class QueryLifecycleTest
         "qux"
     ));
 
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    authConfig = AuthConfig.newBuilder()
+                           .setAuthorizeQueryContextParams(true)
+                           .build();
+    QueryLifecycle lifecycle = createLifecycle();
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = lifecycle.getQuery().getContext();
@@ -772,7 +795,7 @@ public class QueryLifecycleTest
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
-    lifecycle = createLifecycle(authConfig);
+    lifecycle = createLifecycle();
     lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
   }

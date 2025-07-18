@@ -65,7 +65,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
 
     selector.addServerAndUpdateSegment(
@@ -108,7 +109,8 @@ public class ServerSelectorTest
   {
     final ServerSelector selector = new ServerSelector(
         null,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
   }
 
@@ -132,7 +134,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertFalse(selector.hasData());
   }
@@ -159,7 +162,8 @@ public class ServerSelectorTest
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertTrue(selector.hasData());
   }

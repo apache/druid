@@ -40,8 +40,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -59,6 +61,7 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -92,7 +95,6 @@ public class SingleTaskBackgroundRunnerTest
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFile().toString())
-        .setDefaultRowFlushBoundary(50000)
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -103,6 +105,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         EasyMock.createMock(TaskActionClientFactory.class),
         emitter,
+        NoopPolicyEnforcer.instance(),
         new NoopDataSegmentPusher(),
         new NoopDataSegmentKiller(),
         new NoopDataSegmentMover(),
@@ -111,6 +114,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
+        DruidProcessingConfig::new,
         null,
         NoopJoinableFactory.INSTANCE,
         null,
@@ -137,7 +141,8 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        JvmUtils.getRuntimeInfo()
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -321,6 +326,13 @@ public class SingleTaskBackgroundRunnerTest
             0,
             null
         )
+        {
+          @Override
+          public boolean waitForCleanupToFinish()
+          {
+            return true;
+          }
+        }
     );
 
     Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));

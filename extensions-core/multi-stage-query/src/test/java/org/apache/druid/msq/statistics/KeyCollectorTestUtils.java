@@ -21,6 +21,7 @@ package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.KeyColumn;
@@ -292,6 +293,6 @@ public class KeyCollectorTestUtils
     final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
     final List<KeyColumn> keyColumns = ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING));
     final RowSignature keySignature = KeyTestUtils.createKeySignature(keyColumns, signature);
-    return KeyTestUtils.createKey(keySignature, n);
+    return KeyTestUtils.createKey(keySignature, FrameType.latestRowBased(), n);
   }
 }

@@ -20,11 +20,6 @@ set -x
 
 echo "GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
 
-if [ "$GITHUB_BASE_REF" == "" ] ;then
-  echo "GITHUB_BASE_REF is not set; skipping this check!"
-  exit 0
-fi
-
 echo "Setting up git remote"
 git remote set-branches --add origin ${GITHUB_BASE_REF}
 git fetch
@@ -68,3 +63,7 @@ then
   -- ||
   { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && exit 1; }
 fi
+
+
+echo " * test balancing details"
+.github/scripts/test_balancing_calc

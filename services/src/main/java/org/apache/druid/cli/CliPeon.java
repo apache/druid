@@ -24,6 +24,7 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -67,17 +68,15 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
@@ -85,11 +84,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
-import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
@@ -98,7 +94,6 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -114,7 +109,6 @@ import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.ServiceAnnouncingChatHandlerProvider;
@@ -234,10 +228,15 @@ public class CliPeon extends GuiceRunnable
           public void configure(Binder binder)
           {
             ServerRunnable.validateCentralizedDatasourceSchemaConfig(getProperties());
+            Preconditions.checkArgument(
+                taskAndStatusFile.size() >= 2,
+                "taskAndStatusFile array should contain 2 or more elements. Current array elements: [%s]",
+                taskAndStatusFile.toString()
+            );
+
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
-            JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
@@ -258,6 +257,7 @@ public class CliPeon extends GuiceRunnable
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
+            binder.bind(Properties.class).toInstance(properties);
             if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
               log.info("Running peon in k8s mode");
               executorLifecycleConfig.setParentStreamDefined(false);
@@ -376,6 +376,7 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
+        new HadoopIndexTaskModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()
     );
@@ -469,39 +470,24 @@ public class CliPeon extends GuiceRunnable
   static void bindPeonDataSegmentHandlers(Binder binder)
   {
     // Build it to make it bind even if nothing binds to it.
-    Binders.dataSegmentKillerBinder(binder);
-    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
+    bindDataSegmentKiller(binder);
     Binders.dataSegmentMoverBinder(binder);
     binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder);
     binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
   }
 
+  static void bindDataSegmentKiller(Binder binder)
+  {
+    Binders.dataSegmentKillerBinder(binder);
+    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
+  }
+
   private static void configureTaskActionClient(Binder binder)
   {
-    PolyBind.createChoice(
-        binder,
-        "druid.peon.mode",
-        Key.get(TaskActionClientFactory.class),
-        Key.get(RemoteTaskActionClientFactory.class)
-    );
-    final MapBinder<String, TaskActionClientFactory> taskActionBinder =
-        PolyBind.optionBinder(binder, Key.get(TaskActionClientFactory.class));
-    taskActionBinder
-        .addBinding("local")
-        .to(LocalTaskActionClientFactory.class)
-        .in(LazySingleton.class);
-    // all of these bindings are so that we can run the peon in local mode
-    JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
-    binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
-    binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-    binder.bind(IndexerMetadataStorageCoordinator.class)
-          .to(IndexerSQLMetadataStorageCoordinator.class)
+    binder.bind(TaskActionClientFactory.class)
+          .to(RemoteTaskActionClientFactory.class)
           .in(LazySingleton.class);
-    taskActionBinder
-        .addBinding("remote")
-        .to(RemoteTaskActionClientFactory.class)
-        .in(LazySingleton.class);
 
     binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.PEON);
   }

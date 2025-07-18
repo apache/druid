@@ -377,6 +377,7 @@ public class SqlStatementResourceHelperTest
             null,
             null,
             null,
+            null,
             null
         )
     );

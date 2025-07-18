@@ -33,7 +33,7 @@ import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -74,15 +74,16 @@ public final class SegmentGenerationUtils
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      Query<?> query
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
+    final boolean isRollupQuery = isRollupQuery(query);
     final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
 
-    final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
+    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
             queryClusterBy,
@@ -90,7 +91,7 @@ public final class SegmentGenerationUtils
             forceSegmentSortByTime,
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery(),
+            query,
             destination.getDimensionSchemas()
         );
 
@@ -99,7 +100,8 @@ public final class SegmentGenerationUtils
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
-                     .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withGranularity(makeGranularitySpecForIngestion(query, querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withProjections(destination.getProjections())
                      .build();
   }
 
@@ -195,7 +197,7 @@ public final class SegmentGenerationUtils
     );
   }
 
-  private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
+  private static NonnullPair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> contextSegmentSortOrder,
@@ -328,7 +330,7 @@ public final class SegmentGenerationUtils
       dimensionsSpecBuilder.setForceSegmentSortByTime(forceSegmentSortByTime ? null : false);
     }
 
-    return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
+    return new NonnullPair<>(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
   }
 
   /**

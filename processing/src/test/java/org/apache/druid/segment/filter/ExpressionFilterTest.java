@@ -176,6 +176,23 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(edf("dim4 == ''"), ImmutableList.of("2"));
     // AS per SQL standard null == null returns false.
     assertFilterMatchesSkipVectorize(edf("dim4 == null"), ImmutableList.of());
+    if (hasTypeInformation()) {
+      assertFilterMatchesSkipVectorize(edf("isnull(dim4)"), ImmutableList.of("1", "6", "7", "8"));
+      assertFilterMatchesSkipVectorize(
+          NotDimFilter.of(edf("isnull(dim4)")),
+          ImmutableList.of("0", "2", "3", "4", "5", "9")
+      );
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'LONG')"), ImmutableList.of("0", "3", "4", "5", "9"));
+      assertFilterMatchesSkipVectorize(NotDimFilter.of(edf("cast(dim4, 'LONG')")), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'STRING')"), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(
+          NotDimFilter.of(edf("cast(dim4, 'STRING')")),
+          ImmutableList.of("0", "2", "3", "4", "5", "9")
+      );
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'DOUBLE')"), ImmutableList.of("0", "3", "4", "5", "9"));
+      assertFilterMatchesSkipVectorize(NotDimFilter.of(edf("cast(dim4, 'DOUBLE')")), ImmutableList.of());
+    }
+
     assertFilterMatchesSkipVectorize(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '3'"), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '4'"), ImmutableList.of("4", "5"));

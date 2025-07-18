@@ -127,6 +127,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   }
 
   @Override
+  public void loadQueuedSegmentsSkipCallbacks()
+  {
+    sim.cluster().loadQueuedSegmentsSkipCallbacks();
+  }
+
+  @Override
   public void removeServer(DruidServer server)
   {
     sim.cluster().removeServer(server);
@@ -217,6 +223,7 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String DELETED_COUNT = "segment/deleted/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
+    static final String SUCCESS_ACTIONS = "segment/loadQueue/success";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
 
     static final String OVERSHADOWED_COUNT = "segment/overshadowed/count";

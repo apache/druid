@@ -93,6 +93,47 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testBalancingDoesNotUnderReplicateSegment()
+  {
+    // historicals = 2(T1), replicas = 1(T1)
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    // Put all the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run cycle and verify that segments have been chosen for balancing
+    startSimulation(sim);
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    // Load segments, skip callbacks and verify that some segments are now loaded on histT12
+    loadQueuedSegmentsSkipCallbacks();
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    // Run another coordinator cycle
+    runCoordinatorCycle();
+    loadQueuedSegmentsSkipCallbacks();
+
+    // Verify that segments have not been dropped from either server since
+    // MOVE_FROM operation is still not complete
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+
+    // Finish the move operations
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
+  @Test
   public void testDropDoesNotHappenWhenLoadFails()
   {
     // historicals = 2(T1), replicas = 1(T1)

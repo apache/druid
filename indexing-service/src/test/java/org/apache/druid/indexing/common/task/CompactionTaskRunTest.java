@@ -130,6 +130,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
@@ -168,13 +169,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
       "2014-01-01T02:00:30Z,c|d|e,3\n"
   );
 
-  @Parameterized.Parameters(name = "lockGranularity={0}, useSegmentMetadataCache={1}")
+  @Parameterized.Parameters(name = "lockGranularity={0}, useSegmentMetadataCache={1}, useConcurrentLocks={2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.TIME_CHUNK, false},
-        new Object[]{LockGranularity.SEGMENT, true}
+        new Object[]{LockGranularity.TIME_CHUNK, true, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false, false},
+        new Object[]{LockGranularity.SEGMENT, true, false}
     );
   }
 
@@ -183,12 +184,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
   private final LockGranularity lockGranularity;
+  private final boolean useConcurrentLocks;
   private final TestUtils testUtils;
 
   private ExecutorService exec;
   private File localDeepStorage;
 
-  public CompactionTaskRunTest(LockGranularity lockGranularity, boolean useSegmentMetadataCache)
+  public CompactionTaskRunTest(
+      LockGranularity lockGranularity,
+      boolean useSegmentMetadataCache,
+      boolean useConcurrentLocks
+  )
   {
     super(useSegmentMetadataCache);
     testUtils = new TestUtils();
@@ -210,6 +216,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     };
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     this.lockGranularity = lockGranularity;
+    this.useConcurrentLocks = useConcurrentLocks;
   }
 
   public static CompactionState getDefaultCompactionState(
@@ -253,7 +260,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             queryGranularity,
             true,
             intervals
-        )
+        ),
+        null
     );
   }
 
@@ -277,12 +285,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -345,12 +348,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .tuningConfig(
             TuningConfigBuilder.forParallelIndexTask()
@@ -393,7 +391,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 true,
                 ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
-            )
+            ),
+            null
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
         Assert.assertSame(HashBasedNumberedShardSpec.class, segments.get(segmentIdx).getShardSpec().getClass());
@@ -411,12 +410,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -455,7 +449,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
     }
 
-    final CompactionTask compactionTask2 = builder
+    final CompactionTask compactionTask2 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -507,12 +501,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
         .build();
 
@@ -619,13 +608,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .segmentGranularity(Granularities.DAY)
         .build();
@@ -651,7 +635,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     // hour segmentGranularity
-    final CompactionTask compactionTask2 = builder
+    final CompactionTask compactionTask2 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .segmentGranularity(Granularities.HOUR)
         .build();
@@ -688,12 +672,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .ioConfig(
             new CompactionIOConfig(
                 new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
@@ -722,13 +701,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .ioConfig(
             new CompactionIOConfig(
                 new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
@@ -766,13 +740,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null)))
@@ -807,7 +776,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Granularities.MINUTE,
             true,
             ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-        )
+        ),
+        null
     );
     Assert.assertEquals(
         expectedCompactionState,
@@ -821,13 +791,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .metricsSpec(new AggregatorFactory[]{
@@ -866,7 +831,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
             Granularities.MINUTE,
             true,
             ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-        )
+        ),
+        null
     );
     Assert.assertEquals(
         expectedCompactionState,
@@ -880,13 +846,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
         .build();
@@ -912,7 +873,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     // hour segmentGranularity
-    final CompactionTask compactionTask2 = builder
+    final CompactionTask compactionTask2 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, null, null))
         .build();
@@ -948,13 +909,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day queryGranularity
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.SECOND, null))
         .build();
@@ -1002,13 +958,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // day segmentGranularity and day queryGranularity
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.DAY, null))
         .build();
@@ -1040,12 +991,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask1 = builder
+    final CompactionTask compactionTask1 = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, null))
         .build();
@@ -1093,12 +1039,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -1154,11 +1095,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> result = runIndexTask();
     Assert.assertEquals(6, result.rhs.getSegments().size());
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // Setup partial compaction:
     // Change the granularity from HOUR to MINUTE through compaction for hour 01, there are three rows in the compaction interval,
     // all three in the same timestamp (see TEST_ROWS), this should generate one segments (task will now use
@@ -1168,7 +1104,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     // **** PARTIAL COMPACTION: hour -> minute ****
     final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
-    final CompactionTask partialCompactionTask = builder
+    final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
@@ -1230,7 +1166,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     // for hour 00 one real HOUR segment will be generated;
     // for hour 01, one real minute segment plus 59 minute tombstones;
     // and hour 02 one real HOUR segment for a total of 1 + (1+59) + 1 = 62 total segments
-    final CompactionTask fullCompactionTask = builder
+    final CompactionTask fullCompactionTask = compactionTaskBuilder()
         .segmentGranularity(null)
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), true)
@@ -1309,11 +1245,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> result = runIndexTask();
     Assert.assertEquals(6, result.rhs.getSegments().size());
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     // Setup partial interval compaction:
     // Change the granularity from HOUR to MINUTE through compaction for hour 01, there are three rows in the compaction
     // interval,
@@ -1325,7 +1256,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     // **** PARTIAL COMPACTION: hour -> minute ****
     final Interval compactionPartialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
-    final CompactionTask partialCompactionTask = builder
+    final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to true
         .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
@@ -1378,7 +1309,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(64, segmentsAfterPartialCompaction.size());
 
     // Now setup compaction over an interval with only tombstones, keeping same, minute granularity
-    final CompactionTask compactionTaskOverOnlyTombstones = builder
+    final CompactionTask compactionTaskOverOnlyTombstones = compactionTaskBuilder()
         .segmentGranularity(null)
         // Set dropExisting to true
         // last 59 minutes of our 01, should be all tombstones
@@ -1416,13 +1347,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         )
     );
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
     final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
-    final CompactionTask partialCompactionTask = builder
+    final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to false
         .inputSpec(new CompactionIntervalSpec(partialInterval, null), false)
@@ -1444,7 +1370,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
 
-    final CompactionTask fullCompactionTask = builder
+    final CompactionTask fullCompactionTask = compactionTaskBuilder()
         .segmentGranularity(null)
         // Set dropExisting to false
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), false)
@@ -1487,12 +1413,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         () -> runIndexTask(compactionTaskReadyLatch, indexTaskStartLatch, false)
     );
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
         .build();
 
@@ -1541,12 +1462,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask();
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
         .build();
 
@@ -1637,12 +1553,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -1759,12 +1670,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -1889,12 +1795,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
     verifySchema(indexTaskResult.rhs);
 
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-
-    final CompactionTask compactionTask = builder
+    final CompactionTask compactionTask = compactionTaskBuilder()
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
@@ -2140,6 +2041,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
     }
   }
 
+  private Builder compactionTaskBuilder()
+  {
+    return new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    ).context(Map.of(Tasks.USE_CONCURRENT_LOCKS, useConcurrentLocks));
+  }
+
   private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, Task task) throws IOException
   {
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
@@ -2161,8 +2070,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final TaskConfig config = new TaskConfigBuilder()
         .build();
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskActionClient(createActionClient(task))

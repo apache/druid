@@ -29,10 +29,12 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.exec.QueryValidator;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -44,7 +46,6 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
-import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -176,12 +177,14 @@ public class ControllerQueryKernel
   public List<StageId> createAndGetNewStageIds(
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final FrameType rowBasedFrameType,
       final long maxInputBytesPerWorker
   )
   {
     createNewKernels(
         slicerFactory,
         assignmentStrategy,
+        rowBasedFrameType,
         maxInputBytesPerWorker
     );
 
@@ -294,7 +297,7 @@ public class ControllerQueryKernel
 
       //noinspection unchecked
       final ExtraInfoHolder<?> extraInfoHolder =
-          stageKernel.getStageDefinition().getProcessorFactory().makeExtraInfoHolder(extraInfo);
+          stageKernel.getStageDefinition().getProcessor().makeExtraInfoHolder(extraInfo);
 
       final WorkOrder workOrder = new WorkOrder(
           queryDef,
@@ -317,6 +320,7 @@ public class ControllerQueryKernel
   private void createNewKernels(
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final FrameType rowBasedFrameType,
       final long maxInputBytesPerWorker
   )
   {
@@ -336,6 +340,7 @@ public class ControllerQueryKernel
                   stageId,
                   slicerFactory,
                   assignmentStrategy,
+                  rowBasedFrameType,
                   maxInputBytesPerWorker
               )
           );
@@ -358,6 +363,7 @@ public class ControllerQueryKernel
       final StageId stageId,
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final FrameType rowBasedFrameType,
       final long maxInputBytesPerWorker
   )
   {
@@ -386,6 +392,7 @@ public class ControllerQueryKernel
         stageWorkerCountMap,
         slicerFactory.makeSlicer(stagePartitionsMap, stageOutputChannelModeMap),
         assignmentStrategy,
+        rowBasedFrameType,
         config.getMaxRetainedPartitionSketchBytes(),
         maxInputBytesPerWorker
     );

@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C13_D1
+#-------------------------------------------------------------------------
+SELECT tan(a_null) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C14_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C15_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C16_D1
+#-------------------------------------------------------------------------
+SELECT tan(a_empty) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C17_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C18_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C19_D1
+#-------------------------------------------------------------------------
+SELECT tan(a_mixed) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C20_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C21_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C22_D1
+#-------------------------------------------------------------------------
+SELECT tan(a_nested) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C23_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B16_C24_D1
+#-------------------------------------------------------------------------
+SELECT tan(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TAN' to arguments of type 'TAN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C1_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_bool) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C2_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C3_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C4_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_int) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C5_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C6_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C7_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_float) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C8_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C9_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C10_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_str) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C11_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C12_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C13_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_null) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C14_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C15_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C16_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_empty) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C17_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C18_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C19_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_mixed) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C20_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C21_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C22_D1
+#-------------------------------------------------------------------------
+SELECT cot(a_nested) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C23_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B17_C24_D1
+#-------------------------------------------------------------------------
+SELECT cot(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'COT' to arguments of type 'COT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C1_D1
+#-------------------------------------------------------------------------
+SELECT asin(a_bool) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C2_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C3_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C4_D1
+#-------------------------------------------------------------------------
+SELECT asin(a_int) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C5_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C6_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C7_D1
+#-------------------------------------------------------------------------
+SELECT asin(a_float) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C8_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C9_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C10_D1
+#-------------------------------------------------------------------------
+SELECT asin(a_str) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C11_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C12_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C13_D1
+#-------------------------------------------------------------------------
+SELECT asin(a_null) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B18_C14_D1
+#-------------------------------------------------------------------------
+SELECT asin(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'ASIN' to arguments of type 'ASIN(
+!error
+

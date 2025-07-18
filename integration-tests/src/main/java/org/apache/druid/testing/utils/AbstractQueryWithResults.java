@@ -21,37 +21,42 @@ package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class AbstractQueryWithResults<QueryType>
 {
   private final QueryType query;
+  private final String description;
   private final List<Map<String, Object>> expectedResults;
   private final List<String> fieldsToTest;
 
   @JsonCreator
   public AbstractQueryWithResults(
       @JsonProperty("query") QueryType query,
+      @JsonProperty("description") String description,
       @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults,
       @JsonProperty("fieldsToTest") List<String> fieldsToTest
   )
   {
     this.query = query;
+    this.description = description;
     this.expectedResults = expectedResults;
-    if (fieldsToTest != null) {
-      this.fieldsToTest = fieldsToTest;
-    } else {
-      this.fieldsToTest = Collections.emptyList();
-    }
+    this.fieldsToTest = Configs.valueOrDefault(fieldsToTest, List.of());
   }
 
   @JsonProperty
   public QueryType getQuery()
   {
     return query;
+  }
+
+  @JsonProperty
+  public String getDescription()
+  {
+    return description;
   }
 
   @JsonProperty

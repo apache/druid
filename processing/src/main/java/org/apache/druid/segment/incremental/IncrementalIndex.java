@@ -102,10 +102,10 @@ import java.util.stream.Collectors;
  * In-memory, row-based data structure used to hold data during ingestion. Realtime tasks query this index using
  * {@link IncrementalIndexCursorFactory}.
  *
- * Concurrency model: {@link #add(InputRow)} and {@link #add(InputRow, boolean)} are not thread-safe, and must be
- * called from a single thread or externally synchronized. However, the methods that support
- * {@link IncrementalIndexCursorFactory} are thread-safe, and may be called concurrently with each other, and with
- * the "add" methods. This concurrency model supports real-time queries of the data in the index.
+ * Concurrency model: {@link #add(InputRow)} is not thread-safe, and must be called from a single thread or externally
+ * synchronized. However, the methods that support {@link IncrementalIndexCursorFactory} are thread-safe, and may be
+ * called concurrently with each other, and with the "add" methods. This concurrency model supports real-time queries
+ * of the data in the index.
  */
 public abstract class IncrementalIndex implements IncrementalIndexRowSelector, ColumnInspector, Iterable<Row>, Closeable
 {
@@ -253,7 +253,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   private final Map<String, ColumnFormat> timeAndMetricsColumnFormats;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
-  private final boolean useMaxMemoryEstimates;
 
   private final boolean useSchemaDiscovery;
 
@@ -271,12 +270,10 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
    *                                  This should only be set for DruidInputSource since that is the only case where we
    *                                  can have existing metrics. This is currently only use by auto compaction and
    *                                  should not be use for anything else.
-   * @param useMaxMemoryEstimates     true if max values should be used to estimate memory
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
-      final boolean preserveExistingMetrics,
-      final boolean useMaxMemoryEstimates
+      final boolean preserveExistingMetrics
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -286,7 +283,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.preserveExistingMetrics = preserveExistingMetrics;
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.useSchemaDiscovery = incrementalIndexSchema.getDimensionsSpec()
                                                     .useSchemaDiscovery();
 
@@ -387,9 +383,8 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   // Note: This method does not need to be thread safe.
   protected abstract AddToFactsResult addToFacts(
       IncrementalIndexRow key,
-      InputRowHolder inputRowHolder,
-      boolean skipMaxRowsInMemoryCheck
-  ) throws IndexSizeExceededException;
+      InputRowHolder inputRowHolder
+  );
 
 
   public abstract Iterable<Row> iterableWithPostAggregations(
@@ -463,39 +458,17 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
    *
    * Not thread-safe.
    *
-   * @param row the row of data to add
-   *
-   * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
-   *
-   * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
-   */
-  public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
-  {
-    return add(row, false);
-  }
-
-  /**
-   * Adds a new row.  The row might correspond with another row that already exists, in which case this will
-   * update that row instead of inserting a new one.
-   *
-   * Not thread-safe.
-   *
    * @param row                      the row of data to add
-   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows or bytes limit
    *
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
-   *
-   * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
-      throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row)
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     inputRowHolder.set(row);
     final AddToFactsResult addToFactsResult = addToFacts(
         incrementalIndexRowResult.getIncrementalIndexRow(),
-        inputRowHolder,
-        skipMaxRowsInMemoryCheck
+        inputRowHolder
     );
     updateMaxIngestedTime(row.getTimestamp());
     @Nullable ParseException parseException = getCombinedParseException(
@@ -688,11 +661,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   AtomicInteger getNumEntries()
   {
     return numEntries;
-  }
-
-  AggregatorFactory[] getMetrics()
-  {
-    return metrics;
   }
 
   public AtomicLong getBytesInMemory()
@@ -903,7 +871,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
 
   private DimensionDesc initDimension(int dimensionIndex, String dimensionName, DimensionHandler dimensionHandler)
   {
-    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
+    return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler);
   }
 
   @Override
@@ -995,12 +963,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     private final DimensionHandler<?, ?, ?> handler;
     private final DimensionIndexer<?, ?, ?> indexer;
 
-    public DimensionDesc(int index, String name, DimensionHandler<?, ?, ?> handler, boolean useMaxMemoryEstimates)
+    public DimensionDesc(int index, String name, DimensionHandler<?, ?, ?> handler)
     {
       this.index = index;
       this.name = name;
       this.handler = handler;
-      this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
+      this.indexer = handler.makeIndexer();
     }
 
     public DimensionDesc(int index, String name, DimensionHandler<?, ?, ?> handler, DimensionIndexer<?, ?, ?> indexer)

@@ -621,11 +621,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     )
                     .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asCursorFactory(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().as(CursorFactory.class), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       // remove variant type columns from row frames since they aren't currently supported
@@ -648,8 +648,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   schema.getProjections()
                               )
                       );
-                      final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.latestRowBased());
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .put("frame (columnar)", input -> {
                       // remove array type columns from columnar frames since they aren't currently supported
@@ -672,8 +672,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   schema.getProjections()
                               )
                       );
-                      final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-                      return Pair.of(segment.asCursorFactory(), segment);
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.latestColumnar());
+                      return Pair.of(segment.as(CursorFactory.class), segment);
                     })
                     .build();
 
@@ -730,6 +730,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       return true;
     }
     return false;
+  }
+
+  protected boolean hasTypeInformation()
+  {
+    return !testName.contains("rowBasedWithoutTypeSignature");
   }
 
   protected boolean canTestArrayColumns()
@@ -805,6 +810,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
@@ -919,6 +930,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       while (!cursor.isDone()) {
         IndexedInts row = selector.getRow();
         Preconditions.checkState(row.size() == 1);
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
         values.add(selector.lookupName(row.get(0)));
         cursor.advance();
       }
@@ -977,6 +994,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> values = new ArrayList<>();
 
       while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+      while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
           values.add(selector.lookupName(rowVector[i]));
@@ -1001,6 +1022,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
       final List<String> values = new ArrayList<>();
 
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
       while (!cursor.isDone()) {
         final int[] rowVector = selector.getRowVector();
         for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {

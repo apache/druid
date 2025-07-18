@@ -29,7 +29,7 @@ on:
       key:
         required: false
         type: string
-        description: "Key for the matrix"
+        description: "Identifier for job"
       artifact_prefix:
         required: false
         type: string
@@ -41,10 +41,18 @@ on:
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  INPUTS_JDK: ${{ inputs.jdk }}
+  INPUTS_KEY: ${{ inputs.key }}
+  GITHUB_RUN_ID: ${{ github.run_id }}
+  GITHUB_RUN_NUMBER: ${{ github.run_number }}
+  GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+  GITHUB_EVENT_REF: ${{ github.event_name }}-${{ github.event.number || github.ref_name }}
+  GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
 
 jobs:
   execute:
-    name: "Execute (${{ inputs.key }})"
+    name: "${{ inputs.key }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -65,11 +73,16 @@ jobs:
           pattern: ${{ inputs.artifacts_to_download }}
           merge-multiple: true
 
-      - name: Calculate hash for artifact name
-        run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
+      - name: Prepare GITHUB_ENV
+        run: |
+          set -x
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT key=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF run_url=$GITHUB_RUN_URL >> $GITHUB_ENV
+          echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
+          ./.github/scripts/collect_jstacks &
 
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
+        timeout-minutes: 60
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -83,3 +96,4 @@ jobs:
             **/core.[0-9]*
             **/TEST-*.xml
             **/target/jacoco*.exec
+            **/target/jstack*

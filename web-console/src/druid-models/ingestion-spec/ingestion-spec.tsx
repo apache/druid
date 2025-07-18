@@ -43,6 +43,8 @@ import {
   typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
+import { DEFAULT_ARRAY_INGEST_MODE } from '../array-ingest-mode/array-ingest-mode';
 import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
   getDimensionSpecColumnType,
@@ -297,11 +299,8 @@ export interface DataSchema {
 
 export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
-export type ArrayMode = 'arrays' | 'multi-values';
-
 export const DEFAULT_FORCE_SEGMENT_SORT_BY_TIME = true;
 export const DEFAULT_SCHEMA_MODE: SchemaMode = 'fixed';
-export const DEFAULT_ARRAY_MODE: ArrayMode = 'arrays';
 
 export function getForceSegmentSortByTime(spec: Partial<IngestionSpec>): boolean {
   return (
@@ -320,17 +319,17 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(
+export function getArrayIngestMode(
   spec: Partial<IngestionSpec>,
-  whenUnclear: ArrayMode = 'arrays',
-): ArrayMode {
+  whenUnclear: ArrayIngestMode = DEFAULT_ARRAY_INGEST_MODE,
+): ArrayIngestMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
-      return 'arrays';
+      return 'array';
 
     case 'string-only-discovery':
-      return 'multi-values';
+      return 'mvd';
 
     default: {
       const dimensions: (DimensionSpec | string)[] = deepGet(
@@ -344,7 +343,7 @@ export function getArrayMode(
             typeof d === 'object' && d.type === 'auto' && String(d.castToType).startsWith('ARRAY'),
         )
       ) {
-        return 'arrays';
+        return 'array';
       }
 
       if (
@@ -355,7 +354,7 @@ export function getArrayMode(
             typeof d.multiValueHandling === 'string',
         )
       ) {
-        return 'multi-values';
+        return 'mvd';
       }
 
       return whenUnclear;
@@ -363,7 +362,7 @@ export function getArrayMode(
   }
 }
 
-export function showArrayModeToggle(spec: Partial<IngestionSpec>): boolean {
+export function showArrayIngestModeToggle(spec: Partial<IngestionSpec>): boolean {
   const schemaMode = getSchemaMode(spec);
   if (schemaMode !== 'fixed') return false;
 
@@ -524,7 +523,7 @@ export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> 
     spec = deleteKeys(spec, ['dataSource'] as any[]);
   }
 
-  return deleteKeys(spec, ['id', 'groupId', 'resource']);
+  return deleteKeys(spec, ['groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {
@@ -2771,7 +2770,7 @@ export function updateSchemaWithSample(
   sampleResponse: SampleResponse,
   forceSegmentSortByTime: boolean,
   schemaMode: SchemaMode,
-  arrayMode: ArrayMode,
+  arrayIngestMode: ArrayIngestMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
@@ -2817,7 +2816,7 @@ export function updateSchemaWithSample(
           sampleResponse,
           columnTypeHints,
           guessNumericStringsAsNumbers,
-          arrayMode === 'multi-values',
+          arrayIngestMode,
           rollup,
           forceSegmentSortByTime ?? DEFAULT_FORCE_SEGMENT_SORT_BY_TIME ? 'ignore' : 'preserve',
         ),

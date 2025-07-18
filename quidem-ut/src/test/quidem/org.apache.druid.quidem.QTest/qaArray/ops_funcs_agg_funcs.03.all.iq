@@ -1,0 +1,499 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING max(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT max(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING max(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT max(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C11_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C12_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING max(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C14_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C15_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING max(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C17_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C18_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING max(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C19_D1
+#-------------------------------------------------------------------------
+SELECT max(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C20_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C21_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING max(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C22_D1
+#-------------------------------------------------------------------------
+SELECT max(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C23_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B5_C24_D1
+#-------------------------------------------------------------------------
+SELECT max(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING max(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+does not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING avg(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING avg(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING avg(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING avg(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C13_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C14_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C15_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING avg(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C16_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C17_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C18_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING avg(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C19_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C20_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C21_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING avg(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C22_D1
+#-------------------------------------------------------------------------
+SELECT avg(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C23_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C24_D1
+#-------------------------------------------------------------------------
+SELECT avg(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING avg(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'AVG' to arguments of type 'AVG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C1_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C2_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C3_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C4_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C5_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C6_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+

@@ -51,7 +51,7 @@ public class RoundRobinServerSelector
 
   public RoundRobinServerSelector(DruidCluster cluster)
   {
-    cluster.getHistoricals().forEach(
+    cluster.getManagedHistoricals().forEach(
         (tier, servers) -> tierToServers.put(tier, new CircularServerList(servers))
     );
   }

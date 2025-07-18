@@ -130,6 +130,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
@@ -6562,6 +6563,39 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             1126L
         )
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
+  }
+
+  @Test
+  public void testSubqueryWithOuterOffsetAndLimit()
+  {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
+    final GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(new DefaultLimitSpec(null, 1, 2))
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L)
     );
 
     // Subqueries are handled by the ToolChest
@@ -13628,7 +13662,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

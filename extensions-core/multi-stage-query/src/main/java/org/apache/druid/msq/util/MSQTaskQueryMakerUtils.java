@@ -24,6 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.SegmentSource;
+import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
@@ -100,7 +101,7 @@ public class MSQTaskQueryMakerUtils
    */
   public static void validateRealtimeReindex(QueryContext context, MSQDestination destination, Query<?> query)
   {
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context);
+    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context, IndexerControllerContext.DEFAULT_SEGMENT_SOURCE);
     if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)

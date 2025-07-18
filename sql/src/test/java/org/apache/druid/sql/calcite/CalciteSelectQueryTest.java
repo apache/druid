@@ -40,12 +40,12 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.topn.DimensionTopNMetricSpec;
-import org.apache.druid.query.topn.InvertedTopNMetricSpec;
-import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -102,6 +102,38 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             new Object[]{"f"}
         )
     );
+  }
+
+  @Test
+  public void testSelect1024pow4()
+  {
+    // This case is here to document the current behavior and not to test it.
+    // The fact that the signature is the same for both of them is misleading -
+    // not sure if it could cause problems.
+    RowSignature signature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+    ScanQuery scanQuery = Druids.newScanQueryBuilder()
+        .dataSource(
+            InlineDataSource.fromIterable(
+                ImmutableList.of(new Object[] {1099511627776L}),
+                signature
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns(signature)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+    testBuilder()
+        .sql("SELECT cast(1024 as bigint)*1024*1024*1024")
+        .expectedQuery(scanQuery)
+        .expectedSignature(signature)
+        .expectedResults(ImmutableList.of(new Object[] {1099511627776L}))
+        .run();
+    testBuilder()
+        .sql("SELECT 1024*1024*1024*1024")
+        .expectedQuery(scanQuery)
+        .expectedSignature(signature)
+        .expectedResults(ImmutableList.of(new Object[] {0}))
+        .run();
   }
 
   @Test
@@ -729,19 +761,18 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithLimit()
   {
-    // Should use topN even if approximate topNs are off, because this query is exact.
+    // Should use GroupBy instead of TopN when lexicographic TopN is disabled.
 
     testQuery(
         "SELECT DISTINCT dim2 FROM druid.foo LIMIT 10",
         ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                .setLimitSpec(DefaultLimitSpec.builder().limit(10).build())
+                .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
@@ -759,14 +790,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2) LIMIT 10",
         ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                .setLimitSpec(DefaultLimitSpec.builder().limit(10).build())
+                .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
@@ -784,14 +814,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 5) LIMIT 10",
         ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                .threshold(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                .setLimitSpec(DefaultLimitSpec.builder().orderBy(new OrderByColumnSpec("d0", Direction.ASCENDING, StringComparators.LEXICOGRAPHIC)).limit(5).build())
+                .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
@@ -809,21 +838,20 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 DESC LIMIT 5) LIMIT 10",
         ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
-                .threshold(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                .setLimitSpec(DefaultLimitSpec.builder().orderBy(new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.LEXICOGRAPHIC)).limit(5).build())
+                .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{null},
             new Object[]{"abc"},
             new Object[]{"a"},
-            new Object[]{""}
+            new Object[]{""},
+            new Object[]{null}
         )
     );
   }

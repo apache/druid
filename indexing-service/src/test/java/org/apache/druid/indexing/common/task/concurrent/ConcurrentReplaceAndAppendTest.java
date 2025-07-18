@@ -23,6 +23,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -63,6 +65,7 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -590,8 +593,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final Throwable throwable = Throwables.getRootCause(exception);
     Assert.assertEquals(
         StringUtils.format(
-            "Segments[[%s]] are not covered by locks[[]] for task[%s]",
-            segmentV10, replaceTask.getId()
+            "Segment IDs[[%s]] are not covered by locks[[]] for task[%s]",
+            segmentV10.getId(), replaceTask.getId()
         ),
         throwable.getMessage()
     );
@@ -1119,6 +1122,88 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(JAN_23, segmentV10, segmentV11, segmentV12);
   }
 
+  @Test
+  public void test_concurrentAppend_toIntervalWithUnusedAppendSegment_createsFreshVersion()
+  {
+    // Allocate and commit an APPEND segment
+    final SegmentIdWithShardSpec pendingSegment
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
+    Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
+    Assert.assertEquals(0, pendingSegment.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV01 = asSegment(pendingSegment);
+    appendTask.commitAppendSegments(segmentV01);
+
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV01);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV01);
+
+    // Mark it as unused
+    getStorageCoordinator().markAllSegmentsAsUnused(appendTask.getDataSource());
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23);
+
+    // Allocate and commit another APPEND segment
+    final SegmentIdWithShardSpec pendingSegment2
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
+
+    // Verify that the new segment gets a different version
+    Assert.assertEquals(SEGMENT_V0 + "S", pendingSegment2.getVersion());
+    Assert.assertEquals(0, pendingSegment2.getShardSpec().getPartitionNum());
+
+    final DataSegment segmentV02 = asSegment(pendingSegment2);
+    appendTask.commitAppendSegments(segmentV02);
+    Assert.assertNotEquals(segmentV01, segmentV02);
+
+    verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV02);
+    verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV02);
+  }
+
+  @Test
+  public void test_allocateCommitDelete_createsFreshVersion_uptoMaxAllowedRetries()
+  {
+    final int maxAllowedAppends = 10;
+    final int expectedParitionNum = 0;
+    String expectedVersion = SEGMENT_V0;
+
+    // Allocate, commit, delete, repeat
+    for (int i = 0; i < maxAllowedAppends; ++i, expectedVersion += "S") {
+      // Allocate a segment and verify its version and partition number
+      final SegmentIdWithShardSpec pendingSegment
+          = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
+
+      Assert.assertEquals(expectedVersion, pendingSegment.getVersion());
+      Assert.assertEquals(expectedParitionNum, pendingSegment.getShardSpec().getPartitionNum());
+
+      // Commit the segment and verify its version and partition number
+      final DataSegment segment = asSegment(pendingSegment);
+      appendTask.commitAppendSegments(segment);
+
+      Assert.assertEquals(expectedVersion, segment.getVersion());
+      Assert.assertEquals(expectedParitionNum, segment.getShardSpec().getPartitionNum());
+
+      verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segment);
+      verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segment);
+
+      // Mark the segment as unused
+      getStorageCoordinator().markAllSegmentsAsUnused(appendTask.getDataSource());
+      verifyIntervalHasUsedSegments(FIRST_OF_JAN_23);
+    }
+
+    // Verify that the next attempt fails
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            ISE.class,
+            () -> appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY)
+        ),
+        ExceptionMatcher.of(ISE.class).expectRootCause(
+            DruidExceptionMatcher.internalServerError().expectMessageIs(
+                "Could not allocate segment"
+                + "[wiki_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_1970-01-01T00:00:00.000Z]"
+                + " as there are too many clashing unused versions(upto [1970-01-01T00:00:00.000ZSSSSSSSSSS])"
+                + " in the interval. Kill the old unused versions to proceed."
+            )
+        )
+    );
+  }
 
   @Nullable
   private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
@@ -1136,16 +1221,10 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
-    return new DataSegment(
-        id,
-        Collections.singletonMap(id.toString(), id.toString()),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        pendingSegment.getShardSpec(),
-        null,
-        0,
-        0
-    );
+    return DataSegment.builder(id)
+                      .loadSpec(Collections.singletonMap(id.toString(), id.toString()))
+                      .shardSpec(pendingSegment.getShardSpec())
+                      .build();
   }
 
   private void verifyIntervalHasUsedSegments(Interval interval, DataSegment... expectedSegments)
@@ -1198,8 +1277,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       TaskActionClientFactory taskActionClientFactory
   )
   {
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+        = CentralizedDatasourceSchemaConfig.enabled(true);
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
         .setConfig(taskConfig)
         .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))

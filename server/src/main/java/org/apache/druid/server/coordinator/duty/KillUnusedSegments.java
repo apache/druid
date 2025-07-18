@@ -24,10 +24,10 @@ import com.google.common.collect.Sets;
 import org.apache.druid.collections.CircularList;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -67,10 +67,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * The datasources to be killed during each cycle are selected from {@link #datasourceCircularKillList}. This state is
  * refreshed in a run if the set of datasources to be killed changes. Consecutive duplicate datasources are avoided
  * across runs, provided there are other datasources to be killed.
- * </p>
- * <p>
- * See {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}.
- * </p>
+ *
+ * @see org.apache.druid.indexing.common.task.KillUnusedSegmentsTask for details
+ * of the actual kill task and {@code UnusedSegmentKiller} to run embedded kill
+ * tasks on the Overlord.
  */
 public class KillUnusedSegments implements CoordinatorDuty
 {
@@ -97,14 +97,14 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private DateTime lastKillTime;
 
-  private final SegmentsMetadataManager segmentsMetadataManager;
+  private final IndexerMetadataStorageCoordinator storageCoordinator;
   private final OverlordClient overlordClient;
 
   private String prevDatasourceKilled;
   private CircularList<String> datasourceCircularKillList;
 
   public KillUnusedSegments(
-      SegmentsMetadataManager segmentsMetadataManager,
+      IndexerMetadataStorageCoordinator storageCoordinator,
       OverlordClient overlordClient,
       KillUnusedSegmentsConfig killConfig
   )
@@ -133,7 +133,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         this.maxIntervalToKill
     );
 
-    this.segmentsMetadataManager = segmentsMetadataManager;
+    this.storageCoordinator = storageCoordinator;
     this.overlordClient = overlordClient;
     this.datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
   }
@@ -166,7 +166,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     final Set<String> dataSourcesToKill;
     if (CollectionUtils.isNullOrEmpty(dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn())) {
-      dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
+      dataSourcesToKill = storageCoordinator.retrieveAllDatasourceNames();
     } else {
       dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
     }
@@ -290,7 +290,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
 
     final List<Interval> unusedSegmentIntervals = limitToPeriod(
-        segmentsMetadataManager.getUnusedSegmentIntervals(
+        storageCoordinator.getUnusedSegmentIntervals(
             dataSource,
             minStartTime,
             maxEndTime,

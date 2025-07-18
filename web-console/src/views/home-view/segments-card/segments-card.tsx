@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
@@ -92,7 +92,7 @@ WHERE is_active = 1`,
     <HomeViewCard
       className="segments-card"
       href="#segments"
-      icon={IconNames.STACKED_CHART}
+      icon={getConsoleViewIcon('segments')}
       title="Segments"
       loading={segmentCountState.loading}
       error={segmentCountState.error}

@@ -22,13 +22,19 @@ package org.apache.druid.query.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,6 +43,15 @@ import java.util.LinkedHashMap;
 
 public class SegmentAnalysisTest
 {
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(SegmentAnalysis.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void testSerde() throws Exception
   {
@@ -67,6 +82,27 @@ public class SegmentAnalysisTest
         1,
         2,
         ImmutableMap.of("cnt", new CountAggregatorFactory("cnt")),
+        ImmutableMap.of("channel_added_hourly", new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "channel_added_hourly",
+                Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(
+                        Granularities.HOUR,
+                        Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                    )
+                ),
+                ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel"),
+                new AggregatorFactory[] {
+                    new LongSumAggregatorFactory("sum_added", "added")
+                },
+                ImmutableList.of(
+                    OrderBy.ascending(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                    OrderBy.ascending("channel")
+                )
+            ),
+            16
+        )),
         new TimestampSpec(null, null, null),
         Granularities.SECOND,
         true

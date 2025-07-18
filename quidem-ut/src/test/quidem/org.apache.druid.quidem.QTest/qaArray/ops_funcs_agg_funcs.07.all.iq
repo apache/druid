@@ -1,0 +1,775 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B23_C21_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][6]' RETURNING varchar array), time_floor(__time, 'P1D')) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][6]' RETURNING varchar array), time_floor(__time, 'P1D')) IS NOT NULL;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B23_C22_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(a_nested, time_floor(__time, 'P1D')) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B23_C23_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7]' RETURNING varchar array), time_floor(__time, 'P1D')) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B23_C24_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][7]' RETURNING varchar array), time_floor(__time, 'P1D')) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][7]' RETURNING varchar array), time_floor(__time, 'P1D')) IS NOT NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C2_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[0]' RETURNING boolean array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C3_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][0]' RETURNING boolean array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING latest_by(json_value(a_nested, '$[7][0]' RETURNING boolean array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C5_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[1]' RETURNING bigint array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C6_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][1]' RETURNING bigint array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING latest_by(json_value(a_nested, '$[7][1]' RETURNING bigint array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C8_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[2]' RETURNING decimal array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C9_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][2]' RETURNING decimal array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING latest_by(json_value(a_nested, '$[7][2]' RETURNING decimal array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C11_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[3]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C12_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][3]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][3]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C14_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[4]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C15_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][4]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][4]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C17_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[5]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C18_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][5]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][5]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C20_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[6]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C21_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][6]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][6]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C22_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(a_nested, time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C23_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B24_C24_D1
+#-------------------------------------------------------------------------
+SELECT latest_by(json_value(a_nested, '$[7][7]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING latest_by(json_value(a_nested, '$[7][7]' RETURNING varchar array), time_floor(__time, 'P1D'), 1000) IS NOT NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C2_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C3_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING any_value(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C5_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C6_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING any_value(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C8_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C9_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING any_value(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C11_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C12_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING any_value(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C14_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C15_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING any_value(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C17_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C18_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING any_value(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C20_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C21_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING any_value(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C22_D1
+#-------------------------------------------------------------------------
+SELECT any_value(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C23_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B25_C24_D1
+#-------------------------------------------------------------------------
+SELECT any_value(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING any_value(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C1_D1
+#-------------------------------------------------------------------------
+SELECT a_bool AS col1,
+       grouping(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+may only occur in an aggregate query
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C4_D1
+#-------------------------------------------------------------------------
+SELECT a_int AS col1,
+       grouping(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+may only occur in an aggregate query
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C5_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[1]' RETURNING bigint array) AS col1,
+       grouping(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++--------------+-----+
+| col1         | col |
++--------------+-----+
+| [1, 2, null] |   0 |
+| [null, 2, 1] |   0 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C6_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) AS col1,
+       grouping(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING grouping(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
++--------------+-----+
+| col1         | col |
++--------------+-----+
+| [1, 2, null] |   0 |
+| [null, 2, 1] |   0 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C7_D1
+#-------------------------------------------------------------------------
+SELECT a_float AS col1,
+       grouping(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+may only occur in an aggregate query
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C8_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[2]' RETURNING decimal array) AS col1,
+       grouping(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+-----+
+| col1             | col |
++------------------+-----+
+| [0.1, 0.2, null] |   0 |
+| [null, 0.2, 0.1] |   0 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C9_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) AS col1,
+       grouping(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING grouping(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
++------------------+-----+
+| col1             | col |
++------------------+-----+
+| [0.1, 0.2, null] |   0 |
+| [null, 0.2, 0.1] |   0 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C10_D1
+#-------------------------------------------------------------------------
+SELECT a_str AS col1,
+       grouping(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+may only occur in an aggregate query
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C11_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) AS col1,
+       grouping(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++----------------+-----+
+| col1           | col |
++----------------+-----+
+| [S1, S2, null] |   0 |
+| [null, S2, S1] |   0 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C12_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) AS col1,
+       grouping(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING grouping(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
++----------------+-----+
+| col1           | col |
++----------------+-----+
+| [S1, S2, null] |   0 |
+| [null, S2, S1] |   0 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C13_D1
+#-------------------------------------------------------------------------
+SELECT a_null AS col1,
+       grouping(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+may only occur in an aggregate query
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B26_C14_D1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) AS col1,
+       grouping(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++--------------------+-----+
+| col1               | col |
++--------------------+-----+
+| [null, null, null] |   0 |
++--------------------+-----+
+(1 row)
+
+!ok
+

@@ -144,6 +144,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -154,6 +155,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             kafkaServer.consumerProperties(),
+            null,
             null,
             null,
             null,
@@ -198,6 +200,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -208,6 +211,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             kafkaServer.consumerProperties(),
+            null,
             null,
             null,
             null,
@@ -252,6 +256,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA_KAFKA_TIMESTAMP,
         null,
         new KafkaSupervisorIOConfig(
@@ -271,6 +276,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             kafkaServer.consumerProperties(),
+            null,
             null,
             null,
             null,
@@ -366,6 +372,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         dataSchema,
         null,
         new KafkaSupervisorIOConfig(
@@ -376,6 +383,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             kafkaServer.consumerProperties(),
+            null,
             null,
             null,
             null,
@@ -548,6 +556,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -561,6 +570,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             // invalid bootstrap server
             ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
 
+            null,
             null,
             null,
             null,
@@ -605,6 +615,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -618,6 +629,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             // invalid bootstrap server
             ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
 
+            null,
             null,
             null,
             null,

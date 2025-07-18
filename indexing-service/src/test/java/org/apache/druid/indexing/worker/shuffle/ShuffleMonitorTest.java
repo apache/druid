@@ -21,14 +21,12 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.List;
+import java.util.Map;
 
 public class ShuffleMonitorTest
 {
@@ -46,23 +44,16 @@ public class ShuffleMonitorTest
     final ShuffleMonitor monitor = new ShuffleMonitor();
     monitor.setShuffleMetrics(shuffleMetrics);
     Assert.assertTrue(monitor.doMonitor(emitter));
-    final List<Event> events = emitter.getEvents();
-    Assert.assertEquals(2, events.size());
-    Assert.assertSame(ServiceMetricEvent.class, events.get(0).getClass());
-    ServiceMetricEvent event = (ServiceMetricEvent) events.get(0);
-    Assert.assertEquals(ShuffleMonitor.SHUFFLE_BYTES_KEY, event.getMetric());
-    Assert.assertEquals(310L, event.getValue());
-    Assert.assertEquals(
-        ImmutableMap.of(ShuffleMonitor.SUPERVISOR_TASK_ID_DIMENSION, "supervisor"),
-        event.getUserDims()
+    Assert.assertEquals(2, emitter.getNumEmittedEvents());
+    emitter.verifyValue(
+        ShuffleMonitor.SHUFFLE_BYTES_KEY,
+        Map.of(ShuffleMonitor.SUPERVISOR_TASK_ID_DIMENSION, "supervisor"),
+        310L
     );
-    Assert.assertSame(ServiceMetricEvent.class, events.get(1).getClass());
-    event = (ServiceMetricEvent) events.get(1);
-    Assert.assertEquals(ShuffleMonitor.SHUFFLE_REQUESTS_KEY, event.getMetric());
-    Assert.assertEquals(3, event.getValue());
-    Assert.assertEquals(
-        ImmutableMap.of(ShuffleMonitor.SUPERVISOR_TASK_ID_DIMENSION, "supervisor"),
-        event.getUserDims()
+    emitter.verifyValue(
+        ShuffleMonitor.SHUFFLE_REQUESTS_KEY,
+        Map.of(ShuffleMonitor.SUPERVISOR_TASK_ID_DIMENSION, "supervisor"),
+        3
     );
   }
 }

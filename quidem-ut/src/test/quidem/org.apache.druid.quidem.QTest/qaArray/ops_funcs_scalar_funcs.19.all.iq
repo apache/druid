@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C11_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C12_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C13_D1
+#-------------------------------------------------------------------------
+SELECT length(a_null) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C14_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C15_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C16_D1
+#-------------------------------------------------------------------------
+SELECT length(a_empty) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C17_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C18_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C19_D1
+#-------------------------------------------------------------------------
+SELECT length(a_mixed) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C20_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C21_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C22_D1
+#-------------------------------------------------------------------------
+SELECT length(a_nested) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C23_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C24_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_bool) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_int) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_float) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_str) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C11_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C12_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C13_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_null) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C14_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C15_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C16_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_empty) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C17_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C18_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C19_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_mixed) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C20_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C21_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C22_D1
+#-------------------------------------------------------------------------
+SELECT char_length(a_nested) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C23_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B5_C24_D1
+#-------------------------------------------------------------------------
+SELECT char_length(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHAR_LENGTH' to arguments of type 'CHAR_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT character_length(a_bool) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT character_length(a_int) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT character_length(a_float) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT character_length(a_str) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT character_length(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'CHARACTER_LENGTH' to arguments of type 'CHARACTER_LENGTH(
+!error
+

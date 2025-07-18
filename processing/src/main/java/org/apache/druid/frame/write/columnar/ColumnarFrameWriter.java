@@ -124,7 +124,7 @@ public class ColumnarFrameWriter implements FrameWriter
     currentPosition += FrameWriterUtils.writeFrameHeader(
         memory,
         startPosition,
-        FrameType.COLUMNAR,
+        FrameType.latestColumnar(),
         totalSize,
         numRows,
         columnWriters.size(),

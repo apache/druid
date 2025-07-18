@@ -25,6 +25,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.catalog.model.table.TableBuilder;
+import org.apache.druid.catalog.sql.LiveCatalogResolver;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -35,8 +44,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
@@ -48,7 +57,9 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -57,10 +68,13 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -87,7 +101,6 @@ import java.util.TreeSet;
 
 public class MSQInsertTest extends MSQTestBase
 {
-
   private static final String WITH_APPEND_LOCK = "WITH_APPEND_LOCK";
   private static final Map<String, Object> QUERY_CONTEXT_WITH_APPEND_LOCK =
       ImmutableMap.<String, Object>builder()
@@ -172,6 +185,41 @@ public class MSQInsertTest extends MSQTestBase
 
   }
 
+  @Override
+  protected CatalogResolver createMockCatalogResolver()
+  {
+    final MapMetadataCatalog metadataCatalog = new MapMetadataCatalog(objectMapper);
+    metadataCatalog.addSpec(
+        TableId.datasource("foo2"),
+        TableBuilder.datasource("foo2", Granularities.DAY.toString())
+                    .property(
+                        DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                        ImmutableList.of(
+                            new DatasourceProjectionMetadata(
+                                new AggregateProjectionSpec(
+                                    "channel_added_hourly",
+                                    VirtualColumns.create(
+                                        Granularities.toVirtualColumn(
+                                            Granularities.HOUR,
+                                            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                        )
+                                    ),
+                                    ImmutableList.of(
+                                        new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                        new StringDimensionSchema("channel")
+                                    ),
+                                    new AggregatorFactory[]{
+                                        new LongSumAggregatorFactory("sum_added", "added")
+                                    }
+                                )
+                            )
+                        )
+                    )
+                    .buildSpec()
+    );
+    return new LiveCatalogResolver(metadataCatalog);
+  }
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1WithSpec(String contextName, Map<String, Object> context)
@@ -185,7 +233,7 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    MSQSpec msqSpec = new MSQSpec(
+    LegacyMSQSpec msqSpec = new LegacyMSQSpec(
         GroupByQuery.builder()
                     .setDataSource("foo")
                     .setInterval(Intervals.ONLY_ETERNITY)
@@ -221,6 +269,7 @@ public class MSQInsertTest extends MSQTestBase
         new DataSourceMSQDestination(
             "foo1",
             Granularity.fromString("DAY"),
+            null,
             null,
             null,
             null,
@@ -461,6 +510,105 @@ public class MSQInsertTest extends MSQTestBase
                          CounterSnapshotMatcher
                              .with().segmentRowsProcessed(1),
                          2, 0
+                     )
+                     .verifyResults();
+
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithCatalogProjections(String contextName, Map<String, Object> context) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("channel", ColumnType.STRING)
+                                            .add("page", ColumnType.STRING)
+                                            .add("user", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("deleted", ColumnType.LONG)
+                                            .build();
+    AggregateProjectionMetadata expectedProjection = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "channel_added_hourly",
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    Granularities.HOUR,
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ),
+            ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel"),
+            new AggregatorFactory[] {
+                new LongSumAggregatorFactory("sum_added", "added")
+            },
+            ImmutableList.of(
+                OrderBy.ascending(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                OrderBy.ascending("channel")
+            )
+        ),
+        16
+    );
+
+    testIngestQuery().setSql(" insert into foo2 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added,\n"
+                             + "  deleted\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day ")
+                     .setExpectedDataSource("foo2")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "foo2",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedProjections(ImmutableList.of(expectedProjection))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{1466985600000L, "#en.wikipedia", "Bailando 2015", "181.230.118.178", 2L, 0L},
+                             new Object[]{1466985600000L, "#en.wikipedia", "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L},
+                             new Object[]{1466985600000L, "#pl.wikipedia", "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L},
+                             new Object[]{1466985600000L, "#sv.wikipedia", "Salo Toraut", "Lsjbot", 31L, 0L},
+                             new Object[]{1466985660000L, "#ceb.wikipedia", "Neqerssuaq", "Lsjbot", 4150L, 0L},
+                             new Object[]{1466985660000L, "#en.wikipedia", "Panama Canal", "Mariordo", 496L, 0L},
+                             new Object[]{1466985660000L, "#es.wikipedia", "Sumo (banda)", "181.110.165.189", 0L, 173L},
+                             new Object[]{1466985660000L, "#sh.wikipedia", "El Terco, Bachíniva", "Kolega2357", 0L, 1L},
+                             new Object[]{1466985720000L, "#ru.wikipedia", "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L},
+                             new Object[]{1466985720000L, "#sh.wikipedia", "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L},
+                             new Object[]{1466989320000L, "#es.wikipedia", "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L},
+                             new Object[]{1466989320000L, "#id.wikipedia", "Ibnu Sina", "Ftihikam", 106L, 0L},
+                             new Object[]{1466989320000L, "#sh.wikipedia", "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L},
+                             new Object[]{1466989320000L, "#zh.wikipedia", "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L},
+                             new Object[]{1466992920000L, "#de.wikipedia", "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L},
+                             new Object[]{1466992920000L, "#pt.wikipedia", "Dobromir Zhechev", "Ceresta", 1926L, 0L},
+                             new Object[]{1466992920000L, "#sh.wikipedia", "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L},
+                             new Object[]{1466992920000L, "#zh.wikipedia", "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L},
+                             new Object[]{1466992980000L, "#de.wikipedia", "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L},
+                             new Object[]{1466992980000L, "#en.wikipedia", "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L}
+                         )
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(20),
+                         1, 0
                      )
                      .verifyResults();
 
@@ -936,6 +1084,33 @@ public class MSQInsertTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArraySetStatement(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING_ARRAY).build();
+
+    testIngestQuery().setSql(
+                         "SET arrayIngestMode = 'array'; INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{""}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsMvd(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -977,6 +1152,22 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(localContext)
+                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(ISE.class),
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                         )
+                     ))
+                     .verifyExecutionError();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnableSetStatement(String contextName, Map<String, Object> context)
+  {
+    testIngestQuery().setSql(
+                         "SET groupByEnableMultiValueUnnesting = false; INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
+                     .setQueryContext(context)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
@@ -1604,6 +1795,38 @@ public class MSQInsertTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnFoo1NoDimensionsWithLimit(String contextName, Map<String, Object> context)
+  {
+    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(new Object[]{DateTimes.utc(0L).getMillis(), 5L});
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .addTimeColumn()
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery()
+        .setSql("insert into foo1 select count(*) cnt from foo where dim1 != '' limit 4 partitioned by all")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(queryContext)
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+        .setExpectedResultRows(expectedRows)
+        .setExpectedMSQSegmentReport(
+            new MSQSegmentReport(
+                NumberedShardSpec.class.getSimpleName(),
+                "Using NumberedShardSpec to generate segments since the query is inserting rows."
+            )
+        )
+        .verifyResults();
   }
 
   @MethodSource("data")

@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
+import { ColorAssigner } from '../../../../singletons';
 import { formatEmpty, formatNumber } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
@@ -97,7 +98,8 @@ ModuleRepository.registerModule<PieChartParameterValues>({
     },
   },
   component: function PieChartModule(props) {
-    const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const { querySource, where, setWhere, moduleWhere, parameterValues, stage, runSqlQuery } =
+      props;
     const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
     const [highlight, setHighlight] = useState<PieChartHighlight | undefined>();
@@ -106,34 +108,43 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
     const dataQueries = useMemo(() => {
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
+      const effectiveWhere = where.and(moduleWhere);
 
       return {
         mainQuery: querySource
-          .getInitQuery(where)
+          .getInitQuery(effectiveWhere)
           .addSelect(F.cast(splitExpression, 'VARCHAR').as('name'), { addToGroupBy: 'end' })
           .addSelect(measure.expression.as('value'), {
             addToOrderBy: 'end',
             direction: 'DESC',
           })
-          .changeLimitValue(limit),
+          .changeLimitValue(limit + (showOthers ? 1 : 0)),
+        limit,
         splitExpression: splitColumn?.expression,
         othersPartialQuery: showOthers
-          ? querySource.getInitQuery(where).addSelect(measure.expression.as('value'))
+          ? querySource.getInitQuery(effectiveWhere).addSelect(measure.expression.as('value'))
           : undefined,
       };
-    }, [querySource, where, splitColumn, measure, limit, showOthers]);
+    }, [querySource, where, moduleWhere, splitColumn, measure, limit, showOthers]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQueries,
-      processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }, cancelToken) => {
+      processQuery: async (
+        { mainQuery, limit, splitExpression, othersPartialQuery },
+        cancelToken,
+      ) => {
         const result = await runSqlQuery({ query: mainQuery }, cancelToken);
         const data = result.toObjectArray();
 
         if (splitExpression && othersPartialQuery) {
-          const othersResult = await runSqlQuery({
-            query: othersPartialQuery.addWhere(splitExpression.notIn(result.getColumnByIndex(0)!)),
-          });
-          data.push({ name: 'Others', value: othersResult.rows[0][0], __isOthers: true });
+          const pieValues = result.getColumnByIndex(0)!;
+
+          if (pieValues.length > limit) {
+            const othersResult = await runSqlQuery({
+              query: othersPartialQuery.addWhere(splitExpression.notIn(pieValues.slice(0, limit))),
+            });
+            data.push({ name: 'Others', value: othersResult.rows[0][0], __isOthers: true });
+          }
         }
 
         return data;
@@ -189,11 +200,20 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
       myChart.off('click');
 
+      const dataWithColors = data.map((item: any) => ({
+        ...item,
+        itemStyle: {
+          color: splitColumn
+            ? ColorAssigner.getColorForDimensionValue(splitColumn.name, item.name)
+            : '#1890ff',
+        },
+      }));
+
       myChart.setOption({
         series: [
           {
             id: 'hello',
-            data,
+            data: dataWithColors,
           },
         ],
       });

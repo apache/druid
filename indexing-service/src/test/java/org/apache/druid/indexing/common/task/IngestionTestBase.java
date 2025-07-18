@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -50,9 +51,9 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -70,9 +71,9 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
@@ -95,6 +96,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -121,7 +123,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   protected final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
@@ -130,11 +132,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private File baseDir;
   private SupervisorManager supervisorManager;
   private TestDataSegmentKiller dataSegmentKiller;
   private SegmentMetadataCache segmentMetadataCache;
+  private SegmentSchemaCache segmentSchemaCache;
   protected File reportsFile;
 
   protected IngestionTestBase()
@@ -167,6 +170,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector()
     );
 
+    segmentSchemaCache = new SegmentSchemaCache();
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         createTransactionFactory(),
         objectMapper,
@@ -175,17 +179,18 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
-    segmentsMetadataManager = new SqlSegmentsMetadataManager(
-        objectMapper,
-        () -> new SegmentsMetadataManagerConfig(null, null),
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        derbyConnectorRule.getConnector(),
+    segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
+        segmentMetadataCache,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
+        derbyConnectorRule.getConnector(),
+        () -> new SegmentsMetadataManagerConfig(null, null, null),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        CentralizedDatasourceSchemaConfig::create,
+        NoopServiceEmitter.instance(),
+        objectMapper
     );
-    lockbox = new TaskLockbox(taskStorage, storageCoordinator);
+    lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
+    lockbox.syncFromStorage();
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
@@ -253,7 +258,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return segmentsMetadataManager;
   }
 
-  public TaskLockbox getLockbox()
+  public GlobalTaskLockbox getLockbox()
   {
     return lockbox;
   }
@@ -288,7 +293,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
   {
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.enabled(true);
     this.supervisorManager = supervisorManager;
     return new TaskToolbox.Builder()
         .config(config)
@@ -310,15 +315,21 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .taskLogPusher(null)
         .attemptId("1")
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+        .runtimeInfo(JvmUtils.getRuntimeInfo())
         .build();
   }
 
   private SqlSegmentMetadataTransactionFactory createTransactionFactory()
   {
+    final SegmentMetadataCache.UsageMode cacheMode
+        = useSegmentMetadataCache
+          ? SegmentMetadataCache.UsageMode.ALWAYS
+          : SegmentMetadataCache.UsageMode.NEVER;
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), useSegmentMetadataCache)),
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
+        segmentSchemaCache,
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()
@@ -332,7 +343,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         leaderSelector,
-        segmentMetadataCache
+        segmentMetadataCache,
+        NoopServiceEmitter.instance()
     );
   }
 
@@ -416,6 +428,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         SegmentTransactionalInsertAction insertAction = (SegmentTransactionalInsertAction) taskAction;
         publishedSegments.addAll(insertAction.getSegments());
         segmentSchemaMapping.merge(insertAction.getSegmentSchemaMapping());
+      } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+        SegmentTransactionalReplaceAction replaceAction = (SegmentTransactionalReplaceAction) taskAction;
+        publishedSegments.addAll(replaceAction.getSegments());
+        if (replaceAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
+        }
       }
       return result;
     }
@@ -493,10 +511,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
-        final TaskConfig config = new TaskConfigBuilder()
-            .build();
-        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-        centralizedDatasourceSchemaConfig.setEnabled(true);
+        final TaskConfig config = new TaskConfigBuilder().build();
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+            = CentralizedDatasourceSchemaConfig.enabled(true);
         final TaskToolbox box = new TaskToolbox.Builder()
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -517,6 +534,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .taskLogPusher(null)
             .attemptId("1")
             .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+            .runtimeInfo(JvmUtils.getRuntimeInfo())
             .build();
 
 

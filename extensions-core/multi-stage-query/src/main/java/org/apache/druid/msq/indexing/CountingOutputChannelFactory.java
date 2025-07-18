@@ -77,4 +77,10 @@ public class CountingOutputChannelFactory implements OutputChannelFactory
     // No need for counters on nil channels: they never receive input.
     return baseFactory.openNilChannel(partitionNumber);
   }
+
+  @Override
+  public boolean isBuffered()
+  {
+    return baseFactory.isBuffered();
+  }
 }

@@ -72,9 +72,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
             value={row.value}
             filters={moduleFilter}
             onFiltersChange={setModuleFilter}
-          >
-            {row.value}
-          </TableFilterableCell>
+          />
         );
       };
     };

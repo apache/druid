@@ -1,0 +1,515 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_float) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_str) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_null) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_empty) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_mixed) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(a_nested) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A5_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT ipv4_stringify(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'IPV4_STRINGIFY' to arguments of type 'IPV4_STRINGIFY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_bool AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[0]' RETURNING boolean array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][0]' RETURNING boolean array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C4_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_int AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C5_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[1]' RETURNING bigint array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C6_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][1]' RETURNING bigint array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C7_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_float AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C8_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[2]' RETURNING decimal array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C9_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][2]' RETURNING decimal array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C10_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_str AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C11_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[3]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C12_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][3]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C13_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_null AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C14_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[4]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C15_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][4]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C16_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_empty AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C17_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[5]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C18_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][5]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C19_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_mixed AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C20_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[6]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C21_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][6]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C22_D1
+#-------------------------------------------------------------------------
+SELECT cast(a_nested AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C23_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B1_C24_D1
+#-------------------------------------------------------------------------
+SELECT cast(json_value(a_nested, '$[7][7]' RETURNING varchar array) AS varchar) AS col
+FROM test_array;
+cannot convert
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT (CASE a_bool
+            WHEN ARRAY[1,
+                       0,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT (CASE json_value(a_nested, '$[0]' RETURNING boolean array)
+            WHEN ARRAY[1,
+                       0,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT (CASE json_value(a_nested, '$[7][0]' RETURNING boolean array)
+            WHEN ARRAY[1,
+                       0,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT (CASE a_int
+            WHEN ARRAY[1,
+                       2,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT (CASE json_value(a_nested, '$[1]' RETURNING bigint array)
+            WHEN ARRAY[1,
+                       2,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT (CASE json_value(a_nested, '$[7][1]' RETURNING bigint array)
+            WHEN ARRAY[1,
+                       2,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT (CASE a_float
+            WHEN ARRAY[0.1,
+                       0.2,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT (CASE json_value(a_nested, '$[2]' RETURNING decimal array)
+            WHEN ARRAY[0.1,
+                       0.2,
+                       NULL] THEN 1
+            ELSE 2
+        END) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(4 rows)
+
+!ok
+

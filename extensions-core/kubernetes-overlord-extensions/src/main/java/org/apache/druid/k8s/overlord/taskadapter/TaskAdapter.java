@@ -27,6 +27,7 @@ import java.io.IOException;
 
 public interface TaskAdapter
 {
+  String getAdapterType();
 
   Job fromTask(Task task) throws IOException;
 

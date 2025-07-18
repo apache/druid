@@ -1,0 +1,78 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT strlen(c1) len_c1,
+       strlen(c2) len_c2,
+       strlen(c5) len_c5
+FROM
+  (SELECT string_agg(tab0s0, '|') AS c1,
+          string_agg(tab0l0, '#') AS c2,
+          string_agg(tab0d0, '&') AS c3,
+          string_agg(tab0f0, '*') AS c4,
+          string_agg(__time, '@') AS c5
+   FROM test_agg_funcs);
++--------+--------+--------+
+| len_c1 | len_c2 | len_c5 |
++--------+--------+--------+
+|    131 |    131 |    251 |
++--------+--------+--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT string_agg(tab0s0, '|'),
+       tab0l0,
+       tab0d0
+FROM test_agg_funcs;
+is not being grouped
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT strlen(c1) len_c1
+FROM
+  (SELECT string_agg(tab0s0, '|') AS c1,
+          tab0l0 AS c2,
+          tab0d0 AS c3
+   FROM test_agg_funcs
+   GROUP BY tab0s0,
+            tab0l0,
+            tab0d0);
++--------+
+| len_c1 |
++--------+
+|     21 |
+|     21 |
+|     21 |
+|     21 |
+|     21 |
+|     21 |
+|        |
+|        |
+|        |
++--------+
+(9 rows)
+
+!ok
+

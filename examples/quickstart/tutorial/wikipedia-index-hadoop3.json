@@ -72,9 +72,10 @@
         "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
         "mapreduce.map.memory.mb" : 1024,
         "mapreduce.reduce.memory.mb" : 1024,
+        "yarn.app.mapreduce.am.command-opts" : "--add-opens=java.base/java.lang=ALL-UNNAMED",
         "mapreduce.job.classloader" : "true"
       }
     }
   },
-  "hadoopDependencyCoordinates": ["org.apache.hadoop:hadoop-client-api:3.3.1","org.apache.hadoop:hadoop-client-runtime:3.3.1"]
+  "hadoopDependencyCoordinates": ["org.apache.hadoop:hadoop-client-api:3.3.6","org.apache.hadoop:hadoop-client-runtime:3.3.6"]
 }

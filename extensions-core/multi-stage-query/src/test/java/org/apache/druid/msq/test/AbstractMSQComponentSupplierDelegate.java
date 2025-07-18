@@ -19,8 +19,7 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Injector;
+import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.initialization.DruidModule;
@@ -29,7 +28,6 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper.MSQTestModule;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -56,17 +54,15 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
         new MSQIndexingModule(),
-        new TestMSQSqlModule()
+        new TestMSQSqlModule(),
+        new CompressedBigDecimalModule()
     );
   }
 
   @Override
-  public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper,
-      Injector injector)
+  public Class<? extends SqlEngine> getSqlEngineClass()
   {
-    return injector.getInstance(MSQTaskSqlEngine.class);
+    return MSQTaskSqlEngine.class;
   }
 
   @Override
@@ -74,4 +70,5 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
   {
     return false;
   }
+
 }

@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -60,7 +60,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
     delegate.init(buf, position + Byte.BYTES);
   }
 
@@ -69,8 +69,8 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   {
     boolean isNotNull = !nullSelector.isNull();
     if (isNotNull) {
-      if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
-        buf.put(position, NullHandling.IS_NOT_NULL_BYTE);
+      if (buf.get(position) == TypeStrategies.IS_NULL_BYTE) {
+        buf.put(position, TypeStrategies.IS_NOT_NULL_BYTE);
       }
       delegate.aggregate(buf, position + Byte.BYTES);
     }
@@ -80,7 +80,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Nullable
   public Object get(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position) == TypeStrategies.IS_NULL_BYTE) {
       return null;
     }
     return delegate.get(buf, position + Byte.BYTES);
@@ -89,7 +89,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position) == TypeStrategies.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return float for Null Value");
     }
     return delegate.getFloat(buf, position + Byte.BYTES);
@@ -98,7 +98,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position) == TypeStrategies.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return long for Null Value");
     }
     return delegate.getLong(buf, position + Byte.BYTES);
@@ -107,7 +107,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position) == TypeStrategies.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return double for Null Value");
     }
     return delegate.getDouble(buf, position + Byte.BYTES);
@@ -116,7 +116,7 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   @Override
   public boolean isNull(ByteBuffer buf, int position)
   {
-    return buf.get(position) == NullHandling.IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
+    return buf.get(position) == TypeStrategies.IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
   }
 
   @Override

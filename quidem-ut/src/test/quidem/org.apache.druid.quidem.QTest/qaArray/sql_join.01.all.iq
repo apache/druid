@@ -1,0 +1,538 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B1_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_bool
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_bool=t2.a_bool;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B1_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_bool=t2.a_bool);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B1_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_bool
+FROM t1
+INNER JOIN test_array t2 ON t1.a_bool=t2.a_bool;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B2_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_int
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_int=t2.a_int;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B2_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_int=t2.a_int);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B2_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_int
+FROM t1
+INNER JOIN test_array t2 ON t1.a_int=t2.a_int;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B3_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_float
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_float=t2.a_float;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B3_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_float=t2.a_float);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B3_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_float
+FROM t1
+INNER JOIN test_array t2 ON t1.a_float=t2.a_float;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B4_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_str
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_str=t2.a_str;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B4_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_str=t2.a_str);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B4_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_str
+FROM t1
+INNER JOIN test_array t2 ON t1.a_str=t2.a_str;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B5_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_null
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_null=t2.a_null;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B5_C3
+#-------------------------------------------------------------------------
+SELECT a_null
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_null=t2.a_null);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B5_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_null
+FROM t1
+INNER JOIN test_array t2 ON t1.a_null=t2.a_null;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B6_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_empty
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_empty=t2.a_empty;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B6_C3
+#-------------------------------------------------------------------------
+SELECT a_empty
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_empty=t2.a_empty);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B6_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_empty
+FROM t1
+INNER JOIN test_array t2 ON t1.a_empty=t2.a_empty;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_mixed
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_mixed=t2.a_mixed;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B7_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_mixed=t2.a_mixed);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B7_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_mixed
+FROM t1
+INNER JOIN test_array t2 ON t1.a_mixed=t2.a_mixed;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_nested
+FROM test_array t1
+INNER JOIN test_array t2 ON t1.a_nested=t2.a_nested;
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B8_C3
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array t1
+   INNER JOIN test_array t2 ON t1.a_nested=t2.a_nested);
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A1_B8_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_nested
+FROM t1
+INNER JOIN test_array t2 ON t1.a_nested=t2.a_nested;
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B1_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_bool
+FROM test_array t1
+JOIN test_array t2 ON t1.a_bool=t2.a_bool;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B1_C3
+#-------------------------------------------------------------------------
+SELECT a_bool
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_bool=t2.a_bool);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B1_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_bool
+FROM t1
+JOIN test_array t2 ON t1.a_bool=t2.a_bool;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B2_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_int
+FROM test_array t1
+JOIN test_array t2 ON t1.a_int=t2.a_int;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B2_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_int=t2.a_int);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B2_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_int
+FROM t1
+JOIN test_array t2 ON t1.a_int=t2.a_int;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B3_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_float
+FROM test_array t1
+JOIN test_array t2 ON t1.a_float=t2.a_float;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B3_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_float=t2.a_float);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B3_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_float
+FROM t1
+JOIN test_array t2 ON t1.a_float=t2.a_float;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B4_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_str
+FROM test_array t1
+JOIN test_array t2 ON t1.a_str=t2.a_str;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B4_C3
+#-------------------------------------------------------------------------
+SELECT a_str
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_str=t2.a_str);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B4_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_str
+FROM t1
+JOIN test_array t2 ON t1.a_str=t2.a_str;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B5_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_null
+FROM test_array t1
+JOIN test_array t2 ON t1.a_null=t2.a_null;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B5_C3
+#-------------------------------------------------------------------------
+SELECT a_null
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_null=t2.a_null);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B5_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_null
+FROM t1
+JOIN test_array t2 ON t1.a_null=t2.a_null;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B6_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_empty
+FROM test_array t1
+JOIN test_array t2 ON t1.a_empty=t2.a_empty;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B6_C3
+#-------------------------------------------------------------------------
+SELECT a_empty
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_empty=t2.a_empty);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B6_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_empty
+FROM t1
+JOIN test_array t2 ON t1.a_empty=t2.a_empty;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B7_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_mixed
+FROM test_array t1
+JOIN test_array t2 ON t1.a_mixed=t2.a_mixed;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B7_C3
+#-------------------------------------------------------------------------
+SELECT a_mixed
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_mixed=t2.a_mixed);
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B7_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_mixed
+FROM t1
+JOIN test_array t2 ON t1.a_mixed=t2.a_mixed;
+not support
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B8_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_nested
+FROM test_array t1
+JOIN test_array t2 ON t1.a_nested=t2.a_nested;
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B8_C3
+#-------------------------------------------------------------------------
+SELECT a_nested
+FROM
+  (SELECT *
+   FROM test_array t1
+   JOIN test_array t2 ON t1.a_nested=t2.a_nested);
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A2_B8_C5
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT t1.a_nested
+FROM t1
+JOIN test_array t2 ON t1.a_nested=t2.a_nested;
+DruidException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_join TEST_ID: A3_B1_C1
+#-------------------------------------------------------------------------
+SELECT t1.a_bool
+FROM test_array t1
+LEFT JOIN test_array t2 ON t1.a_bool=t2.a_bool;
+not support
+!error
+

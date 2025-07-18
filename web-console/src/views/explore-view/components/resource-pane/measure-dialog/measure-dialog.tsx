@@ -17,14 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
-import {
-  L,
-  type QueryResult,
-  sql,
-  SqlExpression,
-  SqlQuery,
-  SqlWithPart,
-} from 'druid-query-toolkit';
+import { L, type QueryResult, SqlExpression, SqlQuery, SqlWithPart } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';
@@ -40,12 +33,14 @@ export interface MeasureDialogProps {
   measureToDuplicate?: string;
   onApply(newQuery: SqlQuery, rename: Rename | undefined): void;
   querySource: QuerySource;
+  where: SqlExpression;
   runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
   onClose(): void;
 }
 
 export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDialogProps) {
-  const { initMeasure, measureToDuplicate, onApply, querySource, runSqlQuery, onClose } = props;
+  const { initMeasure, measureToDuplicate, onApply, querySource, where, runSqlQuery, onClose } =
+    props;
 
   const [outputName, setOutputName] = useState(initMeasure?.name || '');
   const [formula, setFormula] = useState(String(initMeasure?.expression || ''));
@@ -57,12 +52,9 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
       .changeWithParts([SqlWithPart.simple('t', QuerySource.stripToBaseSource(querySource.query))])
       .addSelect(L('Overall').as('label'))
       .addSelect(expression.as('value'))
-      .applyIf(querySource.hasBaseTimeColumn(), q =>
-        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
-      )
+      .changeWhereExpression(querySource.transformExpressionToBaseColumns(where))
       .toString();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [querySource.query, formula]);
+  }, [querySource, formula, where]);
 
   return (
     <Dialog
@@ -93,10 +85,15 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
               editorHeight={400}
               autoFocus
               showGutter={false}
+              includeAggregates
             />
           </FormGroup>
         </div>
-        <PreviewPane previewQuery={previewQuery} runSqlQuery={runSqlQuery} />
+        <PreviewPane
+          previewQuery={previewQuery}
+          runSqlQuery={runSqlQuery}
+          info="The preview shows the overal value for this measure within the selected filter."
+        />
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

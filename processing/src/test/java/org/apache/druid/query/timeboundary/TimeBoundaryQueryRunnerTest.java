@@ -43,7 +43,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
@@ -158,17 +158,17 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
 
-    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(
+    VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = new VersionedIntervalTimeline<>(
         StringComparators.LEXICOGRAPHIC);
     timeline.add(
         index0.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+        new SingleElementPartitionChunk<>(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment0))
     );
     timeline.add(
         index1.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+        new SingleElementPartitionChunk<>(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment1))
     );
 
     return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
@@ -274,7 +274,6 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     final QueryRunner<Result<TimeBoundaryResultValue>> theRunner =
         new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER).createRunner(
             new RowBasedSegment<>(
-                SegmentId.dummy("dummy"),
                 Sequences.simple(inlineDataSource.getRows()),
                 inlineDataSource.rowAdapter(),
                 inlineDataSource.getRowSignature()

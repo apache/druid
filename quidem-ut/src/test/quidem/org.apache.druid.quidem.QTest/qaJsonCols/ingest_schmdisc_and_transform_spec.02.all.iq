@@ -1,0 +1,401 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_and_transform_spec
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D50
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D51
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D52
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D53
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D54
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D55
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D56
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D57
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D58
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D59
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D60
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D61
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D62
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D63
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D64
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D65
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_str') = 'A';
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D66
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_int') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D67
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_float') = 0.1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D68
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D69
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D70
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D71
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D72
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: D73
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_and_transform_spec TEST_ID: B01
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_json_cols;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+

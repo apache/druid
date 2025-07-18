@@ -51,7 +51,7 @@ function batchArray<T>(array: T[], batchSize: number): T[][] {
 
 describe('table-query', () => {
   describe('specific tests', () => {
-    const source = SqlQuery.create(T('kttm'));
+    const source = SqlQuery.selectStarFrom(T('kttm'));
     const where = sql`(TIME_SHIFT(TIMESTAMP '2019-08-26 00:00:00', 'PT1H', -12) <= "__time" AND "__time" < TIMESTAMP '2019-08-26 00:00:00') AND "country" = 'United States'`;
 
     it('works with no split', () => {
@@ -367,7 +367,7 @@ describe('table-query', () => {
   });
 
   describe('uber test', () => {
-    const source = SqlQuery.create(T('kttm'));
+    const source = SqlQuery.selectStarFrom(T('kttm'));
     const where = sql`(TIME_SHIFT(TIMESTAMP '2019-08-25 08:20:00', 'PT1H', -1) <= "__time" AND "__time" < TIMESTAMP '2019-08-25 14:20:00') AND "country" = 'United States'`;
 
     const splitColumnsVariations: [string, ExpressionMeta[]][] = [

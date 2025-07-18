@@ -163,9 +163,7 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedResults(
-      final List<Object[]> expectedResults
-  )
+  public QueryTestBuilder expectedResults(final List<Object[]> expectedResults)
   {
     return expectedResults(ResultMatchMode.EQUALS, expectedResults);
   }

@@ -30,9 +30,6 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
-import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.querykit.QueryKitSpec;
-import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -44,9 +41,16 @@ import java.io.File;
 public interface ControllerContext
 {
   /**
+   * Globally unique identifier for the query handled by this controller. This is used to set
+   * {@link org.apache.druid.msq.kernel.QueryDefinition#getQueryId}. Must be globally unique because this is used for
+   * identifying workers, naming temporary files, etc.
+   */
+  String queryId();
+
+  /**
    * Configuration for {@link org.apache.druid.msq.kernel.controller.ControllerQueryKernel}.
    */
-  ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec);
+  ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec);
 
   /**
    * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
@@ -60,9 +64,10 @@ public interface ControllerContext
   ObjectMapper jsonMapper();
 
   /**
-   * Emit a metric using a {@link ServiceEmitter}.
+   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * context dependant dimensions.
    */
-  void emitMetric(String metric, Number value);
+  void emitMetric(MSQMetriceEventBuilder metricBuilder);
 
   /**
    * Provides a way for tasks to request injectable objects. Useful because tasks are not able to request injection
@@ -96,7 +101,7 @@ public interface ControllerContext
    *
    * @param queryId               query ID
    * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, MSQSpec)}
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec)}
    * @param workerFailureListener listener that receives callbacks when workers fail
    */
   WorkerManager newWorkerManager(
@@ -118,15 +123,4 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
-
-  /**
-   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
-   * number of workers and partitions.
-   */
-  QueryKitSpec makeQueryKitSpec(
-      QueryKit<Query<?>> queryKit,
-      String queryId,
-      MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig
-  );
 }

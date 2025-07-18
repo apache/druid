@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaTpch/data",
+        "filter" : "orders.tbl.gz"
+      },
+      "inputFormat": { "type": "tsv", "columns": ["o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"], "findColumnsFromHeader": false, "delimiter": "|" },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "orders",
+      "granularitySpec": {
+        "segmentGranularity": "year",
+        "queryGranularity": null,
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto",
+	"missingValue": "2025-01-01T00:00:00.000"
+      },
+      "dimensionsSpec": {
+        "dimensions": [{"name": "o_orderkey", "type": "long"}, {"name": "o_custkey", "type": "long"}, {"name": "o_orderstatus", "type": "string"}, {"name": "o_totalprice", "type": "double"}, {"name": "o_orderdate", "type": "string"}, {"name": "o_orderpriority", "type": "string"}, {"name": "o_clerk", "type": "string"}, {"name": "o_shippriority", "type": "long"}, {"name": "o_comment", "type": "string"}]
+      }
+    }
+  }
+}
+
+

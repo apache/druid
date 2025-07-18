@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
@@ -73,7 +73,7 @@ import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
@@ -91,7 +91,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -988,9 +987,7 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
-    List<Event> events = emitter.getEvents();
-
-    for (Event event : events) {
+    for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC)) {
       EventMap map = event.toMap();
       if (ClientQuerySegmentWalker.ROWS_COUNT_METRIC.equals(map.get("metric"))) {
         Assert.assertTrue(map.containsKey("host"));
@@ -1039,23 +1036,22 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
-    List<Event> events = emitter.getEvents();
-
-    for (Event event : events) {
+    for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.ROWS_COUNT_METRIC)) {
       EventMap map = event.toMap();
-      if (ClientQuerySegmentWalker.ROWS_COUNT_METRIC.equals(map.get("metric"))) {
-        Assert.assertTrue(map.containsKey("host"));
-        Assert.assertTrue(map.containsKey("service"));
-        Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-        Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-        Assert.assertEquals(3, map.get("value"));
-      } else if (ClientQuerySegmentWalker.BYTES_COUNT_METRIC.equals(map.get("metric"))) {
-        Assert.assertTrue(map.containsKey("host"));
-        Assert.assertTrue(map.containsKey("service"));
-        Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
-        Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
-        Assert.assertEquals(43L, map.get("value"));
-      }
+      Assert.assertTrue(map.containsKey("host"));
+      Assert.assertTrue(map.containsKey("service"));
+      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assert.assertEquals(3, map.get("value"));
+    }
+
+    for (ServiceMetricEvent event : emitter.getMetricEvents(ClientQuerySegmentWalker.BYTES_COUNT_METRIC)) {
+      EventMap map = event.toMap();
+      Assert.assertTrue(map.containsKey("host"));
+      Assert.assertTrue(map.containsKey("service"));
+      Assert.assertEquals(DUMMY_QUERY_ID, map.get(DruidMetrics.ID));
+      Assert.assertEquals("1.1", map.get(DruidMetrics.SUBQUERY_ID));
+      Assert.assertEquals(43L, map.get("value"));
     }
   }
 
@@ -1695,7 +1691,7 @@ public class ClientQuerySegmentWalkerTest
         injector,
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
-                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
+                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>>builder()
                     .put(FOO, makeTimeline(FOO, FOO_INLINE))
                     .put(BAR, makeTimeline(BAR, BAR_INLINE))
                     .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
@@ -1842,21 +1838,20 @@ public class ClientQuerySegmentWalkerTest
     }
   }
 
-  private static VersionedIntervalTimeline<String, ReferenceCountingSegment> makeTimeline(
+  private static VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> makeTimeline(
       final String name,
       final InlineDataSource dataSource
   )
   {
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline =
+    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
         new VersionedIntervalTimeline<>(Comparator.naturalOrder());
 
     timeline.add(
         INTERVAL,
         VERSION,
         SHARD_SPEC.createChunk(
-            ReferenceCountingSegment.wrapSegment(
+            ReferenceCountedSegmentProvider.wrapSegment(
                 new RowBasedSegment<>(
-                    SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC.getPartitionNum()),
                     Sequences.simple(dataSource.getRows()),
                     dataSource.rowAdapter(),
                     dataSource.getRowSignature()

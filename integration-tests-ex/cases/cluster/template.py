@@ -23,7 +23,7 @@ internally as a Python data structure made up of maps, arrays and scalars.
 PyYaml does the grunt work of converting the data structure to the YAML file.
 '''
 
-import yaml, os
+import yaml, os, platform
 from pathlib import Path
 
 # Constants used frequently in the template.
@@ -32,6 +32,8 @@ DRUID_NETWORK = 'druid-it-net'
 DRUID_SUBNET = '172.172.172'
 ZOO_KEEPER = 'zookeeper'
 METADATA = 'metadata'
+MINIO = 'minio'
+KAFKA = 'kafka'
 COORDINATOR = 'coordinator'
 OVERLORD = 'overlord'
 ROUTER = 'router'
@@ -68,6 +70,13 @@ def generate(template_path, template):
 
 class BaseTemplate:
 
+    # Lookup map to determine what depends_on condition needs to be specified for a docker-compose dependency.
+    SERVICE_DEPENDENCY_CONDITION_LOOKUP = {
+      METADATA: 'service_healthy',
+      ZOO_KEEPER: 'service_started',
+      MINIO: 'service_healthy',
+    }
+
     def __init__(self):
         # Cluster is the object tree for the docker-compose.yaml file for our test cluster.
         # The tree is a map of objects, each of which is a map of values. The values are
@@ -102,6 +111,7 @@ class BaseTemplate:
         '''
         self.define_zk()
         self.define_metadata()
+        self.define_kafka()
 
     def define_druid_services(self):
         '''
@@ -242,6 +252,11 @@ class BaseTemplate:
             'file': '../Common/dependencies.yaml',
             'service': name
             }}
+
+        # Apple Silicon compatibility helper.
+        if platform.processor() == 'arm':
+            service['platform'] = 'linux/x86_64'
+
         self.add_service(name, service)
         return service
 
@@ -256,6 +271,14 @@ class BaseTemplate:
         Defines the metadata (MySQL) service. Returns the service
         '''
         return self.define_external_service(METADATA)
+
+    def define_kafka(self) -> dict:
+      '''
+      Defines the kafka service. Returns the service
+      '''
+      service = self.define_external_service(KAFKA)
+      self.add_depends(service, [ZOO_KEEPER])
+      return service
 
     def define_druid_service(self, name, base) -> dict:
         '''
@@ -283,11 +306,18 @@ class BaseTemplate:
 
     def add_depends(self, service, items):
         '''
-        Adds a service dependency to a service.
+        Adds 1 or more service dependencies to a service.
+
+        Args:
+            service: The service definition dictionary that is recieving new dependencies
+            items: A list of strings specifying the dependency service name(s)
         '''
         if items is not None and len(items) > 0:
-            depends = service.setdefault('depends_on', [])
-            depends += items
+            depends = service.setdefault('depends_on', {})
+            for dependency_service in items:
+                depends[dependency_service] = {
+                    'condition': BaseTemplate.SERVICE_DEPENDENCY_CONDITION_LOOKUP.get(dependency_service, 'service_started')
+                }
 
     def define_master_service(self, name, base) -> dict:
         '''
@@ -323,7 +353,7 @@ class BaseTemplate:
         Defines a Druid "worker" service: one that depends only on ZooKeeper.
         '''
         service = self.define_druid_service(name, base)
-        self.add_depends(service, [ZOO_KEEPER])
+        self.add_depends(service, [ZOO_KEEPER, METADATA])
         return service
 
     def define_std_worker_service(self, name) -> dict:

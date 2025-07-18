@@ -33,6 +33,7 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -388,7 +389,7 @@ public abstract class ExprEval<T>
       return new StringExprEval((String) val);
     }
     if (val instanceof Number) {
-      if (val instanceof Float || val instanceof Double) {
+      if (val instanceof Float || val instanceof Double || val instanceof BigDecimal) {
         return new DoubleExprEval((Number) val);
       }
       return new LongExprEval((Number) val);
@@ -1308,17 +1309,17 @@ public abstract class ExprEval<T>
           if (value.length == 1) {
             return ExprEval.of(asString());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case LONG:
           if (value.length == 1) {
             return isNumericNull() ? ExprEval.ofLong(null) : ExprEval.ofLong(asLong());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case DOUBLE:
           if (value.length == 1) {
             return isNumericNull() ? ExprEval.ofDouble(null) : ExprEval.ofDouble(asDouble());
           }
-          break;
+          return ExprEval.ofType(castTo, null);
         case ARRAY:
           ExpressionType elementType = (ExpressionType) castTo.getElementType();
           Object[] cast = new Object[value.length];

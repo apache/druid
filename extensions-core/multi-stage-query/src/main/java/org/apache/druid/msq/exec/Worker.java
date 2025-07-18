@@ -46,24 +46,6 @@ public interface Worker
    */
   void run();
 
-  /**
-   * Terminate the worker upon a cancellation request. Causes a concurrently-running {@link #run()} method in
-   * a separate thread to cancel all outstanding work and exit. Does not block. Use {@link #awaitStop()} if you
-   * would like to wait for {@link #run()} to finish.
-   */
-  void stop();
-
-  /**
-   * Wait for {@link #run()} to finish.
-   */
-  void awaitStop();
-
-  /**
-   * Report that the controller has failed. The worker must cease work immediately. Cleanup then exit.
-   * Do not send final messages to the controller: there will be no one home at the other end.
-   */
-  void controllerFailed();
-
   // Controller-to-worker, and worker-to-worker messages
 
   /**

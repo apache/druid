@@ -26,10 +26,14 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 public class CompactionSupervisorSpec implements SupervisorSpec
 {
@@ -41,6 +45,11 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   private final CompactionScheduler scheduler;
   private final CompactionConfigValidationResult validationResult;
 
+  public static String getSupervisorIdForDatasource(String dataSource)
+  {
+    return ID_PREFIX + dataSource;
+  }
+
   @JsonCreator
   public CompactionSupervisorSpec(
       @JsonProperty("spec") DataSourceCompactionConfig spec,
@@ -51,7 +60,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     this.spec = spec;
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.scheduler = scheduler;
-    this.validationResult = scheduler.validateCompactionConfig(spec);
+    this.validationResult = scheduler == null ? null : scheduler.validateCompactionConfig(spec);
   }
 
   @JsonProperty
@@ -70,7 +79,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   @Override
   public String getId()
   {
-    return ID_PREFIX + spec.getDataSource();
+    return getSupervisorIdForDatasource(spec.getDataSource());
   }
 
   public CompactionConfigValidationResult getValidationResult()
@@ -112,5 +121,33 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   public String getSource()
   {
     return "";
+  }
+
+  @Nonnull
+  @Override
+  public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
+  {
+    // No external resource is read. The datasource being written to is authorized
+    // separately in SupervisorResource itself
+    return Set.of();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CompactionSupervisorSpec that = (CompactionSupervisorSpec) o;
+    return suspended == that.suspended && Objects.equals(spec, that.spec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(suspended, spec);
   }
 }

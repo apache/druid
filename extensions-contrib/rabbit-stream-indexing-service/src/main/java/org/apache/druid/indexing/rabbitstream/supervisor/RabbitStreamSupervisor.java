@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -53,8 +54,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
@@ -89,8 +88,6 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   private static final Long NOT_SET = -1L;
   private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private volatile Map<String, Long> latestSequenceFromStream;
 
   private final RabbitStreamSupervisorSpec spec;
@@ -105,7 +102,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       final RowIngestionMetersFactory rowIngestionMetersFactory)
   {
     super(
-        StringUtils.format("RabbitSupervisor-%s", spec.getDataSchema().getDataSource()),
+        StringUtils.format("RabbitSupervisor-%s", spec.getId()),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -116,8 +113,6 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         false);
 
     this.spec = spec;
-    this.emitter = spec.getEmitter();
-    this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
   }
 
   @Override
@@ -148,9 +143,14 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected boolean doesTaskTypeMatchSupervisor(Task task)
+  protected boolean doesTaskMatchSupervisor(Task task)
   {
-    return task instanceof RabbitStreamIndexTask;
+    if (task instanceof RabbitStreamIndexTask) {
+      final String supervisorId = ((RabbitStreamIndexTask) task).getSupervisorId();
+      return Objects.equal(supervisorId, spec.getId());
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -161,6 +161,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
     RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
     Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new RabbitStreamSupervisorReportPayload(
+        spec.getId(),
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
         numPartitions,
@@ -168,7 +169,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? aggregatePartitionLags(partitionLag).getTotalLag() : null,
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
@@ -224,12 +225,14 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new RabbitStreamIndexTask(
           taskId,
+          spec.getId(),
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
           (RabbitStreamIndexTaskTuningConfig) taskTuningConfig,
           (RabbitStreamIndexTaskIOConfig) taskIoConfig,
           context,
-          sortingMapper));
+          sortingMapper
+      ));
     }
     return taskList;
   }
@@ -363,7 +366,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return aggregatePartitionLags(partitionRecordLag);
   }
 
   @Override

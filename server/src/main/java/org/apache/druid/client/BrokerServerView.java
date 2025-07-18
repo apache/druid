@@ -75,6 +75,7 @@ public class BrokerServerView implements TimelineServerView
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
   public BrokerServerView(
@@ -82,13 +83,15 @@ public class BrokerServerView implements TimelineServerView
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig
   )
   {
     this.druidClientFactory = directDruidClientFactory;
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
 
     // Validate and set the segment watcher config
     validateSegmentWatcherConfig(segmentWatcherConfig);
@@ -154,11 +157,25 @@ public class BrokerServerView implements TimelineServerView
         segmentFilter
     );
 
-    baseView.registerServerRemovedCallback(
+    baseView.registerServerCallback(
         exec,
-        server -> {
-          removeServer(server);
-          return CallbackAction.CONTINUE;
+        new ServerCallback() {
+          @Override
+          public CallbackAction serverAdded(DruidServer server)
+          {
+            // We don't track brokers in this view.
+            if (!server.getType().equals(ServerType.BROKER)) {
+              addServer(server);
+            }
+            return CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction serverRemoved(DruidServer server)
+          {
+            removeServer(server);
+            return CallbackAction.CONTINUE;
+          }
         }
     );
   }
@@ -253,7 +270,7 @@ public class BrokerServerView implements TimelineServerView
         log.debug("Adding segment[%s] for server[%s]", segment, server);
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
-          selector = new ServerSelector(segment, tierSelectorStrategy);
+          selector = new ServerSelector(segment, tierSelectorStrategy, brokerViewOfCoordinatorConfig);
 
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           if (timeline == null) {
@@ -375,9 +392,9 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
-    baseView.registerServerRemovedCallback(exec, callback);
+    baseView.registerServerCallback(exec, callback);
   }
 
   @Override

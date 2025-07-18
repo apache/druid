@@ -19,10 +19,10 @@
 
 package org.apache.druid.testsEx.msq;
 
+import com.google.common.collect.ImmutableMap;
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;

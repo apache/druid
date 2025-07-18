@@ -41,6 +41,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -341,6 +342,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           lateMessageRejectionPeriod,
           earlyMessageRejectionPeriod,
           autoScalerConfig,
+          LagAggregator.DEFAULT,
           lateMessageRejectionStartDateTime,
           idleConfig,
           null

@@ -83,7 +83,7 @@ public abstract class AbstractStatement implements Closeable
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
     this.queryContext = new HashMap<>(queryPlus.context());
-
+    sqlToolbox.engine.initContextMap(queryContext);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
 
@@ -142,7 +142,7 @@ public abstract class AbstractStatement implements Closeable
   )
   {
     Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
-        .contextKeysToAuthorize(queryPlus.context().keySet());
+        .contextKeysToAuthorize(plannerContext.queryContextMap().keySet());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)

@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.List;
 
@@ -38,7 +39,12 @@ import java.util.List;
 public interface BrokerClient
 {
   /**
-   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
+   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint, {@code /druid/v2/sql/}.
+   */
+  ListenableFuture<String> submitSqlQuery(ClientSqlQuery sqlQuery);
+
+  /**
+   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint, {@code /druid/v2/sql/task/}.
    */
   ListenableFuture<SqlTaskStatus> submitSqlTask(ClientSqlQuery sqlQuery);
 
@@ -48,4 +54,9 @@ public interface BrokerClient
    * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
    */
   ListenableFuture<List<ExplainPlan>> fetchExplainPlan(ClientSqlQuery sqlQuery);
+
+  /**
+   * Updates the broker with the given {@link CoordinatorDynamicConfig}.
+   */
+  ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config);
 }

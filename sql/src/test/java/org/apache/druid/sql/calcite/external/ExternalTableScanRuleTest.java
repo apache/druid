@@ -26,7 +26,9 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -73,11 +75,13 @@ public class ExternalTableScanRuleTest
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         AuthConfig.newBuilder().build(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
     final PlannerContext plannerContext = PlannerContext.create(
         toolbox,
-        "DUMMY", // The actual query isn't important for this test
+        "SELECT 1", // The actual query isn't important for this test
+        DruidSqlParser.parse("SELECT 1", false).getMainStatement(),
         engine,
         Collections.emptyMap(),
         null

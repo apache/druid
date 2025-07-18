@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -35,20 +36,22 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, KinesisRecordEntity>
 {
   private static final String TYPE = "index_kinesis";
+
+  public static final Set<ResourceAction> INPUT_SOURCE_RESOURCES = Set.of(
+      AuthorizationUtils.createExternalResourceReadAction(KinesisIndexingServiceModule.SCHEME)
+  );
 
   // GetRecords returns maximum 10MB per call
   // (https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html)
@@ -62,6 +65,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
   @JsonCreator
   public KinesisIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
@@ -73,12 +77,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
   {
     super(
         getOrMakeId(id, dataSchema.getDataSource(), TYPE),
+        supervisorId,
         taskResource,
         dataSchema,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
@@ -106,7 +111,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
     return new KinesisIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
         lockGranularityToUse
     );
   }
@@ -174,10 +178,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(KinesisIndexingServiceModule.SCHEME, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return INPUT_SOURCE_RESOURCES;
   }
 
   @Override

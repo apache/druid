@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C7_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_float) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C8_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C9_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C10_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_str) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C11_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C12_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C13_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_null) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C14_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C15_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C16_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_empty) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C17_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C18_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C19_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_mixed) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C20_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C21_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C22_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(a_nested) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C23_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B25_C24_D1
+#-------------------------------------------------------------------------
+SELECT rtrim(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'RTRIM' to arguments of type 'RTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C1_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_bool) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C2_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C3_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C4_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_int) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C5_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C6_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C7_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_float) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C8_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C9_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C10_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_str) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C11_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C12_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C13_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_null) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C14_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C15_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C16_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_empty) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C17_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C18_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C19_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_mixed) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C20_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C21_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C22_D1
+#-------------------------------------------------------------------------
+SELECT reverse(a_nested) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C23_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B26_C24_D1
+#-------------------------------------------------------------------------
+SELECT reverse(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'REVERSE' to arguments of type 'REVERSE(<
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C1_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_bool, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C2_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[0]' RETURNING boolean array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C3_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][0]' RETURNING boolean array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C4_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_int, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C5_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[1]' RETURNING bigint array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C6_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[7][1]' RETURNING bigint array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C7_D1
+#-------------------------------------------------------------------------
+SELECT repeat(a_float, 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B27_C8_D1
+#-------------------------------------------------------------------------
+SELECT repeat(json_value(a_nested, '$[2]' RETURNING decimal array), 2) AS col
+FROM test_array;
+Cannot apply 'REPEAT' to arguments of type 'REPEAT(
+!error
+

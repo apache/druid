@@ -55,7 +55,20 @@ public final class Threads
     }
   }
 
-  private Threads()
+  /**
+   * Temporarily renames the thread.
+   *
+   * Preferred usage should be via try-with-resources clauses.
+   *
+   * @return a {@link AutoCloseable} to rename the thread back to its original name.
+   */
+  public static AutoCloseable withThreadName(String name)
   {
+    final Thread thread = Thread.currentThread();
+    final String oldThreadName = thread.getName();
+    thread.setName(name);
+    return () -> {
+      thread.setName(oldThreadName);
+    };
   }
 }

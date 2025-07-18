@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -55,6 +56,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -74,6 +76,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -382,6 +385,52 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     Assert.assertTrue(druidException.getMessage().contains(
         "Cannot apply 'APPROX_COUNT_DISTINCT_DS_THETA' to arguments of type 'APPROX_COUNT_DISTINCT_DS_THETA(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
     ));
+  }
+
+  @Test
+  public void testApproxCountDistinctFunctionOnSupportedMatieralizedColumn()
+  {
+    cannotVectorize();
+
+    final String sketchValue = "AQMDAAA6zJMa0TALmYwvIg==";
+    final String base64SketchValue = "'" + StringUtils.replace(sketchValue, "=", "\\u003D") + "'";
+
+    Assertions.assertDoesNotThrow(() ->
+                                      testQuery(
+                                          "SELECT APPROX_COUNT_DISTINCT(DECODE_BASE64_COMPLEX('thetaSketch', '"
+                                          + sketchValue
+                                          + "'))",
+                                          ImmutableMap.of("vectorize", false),
+                                          ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                                                                 .dataSource(InlineDataSource.fromIterable(
+                                                                     Collections.singletonList(new Object[]{0L}),
+                                                                     RowSignature.builder()
+                                                                                 .add("ZERO", ColumnType.LONG)
+                                                                                 .build()
+                                                                 ))
+                                                                 .intervals(new MultipleIntervalSegmentSpec(
+                                                                     ImmutableList.of(Filtration.eternity())))
+                                                                 .granularity(Granularities.ALL)
+                                                                 .virtualColumns(new ExpressionVirtualColumn(
+                                                                     "v0",
+                                                                     StringUtils.format(
+                                                                         "complex_decode_base64('thetaSketch',%s)",
+                                                                         base64SketchValue
+                                                                     ),
+                                                                     ColumnType.ofComplex("thetaSketch"),
+                                                                     queryFramework().macroTable()
+                                                                 ))
+                                                                 .aggregators(ImmutableList.of(new SketchMergeAggregatorFactory(
+                                                                     "a0",
+                                                                     "v0",
+                                                                     null,
+                                                                     null,
+                                                                     null,
+                                                                     null
+                                                                 )))
+                                                                 .build()),
+                                          ImmutableList.of(new Object[]{1L})
+                                      ));
   }
 
   @Test
@@ -1150,6 +1199,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + " FROM druid.foo"
         + " GROUP BY 1 ORDER BY 1"
         + " LIMIT 2",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -1164,7 +1214,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(2)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(

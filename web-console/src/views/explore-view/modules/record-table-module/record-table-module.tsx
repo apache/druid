@@ -67,11 +67,20 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     },
   },
   component: function RecordTableModule(props) {
-    const { stage, querySource, timezone, where, setWhere, parameterValues, runSqlQuery } = props;
+    const {
+      stage,
+      querySource,
+      timezone,
+      where,
+      setWhere,
+      moduleWhere,
+      parameterValues,
+      runSqlQuery,
+    } = props;
 
     const query = useMemo((): string | undefined => {
-      return SqlQuery.create(querySource.query)
-        .changeWhereExpression(where)
+      return SqlQuery.selectStarFrom(querySource.query)
+        .changeWhereExpression(where.and(moduleWhere))
         .changeLimitValue(parameterValues.maxRows)
         .applyIf(
           querySource.columns.some(e => e.name === '__time') && !parameterValues.ascending,
@@ -79,7 +88,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
           q => q.changeOrderByClause(querySource.query.orderByClause),
         )
         .toString();
-    }, [querySource, where, parameterValues]);
+    }, [querySource, where, moduleWhere, parameterValues]);
 
     const [resultState, queryManager] = useQueryManager({
       query,

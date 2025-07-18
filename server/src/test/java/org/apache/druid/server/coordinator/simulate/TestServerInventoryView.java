@@ -130,7 +130,7 @@ public class TestServerInventoryView implements ServerInventoryView
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
     serverChangeHandlers.add(new ServerChangeHandler(callback, exec));
   }
@@ -196,9 +196,9 @@ public class TestServerInventoryView implements ServerInventoryView
   private static class ServerChangeHandler
   {
     private final Executor executor;
-    private final ServerRemovedCallback callback;
+    private final ServerCallback callback;
 
-    private ServerChangeHandler(ServerRemovedCallback callback, Executor executor)
+    private ServerChangeHandler(ServerCallback callback, Executor executor)
     {
       this.callback = callback;
       this.executor = executor;

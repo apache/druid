@@ -37,7 +37,7 @@ import java.util.concurrent.Executors;
  */
 public class ReferenceCountingSegmentTest
 {
-  private ReferenceCountingSegment segment;
+  private ReferenceCountedSegmentProvider segment;
   private ExecutorService exec;
 
   private final SegmentId segmentId = SegmentId.dummy("test_segment");
@@ -55,7 +55,7 @@ public class ReferenceCountingSegmentTest
     cursorFactory = EasyMock.createNiceMock(CursorFactory.class);
     indexedTable = EasyMock.createNiceMock(IndexedTable.class);
 
-    segment = ReferenceCountingSegment.wrapRootGenerationSegment(
+    segment = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
         new Segment()
         {
           @Override
@@ -71,24 +71,12 @@ public class ReferenceCountingSegmentTest
           }
 
           @Override
-          public QueryableIndex asQueryableIndex()
-          {
-            return index;
-          }
-
-          @Override
-          public CursorFactory asCursorFactory()
-          {
-            return cursorFactory;
-          }
-
-          @Override
           public <T> T as(Class<T> clazz)
           {
             if (clazz.equals(QueryableIndex.class)) {
-              return (T) asQueryableIndex();
+              return (T) index;
             } else if (clazz.equals(CursorFactory.class)) {
-              return (T) asCursorFactory();
+              return (T) cursorFactory;
             } else if (clazz.equals(IndexedTable.class)) {
               return (T) indexedTable;
             }
@@ -165,23 +153,4 @@ public class ReferenceCountingSegmentTest
     Assert.assertEquals(0, segment.getNumReferences());
     Assert.assertEquals(1, underlyingSegmentClosedCount);
   }
-
-  @Test
-  public void testExposesWrappedSegment()
-  {
-    Assert.assertEquals(segmentId, segment.getId());
-    Assert.assertEquals(dataInterval, segment.getDataInterval());
-    Assert.assertEquals(index, segment.asQueryableIndex());
-    Assert.assertEquals(cursorFactory, segment.asCursorFactory());
-  }
-
-  @Test
-  public void testSegmentAs()
-  {
-    Assert.assertSame(index, segment.as(QueryableIndex.class));
-    Assert.assertSame(cursorFactory, segment.as(CursorFactory.class));
-    Assert.assertSame(indexedTable, segment.as(IndexedTable.class));
-    Assert.assertNull(segment.as(String.class));
-  }
-
 }

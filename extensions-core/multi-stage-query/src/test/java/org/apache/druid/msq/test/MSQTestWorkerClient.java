@@ -21,28 +21,29 @@ package org.apache.druid.msq.test;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  private final Map<String, Worker> inMemoryWorkers;
+  protected final Map<String, WorkerRunRef> inMemoryWorkers;
   private final AtomicBoolean closed = new AtomicBoolean();
 
-  public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
+  public MSQTestWorkerClient(Map<String, WorkerRunRef> inMemoryWorkers)
   {
     this.inMemoryWorkers = inMemoryWorkers;
   }
@@ -50,8 +51,18 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
-    inMemoryWorkers.get(workerTaskId).postWorkOrder(workOrder);
+    getWorkerFor(workerTaskId).postWorkOrder(workOrder);
     return Futures.immediateFuture(null);
+  }
+
+  protected Worker getWorkerFor(String workerTaskId)
+  {
+    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker).worker();
+  }
+
+  protected WorkerRunRef newWorker(String workerId)
+  {
+    throw new RuntimeException("Not implemented!");
   }
 
   @Override
@@ -61,7 +72,7 @@ public class MSQTestWorkerClient implements WorkerClient
       SketchEncoding sketchEncoding
   )
   {
-    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
+    return Futures.immediateFuture(getWorkerFor(workerTaskId).fetchStatisticsSnapshot(stageId));
   }
 
   @Override
@@ -73,7 +84,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     return Futures.immediateFuture(
-        inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+        getWorkerFor(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
     );
   }
 
@@ -85,7 +96,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try {
-      inMemoryWorkers.get(workerTaskId).postResultPartitionBoundaries(stageId, partitionBoundaries);
+      getWorkerFor(workerTaskId).postResultPartitionBoundaries(stageId, partitionBoundaries);
       return Futures.immediateFuture(null);
     }
     catch (Exception e) {
@@ -96,21 +107,21 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
   {
-    inMemoryWorkers.get(workerTaskId).postCleanupStage(stageId);
+    getWorkerFor(workerTaskId).postCleanupStage(stageId);
     return Futures.immediateFuture(null);
   }
 
   @Override
   public ListenableFuture<Void> postFinish(String taskId)
   {
-    inMemoryWorkers.get(taskId).postFinish();
+    getWorkerFor(taskId).postFinish();
     return Futures.immediateFuture(null);
   }
 
   @Override
   public ListenableFuture<CounterSnapshotsTree> getCounters(String taskId)
   {
-    return Futures.immediateFuture(inMemoryWorkers.get(taskId).getCounters());
+    return Futures.immediateFuture(getWorkerFor(taskId).getCounters());
   }
 
   @Override
@@ -122,29 +133,32 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    try (InputStream inputStream =
-             inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
-      byte[] buffer = new byte[8 * 1024];
-      boolean didRead = false;
-      int bytesRead;
-      while ((bytesRead = inputStream.read(buffer)) != -1) {
-        channel.addChunk(Arrays.copyOf(buffer, bytesRead));
-        didRead = true;
-      }
-      inputStream.close();
-
-      return Futures.immediateFuture(!didRead);
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Error reading frame file channel");
-    }
+    return FutureUtils.transform(
+        getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset),
+        inputStream -> {
+          try {
+            byte[] buffer = new byte[8 * 1024];
+            boolean didRead = false;
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+              channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+              didRead = true;
+            }
+            inputStream.close();
+            return !didRead;
+          }
+          catch (Exception e) {
+            throw new ISE(e, "Error reading frame file channel");
+          }
+        }
+    );
   }
 
   @Override
   public void close()
   {
     if (closed.compareAndSet(false, true)) {
-      inMemoryWorkers.forEach((k, v) -> v.stop());
+      inMemoryWorkers.forEach((k, v) -> v.cancel());
     }
   }
 }

@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class FrameCursorFactoryTest
@@ -106,7 +107,7 @@ public class FrameCursorFactoryTest
 
       queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
-      frameCursorFactory = frameSegment.asCursorFactory();
+      frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
     @After
@@ -136,7 +137,7 @@ public class FrameCursorFactoryTest
             actualCapabilities.toColumnType()
         );
 
-        if (frameType == FrameType.COLUMNAR) {
+        if (frameType == FrameType.latestColumnar()) {
           // Columnar frames retain fine-grained hasMultipleValues information
           Assert.assertEquals(
               StringUtils.format("column [%s] hasMultipleValues", columnName),
@@ -283,7 +284,7 @@ public class FrameCursorFactoryTest
     {
       queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
       frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
-      frameCursorFactory = frameSegment.asCursorFactory();
+      frameCursorFactory = Objects.requireNonNull(frameSegment.as(CursorFactory.class));
     }
 
     @After
@@ -319,7 +320,7 @@ public class FrameCursorFactoryTest
     public void test_makeVectorCursor()
     {
       // Conditions for frames to be vectorizable.
-      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.COLUMNAR));
+      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.latestColumnar()));
       Assume.assumeFalse(descending);
       assertVectorCursorsMatch(cursorFactory -> cursorFactory.makeCursorHolder(buildSpec));
     }

@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { render } from '@testing-library/react';
+
+import { getConsoleViewIcon } from '../../../druid-models';
 
 import { HomeViewCard } from './home-view-card';
 
@@ -27,7 +28,7 @@ describe('HomeViewCard', () => {
       <HomeViewCard
         className="some-card"
         href="#somewhere"
-        icon={IconNames.DATABASE}
+        icon={getConsoleViewIcon('services')}
         title="Something"
         loading={false}
         error={undefined}

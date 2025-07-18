@@ -20,11 +20,13 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -37,8 +39,7 @@ import java.util.Map;
 
 public class IngestionTestSqlEngine implements SqlEngine
 {
-  public static final IngestionTestSqlEngine INSTANCE = new IngestionTestSqlEngine();
-
+  @Inject
   private IngestionTestSqlEngine()
   {
   }
@@ -125,5 +126,11 @@ public class IngestionTestSqlEngine implements SqlEngine
     );
 
     return new TestInsertQueryMaker(destination, signature);
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    throw new UnsupportedOperationException();
   }
 }

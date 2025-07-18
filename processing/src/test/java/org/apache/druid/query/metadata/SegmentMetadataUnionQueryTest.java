@@ -122,6 +122,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()

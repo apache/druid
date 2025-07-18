@@ -21,8 +21,10 @@ package org.apache.druid.sql.http;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 /**
  * The Module responsible for providing bindings to the SQL http endpoint
@@ -33,6 +35,7 @@ public class SqlHttpModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(SqlResource.class).in(LazySingleton.class);
+    Multibinder.newSetBinder(binder, SqlEngine.class);
     Jerseys.addResource(binder, SqlResource.class);
   }
 }

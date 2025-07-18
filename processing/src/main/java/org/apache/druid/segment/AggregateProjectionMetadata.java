@@ -110,6 +110,15 @@ public class AggregateProjectionMetadata
     return Objects.hash(schema, numRows);
   }
 
+  @Override
+  public String toString()
+  {
+    return "AggregateProjectionMetadata{" +
+           "schema=" + schema +
+           ", numRows=" + numRows +
+           '}';
+  }
+
   public static class Schema
   {
     /**
@@ -294,10 +303,6 @@ public class AggregateProjectionMetadata
       }
       Projections.ProjectionMatchBuilder matchBuilder = new Projections.ProjectionMatchBuilder();
 
-      if (timeColumnName != null) {
-        matchBuilder.remapColumn(timeColumnName, ColumnHolder.TIME_COLUMN_NAME)
-                    .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-      }
       final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
       if (queryGrouping != null) {
         for (String queryColumn : queryGrouping) {
@@ -308,6 +313,10 @@ public class AggregateProjectionMetadata
               physicalColumnChecker
           );
           if (matchBuilder == null) {
+            return null;
+          }
+          // a query grouping column must also be defined as a projection grouping column
+          if (isInvalidGrouping(queryColumn) || isInvalidGrouping(matchBuilder.getRemapValue(queryColumn))) {
             return null;
           }
         }
@@ -385,13 +394,19 @@ public class AggregateProjectionMetadata
         // check to see if we have an equivalent virtual column defined in the projection, if so we can
         final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
         if (projectionEquivalent != null) {
-          if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
+          final String remapColumnName;
+          if (Objects.equals(projectionEquivalent.getOutputName(), timeColumnName)) {
+            remapColumnName = ColumnHolder.TIME_COLUMN_NAME;
+          } else {
+            remapColumnName = projectionEquivalent.getOutputName();
+          }
+          if (!buildSpecVirtualColumn.getOutputName().equals(remapColumnName)) {
             matchBuilder.remapColumn(
                 buildSpecVirtualColumn.getOutputName(),
-                projectionEquivalent.getOutputName()
+                remapColumnName
             );
           }
-          return matchBuilder.addReferencedPhysicalColumn(projectionEquivalent.getOutputName());
+          return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
         }
 
         matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
@@ -404,8 +419,12 @@ public class AggregateProjectionMetadata
             if (virtualGranularity.isFinerThan(granularity)) {
               return null;
             }
-            return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
-                               .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            // same granularity, replace virtual column directly by remapping it to the physical column
+            if (granularity.equals(virtualGranularity)) {
+              return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
+                                 .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            }
+            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           } else {
             // anything else with __time requires none granularity
             if (Granularities.NONE.equals(granularity)) {
@@ -433,6 +452,22 @@ public class AggregateProjectionMetadata
         }
         return null;
       }
+    }
+
+    /**
+     * Check if a column is either part of {@link #groupingColumns}, or at least is not present in
+     * {@link #virtualColumns}. Naively we would just check that grouping column contains the column in question,
+     * however we can also use a projection when a column is truly missing. {@link #matchRequiredColumn} returns a
+     * match builder if the column is present as either a physical column, or a virtual column, but a virtual column
+     * could also be present for an aggregator input, so we must further check that a column not in the grouping list
+     * is also not a virtual column, the implication being that it is a missing column.
+     */
+    private boolean isInvalidGrouping(@Nullable String columnName)
+    {
+      if (columnName == null) {
+        return false;
+      }
+      return !groupingColumns.contains(columnName) && virtualColumns.exists(columnName);
     }
 
     @Override
@@ -464,6 +499,22 @@ public class AggregateProjectionMetadata
           Arrays.hashCode(aggregators),
           ordering
       );
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Schema{" +
+             "name='" + name + '\'' +
+             ", timeColumnName='" + timeColumnName + '\'' +
+             ", virtualColumns=" + virtualColumns +
+             ", groupingColumns=" + groupingColumns +
+             ", aggregators=" + Arrays.toString(aggregators) +
+             ", ordering=" + ordering +
+             ", timeColumnPosition=" + timeColumnPosition +
+             ", granularity=" + granularity +
+             ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
+             '}';
     }
   }
 }

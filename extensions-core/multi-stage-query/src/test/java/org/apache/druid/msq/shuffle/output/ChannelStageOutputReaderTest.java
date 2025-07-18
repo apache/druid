@@ -69,7 +69,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private final Frame frame = Iterables.getOnlyElement(
         FrameSequenceBuilder
             .fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex()))
-            .frameType(FrameType.ROW_BASED)
+            .frameType(FrameType.latestRowBased())
             .frames()
             .toList()
     );
@@ -295,8 +295,14 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       final IncrementalIndexCursorFactory adapter = new IncrementalIndexCursorFactory(index);
       frameReader = FrameReader.create(adapter.getRowSignature());
       frameList = FrameSequenceBuilder.fromCursorFactory(adapter)
-                                      .frameType(FrameType.ROW_BASED)
-                                      .maxRowsPerFrame(IntMath.divide(index.numRows(), MAX_FRAMES, RoundingMode.CEILING))
+                                      .frameType(FrameType.latestRowBased())
+                                      .maxRowsPerFrame(
+                                          IntMath.divide(
+                                              index.numRows(),
+                                              MAX_FRAMES,
+                                              RoundingMode.CEILING
+                                          )
+                                      )
                                       .frames()
                                       .toList();
     }

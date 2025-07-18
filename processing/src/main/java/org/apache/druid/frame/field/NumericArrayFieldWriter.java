@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -103,17 +104,23 @@ public class NumericArrayFieldWriter implements FieldWriter
   /**
    * Returns the writer for ARRAY<FLOAT>
    */
-  public static NumericArrayFieldWriter getFloatArrayFieldWriter(final ColumnValueSelector selector)
+  public static NumericArrayFieldWriter getFloatArrayFieldWriter(
+      final ColumnValueSelector selector,
+      final FrameType frameType
+  )
   {
-    return new NumericArrayFieldWriter(selector, FloatFieldWriter::forArray);
+    return new NumericArrayFieldWriter(selector, s -> FloatFieldWriter.forArray(s, frameType));
   }
 
   /**
    * Returns the writer for ARRAY<DOUBLE>
    */
-  public static NumericArrayFieldWriter getDoubleArrayFieldWriter(final ColumnValueSelector selector)
+  public static NumericArrayFieldWriter getDoubleArrayFieldWriter(
+      final ColumnValueSelector selector,
+      final FrameType frameType
+  )
   {
-    return new NumericArrayFieldWriter(selector, DoubleFieldWriter::forArray);
+    return new NumericArrayFieldWriter(selector, s -> DoubleFieldWriter.forArray(s, frameType));
   }
 
   public NumericArrayFieldWriter(final ColumnValueSelector selector, NumericFieldWriterFactory writerFactory)

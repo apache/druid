@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
@@ -44,8 +46,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -53,7 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Responsible for loading and dropping of segments by a process that can serve segments.
  */
 @ManageLifecycle
-public class SegmentLoadDropHandler implements DataSegmentChangeHandler
+public class SegmentLoadDropHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
@@ -63,7 +68,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService exec;
+  private final ScheduledExecutorService normalLoadExec;
+  private final ThreadPoolExecutor turboLoadExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -88,9 +94,19 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         config,
         announcer,
         segmentManager,
-        Executors.newScheduledThreadPool(
+        new ScheduledThreadPoolExecutor(
             config.getNumLoadingThreads(),
-            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+            Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
+        ),
+        // Create a fixed size threadpool which has a timeout of 1 minute. Since they are all core threads, new threads
+        // will be created without enqueing the tasks till the capacity is reached.
+        new ThreadPoolExecutor(
+            config.getNumBootstrapThreads(),
+            config.getNumBootstrapThreads(),
+            60L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
         )
     );
   }
@@ -100,13 +116,18 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ScheduledExecutorService exec
+      ScheduledExecutorService normalLoadExec,
+      ThreadPoolExecutor turboLoadExec
   )
   {
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
-    this.exec = exec;
+    this.normalLoadExec = normalLoadExec;
+    this.turboLoadExec = turboLoadExec;
+
+    // Allow core threads to time out to save resources when not in turbo mode
+    this.turboLoadExec.allowCoreThreadTimeOut(true);
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -122,12 +143,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return segmentManager.getRowCountDistribution();
   }
 
-  @Override
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+  public void addSegment(
+      DataSegment segment,
+      @Nullable DataSegmentChangeCallback callback,
+      SegmentLoadingMode loadingMode
+  )
   {
     SegmentChangeStatus result = null;
     try {
-      log.info("Loading segment[%s]", segment.getId());
+      log.info("Loading segment[%s] in mode[%s]", segment.getId(), loadingMode);
       /*
          The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
          and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
@@ -160,13 +184,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
       }
 
-      result = SegmentChangeStatus.SUCCESS;
+      result = SegmentChangeStatus.success(loadingMode);
     }
     catch (Throwable e) {
       log.makeAlert(e, "Failed to load segment")
          .addData("segment", segment)
          .emit();
-      result = SegmentChangeStatus.failed(e.toString());
+      Throwable rootCause = Throwables.getRootCause(e);
+      result = SegmentChangeStatus.failed(rootCause.toString(), loadingMode);
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
@@ -176,7 +201,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
@@ -214,7 +238,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        exec.schedule(
+        normalLoadExec.schedule(
             runnable,
             config.getDropSegmentDelayMillis(),
             TimeUnit.MILLISECONDS
@@ -223,7 +247,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         runnable.run();
       }
 
-      result = SegmentChangeStatus.SUCCESS;
+      result = SegmentChangeStatus.success();
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")
@@ -244,14 +268,22 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  /**
+   * Process a list of {@link DataSegmentChangeRequest}, invoking
+   * {@link #processRequest(DataSegmentChangeRequest, SegmentLoadingMode)} for each one. Handles the computation
+   * asynchronously and returns a future to the result.
+   */
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(
+      List<DataSegmentChangeRequest> changeRequests,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     boolean isAnyRequestDone = false;
 
     Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
 
     for (DataSegmentChangeRequest cr : changeRequests) {
-      AtomicReference<SegmentChangeStatus> status = processRequest(cr);
+      AtomicReference<SegmentChangeStatus> status = processRequest(cr, segmentLoadingMode);
       if (status.get().getState() != SegmentChangeStatus.State.PENDING) {
         isAnyRequestDone = true;
       }
@@ -271,7 +303,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest)
+  /**
+   * Process a {@link DataSegmentChangeRequest}, invoking the request's
+   * {@link DataSegmentChangeRequest#go(DataSegmentChangeHandler, DataSegmentChangeCallback)}.
+   * The segmentLoadingMode parameter determines the thread pool to use.
+   */
+  private AtomicReference<SegmentChangeStatus> processRequest(
+      DataSegmentChangeRequest changeRequest,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     synchronized (requestStatusesLock) {
       AtomicReference<SegmentChangeStatus> status = requestStatuses.getIfPresent(changeRequest);
@@ -282,21 +322,29 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             new DataSegmentChangeHandler()
             {
               @Override
-              public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void addSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
-                exec.submit(
+                final SegmentChangeStatus pendingStatus = SegmentChangeStatus.pending(segmentLoadingMode);
+                requestStatuses.put(changeRequest, new AtomicReference<>(pendingStatus));
+                getLoadingExecutor(segmentLoadingMode).submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                        () -> resolveWaitingFutures()
+                        () -> resolveWaitingFutures(),
+                        segmentLoadingMode
                     )
                 );
               }
 
               @Override
-              public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void removeSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.pending()));
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
@@ -385,6 +433,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       return true;
     }
+  }
+
+  private ExecutorService getLoadingExecutor(SegmentLoadingMode loadingMode)
+  {
+    return loadingMode == SegmentLoadingMode.TURBO ? turboLoadExec : normalLoadExec;
+  }
+
+  public SegmentLoaderConfig getSegmentLoaderConfig()
+  {
+    return config;
   }
 }
 

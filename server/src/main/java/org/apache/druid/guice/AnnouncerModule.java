@@ -24,8 +24,13 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
+import org.apache.druid.curator.announcement.PathChildrenAnnouncer;
+import org.apache.druid.curator.announcement.ServiceAnnouncer;
+import org.apache.druid.guice.annotations.DirectExecutorAnnouncer;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.CuratorDataSegmentServerAnnouncer;
@@ -64,9 +69,28 @@ public class AnnouncerModule implements Module
   }
 
   @Provides
+  @SingleThreadedAnnouncer
   @ManageLifecycleAnnouncements
-  public Announcer getAnnouncer(CuratorFramework curator)
+  public ServiceAnnouncer getAnnouncerWithSingleThreadedExecutorService(CuratorFramework curator, CuratorConfig config)
   {
-    return new Announcer(curator, Execs.singleThreaded("Announcer-%s"));
+    boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
+    if (usingPathChildrenCacheAnnouncer) {
+      return new PathChildrenAnnouncer(curator, Execs.singleThreaded("Announcer-%s"));
+    } else {
+      return new NodeAnnouncer(curator, Execs.singleThreaded("Announcer-%s"));
+    }
+  }
+
+  @Provides
+  @DirectExecutorAnnouncer
+  @ManageLifecycleAnnouncements
+  public ServiceAnnouncer getAnnouncerWithDirectExecutorService(CuratorFramework curator, CuratorConfig config)
+  {
+    boolean usingPathChildrenCacheAnnouncer = config.getPathChildrenCacheStrategy();
+    if (usingPathChildrenCacheAnnouncer) {
+      return new PathChildrenAnnouncer(curator, Execs.directExecutor());
+    } else {
+      return new NodeAnnouncer(curator, Execs.directExecutor());
+    }
   }
 }

@@ -51,7 +51,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
   {
     final Sequence<Frame> frames = FrameSequenceBuilder.fromCursorFactory(new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex()))
                                                        .allocator(ArenaMemoryAllocator.createOnHeap(1000000))
-                                                       .frameType(FrameType.ROW_BASED)
+                                                       .frameType(FrameType.latestRowBased())
                                                        .frames();
 
     final File file = temporaryFolder.newFile();

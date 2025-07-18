@@ -39,6 +39,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
@@ -105,11 +106,13 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       new CalciteRulesManager(ImmutableSet.of()),
       CalciteTests.TEST_AUTHORIZER_MAPPER,
       AuthConfig.newBuilder().build(),
+      NoopPolicyEnforcer.instance(),
       new DruidHookDispatcher()
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
       "SELECT 1", // The actual query isn't important for this test
+      null, /* Don't need a SQL node */
       null, /* Don't need an engine */
       Collections.emptyMap(),
       null

@@ -1,0 +1,182 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A50
+#-------------------------------------------------------------------------
+SELECT repeat(string_agg(tab0s0, '|'), 2) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAAAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++------------------------------------------------------------------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A51
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A52
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A53
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+|           AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A54
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(tab0s0, '|'), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| CCCCCCCCCCAAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A55
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 11) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A56
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 11, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-------------+
+| col         |
++-------------+
+| AAAAAAAAAA| |
++-------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A57
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 75) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA           |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A58
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(tab0s0, '|'), 75, 'C') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----------------------------------------------------------------------------+
+| col                                                                         |
++-----------------------------------------------------------------------------+
+| AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAA|AAAAAAAAAACCCCCCCCCC |
++-----------------------------------------------------------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A59
+#-------------------------------------------------------------------------
+SELECT string_agg(t0.tab0s0, '|') AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A60
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A61
+#-------------------------------------------------------------------------
+SELECT string_agg(t0.tab0s0, '|') AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
+size
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test001 TEST_ID: A62
+#-------------------------------------------------------------------------
+SELECT length(string_agg(t0.tab0s0, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
+size
+!error
+

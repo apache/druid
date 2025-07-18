@@ -19,14 +19,32 @@
 
 package org.apache.druid.frame;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.frame.field.TransformUtils;
+import org.apache.druid.frame.write.RowBasedFrameWriter;
+import org.apache.druid.frame.write.columnar.ColumnarFrameWriter;
 
 import javax.annotation.Nullable;
 
 public enum FrameType
 {
-  COLUMNAR((byte) 0x11),
-  ROW_BASED((byte) 0x12);
+  /**
+   * Columnar frames, written by {@link ColumnarFrameWriter}.
+   */
+  COLUMNAR((byte) 0x11, false),
+
+  /**
+   * Row-based frames (version 1), written by {@link RowBasedFrameWriter}. Obsolete.
+   *
+   * Differs from {@link #ROW_BASED_V2} in how floating-point numbers are serialized. This one uses
+   * {@link TransformUtils#transformFromDoubleLegacy(double)} and
+   * {@link TransformUtils#transformFromFloatLegacy(float)}, which sort incorrectly.
+   */
+  ROW_BASED_V1((byte) 0x12, true),
+
+  /**
+   * Row-based frames (version 2), written by {@link RowBasedFrameWriter}.
+   */
+  ROW_BASED_V2((byte) 0x13, true);
 
   /**
    * Returns the frame type for a particular version byte, or null if the version byte is unrecognized.
@@ -43,11 +61,29 @@ public enum FrameType
     return null;
   }
 
-  private final byte versionByte;
-
-  FrameType(final byte magicByte)
+  /**
+   * Returns the latest row-based frame type.
+   */
+  public static FrameType latestRowBased()
   {
-    this.versionByte = magicByte;
+    return ROW_BASED_V2;
+  }
+
+  /**
+   * Returns the latest columnar frame type.
+   */
+  public static FrameType latestColumnar()
+  {
+    return COLUMNAR;
+  }
+
+  private final byte versionByte;
+  private final boolean rowBased;
+
+  FrameType(byte versionByte, boolean rowBased)
+  {
+    this.versionByte = versionByte;
+    this.rowBased = rowBased;
   }
 
   public byte version()
@@ -55,16 +91,19 @@ public enum FrameType
     return versionByte;
   }
 
-  public Frame ensureType(final Frame frame)
+  /**
+   * Whether this is a row-based type, written by {@link RowBasedFrameWriter}.
+   */
+  public boolean isRowBased()
   {
-    if (frame == null) {
-      throw new NullPointerException("Null frame");
-    }
+    return rowBased;
+  }
 
-    if (frame.type() != this) {
-      throw new ISE("Frame type must be [%s], but was [%s]", this, frame.type());
-    }
-
-    return frame;
+  /**
+   * Whether this is a columnar type, written by {@link ColumnarFrameWriter}.
+   */
+  public boolean isColumnar()
+  {
+    return !rowBased;
   }
 }

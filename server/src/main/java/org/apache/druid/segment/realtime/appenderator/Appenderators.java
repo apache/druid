@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -38,9 +39,15 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.logging.log4j.ThreadContext;
+
+import java.io.File;
 
 public class Appenderators
 {
+  private static final String THREAD_CONTEXT_TASK_LOG_FILE = "task.log.file";
+  private static final String THREAD_CONTEXT_TASK_ID = "task.log.id";
+
   public static Appenderator createRealtime(
       SegmentLoaderConfig segmentLoaderConfig,
       String id,
@@ -58,9 +65,9 @@ public class Appenderators
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -84,14 +91,14 @@ public class Appenderators
             queryProcessingPool,
             Preconditions.checkNotNull(cache, "cache"),
             cacheConfig,
-            cachePopulatorStats
+            cachePopulatorStats,
+            policyEnforcer
         ),
         indexIO,
         indexMerger,
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
@@ -107,7 +114,6 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -125,8 +131,27 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
+  }
+
+  /**
+   * Sets the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void setTaskThreadContextForIndexers(String taskId, File logFile)
+  {
+    ThreadContext.put(THREAD_CONTEXT_TASK_ID, taskId);
+    ThreadContext.put(THREAD_CONTEXT_TASK_LOG_FILE, logFile.getAbsolutePath());
+  }
+
+  /**
+   * Clears the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void clearTaskThreadContextForIndexers()
+  {
+    ThreadContext.remove(THREAD_CONTEXT_TASK_LOG_FILE);
+    ThreadContext.remove(THREAD_CONTEXT_TASK_ID);
   }
 }

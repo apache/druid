@@ -18,6 +18,8 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+BrowserOnly
+docusaurus
 1M
 100MiB
 32-bit
@@ -196,6 +198,7 @@ Murmur3
 MVCC
 MV_TO_ARRAY
 NFS
+NodeCache
 OCF
 OIDC
 OLAP
@@ -207,6 +210,7 @@ OutputStream
 ParAccel
 ParseSpec
 ParseSpecs
+PathChildrenCache
 Protobuf
 protobuf
 pull-deps
@@ -395,6 +399,7 @@ kerberos
 keystore
 keytool
 keytab
+kubeconfig
 kubernetes
 kubexit
 k8s
@@ -424,6 +429,7 @@ microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
+multipart
 multitenancy
 multitenant
 MVDs
@@ -682,6 +688,7 @@ druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
 error_msg
@@ -720,6 +727,7 @@ total_size
 useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
+useLexicographicTopN
 wikipedia
 your-table
 enableTimeBoundaryPlanning
@@ -2220,6 +2228,7 @@ maxStreamLength
 toString
 100TB
 compressedBigDecimal
+compressedBigDecimalSum
 limitSpec
 metricsSpec
 postAggregations
@@ -2410,6 +2419,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram

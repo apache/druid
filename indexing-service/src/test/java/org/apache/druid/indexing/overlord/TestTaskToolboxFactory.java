@@ -41,8 +41,10 @@ import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -65,6 +67,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.utils.RuntimeInfo;
 
 public class TestTaskToolboxFactory extends TaskToolboxFactory
 {
@@ -84,6 +87,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.taskExecutorNode,
         bob.taskActionClientFactory,
         bob.emitter,
+        bob.policyEnforcer,
         bob.segmentPusher,
         bob.dataSegmentKiller,
         bob.dataSegmentMover,
@@ -92,6 +96,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.serverAnnouncer,
         bob.handoffNotifierFactory,
         bob.queryRunnerFactoryConglomerateProvider,
+        bob.processingConfigProvider,
         bob.queryProcessingPool,
         bob.joinableFactory,
         bob.monitorSchedulerProvider,
@@ -118,7 +123,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.shuffleClient,
         bob.taskLogPusher,
         bob.attemptId,
-        bob.centralizedDatasourceSchemaConfig
+        bob.centralizedDatasourceSchemaConfig,
+        bob.runtimeInfo
     );
   }
 
@@ -128,6 +134,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DruidNode taskExecutorNode;
     private TaskActionClientFactory taskActionClientFactory = task -> null;
     private ServiceEmitter emitter;
+    private PolicyEnforcer policyEnforcer;
     private DataSegmentPusher segmentPusher;
     private DataSegmentKiller dataSegmentKiller;
     private DataSegmentMover dataSegmentMover;
@@ -136,6 +143,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private DataSegmentServerAnnouncer serverAnnouncer;
     private SegmentHandoffNotifierFactory handoffNotifierFactory;
     private Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
+    private Provider<DruidProcessingConfig> processingConfigProvider;
     private QueryProcessingPool queryProcessingPool;
     private JoinableFactory joinableFactory;
     private Provider<MonitorScheduler> monitorSchedulerProvider;
@@ -163,6 +171,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+    private RuntimeInfo runtimeInfo;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -185,6 +194,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setEmitter(ServiceEmitter emitter)
     {
       this.emitter = emitter;
+      return this;
+    }
+
+    public Builder setPolicyEnforcer(PolicyEnforcer policyEnforcer)
+    {
+      this.policyEnforcer = policyEnforcer;
       return this;
     }
 
@@ -233,6 +248,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setQueryRunnerFactoryConglomerateProvider(Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider)
     {
       this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
+      return this;
+    }
+
+    public Builder setProcessingConfigProvider(Provider<DruidProcessingConfig> processingConfigProvider)
+    {
+      this.processingConfigProvider = processingConfigProvider;
       return this;
     }
 
@@ -395,6 +416,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+      return this;
+    }
+
+    public Builder setRuntimeInfo(RuntimeInfo runtimeInfo)
+    {
+      this.runtimeInfo = runtimeInfo;
       return this;
     }
   }

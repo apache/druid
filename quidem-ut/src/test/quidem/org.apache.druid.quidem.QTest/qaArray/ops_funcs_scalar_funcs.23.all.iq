@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C19_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_mixed, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C20_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[6]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C21_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][6]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C22_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(a_nested, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C23_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B12_C24_D1
+#-------------------------------------------------------------------------
+SELECT regexp_extract(json_value(a_nested, '$[7][7]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_EXTRACT' to arguments of type 'REGEXP_EXTRACT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C1_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_bool, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C2_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[0]' RETURNING boolean array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C3_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][0]' RETURNING boolean array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C4_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_int, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C5_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[1]' RETURNING bigint array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C6_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][1]' RETURNING bigint array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C7_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_float, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C8_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[2]' RETURNING decimal array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C9_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][2]' RETURNING decimal array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C10_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_str, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C11_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[3]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C12_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][3]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C13_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_null, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C14_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[4]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C15_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][4]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C16_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_empty, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C17_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[5]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C18_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][5]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C19_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_mixed, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C20_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[6]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C21_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][6]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C22_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(a_nested, '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C23_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B13_C24_D1
+#-------------------------------------------------------------------------
+SELECT regexp_like(json_value(a_nested, '$[7][7]' RETURNING varchar array), '.*') AS col
+FROM test_array;
+Cannot apply 'REGEXP_LIKE' to arguments of type 'REGEXP_LIKE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C1_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_bool, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C2_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C3_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C4_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_int, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C5_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C6_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C7_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_float, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C8_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C9_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C10_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_str, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C11_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C12_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C13_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_null, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C14_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C15_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C16_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_empty, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C17_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C18_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C19_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(a_mixed, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B14_C20_D1
+#-------------------------------------------------------------------------
+SELECT contains_string(json_value(a_nested, '$[6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'CONTAINS_STRING' to arguments of type 'CONTAINS_STRING(
+!error
+

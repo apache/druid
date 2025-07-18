@@ -17,5 +17,6 @@
  */
 
 export * from './api';
+export * from './color-assigner';
 export * from './toaster';
 export * from './url-baser';

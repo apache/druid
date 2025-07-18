@@ -35,7 +35,6 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
@@ -50,9 +49,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -71,11 +72,11 @@ import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -92,6 +93,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleaner;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
+import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import org.apache.druid.indexing.overlord.http.OverlordCompactionResource;
@@ -108,12 +110,9 @@ import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManag
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -196,6 +195,7 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
+        standalone ? new MetadataManagerModule() : binder -> {},
         new Module()
         {
           @Override
@@ -210,16 +210,7 @@ public class CliOverlord extends ServerRunnable
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
 
-              JsonConfigProvider.bind(
-                  binder,
-                  CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX,
-                  CentralizedDatasourceSchemaConfig.class
-              );
-
               binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
-              binder.bind(SegmentsMetadataManager.class)
-                    .toProvider(SegmentsMetadataManagerProvider.class)
-                    .in(ManageLifecycle.class);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
@@ -248,16 +239,18 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(TaskLockbox.class).in(LazySingleton.class);
+            binder.bind(GlobalTaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
-            binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(LazySingleton.class);
+            binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(ManageLifecycle.class);
             binder.bind(ScheduledBatchTaskManager.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
+
+            CliPeon.bindDataSegmentKiller(binder);
 
             PolyBind.createChoice(
                 binder,
@@ -455,15 +448,16 @@ public class CliOverlord extends ServerRunnable
           private void configureOverlordHelpers(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.logs.kill", TaskLogAutoCleanerConfig.class);
-            Multibinder.newSetBinder(binder, OverlordDuty.class)
-                       .addBinding()
-                       .to(TaskLogAutoCleaner.class);
+            final Multibinder<OverlordDuty> dutyBinder = Multibinder.newSetBinder(binder, OverlordDuty.class);
+            dutyBinder.addBinding().to(TaskLogAutoCleaner.class);
+            dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
           }
         },
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
+        new HadoopIndexTaskModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),
         new SamplerModule()
@@ -522,16 +516,17 @@ public class CliOverlord extends ServerRunnable
       );
 
       // add some paths not to be redirected to leader.
-      root.addFilter(GuiceFilter.class, "/status/*", null);
-      root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
+      final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
+      root.addFilter(guiceFilterHolder, "/status/*", null);
+      root.addFilter(guiceFilterHolder, "/druid-internal/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
 
       // Can't use /* here because of Guice and Jetty static content conflicts
-      root.addFilter(GuiceFilter.class, "/druid/*", null);
+      root.addFilter(guiceFilterHolder, "/druid/*", null);
 
-      root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+      root.addFilter(guiceFilterHolder, "/druid-ext/*", null);
 
       RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
       JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);

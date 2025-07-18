@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types, as well as ARRAY of STRING, LONG, and DOUBLE values. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
+Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested primitive values&mdash;STRING, LONG, and DOUBLE types, as well as ARRAY of STRING, LONG, and DOUBLE values. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
 Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](math-expr.md#json-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
@@ -330,7 +330,7 @@ FROM (
 PARTITIONED BY ALL
 ```
 
-## Ingest a JSON string as COMPLEX<json\>
+## Ingest a JSON string as COMPLEX\<json\>
 
 If your source data contains serialized JSON strings, you can ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
@@ -485,11 +485,11 @@ Example query results:
 
 ### Extracting nested data elements
 
-The `JSON_VALUE` function is specially optimized to provide native Druid level performance when processing nested literal values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments.
+The `JSON_VALUE` function is specially optimized to provide native Druid level performance when processing nested primitive values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments.
 
 Some operations using `JSON_VALUE` run faster than those using native Druid columns. For example, filtering numeric types uses the indexes built for nested numeric columns, which are not available for Druid DOUBLE, FLOAT, or LONG columns.
 
-`JSON_VALUE` only returns literal types. Any paths that reference JSON objects or array types return null.
+`JSON_VALUE` only returns primitive types of `STRING`, `LONG`, `DOUBLE`, and if using `RETURNING` syntax `ARRAY<STRING>`, `ARRAY<LONG>` or `ARRAY<DOUBLE>`. Any paths that reference JSON objects or array types (if not specifying an array type in `RETURNING` clause) return null.
 
 :::info
  To achieve the best possible performance, use the `JSON_VALUE` function whenever you query JSON objects.
@@ -586,7 +586,7 @@ These functions are primarily intended for use with SQL-based ingestion to trans
 
 You can use the `JSON_QUERY` function to extract a partial structure from any JSON input and return results in a JSON object. Unlike `JSON_VALUE` it can extract objects and arrays.
 
-The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`. The two output columns for `JSON_VALUE` contain null values only because `JSON_VALUE` only returns literal types.
+The following example query illustrates the differences in output between `JSON_VALUE` and `JSON_QUERY`. The two output columns for `JSON_VALUE` contain null values only because `JSON_VALUE` only returns primitive types.
 
 ![Return results in a JSON object](../assets/nested-return-json.png)
 
@@ -680,7 +680,7 @@ Before you start using the nested columns feature, consider the following known 
 - Directly using `COMPLEX<json>` columns and expressions is not well integrated into the Druid query engine. It can result in errors or undefined behavior when grouping and filtering, and when you use `COMPLEX<json>` objects as inputs to aggregators. As a workaround, consider using `TO_JSON_STRING` to coerce the values to strings before you perform these operations.
 - Directly using array-typed outputs from `JSON_KEYS` and `JSON_PATHS` is moderately supported by the Druid query engine. You can group on these outputs, and there are a number of array expressions that can operate on these values, such as `ARRAY_CONCAT_AGG`. However, some operations are not well defined for use outside array-specific functions, such as filtering using `=` or `IS NULL`.
 - Input validation for JSON SQL operators is currently incomplete, which sometimes results in undefined behavior or unhelpful error messages.
-- Ingesting data with a very complex nested structure is potentially an expensive operation and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside an object as a flattened top-level Druid column.
+- Ingesting data with a very complex nested structure is potentially an expensive operation and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested primitive field inside an object as a flattened top-level Druid column.
 
 ## Further reading
 

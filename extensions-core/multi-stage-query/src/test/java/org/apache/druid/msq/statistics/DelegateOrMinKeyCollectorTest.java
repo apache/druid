@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -153,6 +154,7 @@ public class DelegateOrMinKeyCollectorTest
   {
     return KeyTestUtils.createKey(
         KeyTestUtils.createKeySignature(clusterBy.getColumns(), signature),
+        FrameType.latestRowBased(),
         objects
     );
   }

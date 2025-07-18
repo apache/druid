@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.druid.catalog.MetadataCatalog;
+import org.apache.druid.catalog.NullMetadataCatalog;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -44,6 +46,12 @@ public interface CatalogResolver
     }
 
     @Override
+    public MetadataCatalog getMetadataCatalog()
+    {
+      return NullMetadataCatalog.INSTANCE;
+    }
+
+    @Override
     public DruidTable resolveDatasource(
         final String tableName,
         final DatasourceTable.PhysicalDatasourceMetadata dsMetadata
@@ -65,6 +73,12 @@ public interface CatalogResolver
    */
   boolean ingestRequiresExistingTable();
 
+  MetadataCatalog getMetadataCatalog();
+
+  /**
+   * Create a {@link DruidTable} for a given table name and {@link DatasourceTable.PhysicalDatasourceMetadata},
+   * potentially blending data from both existing segments and metadata stored in {@link #getMetadataCatalog()}
+   */
   DruidTable resolveDatasource(
       String tableName,
       DatasourceTable.PhysicalDatasourceMetadata dsMetadata

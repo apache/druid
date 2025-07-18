@@ -20,9 +20,14 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -30,6 +35,8 @@ import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class KubernetesTaskRunnerFactoryTest
 {
@@ -39,7 +46,7 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
-  @Mock private TaskAdapter taskAdapter;
+  private TaskAdapter taskAdapter;
 
   @Before
   public void setup()
@@ -49,7 +56,9 @@ public class KubernetesTaskRunnerFactoryTest
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();
-    druidKubernetesClient = new DruidKubernetesClient();
+    druidKubernetesClient =
+        new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
+    taskAdapter = new TestTaskAdapter();
   }
 
   @Test
@@ -69,5 +78,38 @@ public class KubernetesTaskRunnerFactoryTest
     KubernetesTaskRunner actualRunner = factory.get();
 
     Assert.assertEquals(expectedRunner, actualRunner);
+  }
+
+  static class TestTaskAdapter implements TaskAdapter
+  {
+    @Override
+    public String getAdapterType()
+    {
+      return "";
+    }
+
+    @Override
+    public Job fromTask(Task task) throws IOException
+    {
+      return null;
+    }
+
+    @Override
+    public Task toTask(Job from) throws IOException
+    {
+      return null;
+    }
+
+    @Override
+    public K8sTaskId getTaskId(Job from)
+    {
+      return null;
+    }
+
+    @Override
+    public boolean shouldUseDeepStorageForTaskPayload(Task task) throws IOException
+    {
+      return false;
+    }
   }
 }

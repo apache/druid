@@ -27,10 +27,12 @@ import com.google.common.io.Files;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -61,6 +63,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -115,6 +118,23 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   private static final String DATA_SOURCE = "test";
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2014-01-01/2014-01-02");
 
+  private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
+      "projection1",
+      VirtualColumns.create(
+          Granularities.toVirtualColumn(
+              Granularities.HOUR,
+              Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+          )
+      ),
+      ImmutableList.of(
+          new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+          new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+      ),
+      new AggregatorFactory[]{
+          new LongSumAggregatorFactory("val", "val")
+      }
+  );
+
   private final LockGranularity lockGranularity;
 
   // Whether the currently-running test case is allowed to fetch segments in the primary logic of the CompactionTask.
@@ -151,7 +171,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   }
 
   @Test
-  public void testRunParallelWithDynamicPartitioningMatchCompactionState() throws Exception
+  public void testRunParallelWithDynamicPartitioningMatchCompactionState()
   {
     allowSegmentFetchesByCompactionTask = true;
     runIndexTask(null, true);
@@ -192,7 +212,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -239,7 +260,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -301,7 +323,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -355,7 +378,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
               // Umbrella interval for all segments, since CompactionTasks generated a single granularitySpec.
               ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03:00:00"))
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -405,7 +429,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -452,7 +477,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -502,7 +528,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -582,7 +609,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -636,7 +664,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.MINUTE,
               true,
               ImmutableList.of(segment.getInterval())
-          )
+          ),
+          null
       );
       Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
     }
@@ -867,6 +896,120 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     Assert.assertEquals(3, minuteSegmentCount);
   }
 
+
+
+  @Test
+  public void testRunParallelWithProjections()
+  {
+    allowSegmentFetchesByCompactionTask = true;
+    runIndexTaskWithProjections(null, true);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        getSegmentCacheManagerFactory()
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .build();
+
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTask(compactionTask);
+    verifySchema(dataSegmentsWithSchemas);
+    final Set<DataSegment> compactedSegments = dataSegmentsWithSchemas.getSegments();
+
+    for (DataSegment segment : compactedSegments) {
+      Assert.assertSame(
+          lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
+          segment.getShardSpec().getClass()
+      );
+      // Expect compaction state to exist as store compaction state by default
+      CompactionState expectedState = new CompactionState(
+          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new LongDimensionSchema("val")
+              )
+          ),
+          Collections.emptyList(),
+          null,
+          compactionTask.getTuningConfig().getIndexSpec(),
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
+          ),
+          ImmutableList.of(PROJECTION_SPEC)
+      );
+      Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
+    }
+  }
+
+  @Test
+  public void testRunParallelAddProjections()
+  {
+    allowSegmentFetchesByCompactionTask = true;
+    runIndexTaskWithProjections(null, true);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        getSegmentCacheManagerFactory()
+    );
+    final AggregateProjectionSpec addProjection = new AggregateProjectionSpec(
+        "projection2",
+        VirtualColumns.EMPTY,
+        null,
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("val", "val")
+        }
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .projections(
+            ImmutableList.of(
+                PROJECTION_SPEC,
+                addProjection
+            )
+        )
+        .build();
+
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTask(compactionTask);
+    verifySchema(dataSegmentsWithSchemas);
+    final Set<DataSegment> compactedSegments = dataSegmentsWithSchemas.getSegments();
+
+    for (DataSegment segment : compactedSegments) {
+      Assert.assertSame(
+          lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
+          segment.getShardSpec().getClass()
+      );
+      // Expect compaction state to exist as store compaction state by default
+      CompactionState expectedState = new CompactionState(
+          new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new LongDimensionSchema("val")
+              )
+          ),
+          Collections.emptyList(),
+          null,
+          compactionTask.getTuningConfig().getIndexSpec(),
+          new UniformGranularitySpec(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              true,
+              ImmutableList.of(segment.getInterval())
+          ),
+          ImmutableList.of(PROJECTION_SPEC, addProjection)
+      );
+      Assert.assertEquals("Compaction state for " + segment.getId(), expectedState, segment.getLastCompactionState());
+    }
+  }
+
   @Override
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
@@ -906,6 +1049,73 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                       .withTimestamp(new TimestampSpec("ts", "auto", null))
                       .withDimensions(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")))
                       .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.HOUR,
+                              Granularities.MINUTE,
+                              ImmutableList.of(INTERVAL_TO_INDEX)
+                          )
+                      )
+                      .build(),
+            ioConfig,
+            tuningConfig
+        ),
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(
+                new Resource(
+                    LocalInputSource.TYPE_KEY,
+                    ResourceType.EXTERNAL
+                ), Action.READ
+            )),
+        indexTask.getInputSourceResources()
+    );
+
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = runTask(indexTask);
+    verifySchema(dataSegmentsWithSchemas);
+  }
+
+  private void runIndexTaskWithProjections(@Nullable PartitionsSpec partitionsSpec, boolean appendToExisting)
+  {
+    ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+        new LocalInputSource(inputDir, "druid*"),
+        new CsvInputFormat(
+            Arrays.asList("ts", "dim", "val"),
+            "|",
+            null,
+            false,
+            0,
+            null
+        ),
+        appendToExisting,
+        null
+    );
+    ParallelIndexTuningConfig tuningConfig = newTuningConfig(partitionsSpec, 2, !appendToExisting);
+    ParallelIndexSupervisorTask indexTask = new ParallelIndexSupervisorTask(
+        null,
+        null,
+        null,
+        new ParallelIndexIngestionSpec(
+            DataSchema.builder()
+                      .withDataSource(DATA_SOURCE)
+                      .withTimestamp(new TimestampSpec("ts", "auto", null))
+                      .withDimensions(
+                          DimensionsSpec.builder()
+                                        .setDimensions(
+                                            ImmutableList.of(
+                                                new StringDimensionSchema("ts"),
+                                                new StringDimensionSchema("dim"),
+                                                new LongDimensionSchema("val")
+                                            )
+                                        )
+                                        .build()
+                      )
+                      .withProjections(
+                          ImmutableList.of(PROJECTION_SPEC)
+                      )
                       .withGranularity(
                           new UniformGranularitySpec(
                               Granularities.HOUR,

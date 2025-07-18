@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -62,6 +63,7 @@ import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -100,6 +102,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -324,7 +327,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "foo3",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -390,8 +396,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testRefreshOnEachCycleCentralizedDatasourceSchemaEnabled() throws InterruptedException
   {
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.enabled(true);
 
     serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
     druidServers = serverView.getDruidServers();
@@ -892,19 +897,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    final DataSegment someNewBrokerSegment = DataSegment.builder(SegmentId.of(
+                                                            "foo",
+                                                            Intervals.of("2012/2013"),
+                                                            "version1",
+                                                            null
+                                                        ))
+                                                        .shardSpec(new NumberedShardSpec(2, 3))
+                                                        .dimensions(ImmutableList.of("dim1", "dim2"))
+                                                        .metrics(ImmutableList.of("met1", "met2"))
+                                                        .projections(ImmutableList.of("proj1", "proj2"))
+                                                        .binaryVersion(1)
+                                                        .size(100L)
+                                                        .build();
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
@@ -959,19 +964,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
-    final DataSegment someNewBrokerSegment = new DataSegment(
-        "foo",
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    final DataSegment someNewBrokerSegment = DataSegment.builder(SegmentId.of(
+                                                            "foo",
+                                                            Intervals.of("2012/2013"),
+                                                            "version1",
+                                                            null
+                                                        ))
+                                                        .shardSpec(new NumberedShardSpec(2, 3))
+                                                        .dimensions(ImmutableList.of("dim1", "dim2"))
+                                                        .metrics(ImmutableList.of("met1", "met2"))
+                                                        .projections(ImmutableList.of("proj1", "proj2"))
+                                                        .binaryVersion(1)
+                                                        .size(100L)
+                                                        .build();
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
@@ -1072,7 +1077,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "test",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1138,8 +1146,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 
-    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
-    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted(Metric.REFRESH_DURATION_MILLIS, Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted(Metric.REFRESHED_SEGMENTS, Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
 
   // This test is present to achieve coverage for BrokerSegmentMetadataCache#initServerViewTimelineCallback
@@ -1255,7 +1263,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_NO_RESTRICTION
+                AuthorizationResult.allowWithRestriction(ImmutableMap.of(
+                    "test",
+                    Optional.of(NoRestrictionPolicy.instance())
+                ))
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 

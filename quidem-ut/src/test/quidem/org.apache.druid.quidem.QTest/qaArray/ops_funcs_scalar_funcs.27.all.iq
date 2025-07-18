@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C3_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C4_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C5_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C6_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C7_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C8_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C9_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C10_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C11_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C12_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C13_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C14_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C15_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C16_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C17_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C18_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C19_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C20_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C21_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C22_D1
+#-------------------------------------------------------------------------
+SELECT substr(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C23_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B21_C24_D1
+#-------------------------------------------------------------------------
+SELECT substr(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTR' to arguments of type 'SUBSTR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C1_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_bool) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C2_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C3_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C4_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_int) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C5_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C6_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C7_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_float) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C8_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C9_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C10_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_str) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C11_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C12_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C13_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_null) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C14_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C15_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C16_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_empty) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C17_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C18_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C19_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_mixed) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C20_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C21_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C22_D1
+#-------------------------------------------------------------------------
+SELECT trim(a_nested) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C23_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B22_C24_D1
+#-------------------------------------------------------------------------
+SELECT trim(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TRIM' to arguments of type 'TRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C1_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_bool) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C2_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C3_D1
+#-------------------------------------------------------------------------
+SELECT btrim(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B23_C4_D1
+#-------------------------------------------------------------------------
+SELECT btrim(a_int) AS col
+FROM test_array;
+Cannot apply 'BTRIM' to arguments of type 'BTRIM(
+!error
+

@@ -31,7 +31,6 @@ import java.util.List;
 public class PreparedStatement extends AbstractStatement
 {
   private final SqlQueryPlus originalRequest;
-  private PrepareResult prepareResult;
 
   public PreparedStatement(
       final SqlToolbox lifecycleToolbox,
@@ -65,19 +64,12 @@ public class PreparedStatement extends AbstractStatement
    */
   public PrepareResult prepare()
   {
-    try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
-            sqlToolbox.engine,
-            queryPlus.sql(),
-            queryContext,
-            hook
-        )
-    ) {
+    try (DruidPlanner planner = getPlanner()) {
       validate(planner);
       authorize(planner, authorizer());
 
       // Do the prepare step.
-      this.prepareResult = planner.prepare();
-      return prepareResult;
+      return planner.prepare();
     }
     catch (RuntimeException e) {
       reporter.failed(e);
@@ -98,7 +90,18 @@ public class PreparedStatement extends AbstractStatement
   {
     return new DirectStatement(
         sqlToolbox,
-        originalRequest.withParameters(parameters)
-        );
+        originalRequest.freshCopy().withParameters(parameters)
+    );
+  }
+
+  protected DruidPlanner getPlanner()
+  {
+    return sqlToolbox.plannerFactory.createPlanner(
+        sqlToolbox.engine,
+        queryPlus.sql(),
+        queryPlus.freshCopy().sqlNode(),
+        queryContext,
+        hook
+    );
   }
 }

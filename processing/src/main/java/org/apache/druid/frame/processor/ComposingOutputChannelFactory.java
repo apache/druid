@@ -83,6 +83,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
     // it is useful to identify the readable channels to open in the composition while reading the partition data.
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
+        partitionNumber,
         outputChannelSupplierBuilder.build(),
         null,
         writableFrameChannelSuppliersBuilder.build(),
@@ -131,6 +132,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
 
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
+        null,
         null,
         partitionedOutputChannelSupplierBuilder.build(),
         writableFrameChannelsBuilder.build(),
@@ -191,5 +193,26 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
       outputChannelFactory.openNilChannel(partitionNumber);
     }
     return OutputChannel.nil(partitionNumber);
+  }
+
+  @Override
+  public boolean isBuffered()
+  {
+    for (final OutputChannelFactory channelFactory : channelFactories) {
+      if (channelFactory.isBuffered()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ComposingOutputChannelFactory{" +
+           "channelFactories=" + channelFactories +
+           ", frameSize=" + frameSize +
+           '}';
   }
 }

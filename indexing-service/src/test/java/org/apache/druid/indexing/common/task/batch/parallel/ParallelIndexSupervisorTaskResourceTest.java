@@ -48,7 +48,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
@@ -386,6 +385,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   private static HttpServletRequest newRequest()
   {
     final HttpServletRequest request = EasyMock.niceMock(HttpServletRequest.class);
+    EasyMock.expect(request.getMethod()).andReturn("GET").anyTimes();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(new AuthenticationResult("test", "test", "test", Collections.emptyMap()));
@@ -494,11 +494,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     {
       super(
           toolbox,
-          supervisorTask.getId(),
-          supervisorTask.getGroupId(),
-          supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext(),
-          CentralizedDatasourceSchemaConfig.create(true)
+          supervisorTask
       );
       this.supervisorTask = supervisorTask;
     }

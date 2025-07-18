@@ -126,23 +126,6 @@ public class WorkerChatHandlerTest
 
     }
 
-    @Override
-    public void stop()
-    {
-
-    }
-
-    @Override
-    public void controllerFailed()
-    {
-
-    }
-
-    @Override
-    public void awaitStop()
-    {
-
-    }
 
     @Override
     public void postWorkOrder(WorkOrder workOrder)

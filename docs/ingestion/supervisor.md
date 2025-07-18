@@ -37,11 +37,13 @@ The following table outlines the high-level configuration options for a supervis
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
+|`id`|String|The supervisor id. This should be a unique ID that will identify the supervisor. If unspecified, defaults to `spec.dataSchema.dataSource`.|No|
 |`type`|String|The supervisor type. For streaming ingestion, this can be either `kafka`, `kinesis`, or `rabbit`. For automatic compaction, set the type to `autocompact`. |Yes|
 |`spec`|Object|The container object for the supervisor configuration. For automatic compaction, this is the same as the compaction configuration. |Yes|
 |`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
 |`spec.ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
 |`spec.tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
+|`context`|Object|Allows for extra configuration of both the supervisor and the tasks it spawns.|No|
 |`suspended`|Boolean|Puts the supervisor in a suspended state|No|
 
 ### I/O configuration
@@ -62,6 +64,7 @@ For configuration properties specific to Kafka and Kinesis, see [Kafka I/O confi
 |`lateMessageRejectionStartDateTime`|ISO 8601 date time|Configures tasks to reject messages with timestamps earlier than this date time. For example, if this property is set to `2016-01-01T11:00Z` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This can prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a realtime and a nightly batch ingestion pipeline.|No||
 |`lateMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps earlier than this period before the task was created. For example, if this property is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a streaming and a nightly batch ingestion pipeline. You can specify only one of the late message rejection properties.|No||
 |`earlyMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps later than this period after the task reached its task duration. For example, if this property is set to `PT1H`, the task duration is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps later than `2016-01-01T14:00Z`. Tasks sometimes run past their task duration, such as in cases of supervisor failover.|No||
+|`stopTaskCount`|Integer|Limits the number of ingestion tasks Druid can cycle at any given time. If not set, Druid can cycle all tasks at the same time. If set to a value less than `taskCount`, your cluster needs fewer available slots to run the supervisor. You can save costs by scaling down your ingestion tier, but this can lead to slower cycle times and lag. See [`stopTaskCount`](#stoptaskcount) for more information.|No|`taskCount` value|
 
 #### Task autoscaler
 
@@ -74,6 +77,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`enableTaskAutoScaler`|Enables the autoscaler. If not specified, Druid disables the autoscaler even when `autoScalerConfig` is not null.|No|`false`|
 |`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid sets the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|The minimum number of ingestion tasks. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and starts with the `taskCountMin` number of tasks to launch.|Yes||
+|`taskCountStart`|Optional config to specify the number of ingestion tasks to start with. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and, if specified, starts with the `taskCountStart` number of tasks. Otherwise, defaults to `taskCountMin`.|No|`taskCountMin`|
 |`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 
@@ -181,6 +185,14 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 }
 ```
 </details>
+
+#### `stopTaskCount`
+
+Before you set `stopTaskCount`, note the following: 
+
+- Some operations require all tasks to cycle at the same time, for example changes to the supervisor spec and change to the number of Kafka partitions. These operations can cause lag without sufficient task slot capacity.
+- The [task autoscaler](#task-autoscaler) ignores `stopTaskCount` when shutting down tasks in response to a task count change. The task autoscaler needs to redistribute partitions across tasks, which requires all tasks to be shut down.
+- If you set `stopTaskCount` to a value less than `taskCount`, Druid cycles the longest running tasks first, then other tasks up to the value set.
 
 ### Tuning configuration
 
@@ -409,6 +421,10 @@ workerCapacity = 2 * replicas * taskCount
 This value is for the ideal situation in which there is at most one set of tasks publishing while another set is reading.
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
+
+## Multi-Supervisor Support (Experimental)
+Druid supports multiple stream supervisors ingesting into the same datasource. This means you can have any number of stream supervisors (Kafka, Kinesis, etc.) ingesting into the same datasource at the same time.
+In order to ensure proper synchronization between ingestion tasks with multiple supervisors, it's important to set `useConcurrentLocks=true` in the `context` field of the supervisor spec. Read more [here](concurrent-append-replace.md).
 
 ## Learn more
 

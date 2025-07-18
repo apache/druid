@@ -1,0 +1,753 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/infmt_json_inline
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D50
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D51
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D52
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D53
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D54
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D55
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D56
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D57
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D58
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D59
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D60
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_obj.b_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D61
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D62
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D63
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D64
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_obj.a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D65
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D66
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D67
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D68
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D69
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c2, '$.b_array[1].b_array[1].b_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D70
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D71
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D72
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: D73
+#-------------------------------------------------------------------------
+SELECT json_query(c2, '$.b_array[1].b_array[1].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F01
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F02
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F03
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F04
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F05
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F06
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F07
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F08
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F09
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F10
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F11
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F12
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_num_int') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F13
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_num_float') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F14
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_bool') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F15
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F16
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_obj') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F17
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_array') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F18
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_obj_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F19
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_array[0].a_empty_array_nested') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F20
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F21
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_str1, '$.') = 'A';
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F22
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_int1, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F23
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_float1, '$.') = 0.1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F24
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_bool1, '$.') = 1;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F25
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_null1, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_infmt_json_inline TEST_ID: F26
+#-------------------------------------------------------------------------
+SELECT json_query(t_empty_obj, '$.') c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
++---+
+(2 rows)
+
+!ok
+

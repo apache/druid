@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
@@ -53,6 +54,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -86,22 +89,29 @@ public class MSQTaskSqlEngine implements SqlEngine
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
-  private static final String NAME = "msq-task";
+  public static final String NAME = "msq-task";
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
+  private final QueryKitSpecFactory queryKitSpecFactory;
+  private final SqlToolbox sqlToolbox;
+
   @Inject
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
-      final MSQTerminalStageSpecFactory terminalStageSpecFactory
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory,
+      final MSQTaskQueryKitSpecFactory queryKitSpecFactory,
+      final SqlToolbox sqlToolbox
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
     this.terminalStageSpecFactory = terminalStageSpecFactory;
+    this.queryKitSpecFactory = queryKitSpecFactory;
+    this.sqlToolbox = sqlToolbox;
   }
 
   @Override
@@ -179,7 +189,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory
+        terminalStageSpecFactory,
+        queryKitSpecFactory
     );
   }
 
@@ -213,8 +224,15 @@ public class MSQTaskSqlEngine implements SqlEngine
         plannerContext,
         jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory
+        terminalStageSpecFactory,
+        queryKitSpecFactory
     );
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    return new SqlStatementFactory(sqlToolbox.withEngine(this));
   }
 
   /**

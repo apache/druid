@@ -28,7 +28,8 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
+import type { JsonCompletionRule } from '../../utils';
+import { deepDelete, deepGet, deepSet, durationSanitizer, EXPERIMENTAL_ICON } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
 import { FancyNumericInput } from '../fancy-numeric-input/fancy-numeric-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
@@ -65,6 +66,7 @@ export interface Field<M> {
   max?: number;
   zeroMeansUndefined?: boolean;
   height?: string;
+  experimental?: Functor<M, boolean>;
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean | undefined>;
   required?: Functor<M, boolean>;
@@ -74,6 +76,7 @@ export interface Field<M> {
   valueAdjustment?: (value: any) => any;
   adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
+  jsonCompletions?: JsonCompletionRule[];
 
   customSummary?: (v: any) => string;
   customDialog?: (o: {
@@ -408,6 +411,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         height={field.height}
         issueWithValue={field.issueWithValue}
+        jsonCompletions={field.jsonCompletions}
       />
     );
   }
@@ -509,10 +513,20 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     if (!model) return;
 
     const label = field.label || AutoForm.makeLabelName(field.name);
+    const experimental = AutoForm.evaluateFunctor(field.experimental, model, false);
     return (
       <FormGroupWithInfo
         key={field.name}
-        label={label}
+        label={
+          experimental ? (
+            <>
+              {`${label} `}
+              {EXPERIMENTAL_ICON}
+            </>
+          ) : (
+            label
+          )
+        }
         info={field.info ? <PopoverText>{field.info}</PopoverText> : undefined}
       >
         {this.renderFieldInput(field)}

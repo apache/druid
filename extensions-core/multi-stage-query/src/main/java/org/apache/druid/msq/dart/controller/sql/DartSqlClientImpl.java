@@ -24,10 +24,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.msq.dart.controller.http.GetQueriesResponse;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.http.client.utils.URIBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import java.net.URISyntaxException;
 
 /**
  * Production implementation of {@link DartSqlClient}.
@@ -46,12 +49,22 @@ public class DartSqlClientImpl implements DartSqlClient
   @Override
   public ListenableFuture<GetQueriesResponse> getRunningQueries(final boolean selfOnly)
   {
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, selfOnly ? "/?selfOnly" : "/"),
-            new BytesFullResponseHandler()
-        ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)
-    );
+    try {
+      URIBuilder builder = new URIBuilder("/queries");
+      if (selfOnly) {
+        builder.addParameter("selfOnly", null);
+      }
+
+      return FutureUtils.transform(
+          client.asyncRequest(
+              new RequestBuilder(HttpMethod.GET, builder.toString()),
+              new BytesFullResponseHandler()
+          ),
+          holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), GetQueriesResponse.class)
+      );
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

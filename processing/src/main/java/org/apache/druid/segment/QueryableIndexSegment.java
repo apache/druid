@@ -64,18 +64,6 @@ public class QueryableIndexSegment implements Segment
   }
 
   @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return index;
-  }
-
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return cursorFactory;
-  }
-
-  @Override
   public void close()
   {
     // this is kinda nasty because it actually unmaps the files and stuff too
@@ -95,7 +83,11 @@ public class QueryableIndexSegment implements Segment
       }
     }
 
-    if (TimeBoundaryInspector.class.equals(clazz)) {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) cursorFactory;
+    } else if (QueryableIndex.class.equals(clazz)) {
+      return (T) index;
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) timeBoundaryInspector;
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
@@ -105,7 +97,13 @@ public class QueryableIndexSegment implements Segment
       return (T) new SimpleTopNOptimizationInspector(true);
     }
 
-    return Segment.super.as(clazz);
+    return null;
+  }
+
+  @Override
+  public String getDebugString()
+  {
+    return getClass().getSimpleName() + ":" + segmentId;
   }
 
   @SemanticCreator

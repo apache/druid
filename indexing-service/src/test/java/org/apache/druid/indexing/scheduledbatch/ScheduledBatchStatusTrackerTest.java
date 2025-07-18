@@ -23,10 +23,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -204,7 +207,16 @@ public class ScheduledBatchStatusTrackerTest
     final BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report1);
 
-    verifyTaskStatus(report1.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "Task failed")));
+    // supervisor1 got task1 and task2 at the same time, the order should not matter, hence sort the tasks to make sure the result matches.
+    List<TaskStatus> sortedActualStatues = report1.getRecentTasks()
+                                                  .stream()
+                                                  .map(BatchSupervisorTaskStatus::getTaskStatus)
+                                                  .sorted(Comparator.comparing(TaskStatus::getId))
+                                                  .collect(Collectors.toList());
+    Assert.assertEquals(
+        sortedActualStatues,
+        ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "Task failed"))
+    );
 
     // Verify that tasks were correctly tracked for supervisor 2
     final BatchSupervisorTaskReport report2 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_2);

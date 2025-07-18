@@ -19,18 +19,20 @@
 
 # Druid doc builder
 
-This website was created with [Docusaurus](https://docusaurus.io/).
+This website was created with [Docusaurus 3](https://docusaurus.io/).
 
 To view documentation run:
 
-`npm install`
+`yarn install`
 
 Then run:
 
-`npm start`
+`yarn start`
 
 The current version of the web site appears in your browser. Edit pages with
-your favorite editor. Refresh the web page after each edit to review your changes.
+your favorite editor. The page should automatically refresh. If you need to clear the build cache for some reason, use `yarn clear`.
+
+NPM is also supported, but Docusaurus recommends `yarn`.
 
 ## Dependencies
 
@@ -49,17 +51,17 @@ as part of the the above `npm` commands.
 ## Variables
 
 Documentation pages can refer to a number of special variables using the
-`{{var}}` syntax:
+`\{\{var}}` syntax:
 
-* `DRUIDVERSION` - the version of Druid in which the page appears. Allows
+* `\{\{DRUIDVERSION}}` - the version of Druid in which the page appears. Allows
 creating links to files of the same version on GitHub.
 
 The variables are not replaced when running the web site locally using the
 `start` command above. They're replaced as part of the process that copies the docs to `apache/druid-website-src/`.
 
-## Spellcheck
+## Tests
 
-Please run a spellcheck before issuing a pull request to avoid a build failure
+Please run a spellcheck and link check before issuing a pull request to avoid a build failure
 due to spelling issues. Run:
 
 ```bash

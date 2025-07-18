@@ -76,11 +76,13 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -131,18 +133,18 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
   }
 
   @Test
-  public void testManageInternalReleaseLockWhenTaskIsNotReady() throws Exception
+  public void testManageQueuedTasksReleaseLockWhenTaskIsNotReady() throws Exception
   {
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
     // to task2.
@@ -153,14 +155,14 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
     taskQueue.add(task2);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
     // task3 can run because task2 is still blocked by task1.
     final TestTask task3 = new TestTask("t3", Intervals.of("2021-02-01/P1M"));
     taskQueue.add(task3);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(task3.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
@@ -170,8 +172,19 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.shutdown(task3.getId(), "Emulating shutdown of task3");
 
     // Now task2 should run.
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
+
+    // Sleep to allow all metrics to be emitted
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+    verifySuccessfulTaskCount(taskQueue, 2);
+    verifyFailedTaskCount(taskQueue, 0);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -232,14 +245,14 @@ public class TaskQueueTest extends IngestionTestBase
           }
         },
         getTaskStorage(),
-        new SimpleTaskRunner(),
+        new SimpleTaskRunner(serviceEmitter),
         actionClientFactory,
         getLockbox(),
         serviceEmitter,
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    maxPayloadTaskQueue.setActive();
+    maxPayloadTaskQueue.setActive(true);
 
     // 1 MB is not too large
     char[] context = new char[1024 * 1024];
@@ -377,7 +390,7 @@ public class TaskQueueTest extends IngestionTestBase
       }
     };
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     Optional<TaskStatus> statusOptional = getTaskStorage().getStatus(task.getId());
     Assert.assertTrue(statusOptional.isPresent());
@@ -386,6 +399,14 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -415,10 +436,10 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
 
     // Announce the task and wait for it to start running
     final String taskId = task.getId();
@@ -434,17 +455,20 @@ public class TaskQueueTest extends IngestionTestBase
     // Kill the task, send announcement and wait for TaskQueue to handle update
     taskQueue.shutdown(taskId, "shutdown");
     taskRunner.taskAddedOrUpdated(
-        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
+        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown on runner"), taskLocation),
         workerHolder
     );
-    taskQueue.manageInternal();
+    taskQueue.manageQueuedTasks();
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
-    serviceEmitter.verifyEmitted("task/run/time", 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
-    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -503,7 +527,7 @@ public class TaskQueueTest extends IngestionTestBase
         getObjectMapper(),
         new NoopTaskContextEnricher()
     );
-    taskQueue.setActive();
+    taskQueue.setActive(true);
 
     Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
     Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
@@ -543,7 +567,7 @@ public class TaskQueueTest extends IngestionTestBase
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
         createActionClientFactory(),
-        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
         new StubServiceEmitter("druid/overlord", "testHost"),
         mapper,
         new NoopTaskContextEnricher()
@@ -619,6 +643,22 @@ public class TaskQueueTest extends IngestionTestBase
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
+    );
+  }
+
+  private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
+  {
+    Assert.assertEquals(
+        successCount,
+        taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static void verifyFailedTaskCount(final TaskQueue taskQueue, int failureCount)
+  {
+    Assert.assertEquals(
+        failureCount,
+        taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
   }
 
@@ -701,14 +741,14 @@ public class TaskQueueTest extends IngestionTestBase
     }
   }
 
-  private class SimpleTaskRunner extends SingleTaskBackgroundRunner
+  static class SimpleTaskRunner extends SingleTaskBackgroundRunner
   {
-    SimpleTaskRunner()
+    SimpleTaskRunner(ServiceEmitter emitter)
     {
       super(
           EasyMock.createMock(TaskToolboxFactory.class),
           null,
-          serviceEmitter,
+          emitter,
           new DruidNode("overlord", "localhost", false, 8091, null, true, false),
           null
       );

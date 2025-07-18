@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
@@ -209,17 +209,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public ReferenceCountingSegment getSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  public ReferenceCountedSegmentProvider getSegment(final DataSegment dataSegment) throws SegmentLoadingException
   {
     final File segmentFiles = getSegmentFiles(dataSegment);
     final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
 
     final Segment segment = factory.factorize(dataSegment, segmentFiles, false, SegmentLazyLoadFailCallback.NOOP);
-    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
+    return ReferenceCountedSegmentProvider.wrapSegment(segment, dataSegment.getShardSpec());
   }
 
   @Override
-  public ReferenceCountingSegment getBootstrapSegment(
+  public ReferenceCountedSegmentProvider getBootstrapSegment(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException
@@ -228,7 +228,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final SegmentizerFactory factory = getSegmentFactory(segmentFiles);
 
     final Segment segment = factory.factorize(dataSegment, segmentFiles, config.isLazyLoadOnStart(), loadFailed);
-    return ReferenceCountingSegment.wrapSegment(segment, dataSegment.getShardSpec());
+    return ReferenceCountedSegmentProvider.wrapSegment(segment, dataSegment.getShardSpec());
   }
 
   private SegmentizerFactory getSegmentFactory(final File segmentFiles) throws SegmentLoadingException

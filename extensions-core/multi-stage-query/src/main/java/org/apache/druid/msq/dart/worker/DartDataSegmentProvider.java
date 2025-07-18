@@ -29,13 +29,13 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
-import java.io.Closeable;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -64,14 +64,14 @@ public class DartDataSegmentProvider implements DataSegmentProvider
     }
 
     return () -> {
-      final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> timeline =
+      final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timeline =
           segmentManager.getTimeline(new TableDataSource(segmentId.getDataSource()));
 
       if (!timeline.isPresent()) {
         throw segmentNotFound(segmentId);
       }
 
-      final PartitionChunk<ReferenceCountingSegment> chunk =
+      final PartitionChunk<ReferenceCountedSegmentProvider> chunk =
           timeline.get().findChunk(
               segmentId.getInterval(),
               segmentId.getVersion(),
@@ -82,19 +82,22 @@ public class DartDataSegmentProvider implements DataSegmentProvider
         throw segmentNotFound(segmentId);
       }
 
-      final ReferenceCountingSegment segment = chunk.getObject();
-      final Optional<Closeable> closeable = segment.acquireReferences();
-      if (!closeable.isPresent()) {
+      final ReferenceCountedSegmentProvider segmentReference = chunk.getObject();
+      final Optional<Segment> maybeSegment = segmentReference.acquireReference();
+      if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);
       }
+      final Segment segment = maybeSegment.get();
 
       final Closer closer = Closer.create();
-      closer.register(closeable.get());
       closer.register(() -> {
         final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
         channelCounters.addFile(inspector != null ? inspector.getNumRows() : 0, 0);
+        // don't release the reference until after we get the rows
+        segment.close();
       });
+      // we don't need to close CompleteSegment because the checked out reference is registered with the closer
       return new ReferenceCountingResourceHolder<>(new CompleteSegment(null, segment), closer);
     };
   }

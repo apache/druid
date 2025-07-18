@@ -79,7 +79,7 @@ public class DruidSort extends Sort implements DruidLogicalNode
     double rowCount = mq.getRowCount(this);
 
     if (fetch != null) {
-      OffsetLimit offsetLimit = OffsetLimit.fromSort(this);
+      OffsetLimit offsetLimit = getOffsetLimit();
       rowCount = Math.min(rowCount, offsetLimit.getLimit() - offsetLimit.getOffset());
     }
 
@@ -89,9 +89,19 @@ public class DruidSort extends Sort implements DruidLogicalNode
     return planner.getCostFactory().makeCost(rowCount, cost, 0);
   }
 
+  public OffsetLimit getOffsetLimit()
+  {
+    return OffsetLimit.fromSort(this);
+  }
+
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
     return super.explainTerms(pw).item("druid", "logical");
+  }
+
+  public boolean hasLimitOrOffset()
+  {
+    return fetch != null || offset != null;
   }
 }

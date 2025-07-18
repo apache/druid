@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Popover, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
-import { Loader, ShowValue } from '../../components';
+import { Loader, PopoverText, ShowValue } from '../../components';
 import type { CompactionConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
-import { formatInteger, formatPercent, getApiArray } from '../../utils';
+import { formatInteger, formatPercent, getApiArrayFromKey } from '../../utils';
 import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './compaction-history-dialog.scss';
@@ -46,7 +47,7 @@ function formatGlobalConfig(globalConfig: GlobalConfig): string {
   return [
     `compactionTaskSlotRatio: ${formatPercent(globalConfig.compactionTaskSlotRatio)}`,
     `maxCompactionTaskSlots: ${formatInteger(globalConfig.maxCompactionTaskSlots)}`,
-    `useAutoScaleSlots: ${globalConfig.useAutoScaleSlots}`,
+    `useAutoScaleSlots: ${Boolean(globalConfig.useAutoScaleSlots)}`,
   ].join('\n');
 }
 
@@ -65,8 +66,11 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
     initQuery: datasource,
     processQuery: async (datasource, cancelToken) => {
       try {
-        return await getApiArray<CompactionHistoryEntry>(
-          `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+        return await getApiArrayFromKey<CompactionHistoryEntry>(
+          `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(
+            datasource,
+          )}/history?count=20`,
+          'entries',
           cancelToken,
         );
       } catch (e) {
@@ -105,9 +109,16 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                         downloadFilename={`compaction-history-${datasource}-version-${historyEntry.auditTime}.json`}
                       />
                       {historyEntry.globalConfig && (
-                        <Callout className="global-info">
-                          {formatGlobalConfig(historyEntry.globalConfig)}
-                        </Callout>
+                        <Popover
+                          className="global-info"
+                          content={
+                            <PopoverText>
+                              <pre>{formatGlobalConfig(historyEntry.globalConfig)}</pre>
+                            </PopoverText>
+                          }
+                        >
+                          <Button icon={IconNames.GLOBE} text="Global config" />
+                        </Popover>
                       )}
                     </>
                   }

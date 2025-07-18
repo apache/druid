@@ -45,4 +45,12 @@ public class QueueNonBlockingPool<T> implements NonBlockingPool<T>
 
     return new ReferenceCountingResourceHolder<>(item, () -> queue.add(item));
   }
+
+  /**
+   * Number of available items.
+   */
+  public int availableCount()
+  {
+    return queue.size();
+  }
 }

@@ -25,7 +25,7 @@ sidebar_label: "Query from deep storage"
 
 Query from deep storage allows you to query segments that are stored only in deep storage, which provides lower costs than if you were to load everything onto Historical processes. The tradeoff is that queries from deep storage may take longer to complete. 
 
-This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical services, and querying data from deep storage. If you have [centralized datasource schema enabled](../configuration/index.md#centralized-datasource-schema), you can query datasources that are only in deep storage without having any segment available on Historical.
+This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical services, and querying data from deep storage. If you have [centralized datasource schema enabled](../configuration/index.md#centralized-datasource-schema-experimental), you can query datasources that are only in deep storage without having any segment available on Historical.
 
 To run the queries in this tutorial, replace `ROUTER:PORT` with the location of the Router process and its port number. For example, use `localhost:8888` for the quickstart deployment.
 
@@ -39,7 +39,8 @@ Use the **Load data** wizard or the following SQL query to ingest the `wikipedia
 
 Partitioning by hour provides more segment granularity, so you can selectively load segments onto Historicals or keep them in deep storage.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 REPLACE INTO "wikipedia" OVERWRITE ALL
@@ -129,11 +130,8 @@ Now that there are segments that are only available from deep storage, run the f
 SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'2016-06-27 00:10:00' LIMIT 10
 ```
 
-With the context parameter:
-
-```json
-"executionMode": "ASYNC"
-```
+To run this query asynchronously, specify the `ASYNC` execution mode using the query context.
+Apply the query context parameter before the query using a SET statement. 
 
 For example, run the following curl command:
 
@@ -141,10 +139,7 @@ For example, run the following curl command:
 curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
-    "context":{
-        "executionMode":"ASYNC"
-    }  
+  "query": "SET executionMode = '\''ASYNC'\''; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '\''2016-06-27 00:10:00'\'' LIMIT 10"
 }'
 ```
 
@@ -152,7 +147,8 @@ This query looks for records with timestamps that precede `00:10:00`. Based on t
 
 When you submit the query from deep storage through the API, you get the following response:
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 {
@@ -180,10 +176,7 @@ Compare this to if you were to submit the query to Druid SQL's regular endpoint,
 curl --location 'http://localhost:8888/druid/v2/sql/' \
 --header 'Content-Type: application/json' \
 --data '{
-    "query":"SELECT page FROM wikipedia WHERE __time <  TIMESTAMP'\''2016-06-27 00:10:00'\'' LIMIT 10",
-    "context":{
-        "executionMode":"ASYNC"
-    }  
+  "query": "SET executionMode = '\''ASYNC'\''; SELECT page FROM wikipedia WHERE __time < TIMESTAMP '\''2016-06-27 00:10:00'\'' LIMIT 10"
 }'
 ```
 
@@ -209,7 +202,8 @@ A successful query also returns a `pages` object that includes the page numbers 
 
 Note that `sampleRecords` has been truncated for brevity.
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 {
@@ -265,7 +259,8 @@ curl --location 'http://ROUTER:PORT/druid/v2/sql/statements/:queryId'
 
 Note that the response has been truncated for brevity.
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 [

@@ -21,6 +21,7 @@ package org.apache.druid.tests.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
@@ -58,9 +59,12 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
@@ -98,6 +102,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -114,11 +119,18 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private static final String INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS = "/indexer/wikipedia_index_no_rollup_preserve_metric.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
+  private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
 
   @DataProvider(name = "engine")
   public static Object[][] engine()
   {
     return new Object[][]{{CompactionEngine.NATIVE}};
+  }
+
+  @DataProvider(name = "useSupervisors")
+  public static Object[][] useSupervisors()
+  {
+    return new Object[][]{{true}, {false}};
   }
 
   @Inject
@@ -133,7 +145,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void setup() throws Exception
   {
     // Set compaction slot to 5
-    updateCompactionTaskSlot(0.5, 10, null);
+    updateCompactionTaskSlot(0.5, 10);
     fullDatasourceName = "wikipedia_index_test_" + UUID.randomUUID() + config.getExtraDatasourceNameSuffix();
   }
 
@@ -410,7 +422,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     // added = 31
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     if (engine == CompactionEngine.MSQ) {
-      updateCompactionTaskSlot(0.1, 2, false);
+      updateCompactionTaskSlot(0.1, 2);
     }
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -620,7 +632,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
@@ -638,7 +650,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -744,7 +756,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
-    updateCompactionTaskSlot(0, 0, null);
+    updateCompactionTaskSlot(0, 0);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -761,7 +773,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       Assert.assertNull(compactionResource.getCompactionStatus(fullDatasourceName));
       // Update compaction slots to be 1
-      updateCompactionTaskSlot(1, 1, null);
+      updateCompactionTaskSlot(1, 1);
       // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -769,7 +781,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -791,7 +803,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       checkCompactionIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -1365,7 +1377,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test
   public void testAutoCompactionDutyWithSegmentGranularityFinerAndNotAlignWithSegment() throws Exception
   {
-    updateCompactionTaskSlot(1, 1, null);
+    updateCompactionTaskSlot(1, 1);
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
@@ -1416,7 +1428,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @Test(dataProvider = "engine")
   public void testAutoCompactionDutyWithSegmentGranularityCoarserAndNotAlignWithSegment(CompactionEngine engine) throws Exception
   {
-    updateCompactionTaskSlot(1, 1, null);
+    updateCompactionTaskSlot(1, 1);
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
@@ -1585,13 +1597,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testAutoCompactionDutyWithFilter() throws Exception
+  @Test(dataProvider = "useSupervisors")
+  public void testAutoCompactionDutyWithFilter(boolean useSupervisors) throws Exception
   {
+    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
+      intervalsBeforeCompaction.sort(Ordering.natural().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
 
@@ -1615,7 +1629,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
 
       // For dim "page", result should only contain value "Striker Eureka"
       queryAndResultFields = ImmutableMap.of(
@@ -1628,19 +1642,21 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
   }
 
-  @Test
-  public void testAutoCompationDutyWithMetricsSpec() throws Exception
+  @Test(dataProvider = "useSupervisors")
+  public void testAutoCompationDutyWithMetricsSpec(boolean useSupervisors) throws Exception
   {
+    updateClusterConfig(new ClusterCompactionConfig(0.5, 10, null, useSupervisors, null));
+
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
+      intervalsBeforeCompaction.sort(Ordering.natural().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
 
@@ -1663,7 +1679,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           false,
           CompactionEngine.NATIVE
       );
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
 
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
@@ -1685,7 +1701,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       // Verify compacted segments does not get compacted again
-      forceTriggerAutoCompaction(2);
+      forceTriggerAutoCompaction(intervalsBeforeCompaction, useSupervisors, 2);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
     }
@@ -1745,24 +1761,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testUpdateCompactionTaskSlotWithUseAutoScaleSlots() throws Exception
-  {
-    // First try update without useAutoScaleSlots
-    updateCompactionTaskSlot(3, 5, null);
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
-    // Should be default value which is false
-    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
-    // Now try update from default value to useAutoScaleSlots=true
-    updateCompactionTaskSlot(3, 5, true);
-    compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertTrue(compactionConfig.isUseAutoScaleSlots());
-    // Now try update from useAutoScaleSlots=true to useAutoScaleSlots=false
-    updateCompactionTaskSlot(3, 5, false);
-    compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
-  }
-
   private void loadData(String indexTask) throws Exception
   {
     loadData(indexTask, ImmutableMap.of());
@@ -1784,13 +1782,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           jsonMapper.writeValueAsString(entry.getValue())
       );
     }
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
+    final String taskId = indexer.submitTask(taskSpec);
+    LOG.info("Submitted task[%s] to load data", taskId);
+    indexer.waitUntilTaskCompletes(taskId);
 
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
+        "Segments are loaded"
     );
   }
 
@@ -1822,6 +1820,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       );
     }
     queryHelper.testQueriesFromString(queryResponseTemplate);
+  }
+
+  private void updateClusterConfig(ClusterCompactionConfig clusterConfig) throws Exception
+  {
+    compactionResource.updateClusterConfig(clusterConfig);
+    LOG.info("Updated cluster config to [%s]", clusterConfig);
   }
 
   private void submitCompactionConfig(
@@ -1899,56 +1903,51 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       CompactionEngine engine
   ) throws Exception
   {
-    DataSourceCompactionConfig dataSourceCompactionConfig = new DataSourceCompactionConfig(
-        fullDatasourceName,
-        null,
-        null,
-        null,
-        skipOffsetFromLatest,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            new MaxSizeSplitHintSpec(null, 1),
-            partitionsSpec,
-            null,
-            null,
-            null,
-            null,
-            null,
-            maxNumConcurrentSubTasks,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null
-        ),
-        granularitySpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        !dropExisting ? null : new UserCompactionTaskIOConfig(true),
-        engine,
-        ImmutableMap.of("maxNumTasks", 2)
-    );
+    DataSourceCompactionConfig dataSourceCompactionConfig =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource(fullDatasourceName)
+                                              .withSkipOffsetFromLatest(skipOffsetFromLatest)
+                                              .withTuningConfig(
+                                            new UserCompactionTaskQueryTuningConfig(
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                new MaxSizeSplitHintSpec(null, 1),
+                                                partitionsSpec,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                maxNumConcurrentSubTasks,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                1,
+                                                null
+                                            )
+                                        )
+                                              .withGranularitySpec(granularitySpec)
+                                              .withDimensionsSpec(dimensionsSpec)
+                                              .withMetricsSpec(metricsSpec)
+                                              .withTransformSpec(transformSpec)
+                                              .withIoConfig(
+                                      !dropExisting ? null : new UserCompactionTaskIOConfig(true)
+                                  )
+                                              .withEngine(engine)
+                                              .withTaskContext(ImmutableMap.of("maxNumTasks", 2))
+                                              .build();
     compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
 
     // Wait for compaction config to persist
     Thread.sleep(2000);
 
     // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
     DataSourceCompactionConfig foundDataSourceCompactionConfig
-        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
-    Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
-    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
-
-    foundDataSourceCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
+        = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertNotNull(foundDataSourceCompactionConfig);
     Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
     Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
@@ -1960,46 +1959,80 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     compactionResource.deleteDataSourceCompactionConfig(fullDatasourceName);
 
     // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    DruidCompactionConfig compactionConfig = DruidCompactionConfig
+        .empty().withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
     DataSourceCompactionConfig foundDataSourceCompactionConfig
         = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
     Assert.assertNull(foundDataSourceCompactionConfig);
   }
 
+  /**
+   * Performs compaction of the given intervals of the test datasource,
+   * {@link #fullDatasourceName}, and verifies the total number of segments in
+   * the datasource after compaction.
+   */
+  private void forceTriggerAutoCompaction(
+      List<String> intervals,
+      boolean useSupervisors,
+      int numExpectedSegmentsAfterCompaction
+  ) throws Exception
+  {
+    if (useSupervisors) {
+      // Enable compaction for the requested intervals
+      final FixedIntervalOrderPolicy policy = new FixedIntervalOrderPolicy(
+          intervals.stream().map(
+              interval -> new FixedIntervalOrderPolicy.Candidate(fullDatasourceName, Intervals.of(interval))
+          ).collect(Collectors.toList())
+      );
+      updateClusterConfig(
+          new ClusterCompactionConfig(0.5, intervals.size(), policy, true, null)
+      );
+
+      // Wait for scheduler to pick up the compaction job
+      Thread.sleep(30_000);
+      waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
+
+      // Disable all compaction
+      updateClusterConfig(
+          new ClusterCompactionConfig(0.5, intervals.size(), COMPACT_NOTHING_POLICY, true, null)
+      );
+    } else {
+      forceTriggerAutoCompaction(numExpectedSegmentsAfterCompaction);
+    }
+  }
+
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
     compactionResource.forceTriggerAutoCompaction();
+    waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
+  }
+
+  private void waitForCompactionToFinish(int numExpectedSegmentsAfterCompaction)
+  {
     waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Compaction"
+        "Segments are loaded"
     );
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 
   private void verifySegmentsCount(int numExpectedSegments)
   {
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          return metadataSegmentCount == numExpectedSegments;
-        },
-        "Compaction segment count check"
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getSegments(fullDatasourceName).size(),
+        numExpectedSegments,
+        "Segment count"
     );
   }
 
   private void checkCompactionIntervals(List<String> expectedIntervals)
   {
-    Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          final Set<String> actualIntervals = new HashSet<>(coordinator.getSegmentIntervals(fullDatasourceName));
-          System.out.println("ACTUAL: " + actualIntervals);
-          System.out.println("EXPECTED: " + expectedIntervalsSet);
-          return actualIntervals.equals(expectedIntervalsSet);
-        },
-        "Compaction interval check"
+    final Set<String> expectedIntervalsSet = new HashSet<>(expectedIntervals);
+    ITRetryUtil.retryUntilEquals(
+        () -> Set.copyOf(coordinator.getSegmentIntervals(fullDatasourceName)),
+        expectedIntervalsSet,
+        "Segment intervals"
     );
   }
 
@@ -2062,21 +2095,32 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots, Boolean useAutoScaleSlots) throws Exception
+  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
   {
-    compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
-    // Verify that the compaction config is updated correctly.
-    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
-    Assert.assertEquals(compactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
-    Assert.assertEquals(compactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
-    if (useAutoScaleSlots != null) {
-      Assert.assertEquals(compactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
-    }
+    final ClusterCompactionConfig oldConfig = compactionResource.getClusterConfig();
+    compactionResource.updateClusterConfig(
+        new ClusterCompactionConfig(
+            compactionTaskSlotRatio,
+            maxCompactionTaskSlots,
+            oldConfig.getCompactionPolicy(),
+            oldConfig.isUseSupervisors(),
+            oldConfig.getEngine()
+        )
+    );
+
+    // Verify that the compaction config is updated correctly
+    final ClusterCompactionConfig updatedConfig = compactionResource.getClusterConfig();
+    Assert.assertEquals(updatedConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
+    Assert.assertEquals(updatedConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    LOG.info(
+        "Updated compactionTaskSlotRatio[%s] and maxCompactionTaskSlots[%d]",
+        compactionTaskSlotRatio, maxCompactionTaskSlots
+    );
   }
 
   private void getAndAssertCompactionStatus(
       String fullDatasourceName,
-      AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
+      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       Matcher<Long> bytesAwaitingCompactionMatcher,
       Matcher<Long> bytesCompactedMatcher,
       Matcher<Long> bytesSkippedMatcher,
@@ -2088,17 +2132,17 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       long intervalCountSkipped
   ) throws Exception
   {
-    Map<String, String> actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
+    AutoCompactionSnapshot actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assert.assertNotNull(actualStatus);
-    Assert.assertEquals(actualStatus.get("scheduleStatus"), scheduleStatus.toString());
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompactionMatcher);
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompactedMatcher);
-    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkippedMatcher);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountAwaitingCompaction")), segmentCountAwaitingCompaction);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountCompacted")), segmentCountCompacted);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountSkipped")), segmentCountSkipped);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountAwaitingCompaction")), intervalCountAwaitingCompaction);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountCompacted")), intervalCountCompacted);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("intervalCountSkipped")), intervalCountSkipped);
+    Assert.assertEquals(actualStatus.getScheduleStatus(), scheduleStatus);
+    MatcherAssert.assertThat(actualStatus.getBytesAwaitingCompaction(), bytesAwaitingCompactionMatcher);
+    MatcherAssert.assertThat(actualStatus.getBytesCompacted(), bytesCompactedMatcher);
+    MatcherAssert.assertThat(actualStatus.getBytesSkipped(), bytesSkippedMatcher);
+    Assert.assertEquals(actualStatus.getSegmentCountAwaitingCompaction(), segmentCountAwaitingCompaction);
+    Assert.assertEquals(actualStatus.getSegmentCountCompacted(), segmentCountCompacted);
+    Assert.assertEquals(actualStatus.getSegmentCountSkipped(), segmentCountSkipped);
+    Assert.assertEquals(actualStatus.getIntervalCountAwaitingCompaction(), intervalCountAwaitingCompaction);
+    Assert.assertEquals(actualStatus.getIntervalCountCompacted(), intervalCountCompacted);
+    Assert.assertEquals(actualStatus.getIntervalCountSkipped(), intervalCountSkipped);
   }
 }

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -60,7 +60,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.IS_NULL_BYTE
+        TypeStrategies.IS_NULL_BYTE
     );
     buf.putInt(position + VALUE_OFFSET, 0);
   }
@@ -74,7 +74,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     long time = buf.getLong(position);
-    if (buf.get(position + NULLITY_OFFSET) == NullHandling.IS_NULL_BYTE) {
+    if (buf.get(position + NULLITY_OFFSET) == TypeStrategies.IS_NULL_BYTE) {
       return new SerializablePairLongString(time, null);
     }
     int index = buf.getInt(position + VALUE_OFFSET);
@@ -92,7 +92,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
   protected void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NOT_NULL_BYTE);
     buf.putInt(
         position + VALUE_OFFSET,
         ((SingleValueDimensionVectorSelectorAdapter) valueSelector).singleValueDimensionVectorSelector.getRowVector()[index]
@@ -103,7 +103,7 @@ public class SingleStringFirstLastDimensionVectorAggregator
   protected void putNull(ByteBuffer buf, int position, long time)
   {
     buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
+    buf.put(position + NULLITY_OFFSET, TypeStrategies.IS_NULL_BYTE);
     buf.putInt(position + VALUE_OFFSET, 0);
   }
 
