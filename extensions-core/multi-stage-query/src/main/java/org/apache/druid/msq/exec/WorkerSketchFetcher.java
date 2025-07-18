@@ -139,7 +139,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
     try {
       // since this is running another in thread, hence the controller thread does not block; hence we need not call with failure handler.
-      workerManager.waitForWorkers(ImmutableSet.of(worker), null);
+      workerManager.waitForWorkers(ImmutableSet.of(worker));
     }
     catch (InterruptedException interruptedException) {
       isError.compareAndSet(null, interruptedException);

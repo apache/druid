@@ -91,17 +91,22 @@ public class MSQWorkerTaskLauncherRetryTests
     overlordClient.addUnknownLocationWorker(1);
 
     final MSQWorkerTaskLauncher msqWorkerTaskLauncher = new MSQWorkerTaskLauncher(
-        "controller-id", "foo", overlordClient, (task, fault) -> {
-      Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-      workerFailedLatch.countDown();
-      overlordClient.removeUnknownLocationWorker(1);
-
-    }, ImmutableMap.of(), TimeUnit.SECONDS.toMillis(5), new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
+        "controller-id",
+        "foo",
+        overlordClient,
+        ImmutableMap.of(),
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
     );
 
     try {
 
-      msqWorkerTaskLauncher.start();
+      msqWorkerTaskLauncher.start((task, fault) -> {
+        Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
+        workerFailedLatch.countDown();
+        overlordClient.removeUnknownLocationWorker(1);
+
+      });
 
       MockBlockingConsumer mockBlockingConsumer = new MockBlockingConsumer(
           msqWorkerTaskLauncher,
@@ -139,14 +144,18 @@ public class MSQWorkerTaskLauncherRetryTests
     overlordClient.addUnknownLocationWorker(1);
 
     final MSQWorkerTaskLauncher msqWorkerTaskLauncher = new MSQWorkerTaskLauncher(
-        "controller-id", "foo", overlordClient, (task, fault) -> {
-      Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-      overlordClient.removeUnknownLocationWorker(1);
-
-    }, ImmutableMap.of(), TimeUnit.SECONDS.toMillis(5), new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
+        "controller-id",
+        "foo",
+        overlordClient,
+        ImmutableMap.of(),
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
     );
     try {
-      msqWorkerTaskLauncher.start();
+      msqWorkerTaskLauncher.start((task, fault) -> {
+        Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
+        overlordClient.removeUnknownLocationWorker(1);
+      });
 
       MockNonBlockingConsumer mockNonBlockingConsumer = new MockNonBlockingConsumer(
           msqWorkerTaskLauncher,
@@ -199,7 +208,7 @@ public class MSQWorkerTaskLauncherRetryTests
 
       // start stages
       try {
-        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount, null);
+        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount);
         workerStartedLatch.await();
       }
       catch (InterruptedException e) {
@@ -212,7 +221,7 @@ public class MSQWorkerTaskLauncherRetryTests
 
       // submit work worders
       try {
-        msqWorkerTaskLauncher.waitForWorkers(workerNumbers, null);
+        msqWorkerTaskLauncher.waitForWorkers(workerNumbers);
       }
       catch (InterruptedException e) {
         throw new RuntimeException(e);
@@ -226,7 +235,6 @@ public class MSQWorkerTaskLauncherRetryTests
     private final MSQWorkerTaskLauncher msqWorkerTaskLauncher;
     private final int taskCount;
     private final CountDownLatch workerStartedLatch;
-    private WorkerFailureListener failureListener;
 
     public MockNonBlockingConsumer(
         MSQWorkerTaskLauncher msqWorkerTaskLauncher,
@@ -238,7 +246,6 @@ public class MSQWorkerTaskLauncherRetryTests
       this.msqWorkerTaskLauncher = msqWorkerTaskLauncher;
       this.taskCount = tasksCount;
       this.workerStartedLatch = workerStartedLatch;
-      this.failureListener = failureListener;
     }
 
 
@@ -247,7 +254,7 @@ public class MSQWorkerTaskLauncherRetryTests
     {
       // start stages
       try {
-        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount, failureListener);
+        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount);
         workerStartedLatch.await();
       }
       catch (InterruptedException e) {
@@ -261,7 +268,7 @@ public class MSQWorkerTaskLauncherRetryTests
 
       // submit work worders
       try {
-        msqWorkerTaskLauncher.waitForWorkers(workerNumbers, failureListener);
+        msqWorkerTaskLauncher.waitForWorkers(workerNumbers);
       }
       catch (InterruptedException e) {
         throw new RuntimeException(e);

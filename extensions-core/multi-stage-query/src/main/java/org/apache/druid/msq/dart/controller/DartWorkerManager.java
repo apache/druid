@@ -86,7 +86,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public ListenableFuture<?> start()
+  public ListenableFuture<?> start(WorkerFailureListener workerFailureListener)
   {
     if (!state.compareAndSet(State.NEW, State.STARTED)) {
       throw new ISE("Cannot start from state[%s]", state.get());
@@ -96,7 +96,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public void launchWorkersIfNeeded(int workerCount, WorkerFailureListener workerFailureListener)
+  public void launchWorkersIfNeeded(int workerCount)
   {
     // Nothing to do, just validate the count.
     if (workerCount > workerIds.size()) {
@@ -109,7 +109,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public void waitForWorkers(Set<Integer> workerNumbers, WorkerFailureListener workerFailureListener)
+  public void waitForWorkers(Set<Integer> workerNumbers)
   {
     // Nothing to wait for, just validate the numbers.
     for (final int workerNumber : workerNumbers) {

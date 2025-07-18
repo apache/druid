@@ -42,7 +42,6 @@ public class MSQWorkerTaskLauncherTest
         "controller-id",
         "foo",
         Mockito.mock(OverlordClient.class),
-        (task, fault) -> {},
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
         new MSQWorkerTaskLauncherConfig()

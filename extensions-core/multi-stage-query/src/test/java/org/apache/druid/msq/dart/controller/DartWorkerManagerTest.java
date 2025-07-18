@@ -116,20 +116,20 @@ public class DartWorkerManagerTest
   @Test
   public void test_launchWorkersIfNeeded()
   {
-    workerManager.launchWorkersIfNeeded(0, null); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(1, null); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(2, null); // Does nothing, equal to WORKERS.size()
+    workerManager.launchWorkersIfNeeded(0); // Does nothing, less than WORKERS.size()
+    workerManager.launchWorkersIfNeeded(1); // Does nothing, less than WORKERS.size()
+    workerManager.launchWorkersIfNeeded(2); // Does nothing, equal to WORKERS.size()
     Assert.assertThrows(
         DruidException.class,
-        () -> workerManager.launchWorkersIfNeeded(3, null)
+        () -> workerManager.launchWorkersIfNeeded(3)
     );
   }
 
   @Test
   public void test_waitForWorkers()
   {
-    workerManager.launchWorkersIfNeeded(2, null);
-    workerManager.waitForWorkers(IntSet.of(0, 1), null); // Returns immediately
+    workerManager.launchWorkersIfNeeded(2);
+    workerManager.waitForWorkers(IntSet.of(0, 1)); // Returns immediately
   }
 
   @Test
@@ -140,7 +140,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(false);
 
     // Ensure the future from start() resolves.
@@ -155,7 +155,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.
@@ -170,7 +170,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.
