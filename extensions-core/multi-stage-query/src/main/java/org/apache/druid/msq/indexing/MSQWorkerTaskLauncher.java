@@ -596,10 +596,10 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       }
 
       if (tracker.statusRef.get() == null) {
+        tracker.enableRetrying();
         removeWorkerFromFullyStartedWorkers(tracker);
         final String errorMessage = StringUtils.format("Task [%s] status missing", taskId);
         log.info(errorMessage + ". Trying to relaunch the worker");
-        tracker.enableRetrying();
         invokeFailureListener(tracker, errorMessage);
 
       } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {

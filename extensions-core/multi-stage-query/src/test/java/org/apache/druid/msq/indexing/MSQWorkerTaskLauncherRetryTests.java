@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -52,7 +51,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -100,27 +98,30 @@ public class MSQWorkerTaskLauncherRetryTests
     );
 
     try {
+      final long workerThreadId = Thread.currentThread().getId();
 
-      msqWorkerTaskLauncher.start((task, fault) -> {
-        Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-        workerFailedLatch.countDown();
-        overlordClient.removeUnknownLocationWorker(1);
+      startTaskLauncher(
+          msqWorkerTaskLauncher,
+          failedWorkerNumber,
+          workerFailedLatch,
+          overlordClient,
+          workerThreadId,
+          workerStartedLatch
+      );
 
-      });
-
-      MockBlockingConsumer mockBlockingConsumer = new MockBlockingConsumer(
+      MockConsumer mockConsumer = new MockConsumer(
           msqWorkerTaskLauncher,
           3,
           workerStartedLatch
       );
-      Future<?> futures = executors.submit(mockBlockingConsumer);
+      Future<?> futures = executors.submit(mockConsumer);
+      // hook called but worker not queued for relaunch.
       workerFailedLatch.await();
-      overlordClient.removefailedWorker(failedWorkerNumber);
-      msqWorkerTaskLauncher.submitForRelaunch(failedWorkerNumber);
-      workerStartedLatch.countDown();
+      Assertions.assertEquals(1, workerStartedLatch.getCount());
+      // we would need to call hooks to allow the main thread to proceed since we are using an exec service to so the thread id's would not match.
+      enableWorkerRelaunch(overlordClient, failedWorkerNumber, msqWorkerTaskLauncher, workerStartedLatch);
       // future should be completed in 5 seconds else throw an exception.
       Assertions.assertNull(futures.get(5, TimeUnit.SECONDS));
-
     }
     finally {
       msqWorkerTaskLauncher.stop(true);
@@ -128,14 +129,42 @@ public class MSQWorkerTaskLauncherRetryTests
     }
   }
 
+  private static void enableWorkerRelaunch(
+      TestOverlordClient overlordClient,
+      int failedWorkerNumber,
+      MSQWorkerTaskLauncher msqWorkerTaskLauncher,
+      CountDownLatch workerStartedLatch
+  )
+  {
+    overlordClient.removeUnknownLocationWorker(1);
+    overlordClient.removefailedWorker(failedWorkerNumber);
+    msqWorkerTaskLauncher.submitForRelaunch(failedWorkerNumber);
+    workerStartedLatch.countDown();
+  }
+
+  private static void startTaskLauncher(
+      MSQWorkerTaskLauncher msqWorkerTaskLauncher,
+      int failedWorkerNumber,
+      CountDownLatch workerFailedLatch,
+      TestOverlordClient overlordClient,
+      long workerThreadId,
+      CountDownLatch workerStartedLatch
+  )
+  {
+    msqWorkerTaskLauncher.start((task, fault) -> {
+      Assertions.assertEquals(failedWorkerNumber, task.getWorkerNumber());
+      workerFailedLatch.countDown();
+      if (workerThreadId == Thread.currentThread().getId()) {
+        // If the worker thread is the same as the main thread, we can directly relaunch the worker.
+        enableWorkerRelaunch(overlordClient, failedWorkerNumber, msqWorkerTaskLauncher, workerStartedLatch);
+      }
+    });
+  }
+
 
   @Test
   public void mainThreadNonBlockingSimulationTest() throws Exception
   {
-    final ExecutorService executors = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(false)
-                                                                                                  .setNameFormat(
-                                                                                                      "Controller-simulator-%d")
-                                                                                                  .build());
     final TestOverlordClient overlordClient = new TestOverlordClient();
     final int failedWorkerNumber = 2;
     final CountDownLatch workerFailedLatch = new CountDownLatch(1);
@@ -151,46 +180,45 @@ public class MSQWorkerTaskLauncherRetryTests
         TimeUnit.SECONDS.toMillis(5),
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
     );
-    try {
-      msqWorkerTaskLauncher.start((task, fault) -> {
-        Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-        overlordClient.removeUnknownLocationWorker(1);
-      });
 
-      MockNonBlockingConsumer mockNonBlockingConsumer = new MockNonBlockingConsumer(
+    try {
+      final long workerThreadId = Thread.currentThread().getId();
+
+      startTaskLauncher(
           msqWorkerTaskLauncher,
-          3,
-          workerStartedLatch,
-          (task, fault) -> {
-            Assert.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-            workerFailedLatch.countDown();
-            overlordClient.removefailedWorker(failedWorkerNumber);
-            msqWorkerTaskLauncher.submitForRelaunch(failedWorkerNumber);
-          }
+          failedWorkerNumber,
+          workerFailedLatch,
+          overlordClient,
+          workerThreadId,
+          workerStartedLatch
       );
 
-      Future<?> futures = executors.submit(mockNonBlockingConsumer);
-      workerFailedLatch.await();
-      workerStartedLatch.countDown();
-      // future should be completed in 5 seconds else throw an exception.
-      Assertions.assertNull(futures.get(5, TimeUnit.SECONDS));
 
+      MockConsumer mockConsumer = new MockConsumer(
+          msqWorkerTaskLauncher,
+          3,
+          workerStartedLatch
+      );
+      mockConsumer.run();
+      // failed latch  called
+      workerFailedLatch.await();
+      // worker started.
+      workerStartedLatch.await();
     }
     finally {
       msqWorkerTaskLauncher.stop(true);
-      executors.shutdownNow();
     }
   }
 
 
-  private static class MockBlockingConsumer implements Runnable
+  private static class MockConsumer implements Runnable
   {
 
     private final MSQWorkerTaskLauncher msqWorkerTaskLauncher;
     private final int taskCount;
     private final CountDownLatch workerStartedLatch;
 
-    public MockBlockingConsumer(
+    public MockConsumer(
         MSQWorkerTaskLauncher msqWorkerTaskLauncher,
         int tasksCount,
         CountDownLatch workerStartedLatch
@@ -205,7 +233,6 @@ public class MSQWorkerTaskLauncherRetryTests
     @Override
     public void run()
     {
-
       // start stages
       try {
         msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount);
@@ -214,53 +241,6 @@ public class MSQWorkerTaskLauncherRetryTests
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      Set<Integer> workerNumbers = new HashSet<>();
-      for (int i = 0; i < taskCount; i++) {
-        workerNumbers.add(i);
-      }
-
-      // submit work worders
-      try {
-        msqWorkerTaskLauncher.waitForWorkers(workerNumbers);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  private static class MockNonBlockingConsumer implements Runnable
-  {
-
-    private final MSQWorkerTaskLauncher msqWorkerTaskLauncher;
-    private final int taskCount;
-    private final CountDownLatch workerStartedLatch;
-
-    public MockNonBlockingConsumer(
-        MSQWorkerTaskLauncher msqWorkerTaskLauncher,
-        int tasksCount,
-        CountDownLatch workerStartedLatch,
-        WorkerFailureListener failureListener
-    )
-    {
-      this.msqWorkerTaskLauncher = msqWorkerTaskLauncher;
-      this.taskCount = tasksCount;
-      this.workerStartedLatch = workerStartedLatch;
-    }
-
-
-    @Override
-    public void run()
-    {
-      // start stages
-      try {
-        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount);
-        workerStartedLatch.await();
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-
       Set<Integer> workerNumbers = new HashSet<>();
       for (int i = 0; i < taskCount; i++) {
         workerNumbers.add(i);
@@ -284,7 +264,6 @@ public class MSQWorkerTaskLauncherRetryTests
 
     public TestOverlordClient()
     {
-
     }
 
     @Override
