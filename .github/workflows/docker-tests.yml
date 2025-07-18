@@ -21,8 +21,6 @@ jobs:
   setup-docker-image:
     name: Setup Docker Image
     runs-on: ubuntu-latest
-    outputs:
-      image_name: ${{ steps.get-image-name.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
       - name: Retrieve Docker container
@@ -41,17 +39,14 @@ jobs:
         run: |
           docker load --input druid-dist-container.tar.gz
           docker images
-      - name: Get Docker image name
-        id: get-image-name
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+          cache: 'maven'
+      - name: Run *DockerTest*
         run: |
           source .github/scripts/distribution_checks_env.sh
-          echo "image_name=$DRUID_DIST_IMAGE_NAME" >> $GITHUB_OUTPUT
-
-  run-docker-test:
-    name: Run Docker Tests
-    needs: setup-docker-image
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/run_unit-tests -Dtest=*DockerTest* -Ddruid.testing.docker.image=${{ needs.setup-docker-image.outputs.image_name }}
-      jdk: 17
-      key: "test-jdk17-docker"
+          .github/scripts/run_unit-tests -Dtest=*DockerTest* -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
+        timeout-minutes: 60
