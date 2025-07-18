@@ -181,6 +181,7 @@
       "querying/querying",
       "querying/query-processing",
       "querying/query-execution",
+      "querying/dart",
       "querying/troubleshooting",
       {
         "type": "category",
