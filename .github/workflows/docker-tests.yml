@@ -22,6 +22,7 @@ jobs:
     name: Run Docker Tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Retrieve Docker container
         id: docker-restore
         uses: actions/cache/restore@v4
