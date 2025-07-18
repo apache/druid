@@ -2245,7 +2245,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringPatternFilterScan()
+  public void testMultiValueStringRegexFilterScan()
   {
     testQuery(
         "SELECT MV_FILTER_REGEX(dim3, '^b.*') FROM druid.numfoo",
