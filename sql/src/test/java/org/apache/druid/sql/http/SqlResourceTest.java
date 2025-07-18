@@ -285,7 +285,6 @@ public class SqlResourceTest extends CalciteTestBase
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        defaultQueryConfig,
         lifecycleManager
     );
     sqlStatementFactory = new SqlStatementFactory(null)
@@ -331,6 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
   }
@@ -1668,6 +1668,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
 
