@@ -25,7 +25,7 @@ sidebar_label: Kerberized HDFS deep storage
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. Use SQL-based ingestion instead of MapReduce or MiddleManager-less ingestion with Kubernetes instead of YARN
+Hadoop-based ingestion deprecated. Use SQL-based ingestion instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
 
 :::
 

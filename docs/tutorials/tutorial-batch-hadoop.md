@@ -25,7 +25,7 @@ sidebar_label: Load from Apache Hadoop
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated.
+Hadoop-based ingestion deprecated. Use SQL-based ingestion instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
 
 :::
 
