@@ -179,7 +179,7 @@ jobs:
     uses: ./github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its]
+    needs: [build, unit-tests, revised-its, standard-its, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
