@@ -124,7 +124,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     PeonCommandContext context = new PeonCommandContext(
         generateCommand(task),
         javaOpts(task),
-        taskConfig.getBaseTaskDir(),
+        taskConfig.getTaskDir(task.getId()),
         taskRunnerConfig.getCpuCoreInMicro(),
         node.isEnableTlsPort()
     );
@@ -408,6 +408,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       );
     }
 
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
+        "-Ddruid.indexer.task.baseTaskDir=%s", taskConfig.getBaseTaskDir().getAbsolutePath()
+    ));
     javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.port=%d", DruidK8sConstants.PORT));
     javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
         "-Ddruid.plaintextPort=%d",
@@ -435,8 +438,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(taskConfig.getBaseTaskDir().getAbsolutePath());
-    command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();
     if (nodeType != null) {
