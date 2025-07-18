@@ -111,13 +111,8 @@ public class CloneHistoricals implements CoordinatorDuty
 
       // Drop any segments missing from the clone source.
       for (DataSegment segment : targetProjectedSegments) {
-        if (!sourceProjectedSegments.contains(segment)
-            && loadQueueManager.dropSegment(segment, targetServer)) {
-          stats.add(
-              Stats.Segments.DROPPED_FROM_CLONE,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
-              1L
-          );
+        if (!sourceProjectedSegments.contains(segment)) {
+          dropSegmentFromTargetServer(segment, targetServer, params);
         }
       }
     }
@@ -149,6 +144,23 @@ public class CloneHistoricals implements CoordinatorDuty
       params.getCoordinatorStats().add(
           Stats.Segments.ASSIGNED_TO_CLONE,
           rowKey.build(),
+          1L
+      );
+    }
+  }
+
+  private void dropSegmentFromTargetServer(
+      DataSegment segment,
+      ServerHolder targetServer,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    if (targetServer.isLoadingSegment(segment)) {
+      targetServer.cancelOperation(SegmentAction.LOAD, segment);
+    } else if (loadQueueManager.dropSegment(segment, targetServer)) {
+      params.getCoordinatorStats().add(
+          Stats.Segments.DROPPED_FROM_CLONE,
+          RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
           1L
       );
     }
