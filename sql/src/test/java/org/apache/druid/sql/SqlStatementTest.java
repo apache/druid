@@ -591,7 +591,6 @@ public class SqlStatementTest
             new NoopServiceEmitter(),
             testRequestLogger,
             QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            defaultQueryConfig,
             new SqlLifecycleManager()
         )
     );

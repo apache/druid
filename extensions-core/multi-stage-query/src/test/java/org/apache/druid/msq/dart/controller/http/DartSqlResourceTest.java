@@ -215,7 +215,6 @@ public class DartSqlResourceTest extends MSQTestBase
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new DefaultQueryConfig(ImmutableMap.of()),
         lifecycleManager
     );
 
@@ -272,6 +271,7 @@ public class DartSqlResourceTest extends MSQTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         ResponseContextConfig.newConfig(false),
+        DefaultQueryConfig.NIL,
         SELF_NODE
     );
 
