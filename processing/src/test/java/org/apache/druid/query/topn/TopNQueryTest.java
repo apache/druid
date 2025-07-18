@@ -40,6 +40,7 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -51,6 +52,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.List;
 
 public class TopNQueryTest extends InitializedNullHandlingTest
 {
@@ -295,6 +297,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("v"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(List.of(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -330,5 +333,6 @@ public class TopNQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
+    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 }
