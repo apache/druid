@@ -78,9 +78,8 @@ setupConfig()
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
       setKey $DRUID_SERVICE "$var" "$val"
   done
-  if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
-    setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
-  fi
+
+  setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
 }
 
 setupData()
@@ -94,12 +93,13 @@ setupData()
 
   service mariadb start
   for i in {30..0}; do
-    mysqladmin ping --silent && break;
-    sleep 1; \
-  done; \
+    mysqladmin ping --silent && break
+    sleep 1
+  done
   if [ "$i" = 0 ]; then
-    echo "MySQL did not start"; exit 1;
-  fi;
+    echo "MySQL did not start"
+    exit 1
+  fi
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.

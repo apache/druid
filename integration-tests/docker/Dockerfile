@@ -30,7 +30,7 @@ RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh
 FROM druidbase
 ARG MYSQL_VERSION
 ARG MARIA_VERSION
-ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
+ARG MYSQL_DRIVER_CLASSNAME
 ARG CONFLUENT_VERSION
 
 # Verify Java version
@@ -44,13 +44,16 @@ COPY extensions/ /usr/local/druid/extensions/
 # Download the MySQL Java connector
 # target path must match the exact path referenced in environment-configs/common
 # alternatively: Download the MariaDB Java connector, and pretend it is the mysql connector
-RUN if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ] ; \
-    then wget -q "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/$MYSQL_VERSION/mysql-connector-j-$MYSQL_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-j.jar; \
-    elif [ "$MYSQL_DRIVER_CLASSNAME" = "org.mariadb.jdbc.Driver" ] ; \
-    then wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" \
-    -O /usr/local/druid/lib/mysql-connector-j.jar; \
-    fi
+RUN ( \
+    if [ "$MYSQL_DRIVER_CLASSNAME" = "com.mysql.jdbc.Driver" ]; then  \
+      wget -q "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/$MYSQL_VERSION/mysql-connector-j-$MYSQL_VERSION.jar"  -O /usr/local/druid/lib/mysql-connector-j.jar; \
+    elif [ "$MYSQL_DRIVER_CLASSNAME" = "org.mariadb.jdbc.Driver" ]; then \
+      wget -q "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/$MARIA_VERSION/mariadb-java-client-$MARIA_VERSION.jar" -O /usr/local/druid/lib/mysql-connector-j.jar; \
+    else \
+      echo "Unknown MySQL driver class name: $MYSQL_DRIVER_CLASSNAME"; \
+      exit 1; \
+    fi \
+    )
 
 # download kafka protobuf provider
 RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-provider/$CONFLUENT_VERSION/kafka-protobuf-provider-$CONFLUENT_VERSION.jar" \
@@ -58,7 +61,6 @@ RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-pro
 
 # Setup metadata store
 RUN echo "[mysqld]\ncharacter-set-server=utf8\ncollation-server=utf8_bin\n" >> /etc/mysql/my.cnf
-#RUN mkdir -p /run/mysqld && chown mysql:mysql /run/mysqld
 RUN ( \
     service mariadb start; \
     for i in {30..0}; do \
