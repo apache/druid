@@ -2942,4 +2942,10 @@ public class ControllerImpl implements Controller
   {
     return context;
   }
+
+  @Override
+  public QueryContext getQueryContext()
+  {
+    return querySpec.getContext();
+  }
 }
