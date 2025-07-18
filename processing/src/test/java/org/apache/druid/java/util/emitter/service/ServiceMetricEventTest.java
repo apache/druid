@@ -22,6 +22,7 @@ package org.apache.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -319,7 +320,7 @@ public class ServiceMetricEventTest
   }
 
   @Test
-  public void test_copy_returnsAnImmutableInstance()
+  public void test_builder_createsImmutableEvents()
   {
     final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent
         .builder()
@@ -327,10 +328,8 @@ public class ServiceMetricEventTest
         .setMetric("m1", 100);
 
     final ServiceMetricEvent event1 = eventBuilder.build("coordinator", "localhost");
-    final ServiceMetricEvent event1Copy = event1.copy();
 
     Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
-    Assert.assertEquals(Map.of("dim1", "v1"), event1Copy.getUserDims());
 
     final ServiceMetricEvent event2 = eventBuilder
         .setDimension("dim2", "v2")
@@ -339,9 +338,25 @@ public class ServiceMetricEventTest
 
     // Verify that the original event gets changed dimensions
     Assert.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event2.getUserDims());
-    Assert.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event1.getUserDims());
+    Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+  }
 
-    // But the event copy still has the original dimensions
-    Assert.assertEquals(Map.of("dim1", "v1"), event1Copy.getUserDims());
+  @Test
+  public void test_builder_throwsException_ifDimNameOrValueIsNull()
+  {
+    final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder();
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension("dim1", (Object) null)
+    );
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension(null, null)
+    );
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension(null, new String[]{"a"})
+    );
   }
 }
