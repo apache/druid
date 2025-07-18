@@ -89,7 +89,7 @@ public final class DruidContainers
   public static DruidContainerResource newHistorical()
   {
     return new DruidContainerResource(DruidCommand.HISTORICAL)
-        .addProperty("druid.processing.buffer.sizeBytes", "50MiB")
+        .addProperty("druid.processing.buffer.sizeBytes", "10MiB")
         .addProperty("druid.processing.numMergeBuffers", "2")
         .addProperty("druid.processing.numThreads", "5");
   }

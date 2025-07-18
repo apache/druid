@@ -84,7 +84,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private final List<Integer> taskPorts = new ArrayList<>();
 
   private int servicePort;
-  private DockerImageName imageName = DruidContainer.Image.APACHE_33;
+  private DockerImageName imageName;
   private EmbeddedDruidCluster cluster;
 
   private String containerDirectory;

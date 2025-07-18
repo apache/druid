@@ -19,8 +19,10 @@
 
 package org.apache.druid.testing;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.images.builder.Transferable;
+import org.testcontainers.shaded.com.google.common.base.Throwables;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.StringWriter;
@@ -40,6 +42,8 @@ import java.util.Properties;
  */
 public class DruidContainer extends GenericContainer<DruidContainer>
 {
+  private static final Logger log = new Logger(DruidContainer.class);
+
   /**
    * Standard images for {@link DruidContainer}.
    */
@@ -114,6 +118,18 @@ public class DruidContainer extends GenericContainer<DruidContainer>
   {
     copyFileToContainer(Transferable.of(toString(commonProperties), 0777), COMMON_PROPERTIES_PATH);
     copyFileToContainer(Transferable.of(toString(serviceProperties), 0777), SERVICE_PROPERTIES_PATH);
+  }
+
+  @Override
+  public void start()
+  {
+    try {
+      super.start();
+    }
+    catch (Throwable t) {
+      final Throwable rootCause = Throwables.getRootCause(t);
+      log.error(rootCause, "Error while starting container");
+    }
   }
 
   private static String toString(Properties properties)

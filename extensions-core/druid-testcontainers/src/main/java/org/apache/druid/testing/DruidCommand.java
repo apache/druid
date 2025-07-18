@@ -79,7 +79,7 @@ public enum DruidCommand
       "historical",
       Map.of(
           "druid.segmentCache.locations",
-          "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"100M\"}]"
+          "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"10M\"}]"
       ),
       8083
   ),
