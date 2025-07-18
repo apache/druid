@@ -26,10 +26,12 @@ import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
+import org.apache.druid.msq.logical.LogicalInputSpec.InputProperty;
 import org.apache.druid.msq.logical.stages.AbstractFrameProcessorStage;
 import org.apache.druid.msq.logical.stages.AbstractShuffleStage;
 import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.querykit.scan.ScanQueryStageProcessor;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
@@ -38,9 +40,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds {@link QueryDefinition} from {@link LogicalStage}-s.
@@ -91,13 +95,8 @@ public class StageMaker
   private StageDefinitionBuilder buildFrameProcessorStage(AbstractFrameProcessorStage frameProcessorStage)
   {
     List<LogicalInputSpec> inputs = frameProcessorStage.getInputSpecs();
-    List<InputSpec> inputSpecs = new ArrayList<>();
-    for (LogicalInputSpec dagInputSpec : inputs) {
-      inputSpecs.add(dagInputSpec.toInputSpec(this));
-    }
+    StageDefinitionBuilder sdb = newStageDefinitionBuilder(inputs);
     StageProcessor<?, ?> stageProcessor = frameProcessorStage.buildStageProcessor(this);
-    StageDefinitionBuilder sdb = newStageDefinitionBuilder();
-    sdb.inputs(inputSpecs);
     sdb.signature(frameProcessorStage.getLogicalRowSignature());
     sdb.processor(stageProcessor);
     sdb.shuffleSpec(MixShuffleSpec.instance());
@@ -107,21 +106,28 @@ public class StageMaker
   private StageDefinitionBuilder buildShuffleStage(AbstractShuffleStage stage)
   {
     List<LogicalInputSpec> inputs = stage.getInputSpecs();
-    List<InputSpec> inputSpecs = new ArrayList<>();
-    for (LogicalInputSpec dagInputSpec : inputs) {
-      inputSpecs.add(dagInputSpec.toInputSpec(this));
-    }
-    StageDefinitionBuilder sdb = newStageDefinitionBuilder();
-    sdb.inputs(inputSpecs);
+    StageDefinitionBuilder sdb = newStageDefinitionBuilder(inputs);
     sdb.signature(stage.getRowSignature());
     sdb.processor(makeScanStageProcessor(VirtualColumns.EMPTY, stage.getRowSignature(), null));
     sdb.shuffleSpec(stage.buildShuffleSpec());
     return sdb;
   }
 
-  private StageDefinitionBuilder newStageDefinitionBuilder()
+  private StageDefinitionBuilder newStageDefinitionBuilder(List<LogicalInputSpec> inputs)
   {
-    return StageDefinition.builder(getNextStageId());
+    List<InputSpec> inputSpecs = new ArrayList<>();
+    Set<Integer> broadcastInputs = new HashSet<>();
+    for (int i = 0; i < inputs.size(); i++) {
+      LogicalInputSpec dagInputSpec = inputs.get(i);
+      inputSpecs.add(dagInputSpec.toInputSpec(this));
+      if (dagInputSpec.hasProperty(InputProperty.BROADCAST)) {
+        broadcastInputs.add(i);
+      }
+    }
+    StageDefinitionBuilder sdb = StageDefinition.builder(getNextStageId());
+    sdb.broadcastInputs(broadcastInputs);
+    sdb.inputs(inputSpecs);
+    return sdb;
   }
 
   private int getNextStageId()
@@ -151,5 +157,10 @@ public class StageMaker
       return dartQueryId;
     }
     return plannerContext.getSqlQueryId();
+  }
+
+  public StageProcessor<?, ?> makeSegmentMapProcessor(RowSignature signature, DataSource dataSource)
+  {
+    return ScanQueryStageProcessor.makeSegmentMapFnProcessor(signature, dataSource);
   }
 }
