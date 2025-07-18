@@ -22,14 +22,15 @@ package org.apache.druid.server.metrics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
-import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -50,12 +51,10 @@ import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
-import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -66,9 +65,6 @@ import java.util.Properties;
 public class MetricsModuleTest
 {
   private static final String CPU_ARCH = System.getProperty("os.arch");
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSimpleInjection()
@@ -166,10 +162,14 @@ public class MetricsModuleTest
         StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
         "UnknownScheduler"
     );
-    expectedException.expect(CreationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage("Unknown monitor scheduler[UnknownScheduler]");
-    createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            ProvisionException.class,
+            () -> createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class)
+        ),
+        ExceptionMatcher.of(ProvisionException.class)
+                        .expectMessageContains("Unknown monitor scheduler[UnknownScheduler]")
+    );
   }
 
   @Test
