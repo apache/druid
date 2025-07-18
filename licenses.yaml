@@ -948,7 +948,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.17.2
+version: 1.17.6
 libraries:
   - com.squareup.okio: okio
 
