@@ -47,7 +47,7 @@ public class ServiceMetricEvent implements Event
 
   private final DateTime createdTime;
   private final ImmutableMap<String, String> serviceDims;
-  private final Map<String, Object> userDims;
+  private final ImmutableMap<String, Object> userDims;
   private final String feed;
   private final String metric;
   private final Number value;
@@ -58,7 +58,7 @@ public class ServiceMetricEvent implements Event
   private ServiceMetricEvent(
       DateTime createdTime,
       ImmutableMap<String, String> serviceDims,
-      Map<String, Object> userDims,
+      ImmutableMap<String, Object> userDims,
       String feed,
       String metric,
       Number value
@@ -66,7 +66,7 @@ public class ServiceMetricEvent implements Event
   {
     this.createdTime = createdTime != null ? createdTime : DateTimes.nowUtc();
     this.serviceDims = serviceDims;
-    this.userDims = userDims == null ? Map.of() : Map.copyOf(userDims);
+    this.userDims = userDims;
     this.feed = feed;
     this.metric = metric;
     this.value = value;
@@ -159,14 +159,7 @@ public class ServiceMetricEvent implements Event
      */
     public Builder setDimensionIfNotNull(String dim, Object value)
     {
-      if (dim == null) {
-        throw new IAE("Dimension name cannot be null");
-      }
-
-      if (value != null) {
-        userDims.put(dim, value);
-      }
-      return this;
+      return value == null ? this : setDimension(dim, value);
     }
 
     /**
@@ -176,10 +169,14 @@ public class ServiceMetricEvent implements Event
      */
     public Builder setDimension(String dim, Object value)
     {
-      if (value == null) {
+      if (dim == null) {
+        throw new IAE("Dimension name cannot be null");
+      } else if (value == null) {
         throw new IAE("Value of dimension[%s] cannot be null", dim);
       }
-      return setDimensionIfNotNull(dim, value);
+
+      userDims.put(dim, value);
+      return this;
     }
 
     public Object getDimension(String dim)
@@ -216,7 +213,7 @@ public class ServiceMetricEvent implements Event
       return new ServiceMetricEvent(
           createdTime,
           serviceDimensions,
-          userDims,
+          ImmutableMap.copyOf(userDims),
           feed,
           metric,
           value
