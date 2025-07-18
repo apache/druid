@@ -17,51 +17,61 @@
  * under the License.
  */
 
-package org.apache.druid.tests.coordinator.duty;
+package org.apache.druid.testing.embedded.compact;
 
-import com.google.inject.Inject;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CompactionResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.joda.time.Period;
-import org.testng.Assert;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@Test(groups = {TestNGGroup.UPGRADE})
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
+import java.nio.charset.StandardCharsets;
+
+public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
 {
-  private static final String UPGRADE_DATASOURCE_NAME = "upgradeTest";
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
+      .addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-  @Inject
-  protected CompactionResourceTestClient compactionResource;
+  protected CompactionResourceTestClient compactionResource =
+      new CompactionResourceTestClient(coordinator, overlord);
 
-  @Inject
-  private IntegrationTestingConfig config;
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
+                               .addServer(coordinator);
+  }
 
   @Test
-  public void testUpgradeAutoCompactionConfigurationWhenConfigurationFromOlderVersionAlreadyExist() throws Exception
+  public void test_configCanBeUpdated_afterVersionUpgrades() throws Exception
   {
+    // Insert a minimal compaction config manually into the DB
+    // Then start the Overlord to ensure that the Overlord has the latest config cached
+    insertMinimalCompactionConfig((TestDerbyConnector) coordinator.bindings().sqlMetadataConnector());
+    cluster.addServer(overlord);
+    overlord.start();
+
     // Verify that compaction config already exist. This config was inserted manually into the database using SQL script.
-    // This auto compaction configuration payload is from Druid 0.21.0
     DruidCompactionConfig coordinatorCompactionConfig = DruidCompactionConfig.empty()
         .withDatasourceConfigs(compactionResource.getAllCompactionConfigs());
     DataSourceCompactionConfig foundDataSourceCompactionConfig
-        = coordinatorCompactionConfig.findConfigForDatasource(UPGRADE_DATASOURCE_NAME).orNull();
-    Assert.assertNotNull(foundDataSourceCompactionConfig);
+        = coordinatorCompactionConfig.findConfigForDatasource(dataSource).orNull();
+    Assertions.assertNotNull(foundDataSourceCompactionConfig);
 
     // Now submit a new auto compaction configuration
     PartitionsSpec newPartitionsSpec = new DynamicPartitionsSpec(4000, null);
@@ -69,7 +79,7 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
 
     DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
-        .forDataSource(UPGRADE_DATASOURCE_NAME)
+        .forDataSource(dataSource)
         .withSkipOffsetFromLatest(newSkipOffset)
         .withTuningConfig(
             new UserCompactionTaskQueryTuningConfig(
@@ -103,10 +113,32 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
 
     // Verify that compaction was successfully updated
     foundDataSourceCompactionConfig
-        = compactionResource.getDataSourceCompactionConfig(UPGRADE_DATASOURCE_NAME);
-    Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
-    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), newPartitionsSpec);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), newSkipOffset);
+        = compactionResource.getDataSourceCompactionConfig(dataSource);
+    Assertions.assertNotNull(foundDataSourceCompactionConfig);
+    Assertions.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
+    Assertions.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), newPartitionsSpec);
+    Assertions.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), newSkipOffset);
+  }
+
+  /**
+   * Inserts a bare-bones compaction config directly into the druid_config
+   * metadata table.
+   */
+  private void insertMinimalCompactionConfig(TestDerbyConnector sqlConnector)
+  {
+    final String configJson = StringUtils.format(
+        "{\"compactionConfigs\":[{\"dataSource\":\"%s\"}]}",
+        dataSource
+    );
+
+    sqlConnector.retryWithHandle(
+        handle -> handle.insert(
+            StringUtils.format(
+                "INSERT INTO %s (name, payload) VALUES ('coordinator.compaction.config',?)",
+                sqlConnector.getMetadataTablesConfig().getConfigTable()
+            ),
+            configJson.getBytes(StandardCharsets.UTF_8)
+        )
+    );
   }
 }
