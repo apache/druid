@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -31,28 +32,24 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.CompleteSegment;
-import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -62,30 +59,28 @@ import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.easymock.EasyMock;
+import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-public class TaskDataSegmentProviderTest
+class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "foo";
   private static final int NUM_SEGMENTS = 10;
@@ -97,22 +92,38 @@ public class TaskDataSegmentProviderTest
   private SegmentLocalCacheManager cacheManager;
   private TaskDataSegmentProvider provider;
   private ListeningExecutorService exec;
-  private IndexIO indexIO = EasyMock.mock(IndexIO.class);
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private static File SEGMENT_ZIP_FILE;
 
-  @Before
+  @TempDir
+  public Path tempDir;
+
+  @BeforeAll
+  public static void setupStatic(@TempDir Path tempDir) throws IOException
+  {
+    File segDir = tempDir.resolve("segment").toFile();
+    File segmentFile = TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.DEFAULT, segDir);
+    File zipPath = tempDir.resolve("zip").toFile();
+    FileUtils.mkdirp(zipPath);
+    SEGMENT_ZIP_FILE = new File(zipPath, "index.zip");
+    CompressionUtils.zip(segmentFile, SEGMENT_ZIP_FILE);
+  }
+
+  @BeforeEach
   public void setUp() throws Exception
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
-    EasyMock.reset(indexIO);
-    EasyMock.expect(indexIO.loadIndex(EasyMock.anyObject())).andReturn(new TestQueryableIndex()).anyTimes();
-    EasyMock.replay(indexIO);
-
     final ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
     jsonMapper.registerSubtypes(TestLoadSpec.class);
+    jsonMapper.registerModule(new SegmentizerModule());
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), jsonMapper)
+            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
+            .addValue(IndexIO.class, TestIndex.INDEX_IO)
+    );
 
     segments = new ArrayList<>();
 
@@ -143,7 +154,7 @@ public class TaskDataSegmentProviderTest
       );
     }
 
-    cacheDir = temporaryFolder.newFolder();
+    cacheDir = tempDir.resolve("cache").toFile();
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
         ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
     );
@@ -158,20 +169,15 @@ public class TaskDataSegmentProviderTest
 
     provider = new TaskDataSegmentProvider(
         new TestCoordinatorClientImpl(),
-        cacheManager,
-        indexIO
+        cacheManager
     );
 
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(THREADS, getClass().getSimpleName() + "-%s"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
-    if (indexIO != null) {
-      EasyMock.verify(indexIO);
-    }
-
     if (exec != null) {
       exec.shutdownNow();
       exec.awaitTermination(1, TimeUnit.MINUTES);
@@ -196,7 +202,7 @@ public class TaskDataSegmentProviderTest
               holderSupplier -> {
                 try {
                   final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
-                  Assert.assertEquals(segment.getId(), holder.get().getSegment().getId());
+                  Assertions.assertEquals(segment.getId(), holder.get().getSegment().getId());
 
                   final String expectedStorageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
                   final File expectedFile = new File(
@@ -208,8 +214,8 @@ public class TaskDataSegmentProviderTest
                       )
                   );
 
-                  Assert.assertTrue(expectedFile.exists());
-                  Assert.assertArrayEquals(
+                  Assertions.assertTrue(expectedFile.exists());
+                  Assertions.assertArrayEquals(
                       Ints.toByteArray(expectedSegmentNumber),
                       Files.readAllBytes(expectedFile.toPath())
                   );
@@ -226,15 +232,15 @@ public class TaskDataSegmentProviderTest
       );
     }
 
-    Assert.assertEquals(iterations, testFutures.size());
+    Assertions.assertEquals(iterations, testFutures.size());
     for (int i = 0; i < iterations; i++) {
       ListenableFuture<Boolean> testFuture = testFutures.get(i);
-      Assert.assertTrue("Test iteration #" + i, FutureUtils.getUnchecked(testFuture, false));
+      Assertions.assertTrue(FutureUtils.getUnchecked(testFuture, false), "Test iteration #" + i);
     }
 
     // Cache dir should exist, but be empty, since we've closed all holders.
-    Assert.assertTrue(cacheDir.exists());
-    Assert.assertArrayEquals(new String[]{}, cacheDir.list());
+    Assertions.assertTrue(cacheDir.exists());
+    Assertions.assertArrayEquals(new String[]{}, cacheDir.list());
   }
 
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
@@ -274,77 +280,12 @@ public class TaskDataSegmentProviderTest
     {
       try {
         Files.write(new File(destDir, LOAD_SPEC_FILE_NAME).toPath(), Ints.toByteArray(uniqueId));
-        Files.write(new File(destDir, "version.bin").toPath(), Ints.toByteArray(1));
+        CompressionUtils.unzip(SEGMENT_ZIP_FILE, destDir);
         return new LoadSpecResult(1);
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to load segment in location [%s]", destDir);
       }
-    }
-  }
-
-  private static class TestQueryableIndex implements QueryableIndex
-  {
-    @Override
-    public Interval getDataInterval()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getNumRows()
-    {
-      return 0;
-    }
-
-    @Override
-    public Indexed<String> getAvailableDimensions()
-    {
-      return new ListIndexed<>();
-    }
-
-    @Override
-    public BitmapFactory getBitmapFactoryForDimensions()
-    {
-      return RoaringBitmapFactory.INSTANCE;
-    }
-
-    @Nullable
-    @Override
-    public Metadata getMetadata()
-    {
-      return null;
-    }
-
-    @Override
-    public Map<String, DimensionHandler> getDimensionHandlers()
-    {
-      return Collections.emptyMap();
-    }
-
-    @Override
-    public List<String> getColumnNames()
-    {
-      return Collections.emptyList();
-    }
-
-    @Nullable
-    @Override
-    public ColumnHolder getColumnHolder(String columnName)
-    {
-      return null;
-    }
-
-    @Override
-    public List<OrderBy> getOrdering()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public void close()
-    {
-
     }
   }
 }

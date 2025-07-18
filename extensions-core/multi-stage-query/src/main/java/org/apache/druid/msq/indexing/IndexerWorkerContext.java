@@ -154,7 +154,7 @@ public class IndexerWorkerContext implements WorkerContext
         overlordClient,
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
-        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager, indexIO),
+        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager),
         serviceClientFactory,
         memoryIntrospector,
         processingBuffersProvider,
