@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -557,6 +559,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   public void testSerde() throws Exception
   {
+    // deserialize, then serialize, then deserialize of DataSchema.
     String jsonStr = "{"
                      + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
                      + "\"parser\":{"
@@ -582,30 +585,63 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         DataSchema.class
     );
 
-    Assert.assertEquals(actual.getDataSource(), IdUtilsTest.VALID_ID_CHARS);
+    Assert.assertEquals(IdUtilsTest.VALID_ID_CHARS, actual.getDataSource());
     Assert.assertEquals(
-        actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
             DimensionsSpec.builder().setDimensionExclusions(Arrays.asList("__time", "metric1", "xXx", "col1")).build(),
             null,
             null,
             null
-        )
+        ),
+        actual.getParser().getParseSpec()
     );
     Assert.assertArrayEquals(
-        actual.getAggregators(),
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1")
-        }
+        },
+        actual.getAggregators()
     );
     Assert.assertEquals(
-        actual.getGranularitySpec(),
         new ArbitraryGranularitySpec(
             new DurationGranularity(86400000, null),
             ImmutableList.of(Intervals.of("2014/2015"))
-        )
+        ),
+        actual.getGranularitySpec()
     );
+    Assert.assertNull(actual.getProjections());
+  }
+
+  @Test
+  public void testSerdeWithProjections() throws Exception
+  {
+    // serialize, then deserialize of DataSchema with projections.
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "ab_count_projection",
+        null,
+        Arrays.asList(
+            new StringDimensionSchema("a"),
+            new LongDimensionSchema("b")
+        ),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count")
+        }
+    );
+    DataSchema original = DataSchema.builder()
+                                    .withDataSource("datasource")
+                                    .withTimestamp(new TimestampSpec(null, null, null))
+                                    .withDimensions(DimensionsSpec.EMPTY)
+                                    .withAggregators(new CountAggregatorFactory("rows"))
+                                    .withProjections(ImmutableList.of(projectionSpec))
+                                    .withGranularity(ARBITRARY_GRANULARITY)
+                                    .build();
+    DataSchema serdeResult = jsonMapper.readValue(jsonMapper.writeValueAsString(original), DataSchema.class);
+
+    Assert.assertEquals("datasource", serdeResult.getDataSource());
+    Assert.assertArrayEquals(new AggregatorFactory[]{new CountAggregatorFactory("rows")}, serdeResult.getAggregators());
+    Assert.assertEquals(ImmutableList.of(projectionSpec), serdeResult.getProjections());
+    Assert.assertEquals(ImmutableList.of("ab_count_projection"), serdeResult.getProjectionNames());
+    Assert.assertEquals(jsonMapper.writeValueAsString(original), jsonMapper.writeValueAsString(serdeResult));
   }
 
   @Test

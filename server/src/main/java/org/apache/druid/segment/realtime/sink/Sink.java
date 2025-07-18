@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.sink;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -47,6 +46,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -249,17 +249,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   public DataSegment getSegment()
   {
-    return new DataSegment(
-        schema.getDataSource(),
-        interval,
-        version,
-        ImmutableMap.of(),
-        Collections.emptyList(),
-        Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
-        shardSpec,
-        null,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(schema.getDataSource(), interval, version, shardSpec))
+                      .shardSpec(shardSpec)
+                      .dimensions(null)
+                      .metrics(Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName))
+                      .projections(schema.getProjectionNames())
+                      .build();
   }
 
   public int getNumRows()
