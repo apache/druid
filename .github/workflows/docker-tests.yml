@@ -40,7 +40,7 @@ jobs:
           docker images
       - name: Get Docker image name env
         run: |
-          source .github/workflows/distribution_checks_env.sh
+          source .github/scripts/distribution_checks_env.sh
           echo "DRUID_DIST_IMAGE_NAME=$DRUID_DIST_IMAGE_NAME" >> $GITHUB_ENV
       - name: Run the test
         uses: ./.github/workflows/worker.yml
