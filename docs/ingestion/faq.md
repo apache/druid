@@ -49,10 +49,6 @@ Other common reasons that hand-off fails are as follows:
 
 4) Deep storage is improperly configured. Make sure that your segment actually exists in deep storage and that the Coordinator logs have no errors.
 
-## How do I get HDFS to work?
-
-Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [deep storage](../design/deep-storage.md) .
-
 ## How do I know when I can make query to Druid after submitting batch ingestion task?
 
 You can verify if segments created by a recent ingestion task are loaded onto historicals and available for querying using the following workflow.

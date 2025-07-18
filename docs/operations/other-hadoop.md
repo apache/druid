@@ -23,6 +23,12 @@ title: "Working with different versions of Apache Hadoop"
   -->
 
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion deprecated. Use SQL-based ingestion instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+
+:::
+
 Apache Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.md) using the druid-hdfs-storage extension.

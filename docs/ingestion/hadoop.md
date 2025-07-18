@@ -23,6 +23,13 @@ sidebar_label: "Hadoop-based"
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion deprecated. Use SQL-based ingestion instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+
+:::
+
+
 Apache Hadoop-based batch ingestion in Apache Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
 instance of a Druid [Overlord](../design/overlord.md). Please refer to our [Hadoop-based vs. native batch comparison table](index.md#batch) for
 comparisons between Hadoop-based, native batch (simple), and native batch (parallel) ingestion.

@@ -23,6 +23,11 @@ sidebar_label: Load from Apache Hadoop
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion deprecated. Use SQL-based ingestion instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+
+:::
 
 This tutorial shows you how to load data files into Apache Druid using a remote Hadoop cluster.
 
