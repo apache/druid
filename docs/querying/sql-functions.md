@@ -4157,6 +4157,70 @@ Returns the following:
 
 [Learn more](sql-multivalue-string-functions.md)
 
+## MV_FILTER_REGEX
+
+Filters a multi-value expression to include only values matching the specified regular expression pattern.
+
+* **Syntax:** `MV_FILTER_REGEX(expr, pattern)`
+* **Function type:** Multi-value string
+
+<details>
+<summary>Example</summary>
+
+The following example filters the `tags` multi-value string from the `mvd-example` datasource to include only values starting with the letter `t`:
+
+```sql
+SELECT MV_FILTER_REGEX("tags", '^t.*') AS regex_filtered
+FROM "mvd-example"
+LIMIT 4
+```
+
+Returns the following:
+
+| `regex_filtered` |
+| -- |
+| `["t1","t2","t3"]` |
+| `["t3","t4","t5"]` |
+| `["t5","t6","t7"]` |
+| `[]` |
+
+</details>
+
+Filters multi-value `expr` to include values that match `pattern`.
+
+---
+
+## MV_FILTER_PREFIX
+
+Filters a multi-value expression to include only values that start with the specified prefix.
+
+* **Syntax:** `MV_FILTER_PREFIX(expr, prefix)`
+* **Function type:** Multi-value string
+
+<details>
+<summary>Example</summary>
+
+The following example filters the `tags` multi-value string from the `mvd-example` datasource to include only values starting with `t3`:
+
+```sql
+SELECT MV_FILTER_PREFIX("tags", 't3') AS prefix_filtered
+FROM "mvd-example"
+LIMIT 4
+```
+
+Returns the following:
+
+| `prefix_filtered` |
+| -- |
+| `[]` |
+| `["t3"]` |
+| `[]` |
+| `[]` |
+
+</details>
+
+Filters multi-value `expr` to include values that have prefix `prefix`.
+
 ## MV_LENGTH
 
 Returns the length of an array expression.
