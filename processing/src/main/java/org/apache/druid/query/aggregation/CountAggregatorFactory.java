@@ -93,7 +93,8 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name);
+    // Returning a CountAggregator that defaults to 0, which is the expected behavior for a combining factory.
+    return new CountAggregatorFactory(name);
   }
 
   @Override
