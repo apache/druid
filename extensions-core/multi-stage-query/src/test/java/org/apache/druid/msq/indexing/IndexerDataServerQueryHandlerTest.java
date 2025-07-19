@@ -40,6 +40,7 @@ import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -124,7 +125,7 @@ public class IndexerDataServerQueryHandlerTest
     dataServerClient2 = mock(DataServerClient.class);
     coordinatorClient = mock(CoordinatorClient.class);
     query = newScanQueryBuilder()
-        .dataSource(new InputNumberDataSource(1))
+        .dataSource(FilteredDataSource.create(new InputNumberDataSource(1), null))
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2003/2004"))))
         .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -137,6 +138,7 @@ public class IndexerDataServerQueryHandlerTest
     );
     target = spy(
         new IndexerDataServerQueryHandler(
+            1,
             DATASOURCE1,
             new ChannelCounters(),
             mock(ServiceClientFactory.class),
