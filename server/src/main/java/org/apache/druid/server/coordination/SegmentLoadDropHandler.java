@@ -45,7 +45,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -62,16 +62,16 @@ public class SegmentLoadDropHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
-  // Synchronizes removals from segmentsToDelete
-  private final Object segmentDeleteLock = new Object();
-
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService normalLoadExec;
   private final ThreadPoolExecutor turboLoadExec;
 
-  private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
+  /**
+   * Holder of latches for segments that have drops scheduled, or drops currently being executed.
+   */
+  private final ConcurrentHashMap<DataSegment, SegmentDropLatch> segmentDropLatches;
 
   // Keep history of load/drop request status in a LRU cache to maintain idempotency if same request shows up
   // again and to return status of a completed request. Maximum size of this cache must be significantly greater
@@ -129,7 +129,7 @@ public class SegmentLoadDropHandler
     // Allow core threads to time out to save resources when not in turbo mode
     this.turboLoadExec.allowCoreThreadTimeOut(true);
 
-    this.segmentsToDelete = new ConcurrentSkipListSet<>();
+    this.segmentDropLatches = new ConcurrentHashMap<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
 
@@ -152,23 +152,15 @@ public class SegmentLoadDropHandler
     SegmentChangeStatus result = null;
     try {
       log.info("Loading segment[%s] in mode[%s]", segment.getId(), loadingMode);
-      /*
-         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
-         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
-         the segment, which makes dropping segment and downloading segment happen at the same time.
-       */
-      if (segmentsToDelete.contains(segment)) {
-        /*
-           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
-           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
-           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
-           cost of acquiring lock by doing the "contains" check outside the synchronized block.
-         */
-        synchronized (segmentDeleteLock) {
-          segmentsToDelete.remove(segment);
-        }
+
+      // Cancel any pending drops for this segment, or wait for them if they have already started executing. This is
+      // necessary to prevent delayed drops issued by removeSegment() from dropping a segment while we are trying to
+      // load it.
+      final SegmentDropLatch currentDropLatch = segmentDropLatches.remove(segment);
+      if (currentDropLatch != null) {
+        currentDropLatch.cancelOrAwait();
       }
+
       try {
         segmentManager.loadSegment(segment);
       }
@@ -216,20 +208,29 @@ public class SegmentLoadDropHandler
     SegmentChangeStatus result = null;
     try {
       announcer.unannounceSegment(segment);
-      segmentsToDelete.add(segment);
+
+      final SegmentDropLatch dropLatch = new SegmentDropLatch();
+      final SegmentDropLatch priorLatch = segmentDropLatches.putIfAbsent(segment, dropLatch);
+
+      if (priorLatch != null) {
+        log.warn("Cannot drop segment[%s] that already has a drop pending. Ignoring.", segment.getId());
+        return;
+      }
 
       Runnable runnable = () -> {
         try {
-          synchronized (segmentDeleteLock) {
-            if (segmentsToDelete.remove(segment)) {
-              segmentManager.dropSegment(segment);
-            }
+          if (dropLatch.startDropping()) {
+            segmentManager.dropSegment(segment);
           }
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
              .addData("segment", segment)
              .emit();
+        }
+        finally {
+          dropLatch.doneDropping();
+          segmentDropLatches.remove(segment, dropLatch);
         }
       };
 
@@ -265,7 +266,7 @@ public class SegmentLoadDropHandler
 
   public Collection<DataSegment> getSegmentsToDelete()
   {
-    return ImmutableList.copyOf(segmentsToDelete);
+    return ImmutableList.copyOf(segmentDropLatches.keySet());
   }
 
   /**
