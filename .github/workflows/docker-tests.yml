@@ -75,7 +75,7 @@ jobs:
       - name: Collect service logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |
-          tar cvzf ./service-logs.tgz /tmp/embedded-tests/logs
+          tar cvzf ./service-logs.tgz /tmp/embedded-tests
 
       - name: Upload Druid service logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
