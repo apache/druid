@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.WorkerCount;
@@ -85,7 +86,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public ListenableFuture<?> start()
+  public ListenableFuture<?> start(WorkerFailureListener workerFailureListener)
   {
     if (!state.compareAndSet(State.NEW, State.STARTED)) {
       throw new ISE("Cannot start from state[%s]", state.get());

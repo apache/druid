@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.util;
 
+import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
@@ -34,6 +35,10 @@ public class MSQFaultUtilsTest
   {
     Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(
         "Task execution process exited unsuccessfully with code[137]. See middleManager logs for more details..."));
+    Assert.assertEquals(
+        UnknownFault.CODE,
+        MSQFaultUtils.getErrorCodeFromMessage(TaskQueue.FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG)
+    );
 
     Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(""));
     Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(null));

@@ -140,7 +140,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(false);
 
     // Ensure the future from start() resolves.
@@ -155,7 +155,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.
@@ -170,7 +170,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start();
+    final ListenableFuture<?> future = workerManager.start(null);
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.

@@ -102,6 +102,7 @@ import java.util.stream.Collectors;
  */
 public class TaskQueue
 {
+  public static final String FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG = "Failed to run task. See overlord logs for more details.";
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
@@ -782,7 +783,7 @@ public class TaskQueue
             statusUpdatesInQueue.incrementAndGet();
             TaskStatus status = TaskStatus.failure(
                 task.getId(),
-                "Failed to run task. See overlord logs for more details."
+                FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG
             );
             taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
           }

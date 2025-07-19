@@ -230,14 +230,13 @@ public class MSQTasksTest
         CONTROLLER_ID,
         "foo",
         new TasksTestOverlordClient(numSlots),
-        (task, fault) -> {},
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
         new MSQWorkerTaskLauncherConfig()
     );
 
     try {
-      msqWorkerTaskLauncher.start();
+      msqWorkerTaskLauncher.start(null);
       msqWorkerTaskLauncher.launchWorkersIfNeeded(numTasks);
       fail();
     }
