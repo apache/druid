@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -78,6 +79,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
+  private final String id;
 
   private final List<EmbeddedDruidServer<?>> servers = new ArrayList<>();
   private final List<EmbeddedResource> resources = new ArrayList<>();
@@ -89,6 +91,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   private EmbeddedDruidCluster()
   {
+    id = IdUtils.getRandomId();
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
     addExtension(RuntimeInfoModule.class);
@@ -378,5 +381,10 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     final String csv = items.stream().map(name -> "\"" + name + "\"").collect(Collectors.joining(","));
     return "[" + csv + "]";
+  }
+
+  public String getId()
+  {
+    return id;
   }
 }

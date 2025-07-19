@@ -5146,6 +5146,17 @@ libraries:
 
 ---
 
+# Dependency of Testcontainers
+name: jakarta.activation
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Eclipse Distribution License 1.0
+version: 2.0.1
+libraries:
+  - com.sun.activation: jakarta.activation
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
