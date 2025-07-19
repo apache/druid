@@ -21,6 +21,8 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.junit.Assert;
@@ -55,5 +57,18 @@ public class MSQWorkerTaskLauncherTest
     target.retryInactiveTasksIfNeeded(5);
 
     Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
+  }
+
+  @Test
+  public void testMultipleWorkerFailureRegistration()
+  {
+    target.start(getWorkerFailureListener());
+    Assert.assertThrows(DruidException.class, () -> target.start(getWorkerFailureListener()));
+  }
+
+  private static WorkerFailureListener getWorkerFailureListener()
+  {
+    return (a, b) -> {
+    };
   }
 }

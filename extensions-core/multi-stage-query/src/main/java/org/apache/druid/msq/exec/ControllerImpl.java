@@ -189,7 +189,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
-import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.Interval;
@@ -783,7 +782,7 @@ public class ControllerImpl implements Controller
     return queryDef;
   }
 
-  private @NotNull WorkerFailureListener getWorkerFailureListener(ControllerQueryKernel controllerQueryKernel)
+  private WorkerFailureListener getWorkerFailureListener(ControllerQueryKernel controllerQueryKernel)
   {
     return (failedTask, fault) -> {
       throwIfNonRetriableFault(fault);
@@ -1398,9 +1397,7 @@ public class ControllerImpl implements Controller
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
 
     try {
-      workerManager.waitForWorkers(
-          workers
-      );
+      workerManager.waitForWorkers(workers);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -2237,7 +2234,7 @@ public class ControllerImpl implements Controller
     private final ControllerQueryKernel queryKernel;
 
     /**
-     * Return value of {@link WorkerManager#start()}. Set by {@link #startTaskLauncher()}.
+     * Return value of {@link WorkerManager#start(WorkerFailureListener)} )}. Set by {@link #startTaskLauncher()}.
      */
     private ListenableFuture<?> workerTaskLauncherFuture;
 
@@ -2383,9 +2380,7 @@ public class ControllerImpl implements Controller
       }
 
       // wait till the workers identified above are fully ready
-      workerManager.waitForWorkers(
-          workersNeedToBeFullyStarted
-      );
+      workerManager.waitForWorkers(workersNeedToBeFullyStarted);
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
         contactWorkersForStage(
@@ -2564,9 +2559,7 @@ public class ControllerImpl implements Controller
               stageDef.doesShuffle() ? stageDef.getShuffleSpec().kind() : "none"
           );
 
-          workerManager.launchWorkersIfNeeded(
-              workerCount
-          );
+          workerManager.launchWorkersIfNeeded(workerCount);
           stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
           startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
         }

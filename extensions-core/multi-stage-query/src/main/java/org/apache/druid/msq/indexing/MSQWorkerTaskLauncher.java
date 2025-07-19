@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -43,6 +44,7 @@ import org.apache.druid.msq.exec.RetryCapableWorkerManager;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
 import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
@@ -175,7 +177,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   public ListenableFuture<?> start(WorkerFailureListener workerFailureListener)
   {
     if (!this.workerFailureListenerRef.compareAndSet(null, workerFailureListener)) {
-      log.warn("WorkerFailureListener already set. Ignoring re-registration call");
+      throw DruidException.defensive("WorkerFailureListener already set for MSQWorkerTaskLauncher");
     }
 
     if (state.compareAndSet(State.NEW, State.STARTED)) {
@@ -263,12 +265,11 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
           throw new ISE("Stopped");
         }
         // add failed tasks to retry the queue
-        WorkerFailureListener workerFailureListener = workerFailureListenerRef.get();
-        if (workerFailureListener != null) {
+        if (workerFailureListenerRef.get() != null) {
           for (TaskTracker taskTracker : taskTrackers.values()) {
             if (taskTracker.isRetrying()) {
-              workerFailureListener.onFailure(
-                  taskTracker.msqWorkerTask,
+              invokeFailureListener(
+                  taskTracker,
                   new WorkerFailedFault(
                       taskTracker.msqWorkerTask.getId(),
                       taskTracker.statusRef.get().getErrorMsg()
@@ -328,16 +329,14 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
           throw new ISE("Stopped");
         }
 
-        WorkerFailureListener workerFailureListener = workerFailureListenerRef.get();
-        if (workerFailureListener != null) {
+        if (workerFailureListenerRef.get() != null) {
           for (TaskTracker taskTracker : taskTrackers.values()) {
             if (taskTracker.isRetrying() && workerNumbers.contains(taskTracker.workerNumber)) {
-              workerFailureListener.onFailure(
-                  taskTracker.msqWorkerTask,
-                  new WorkerFailedFault(
-                      taskTracker.msqWorkerTask.getId(),
-                      taskTracker.statusRef.get().getErrorMsg()
-                  )
+              invokeFailureListener(taskTracker,
+                                    new WorkerFailedFault(
+                                        taskTracker.msqWorkerTask.getId(),
+                                        taskTracker.statusRef.get().getErrorMsg()
+                                    )
               );
             }
           }
@@ -600,7 +599,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         removeWorkerFromFullyStartedWorkers(tracker);
         final String errorMessage = StringUtils.format("Task [%s] status missing", taskId);
         log.info(errorMessage + ". Trying to relaunch the worker");
-        invokeFailureListener(tracker, errorMessage);
+        invokeFailureListener(tracker, UnknownFault.forMessage(errorMessage));
 
       } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
@@ -614,18 +613,18 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         removeWorkerFromFullyStartedWorkers(tracker);
         TaskStatus taskStatus = tracker.statusRef.get();
         log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, taskStatus.getErrorMsg());
-        invokeFailureListener(tracker, taskStatus.getErrorMsg());
+        invokeFailureListener(tracker, new WorkerFailedFault(taskId, taskStatus.getErrorMsg()));
       }
     }
   }
 
-  private void invokeFailureListener(TaskTracker tracker, String errorMessage)
+  private void invokeFailureListener(TaskTracker tracker, MSQFault msqFault)
   {
     WorkerFailureListener workerFailureListener = workerFailureListenerRef.get();
     if (workerFailureListener != null) {
       workerFailureListener.onFailure(
           tracker.msqWorkerTask,
-          UnknownFault.forMessage(errorMessage)
+          msqFault
       );
     }
   }
