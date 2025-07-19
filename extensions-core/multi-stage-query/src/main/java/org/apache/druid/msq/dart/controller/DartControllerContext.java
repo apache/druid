@@ -35,7 +35,6 @@ import org.apache.druid.msq.exec.ControllerMemoryParameters;
 import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
-import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -203,8 +202,7 @@ public class DartControllerContext implements ControllerContext
   public WorkerManager newWorkerManager(
       String queryId,
       MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig,
-      WorkerFailureListener workerFailureListener
+      ControllerQueryKernelConfig queryKernelConfig
   )
   {
     // We're ignoring WorkerFailureListener. Dart worker failures are routed into the controller by
