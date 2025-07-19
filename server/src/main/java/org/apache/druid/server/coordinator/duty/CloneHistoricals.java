@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -34,6 +35,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -102,18 +104,15 @@ public class CloneHistoricals implements CoordinatorDuty
       final Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
       // Load any segments missing in the clone target.
       for (DataSegment segment : sourceProjectedSegments) {
-        if (!targetProjectedSegments.contains(segment) && loadQueueManager.loadSegment(segment, targetServer, SegmentAction.LOAD)) {
-          stats.add(
-              Stats.Segments.ASSIGNED_TO_CLONE,
-              RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
-              1L
-          );
+        if (!targetProjectedSegments.contains(segment)) {
+          loadSegmentOnTargetServer(segment, targetServer, params);
         }
       }
 
       // Drop any segments missing from the clone source.
       for (DataSegment segment : targetProjectedSegments) {
-        if (!sourceProjectedSegments.contains(segment) && loadQueueManager.dropSegment(segment, targetServer)) {
+        if (!sourceProjectedSegments.contains(segment)
+            && loadQueueManager.dropSegment(segment, targetServer)) {
           stats.add(
               Stats.Segments.DROPPED_FROM_CLONE,
               RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
@@ -127,6 +126,53 @@ public class CloneHistoricals implements CoordinatorDuty
     cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
+  }
+
+  private void loadSegmentOnTargetServer(
+      DataSegment segment,
+      ServerHolder targetServer,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    final RowKey.Builder rowKey = RowKey
+        .with(Dimension.SERVER, targetServer.getServer().getName())
+        .with(Dimension.DATASOURCE, segment.getDataSource());
+
+    final DataSegment loadableSegment = getLoadableSegment(segment, params);
+    if (loadableSegment == null) {
+      params.getCoordinatorStats().add(
+          Stats.Segments.ASSIGN_SKIPPED,
+          rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
+          1L
+      );
+    } else if (loadQueueManager.loadSegment(loadableSegment, targetServer, SegmentAction.LOAD)) {
+      params.getCoordinatorStats().add(
+          Stats.Segments.ASSIGNED_TO_CLONE,
+          rowKey.build(),
+          1L
+      );
+    }
+  }
+
+  /**
+   * Returns a DataSegment with the correct value of loadSpec (as obtained from
+   * metadata store). This method may return null if there is no snapshot available
+   * for the underlying datasource or if the segment is unused.
+   */
+  @Nullable
+  private DataSegment getLoadableSegment(DataSegment segmentToMove, DruidCoordinatorRuntimeParams params)
+  {
+    if (!params.isUsedSegment(segmentToMove)) {
+      return null;
+    }
+
+    ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot()
+                                                .getDataSource(segmentToMove.getDataSource());
+    if (datasource == null) {
+      return null;
+    }
+
+    return datasource.getSegment(segmentToMove.getId());
   }
 
   /**
