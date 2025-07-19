@@ -45,6 +45,8 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical1 = new EmbeddedHistorical();
   private final EmbeddedHistorical historical2 = new EmbeddedHistorical()
       .addProperty("druid.plaintextPort", "7083");
+  private final EmbeddedHistorical historical3 = new EmbeddedHistorical()
+      .addProperty("druid.plaintextPort", "6083");
   private final EmbeddedCoordinator coordinator1 = new EmbeddedCoordinator();
   private final EmbeddedCoordinator coordinator2 = new EmbeddedCoordinator()
       .addProperty("druid.plaintextPort", "7081");
@@ -60,6 +62,7 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
                                .addServer(coordinator2)
                                .addServer(new EmbeddedIndexer())
                                .addServer(historical1)
+                               .addServer(historical3)
                                .addServer(new EmbeddedBroker())
                                .addServer(new EmbeddedRouter());
   }
@@ -67,29 +70,13 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
   @Test
   public void test_cloneHistoricals_inTurboMode_duringCoordinatorLeaderSwitch() throws Exception
   {
-    cluster.callApi().onLeaderCoordinator(
-        c -> c.updateRulesForDatasource(
-            dataSource,
-            List.of(new ForeverLoadRule(Map.of("_default_tier", 1), null))
-        )
-    );
-    cluster.callApi().onLeaderCoordinator(
-        c -> c.updateCoordinatorDynamicConfig(
-            CoordinatorDynamicConfig
-                .builder()
-                .withCloneServers(Map.of("localhost:7083", "localhost:8083"))
-                .withTurboLoadingNodes(Set.of("localhost:7083"))
-                .build()
-        )
-    );
-
     runIngestion();
 
     // Wait for segments to be loaded on historical1
     coordinator1.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(10)
+        agg -> agg.hasSumAtLeast(20)
     );
     coordinator1.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/loadQueue/success")
@@ -111,6 +98,16 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
     // Add historical2 to the cluster
     cluster.addServer(historical2);
     historical2.start();
+
+    cluster.callApi().onLeaderCoordinator(
+        c -> c.updateCoordinatorDynamicConfig(
+            CoordinatorDynamicConfig
+                .builder()
+                .withCloneServers(Map.of(historical2.bindings().selfNode().getHostAndPort(), historical1.bindings().selfNode().getHostAndPort()))
+                .withTurboLoadingNodes(Set.of(historical2.bindings().selfNode().getHostAndPort()))
+                .build()
+        )
+    );
 
     // Wait for the clones to be loaded
     coordinator2.latchableEmitter().waitForEventAggregate(
