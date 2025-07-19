@@ -253,7 +253,7 @@ public class LatchableEmitter extends StubServiceEmitter
     /**
      * Matches an event only if it has the given metric value.
      */
-    public EventMatcher hasValue(long metricValue)
+    public EventMatcher hasValueAtLeast(long metricValue)
     {
       this.metricValue = metricValue;
       return this;
@@ -273,7 +273,7 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (metricValue != null && event.getValue().longValue() != metricValue) {
+      } else if (metricValue != null && event.getValue().longValue() < metricValue) {
         return false;
       }
 
