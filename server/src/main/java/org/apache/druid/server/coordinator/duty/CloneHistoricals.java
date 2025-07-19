@@ -29,7 +29,6 @@ import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -66,7 +65,6 @@ public class CloneHistoricals implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final Map<String, String> cloneServers = params.getCoordinatorDynamicConfig().getCloneServers();
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
     final DruidCluster cluster = params.getDruidCluster();
 
     if (cloneServers.isEmpty()) {
