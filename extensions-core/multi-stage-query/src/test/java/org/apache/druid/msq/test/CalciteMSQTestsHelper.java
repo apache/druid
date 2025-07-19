@@ -22,6 +22,7 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -38,14 +39,17 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.CompleteSegment;
@@ -62,18 +66,12 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -190,11 +188,17 @@ public class CalciteMSQTestsHelper
     // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
     // In the future, if this needs to be supported, mocks for DataServerQueryHandler should be added like
     // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
-    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
-    DataServerQueryHandler dataServerQueryHandler = Mockito.mock(DataServerQueryHandler.class);
-    doThrow(new AssertionError("Test does not support loaded segment query"))
-        .when(dataServerQueryHandler).fetchRowsFromDataServer(any(), any(), any());
-    doReturn(dataServerQueryHandler).when(mockFactory).createDataServerQueryHandler(anyString(), any(), any());
-    return mockFactory;
+    return (inputNumber, dataSourceName, channelCounters, dataServerRequestDescriptor) -> new DataServerQueryHandler()
+    {
+      @Override
+      public <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
+          Query<QueryType> query,
+          Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
+          Closer closer
+      )
+      {
+        throw new AssertionError("Test does not support loaded segment query");
+      }
+    };
   }
 }
