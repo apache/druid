@@ -74,7 +74,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_sync_onBrokers()
+  public void test_ingestDayGranularity_andCompactToMonthGranularity()
   {
     // Ingest data at DAY granularity and verify
     runIngestionAtDayGranularity();
