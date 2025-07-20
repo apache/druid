@@ -99,4 +99,6 @@ public interface ServerReferencesProvider
    * {@link ObjectMapper} annotated with {@link Json}.
    */
   ObjectMapper jsonMapper();
+
+  <T> T getInstance(Class<T> clazz);
 }

@@ -30,11 +30,8 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -87,10 +84,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Mock
   private FilteredServerInventoryView serverInventoryView;
   @Mock
-  private DruidLeaderClient coordinatorDruidLeaderClient;
-  @Mock
-  private DruidLeaderClient overlordDruidLeaderClient;
-  @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   @Mock
   private ObjectMapper objectMapper;
@@ -121,12 +114,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidOperatorTable.class).toInstance(druidOperatorTable);
-          binder.bind(DruidLeaderClient.class)
-                .annotatedWith(Coordinator.class)
-                .toInstance(coordinatorDruidLeaderClient);
-          binder.bind(DruidLeaderClient.class)
-                .annotatedWith(IndexingService.class)
-                .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
           binder.bind(DruidSchemaManager.class).toInstance(new NoopDruidSchemaManager());
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);

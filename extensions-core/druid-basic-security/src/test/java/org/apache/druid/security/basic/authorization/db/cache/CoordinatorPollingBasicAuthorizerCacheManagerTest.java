@@ -21,14 +21,15 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.rpc.MockServiceClient;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
+import org.apache.druid.security.basic.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
@@ -36,7 +37,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -53,14 +57,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 {
   private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
+  private static final String AUTHORIZER_NAME = "test-basic-auth";
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   // Mocks
-  private Request request;
   private Injector injector;
-  private DruidLeaderClient leaderClient;
+  private CoordinatorServiceClient leaderClient;
+  private MockServiceClient serviceClient;
 
   private CoordinatorPollingBasicAuthorizerCacheManager manager;
 
@@ -72,12 +77,13 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     final BasicRoleBasedAuthorizer authorizer = EasyMock.createStrictMock(BasicRoleBasedAuthorizer.class);
     injector = EasyMock.createStrictMock(Injector.class);
     EasyMock.expect(injector.getInstance(AuthorizerMapper.class))
-            .andReturn(new AuthorizerMapper(Map.of("test-basic-auth", authorizer))).once();
+            .andReturn(new AuthorizerMapper(Map.of(AUTHORIZER_NAME, authorizer))).once();
 
-    request = EasyMock.createStrictMock(Request.class);
-    leaderClient = EasyMock.createStrictMock(DruidLeaderClient.class);
+    serviceClient = new MockServiceClient();
+    leaderClient = EasyMock.createStrictMock(CoordinatorServiceClient.class);
+    EasyMock.expect(leaderClient.getServiceClient()).andReturn(serviceClient).anyTimes();
 
-    final int numRetries = 10;
+    final int numRetries = 1;
     manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
         new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
@@ -107,21 +113,24 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     groupResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new GroupMappingAndRoleMap(Map.of(), Map.of())));
 
     // Return the first set of requests immediately
-    expectHttpRequestAndAnswer(() -> userResponseHolder);
-    expectHttpRequestAndAnswer(() -> groupResponseHolder);
+    expectHttpRequestAndAnswer("cachedSerializedUserMap", () -> userResponseHolder);
+    expectHttpRequestAndAnswer("cachedSerializedGroupMappingMap", () -> groupResponseHolder);
 
     // Block the second user request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
-    expectHttpRequestAndAnswer(() -> {
-      try {
-        Thread.sleep(10_000);
-        return userResponseHolder;
-      }
-      catch (InterruptedException e) {
-        isInterrupted.set(true);
-        throw e;
-      }
-    });
+    expectHttpRequestAndAnswer(
+        "cachedSerializedUserMap",
+        () -> {
+          try {
+            Thread.sleep(10_000);
+            return userResponseHolder;
+          }
+          catch (InterruptedException e) {
+            isInterrupted.set(true);
+            throw e;
+          }
+        }
+    );
 
     replayAll();
 
@@ -149,24 +158,27 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     groupResponseHolder.addChunk(JacksonUtils.toBytes(MAPPER, new GroupMappingAndRoleMap(Map.of(), Map.of())));
 
     // Return the first set of requests immediately
-    expectHttpRequestAndAnswer(() -> userResponseHolder);
-    expectHttpRequestAndAnswer(() -> groupResponseHolder);
+    expectHttpRequestAndAnswer("cachedSerializedUserMap", () -> userResponseHolder);
+    expectHttpRequestAndAnswer("cachedSerializedGroupMappingMap", () -> groupResponseHolder);
 
     // Return the second user request immediately
-    expectHttpRequestAndAnswer(() -> userResponseHolder);
+    expectHttpRequestAndAnswer("cachedSerializedUserMap", () -> userResponseHolder);
 
     // Block the second group request so that it can be interrupted by stop()
     final AtomicBoolean isInterrupted = new AtomicBoolean(false);
-    expectHttpRequestAndAnswer(() -> {
-      try {
-        Thread.sleep(10_000);
-        return groupResponseHolder;
-      }
-      catch (InterruptedException e) {
-        isInterrupted.set(true);
-        throw e;
-      }
-    });
+    expectHttpRequestAndAnswer(
+        "cachedSerializedGroupMappingMap",
+        () -> {
+          try {
+            Thread.sleep(10_000);
+            return groupResponseHolder;
+          }
+          catch (InterruptedException e) {
+            isInterrupted.set(true);
+            throw e;
+          }
+        }
+    );
 
     replayAll();
 
@@ -183,21 +195,27 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     verifyAll();
   }
 
-  private void expectHttpRequestAndAnswer(IAnswer<BytesFullResponseHolder> responseHolder)
+  private void expectHttpRequestAndAnswer(String path, IAnswer<BytesFullResponseHolder> responseHolder)
   {
-    try {
-      EasyMock.expect(
-          leaderClient.makeRequest(EasyMock.anyObject(), EasyMock.anyString())
-      ).andReturn(request).once();
-      EasyMock.expect(
-          leaderClient.go(
-              EasyMock.anyObject(),
-              EasyMock.anyObject(BytesFullResponseHandler.class)
-          )
-      ).andAnswer(responseHolder).once();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    final String fullPath = StringUtils.format(
+        "/druid-ext/basic-security/authorization/db/%s/%s",
+        AUTHORIZER_NAME, path
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, fullPath),
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+        {
+          @Override
+          public ChannelBuffer getContent()
+          {
+            try {
+              return ChannelBuffers.wrappedBuffer(responseHolder.answer().getContent());
+            }
+            catch (Throwable e) {
+              throw new RuntimeException(e);
+            }
+          }
+        }
+    );
   }
 }
