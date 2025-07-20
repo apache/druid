@@ -119,17 +119,15 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
            .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
     return clusterWithKafka
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class
-        )
+        .addExtension(DartControllerModule.class)
+        .addExtension(DartWorkerModule.class)
+        .addExtension(DartControllerMemoryManagementModule.class)
+        .addExtension(DartWorkerMemoryManagementModule.class)
+        .addExtension(IndexerMemoryManagementModule.class)
+        .addExtension(MSQDurableStorageModule.class)
+        .addExtension(MSQIndexingModule.class)
+        .addExtension(MSQSqlModule.class)
+        .addExtension(SqlTaskModule.class)
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .useLatchableEmitter()
