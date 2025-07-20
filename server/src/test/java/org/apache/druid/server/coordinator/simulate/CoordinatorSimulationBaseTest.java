@@ -151,6 +151,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   }
 
   @Override
+  public void deleteSegments(List<DataSegment> segments)
+  {
+    sim.cluster().deleteSegments(segments);
+  }
+
+  @Override
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);
