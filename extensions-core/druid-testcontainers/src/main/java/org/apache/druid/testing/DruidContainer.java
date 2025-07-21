@@ -37,7 +37,10 @@ import java.util.Properties;
  * </pre>
  * Dependencies of Druid services:
  * <ul>
- * <li>All Druid services need to be able to access </li>
+ * <li>All Druid services need to be able to connect to a Zookeeper cluster for
+ * service discovery. Specified by property {@code druid.service.zk.host}</li>
+ * <li>Coordinator and Overlord services need to be able to connect to a SQL
+ * metadata store, specified by property {@code druid.metadata.storage.connector.connectURI}.</li>
  * </ul>
  */
 public class DruidContainer extends GenericContainer<DruidContainer>
