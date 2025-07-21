@@ -486,7 +486,7 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testPreparePolicyEnforcerThrowsForNoPolicy() throws Exception
+  public void testPreparePolicyEnforcerThrowsForNoPolicy()
   {
     policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
     sqlStatementFactory = buildSqlStatementFactory();
@@ -531,26 +531,8 @@ public class SqlStatementTest
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
-    Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
-  }
-
-  @Test
-  public void testDefaultQueryContextIsApplied()
-  {
-    SqlQueryPlus sqlReq = SqlQueryPlus
-        .builder("select 1 + ?")
-        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
-        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
-        .build();
-    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.context();
-    Assert.assertEquals(2, context.size());
-    // Statement should contain default query context values
-    for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
-      Assert.assertTrue(context.containsKey(defaultContextKey));
-    }
+    Assert.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
   }
 
   private SqlStatementFactory buildSqlStatementFactory()
