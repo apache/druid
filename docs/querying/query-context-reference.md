@@ -132,3 +132,10 @@ vectorization. These query types will ignore the `vectorize` parameter even if i
 |`vectorize`|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
 |`vectorSize`|`512`|Sets the row batching size for a particular query. This will override `druid.query.default.context.vectorSize` if it's set.|
 |`vectorizeVirtualColumns`|`true`|Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization). Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries with virtual columns that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production. This will override `druid.query.default.context.vectorizeVirtualColumns` if it's set.|
+
+## Learn more
+
+- [Set query context](./set-query-context.md) to learn how to configure query context parameters.
+- [SQL query context](sql-query-context.md) for query context parameters specific to Druid SQL.
+- [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters) for context parameters used in SQL-based ingestion (MSQ).
+

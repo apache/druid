@@ -400,6 +400,8 @@ SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 
 
 SET statements only apply to the query in the same request. Subsequent requests are not affected.
 
+SET statements work with SELECT, INSERT, and REPLACE queries.
+
 If you use the [JSON API](../api-reference/sql-api.md), you can also include query context parameters using the `context` field. If you include both, the parameter value in SET takes precedence over the parameter value in `context`.
 
 Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.

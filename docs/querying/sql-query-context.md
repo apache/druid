@@ -32,9 +32,6 @@ In Apache Druid, you can control how your [Druid SQL queries](./sql.md) queries 
 
 For additional context parameters supported for all query types, refer to [Query context reference](query-context-reference.md). To learn how to set the query context, see [Set query context](../querying/set-query-context.md).
 
-You can also override the default values for these parameters by setting a runtime property like this:
-`druid.query.default.context.{query_context_key}`. For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
-
 The table below lists the query context parameters you can use with Druid SQL.
 
 |Parameter|Description|Default value|
@@ -60,5 +57,6 @@ The table below lists the query context parameters you can use with Druid SQL.
 |`inSubQueryThreshold`|At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table. `inFunctionThreshold` takes priority over this setting. A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`. A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`. |`2147483647`|
 
 ## Learn more
-- [Set query context](../querying/set-query-context.md) for how to set query context.
+- [Set query context](../querying/set-query-context.md) for how to set the query context.
 - [Query context reference](query-context-reference.md)  for available query context parameters.
+- [MSQ context parameters](../multi-stage-query/reference.md#context-parameters) for how to set context parameters for Multi-Stage Queries.
