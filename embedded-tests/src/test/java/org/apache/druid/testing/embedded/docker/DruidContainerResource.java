@@ -22,7 +22,6 @@ package org.apache.druid.testing.embedded.docker;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.DruidContainer;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -267,7 +266,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private Properties getServerProperties()
   {
     FORBIDDEN_PROPERTIES.forEach(properties::remove);
-    addProperty("druid.host", hostMachine());
+    addProperty("druid.host", EmbeddedDruidCluster.getDefaultHost());
     addProperty("druid.plaintextPort", String.valueOf(servicePort));
 
     final Properties serverProperties = new Properties();
@@ -290,16 +289,6 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Hostname for the host machine running the containers. Using this hostname
-   * instead of "localhost" allows all the Druid containers to talk to each
-   * other and also other EmbeddedDruidServers.
-   */
-  private static String hostMachine()
-  {
-    return DruidNode.getDefaultHost();
   }
 
   @Override

@@ -37,6 +37,8 @@ import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -247,7 +249,22 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public String getEmbeddedServiceHostname()
   {
-    return hasDruidContainers ? DruidNode.getDefaultHost() : "localhost";
+    return hasDruidContainers ? getDefaultHost() : "localhost";
+  }
+
+  /**
+   * Hostname for the host machine running the containers. Using this hostname
+   * instead of "localhost" allows all the Druid containers to talk to each
+   * other and also other EmbeddedDruidServers.
+   */
+  public static String getDefaultHost()
+  {
+    try {
+      return InetAddress.getLocalHost().getHostAddress();
+    }
+    catch (UnknownHostException e) {
+      throw new ISE(e, "Unable to determine host name");
+    }
   }
 
   /**
