@@ -518,10 +518,7 @@ public class TestHelper
 
   public static DataSegment toSimpleDataSegment(Segment segment, ShardSpec shardSpec)
   {
-    return DataSegment.builder()
-                      .dataSource(segment.getId().getDataSource())
-                      .interval(segment.getId().getInterval())
-                      .version(segment.getId().getVersion())
+    return DataSegment.builder(segment.getId())
                       .shardSpec(shardSpec)
                       .size(0)
                       .build();

@@ -92,6 +92,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -1849,10 +1850,8 @@ public class ClientQuerySegmentWalkerTest
 
   private static DataSegment makeDataSegment(String name)
   {
-    return DataSegment.builder()
-                      .dataSource(name)
-                      .interval(INTERVAL)
-                      .version(VERSION)
+    final SegmentId segmentId = SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC);
+    return DataSegment.builder(segmentId)
                       .shardSpec(SHARD_SPEC)
                       .size(1L)
                       .build();
