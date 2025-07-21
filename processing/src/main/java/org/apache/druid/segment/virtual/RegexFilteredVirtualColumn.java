@@ -40,8 +40,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Virtual column form of {@link RegexFilteredDimensionSpec}, powered by
- * {@link org.apache.druid.query.dimension.ForwardingFilteredDimensionSelector}
+ * Virtual column form of {@link RegexFilteredDimensionSpec}
  */
 public class RegexFilteredVirtualColumn implements VirtualColumn
 {

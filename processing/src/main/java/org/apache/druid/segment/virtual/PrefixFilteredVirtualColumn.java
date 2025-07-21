@@ -40,8 +40,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Virtual column form of {@link PrefixFilteredDimensionSpec}, powered by
- * {@link org.apache.druid.query.dimension.ForwardingFilteredDimensionSelector}
+ * Virtual column form of {@link PrefixFilteredDimensionSpec}
  */
 public class PrefixFilteredVirtualColumn implements VirtualColumn
 {
