@@ -664,7 +664,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Override
     public void handle()
     {
-      resetInternal(dataSourceMetadata);
+      resetInternal(dataSourceMetadata, false);
     }
 
     @Override
@@ -1824,8 +1824,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public void resetInternal(DataSourceMetadata dataSourceMetadata)
+  public void resetInternal(DataSourceMetadata dataSourceMetadata, boolean autoReset)
   {
+    String autoResetMessage = autoReset ? "automatically" : "manually";
+
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(supervisorId);
@@ -1833,7 +1835,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.values()
                                .forEach(group -> killTasksInGroup(
                                    group,
-                                   "DataSourceMetadata is not found while reset"
+                                   "Offset of all partitions has been reset %s",
+                                   autoResetMessage
                                ));
       activelyReadingTaskGroups.clear();
       partitionGroups.clear();
@@ -1845,7 +1848,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             dataSourceMetadata.getClass()
         );
       }
-      log.info("Reset supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
+      log.info("Reset supervisor[%s] for dataSource[%s] with metadata[%s] %s", supervisorId, dataSource, dataSourceMetadata, autoResetMessage);
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
@@ -1901,7 +1904,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           metadataUpdateSuccess = true;
         } else {
           final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
-          log.info("Reset supervisor[%s] for dataSource[%s] to new meta [%s]", supervisorId, dataSource, newMetadata);
+          log.info("Reset supervisor[%s] for dataSource[%s] to new meta [%s] %s", supervisorId, dataSource, newMetadata, autoResetMessage);
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
           }
@@ -1913,12 +1916,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (metadataUpdateSuccess) {
           resetMetadata.getSeekableStreamSequenceNumbers()
                        .getPartitionSequenceNumberMap()
-                       .keySet()
-                       .forEach(partition -> {
+                       .forEach((partition, offset) -> {
                          final int groupId = getTaskGroupIdForPartition(partition);
                          killTaskGroupForPartitions(
                              ImmutableSet.of(partition),
-                             "DataSourceMetadata is updated while reset"
+                             "Offset of partition [%s] has been reset to [%s] %s",
+                             partition,
+                             offset,
+                             autoResetMessage
                          );
                          activelyReadingTaskGroups.remove(groupId);
                          // killTaskGroupForPartitions() cleans up partitionGroups.
@@ -1986,12 +1991,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     resetMetadata.getSeekableStreamSequenceNumbers()
                  .getPartitionSequenceNumberMap()
-                 .keySet()
-                 .forEach(partition -> {
+                 .forEach((partition, offset) -> {
                    final int groupId = getTaskGroupIdForPartition(partition);
                    killTaskGroupForPartitions(
                        ImmutableSet.of(partition),
-                       "DataSourceMetadata is updated while reset offsets is called"
+                       "Offset of partition [%s] has been reset to [%s] by the user",
+                       partition,
+                       offset
                    );
                    activelyReadingTaskGroups.remove(groupId);
                    // killTaskGroupForPartitions() cleans up partitionGroups.
@@ -3993,27 +3999,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (sequence != null) {
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
-        SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
-        boolean isOffsetAvailable = earliestOffset != null
-               && makeSequenceNumber(sequence).isAvailableWithEarliest(makeSequenceNumber(earliestOffset));
+        // Check if current sequence is less than or equal to earliestSequenceNumber in the stream
+        SequenceOffsetType earliestSequenceNumber = getOffsetFromStreamForPartition(partition, true);
+        boolean isOffsetAvailable = earliestSequenceNumber != null
+                                    && makeSequenceNumber(sequence).isAvailableWithEarliest(makeSequenceNumber(earliestSequenceNumber));
 
         if (!isOffsetAvailable) {
-          if (taskTuningConfig.isResetOffsetAutomatically() && earliestOffset != null) {
+          if (taskTuningConfig.isResetOffsetAutomatically() && earliestSequenceNumber != null) {
             resetInternal(
                 createDataSourceMetaDataForReset(ioConfig.getStream(),
                                                  // Reset to the earliest offset for the partition
-                                                 ImmutableMap.of(partition, earliestOffset))
+                                                 ImmutableMap.of(partition, earliestSequenceNumber)),
+                // auto reset flag
+                true
             );
             log.makeAlert("Offsets were reset automatically, potential data duplication or loss")
                .addData("dataSource", this.dataSource)
                .addData("partition", partition)
                .addData("offset", sequence.toString())
-               .addData("newOffset", earliestOffset.toString())
+               .addData("newOffset", earliestSequenceNumber.toString())
                .emit();
 
             // Return the earliest offset as the new sequence number
             return makeSequenceNumber(
-                earliestOffset,
+                earliestSequenceNumber,
                 useExclusiveStartSequenceNumberForNonFirstSequence()
             );
           } else {
@@ -4022,7 +4031,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     "Previous sequenceNumber [%s] is no longer available for partition [%s] which now has the least sequence number [%s]. You can clear the previous"
                     + " sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
                     sequence.toString(),
-                    earliestOffset == null ? "null" : earliestOffset.toString(),
+                    earliestSequenceNumber == null ? "null" : earliestSequenceNumber.toString(),
                     partition
                 )
             );

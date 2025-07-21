@@ -3451,7 +3451,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
 
   }
@@ -3482,7 +3482,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaDataSourceMetadata kafkaDataSourceMetadata = new KafkaDataSourceMetadata(
         new SeekableStreamStartSequenceNumbers<>(
             topic,
-            singlePartitionMap(topic, 0, 1000L, 1, 1000L, 2, 1000L),
+            singlePartitionMap(topic,
+                               // partition 0
+                               0, 1000L,
+                               // partition 1
+                               1, 1000L,
+                               // partition 2
+                               2, 1000L),
             ImmutableSet.of()
         )
     );
@@ -3490,13 +3496,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaDataSourceMetadata resetMetadata = new KafkaDataSourceMetadata(
         new SeekableStreamStartSequenceNumbers<>(
             topic,
-            singlePartitionMap(topic, 1, 1000L, 2, 1000L),
+            singlePartitionMap(topic,
+                               // partition 1
+                               1, 1005L,
+                               // partition 2
+                               2, 1006L),
             ImmutableSet.of()
         )
     );
-
-    KafkaDataSourceMetadata expectedMetadata = new KafkaDataSourceMetadata(
-        new SeekableStreamStartSequenceNumbers<>(topic, singlePartitionMap(topic, 0, 1000L), ImmutableSet.of()));
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
@@ -3508,7 +3515,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
     try {
-      supervisor.resetInternal(resetMetadata);
+      supervisor.resetInternal(resetMetadata, false);
     }
     catch (NullPointerException npe) {
       // Expected as there will be an attempt to EasyMock.reset partitionGroups offsets to NOT_SET
@@ -3518,6 +3525,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, captureDataSource.getValue());
+
+    KafkaDataSourceMetadata expectedMetadata = new KafkaDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(topic, singlePartitionMap(topic,
+                                                                           // partition 0, unchanged
+                                                                           0, 1000L,
+                                                                           // partition 1, reset to 1005
+                                                                           1, 1005L,
+                                                                           // partition 2, reset to 1006
+                                                                           2, 1006L
+                                                                           ), ImmutableSet.of()));
     Assert.assertEquals(expectedMetadata, captureDataSourceMetadata.getValue());
   }
 
@@ -3553,7 +3570,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(resetMetadata);
+    supervisor.resetInternal(resetMetadata, false);
     verifyAll();
   }
 
@@ -3566,6 +3583,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
@@ -3575,18 +3593,24 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
             .andReturn(
                 new KafkaDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 1, -100L, 2, 200L))
+                    new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic,
+                                                                                     // partition 1
+                                                                                     1, -100L,
+                                                                                     // partition 2
+                                                                                     2, 200L))
                 )
-            ).times(3);
+            ).times(4);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
-    // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
-    // Instead, subsequent partitions will be reset in the following supervisor runs.
     EasyMock.expect(
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KafkaDataSourceMetadata(
                 // Only one partition is reset in a single supervisor run.
-                new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 2, 200L))
+                new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic,
+                                                                                 // partition 1 will be reset to zero
+                                                                                 1, 0L,
+                                                                                 // partition 2 will be kept unchanged
+                                                                                 2, 200L))
             )
         )
     ).andReturn(true);
@@ -3598,7 +3622,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
+        "Offsets were reset automatically, potential data duplication or loss",
         alert.getDescription()
     );
   }
@@ -3715,11 +3739,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id2", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id3", "Offset of all partitions has been reset %s", "manually");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
@@ -3830,12 +3854,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id1", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id1", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id2", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id3", "Offset of all partitions has been reset %s", "manually");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
@@ -4258,7 +4282,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 

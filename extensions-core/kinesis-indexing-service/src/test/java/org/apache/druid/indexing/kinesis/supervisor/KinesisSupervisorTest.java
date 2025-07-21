@@ -2660,7 +2660,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
@@ -2713,7 +2713,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new SeekableStreamStartSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(
+                // SHARD_ID1 is not included in the reset metadata, so it should be kept unchanged
                 SHARD_ID1,
+                KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
+
+                SHARD_ID0,
                 KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
             ),
             ImmutableSet.of()
@@ -2730,7 +2734,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
     try {
-      supervisor.resetInternal(resetMetadata);
+      supervisor.resetInternal(resetMetadata, false);
     }
     catch (NullPointerException npe) {
       // Expected as there will be an attempt to EasyMock.reset partitionGroups sequences to NOT_SET
@@ -2774,7 +2778,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(resetMetadata);
+    supervisor.resetInternal(resetMetadata, false);
     verifyAll();
   }
 
@@ -2812,6 +2816,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .anyTimes();
 
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -2826,7 +2831,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                 new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "100", SHARD_ID2, "200"))
             )
         )
-        .times(2);
+        .times(3);
 
     // Since shard 2 was in metadata before but is not in the list of shards returned by the record supplier,
     // it gets deleted from metadata (it is an expired shard)
@@ -2845,7 +2850,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .andReturn(true)
         .times(1);
 
-    // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.
     EasyMock
@@ -2854,7 +2858,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
                 DATASOURCE,
                 new KinesisDataSourceMetadata(
                     // Only one partition is reset in a single supervisor run.
-                    new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of())
+                    new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "300"))
                 )
             )
         )
@@ -2878,7 +2882,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]",
+        "Offsets were reset automatically, potential data duplication or loss",
         alert.getDescription()
     );
   }
@@ -3038,11 +3042,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id2", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id3", "Offset of all partitions has been reset %s", "manually");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
@@ -3192,12 +3196,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     EasyMock.reset(taskQueue, indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
-    taskQueue.shutdown("id1", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id2", "DataSourceMetadata is not found while reset");
-    taskQueue.shutdown("id3", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("id1", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id2", "Offset of all partitions has been reset %s", "manually");
+    taskQueue.shutdown("id3", "Offset of all partitions has been reset %s", "manually");
     EasyMock.replay(taskQueue, indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
@@ -3723,7 +3727,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(DATASOURCE)).andReturn(true);
     EasyMock.replay(indexerMetadataStorageCoordinator);
 
-    supervisor.resetInternal(null);
+    supervisor.resetInternal(null, false);
     verifyAll();
   }
 
