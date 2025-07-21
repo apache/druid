@@ -21,7 +21,6 @@ package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -36,15 +35,14 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -185,14 +183,7 @@ public class CatalogClient implements CatalogSource
       return FutureUtils.getUnchecked(future, true);
     }
     catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      if (rootCause instanceof HttpResponseException) {
-        final HttpResponseException httpException = (HttpResponseException) rootCause;
-        if (httpException.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-          return null;
-        }
-      }
-      throw e;
+      return ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(e, () -> null);
     }
   }
 }
