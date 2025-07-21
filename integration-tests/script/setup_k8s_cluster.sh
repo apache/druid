@@ -22,7 +22,9 @@ export KUBECONFIG=$HOME/.kube/config
 
 # Launch K8S cluster
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-curl -sfL https://get.k3s.io | bash /dev/stdin  --docker
+curl -sfL https://get.k3s.io | bash /dev/stdin  --docker  &> abc.log
+cat abc.log
+systemctl status k3s.service
 mkdir -p $HOME/.kube
 sudo cp /etc/rancher/k3s/k3s.yaml $KUBECONFIG
 sudo chmod 777 $KUBECONFIG
