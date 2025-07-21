@@ -426,19 +426,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void drop(final DataSegment segment)
   {
-    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(segment.getId());
     final ReferenceCountingLock lock = lock(segment);
     synchronized (lock) {
       try {
-        // always unmount on cleanup to unmap the segment
-        cacheEntry.unmount();
-        if (!config.isDeleteOnRemove()) {
-          return;
-        }
         for (StorageLocation location : locations) {
-          if (cacheEntry.checkExists(location.getPath())) {
-            cleanupCacheFiles(location.getPath(), new File(location.getPath(), getSegmentDir(segment)));
-            location.release(cacheEntry);
+          final SegmentCacheEntry entry = location.getCacheEntry(id);
+          if (entry != null) {
+            location.release(entry);
           }
         }
       }

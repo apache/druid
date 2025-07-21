@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -38,7 +37,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -48,9 +46,9 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -73,7 +71,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +80,7 @@ import java.util.function.Supplier;
 class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "foo";
-  private static final int NUM_SEGMENTS = 10;
+  private static final int NUM_SEGMENTS = 50;
   private static final int THREADS = 8;
   private static final String LOAD_SPEC_FILE_NAME = "data";
 
@@ -200,33 +197,13 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
           FutureUtils.transform(
               f,
               holderSupplier -> {
-                try {
-                  final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
-                  Assertions.assertEquals(segment.getId(), holder.get().getSegment().getId());
-
-                  final String expectedStorageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-                  final File expectedFile = new File(
-                      StringUtils.format(
-                          "%s/%s/%s",
-                          cacheDir,
-                          expectedStorageDir,
-                          LOAD_SPEC_FILE_NAME
-                      )
-                  );
-
-                  Assertions.assertTrue(expectedFile.exists());
-                  Assertions.assertArrayEquals(
-                      Ints.toByteArray(expectedSegmentNumber),
-                      Files.readAllBytes(expectedFile.toPath())
-                  );
-
-                  holder.close();
-
-                  return true;
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
+                Assertions.assertEquals(segment.getId(), holder.get().getSegment().getId());
+                PhysicalSegmentInspector gadget = holder.get().getSegment().as(PhysicalSegmentInspector.class);
+                Assertions.assertNotNull(gadget);
+                Assertions.assertEquals(1209, gadget.getNumRows());
+                holder.close();
+                return true;
               }
           )
       );
@@ -240,7 +217,7 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
 
     // Cache dir should exist, but be empty, since we've closed all holders.
     Assertions.assertTrue(cacheDir.exists());
-    Assertions.assertArrayEquals(new String[]{}, cacheDir.list());
+    Assertions.assertEquals(List.of(), List.of(cacheDir.list()));
   }
 
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
@@ -279,7 +256,6 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
     public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
     {
       try {
-        Files.write(new File(destDir, LOAD_SPEC_FILE_NAME).toPath(), Ints.toByteArray(uniqueId));
         CompressionUtils.unzip(SEGMENT_ZIP_FILE, destDir);
         return new LoadSpecResult(1);
       }

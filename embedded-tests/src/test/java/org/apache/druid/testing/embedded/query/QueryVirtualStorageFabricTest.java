@@ -65,7 +65,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Virtual storage fabric mode tests for classic native JSON queries
  */
-class EmbeddedQueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
+class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();

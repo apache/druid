@@ -299,11 +299,11 @@ class StorageLocationTest
 
     Assertions.assertFalse(loc.reserve(entry2));
 
-    Assertions.assertTrue(loc.release(entry1));
+    loc.release(entry1);
     Assertions.assertEquals(1000L, loc.availableSizeBytes());
     Assertions.assertFalse(loc.isReserved(entry2.getId()));
 
-    Assertions.assertFalse(loc.release(entry2));
+    loc.release(entry2);
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})

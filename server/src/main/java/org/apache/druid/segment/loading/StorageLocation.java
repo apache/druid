@@ -286,34 +286,29 @@ public class StorageLocation
     }
   }
 
-  public boolean release(CacheEntry entry)
+  public void release(CacheEntry entry)
   {
-    final CacheEntry existingEntry = staticCacheEntries.remove(entry.getId());
-    if (existingEntry != null) {
-      existingEntry.unmount();
-      currSizeBytes.getAndAdd(-entry.getSize());
-      return true;
+    final boolean present = staticCacheEntries.containsKey(entry.getId());
+    staticCacheEntries.computeIfPresent(
+        entry.getId(),
+        (identifier, cacheEntry) -> {
+          cacheEntry.unmount();
+          currSizeBytes.getAndAdd(-entry.getSize());
+          return null;
+        }
+    );
+    if (present) {
+      return;
     }
 
-    final WeakCacheEntry existingWeakEntry = weakCacheEntries.remove(entry.getId());
-    if (existingWeakEntry != null) {
-      synchronized (lock) {
-        unlinkAndUnmountWeakEntry(existingWeakEntry);
-      }
-      return true;
-    }
-
-    log.warn("Entry[%s] is not found under this location[%s]", entry.getId(), path);
-    return false;
-  }
-
-  private void finishWeakReservationHold(Iterable<CacheEntryIdentifier> reservations)
-  {
-    for (CacheEntryIdentifier entryId : reservations) {
-      final WeakCacheEntry reservation = weakCacheEntries.get(entryId);
-      if (reservation != null) {
-        reservation.release();
-      }
+    synchronized (lock) {
+      weakCacheEntries.computeIfPresent(
+          entry.getId(),
+          (identifier, weakCacheEntry) -> {
+            unlinkAndUnmountWeakEntry(weakCacheEntry);
+            return null;
+          }
+      );
     }
   }
 
