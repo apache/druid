@@ -79,14 +79,8 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
+  public Object combine(Object lhs, Object rhs)
   {
-    if (rhs == null) {
-      return lhs;
-    }
-    if (lhs == null) {
-      return rhs;
-    }
     return CountAggregator.combineValues(lhs, rhs);
   }
 
