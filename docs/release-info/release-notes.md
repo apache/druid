@@ -57,25 +57,69 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
-#### Improved HTTP endpoints
+### Hadoop-based ingestion
 
-You can now use raw SQL in the HTTP body for `/druid/v2/sql` endpoints. You can set `Content-Type` to `text/plain` instead of `application/json`, so you can provide raw text that isn't escaped. 
+Hadoop-based ingestion has been deprecated since Druid 32.0. You must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
 
-[#17937](https://github.com/apache/druid/pull/17937)
+To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file.
 
-Additionally, SQL requests can now include multiple SET statements to build up context for the final statement. For example, the following query results in a statement that includes the `timeout`, `useCache`, `populateCache`, and `vectorize` query context parameters: 
+[#18239](https://github.com/apache/druid/pull/18239)
+
+### Use SET statements for query context parameters
+
+You can now use SET statements to define query context parameters for a query through the [Druid console](#set-statements-in-the-druid-console) or the [API](#set-statements-with-the-api).
+
+[#17894](https://github.com/apache/druid/pull/17894) [#17974](https://github.com/apache/druid/pull/17974)
+
+#### SET statements in the Druid console
+
+The web console now supports using SET statements to specify query context parameters. For example, if you include `SET timeout = 20000;` in your query, the timeout query context parameter is set:
+
+```sql
+SET timeout = 20000;
+SELECT "channel", "page", sum("added") from "wikipedia" GROUP BY 1, 2
+```
+
+[#17966](https://github.com/apache/druid/pull/17966)
+
+#### SET statements with the API
+
+SQL queries issued to `/druid/v2/sql` can now include multiple SET statements to build up context for the final statement. For example, the following SQL query results includes the `timeout`, `useCache`, `populateCache`, `vectorize`, and `engine` query context parameters: 
 
 ```sql
 SET timeout = 20000;
 SET useCache = false;
 SET populateCache = false;
 SET vectorize = 'force';
+SET engine = 'msq-dart'
 SELECT "channel", "page", sum("added") from "wikipedia" GROUP BY 1, 2
 ```
 
+The API call for this query looks like the following: 
+
+```curl
+curl --location 'http://HOST:PORT/druid/v2/sql' \
+--header 'Content-Type: application/json' \
+--data '{
+  "query": "SET timeout=20000; SET useCache=false; SET populateCache=false; SET engine='\''msq-dart'\'';SELECT  user,  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia GROUP BY 1, 2 ORDER BY 2 DESC",
+  "resultFormat": "array",
+  "header": true,
+  "typesHeader": true,
+  "sqlTypesHeader": true
+}'
+```
+
+
+
 This improvement also works for INSERT and REPLACE queries using the MSQ task engine. Note that JDBC isn't supported.
 
-[#17974](https://github.com/apache/druid/pull/17974)
+#### Improved HTTP endpoints
+
+You can now use raw SQL in the HTTP body for `/druid/v2/sql` endpoints. You can set `Content-Type` to `text/plain` instead of `application/json`, so you can provide raw text that isn't escaped. 
+
+
+ [#17937](https://github.com/apache/druid/pull/17937)
+
 ### Cloning Historicals
 
 You can now configure clones for Historicals using the dynamic Coordinator configuration `cloneServers`. Cloned Historicals are useful for situations such as rolling updates where you want to launch a new Historical as a replacement for an existing one.
@@ -95,18 +139,22 @@ As part of this change, new Coordinator APIs are available. For more information
 [#17863](https://github.com/apache/druid/pull/17863) [#17899](https://github.com/apache/druid/pull/17899) [#17956](https://github.com/apache/druid/pull/17956) 
 ### Embedded kill tasks on the Overlord (Experimental)
 
-You can now run kill tasks directly on the Overlord itself. Embedded kill tasks provide several benefits as they:
+You can now run kill tasks directly on the Overlord itself. Embedded kill tasks provide several benefits; they:
 
-- Unused segments are killed as soon as they're eligible and are killed faster
-- Doesn't require a task slot
-- Locked intervals are automatically skipped
-- Configuration is simpler
-- A large number of unused segments doesn't cause issues for them
+- Kill segments as soon as they're eligible 
+- Don't take up tasks slot
+- finish faster since they use optimized metadata queries and don't launch a new JVM
+- Kill a small number of segments per task, ensuring locks on an interval aren't held for too long
+- Skip locked intervals to avoid head-of-line blocking
+- Require minimal configuration
+- Can keep up with a large number of unused segments in the cluster
 
 This feature is controlled by the following configs:
 
 - `druid.manager.segments.killUnused.enabled` - Whether the feature is enabled or not
 - `druid.manager.segments.killUnused.bufferPeriod` - The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused.
+
+T use embedded kill tasks, you need to have segment metadata cache enabled.
 
 As part of this feature, [new metrics](#overlord-kill-task-metrics) have been added.
 
@@ -133,12 +181,6 @@ MSQ Dart is now able to query real-time tasks by setting the query context param
 This section contains detailed release notes separated by areas.
 
 ### Web console
-
-#### SET statements
-
-The web console supports using SET statements to specify query context parameters. For example, if you include `SET timeout = 20000;` in your query, the timeout query context parameter is set. 
-
-[#17966](https://github.com/apache/druid/pull/17966)
 
 #### Other web console improvements
 
@@ -324,6 +366,17 @@ Additionally, MSQ task engine metrics now include the following dimensions:
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
+
+#### Hadoop-based ingestion
+
+Hadoop-based ingestion has been deprecated since Druid 32.0. You must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
+
+To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file.
+
+Hadoop-based ingestion deprecated. Use [SQL-based ingestion](../multi-stage-query/index.md) instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+
+
+[#18239](https://github.com/apache/druid/pull/18239)
 
 #### `groupBy` and `topN` queries
 
