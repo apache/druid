@@ -1426,13 +1426,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesQueryOrderByNotCompatibleWithProjection()
   {
+    // Query has `__time ASC` ordering, but projection has `b ASC` ordering, so no projection can be used.
+    // This is not ideal, since we know query has Granularities.DAY, and segment also has Granularities.DAY, so the __time ordering does not matter.
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("test")
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .granularity(Granularities.DAY)
-                                        .descending(true)
                                         .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
-                                        .context(ImmutableMap.of(QueryContexts.USE_PROJECTION, "c_sum_daily"))
+                                        .context(ImmutableMap.of(QueryContexts.USE_PROJECTION, "b_c_sum"))
                                         .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
@@ -1440,7 +1441,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> projectionsCursorFactory.makeCursorHolder(buildSpec));
     Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("Projection[c_sum_daily] specified, but does not satisfy query", e.getMessage());
+    Assert.assertEquals("Projection[b_c_sum] specified, but does not satisfy query", e.getMessage());
   }
 
   @Test
