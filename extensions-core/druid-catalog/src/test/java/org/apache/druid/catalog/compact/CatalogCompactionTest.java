@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.catalog;
+package org.apache.druid.catalog.compact;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
@@ -25,7 +25,6 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.sync.CatalogClient;
-import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
@@ -65,7 +64,6 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
                                .useLatchableEmitter()
                                .addExtension(CatalogClientModule.class)
                                .addExtension(CatalogCoordinatorModule.class)
-                               .addExtension(AWSModule.class)
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(broker)
