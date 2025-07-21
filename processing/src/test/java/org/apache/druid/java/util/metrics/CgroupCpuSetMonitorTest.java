@@ -21,7 +21,6 @@ package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
@@ -34,8 +33,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 public class CgroupCpuSetMonitorTest
 {
@@ -72,19 +69,11 @@ public class CgroupCpuSetMonitorTest
     final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, ImmutableMap.of(), "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
-    final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(4, actualEvents.size());
-    final Map<String, Object> cpusEvent = actualEvents.get(0).toMap();
-    final Map<String, Object> effectiveCpusEvent = actualEvents.get(1).toMap();
-    final Map<String, Object> memsEvent = actualEvents.get(2).toMap();
-    final Map<String, Object> effectiveMemsEvent = actualEvents.get(3).toMap();
-    Assert.assertEquals("cgroup/cpuset/cpu_count", cpusEvent.get("metric"));
-    Assert.assertEquals(8, cpusEvent.get("value"));
-    Assert.assertEquals("cgroup/cpuset/effective_cpu_count", effectiveCpusEvent.get("metric"));
-    Assert.assertEquals(7, effectiveCpusEvent.get("value"));
-    Assert.assertEquals("cgroup/cpuset/mems_count", memsEvent.get("metric"));
-    Assert.assertEquals(4, memsEvent.get("value"));
-    Assert.assertEquals("cgroup/cpuset/effective_mems_count", effectiveMemsEvent.get("metric"));
-    Assert.assertEquals(1, effectiveMemsEvent.get("value"));
+    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+
+    emitter.verifyValue("cgroup/cpuset/cpu_count", 8);
+    emitter.verifyValue("cgroup/cpuset/effective_cpu_count", 7);
+    emitter.verifyValue("cgroup/cpuset/mems_count", 4);
+    emitter.verifyValue("cgroup/cpuset/effective_mems_count", 1);
   }
 }

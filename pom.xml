@@ -185,11 +185,11 @@
 
     <modules>
         <module>processing</module>
-        <module>indexing-hadoop</module>
-        <module>indexing-service</module>
         <module>server</module>
-        <module>sql</module>
+        <module>indexing-service</module>
+        <module>indexing-hadoop</module>
         <module>services</module>
+        <module>sql</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
@@ -1094,7 +1094,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.2</version>
+                <version>5.13.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1580,7 +1580,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.8.6.6</version>
+                <version>4.9.3.2</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>

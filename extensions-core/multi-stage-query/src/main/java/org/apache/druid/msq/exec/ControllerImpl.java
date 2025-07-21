@@ -343,8 +343,21 @@ public class ControllerImpl implements Controller
     try (final Closer closer = Closer.create()) {
       reportPayload = runInternal(queryListener, closer);
     }
+    catch (Throwable e) {
+      log.error(e, "Controller internal execution encountered exception.");
+      queryListener.onQueryComplete(makeStatusReportForException(e));
+      throw e;
+    }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
     queryListener.onQueryComplete(reportPayload);
+  }
+
+
+  private MSQTaskReportPayload makeStatusReportForException(Throwable e)
+  {
+    MSQErrorReport errorReport = MSQErrorReport.fromFault(queryId(), null, null, UnknownFault.forException(e));
+    MSQStatusReport statusReport = new MSQStatusReport(TaskState.FAILED, errorReport, null, null, 0, new HashMap<>(), 0, 0, null, null);
+    return new MSQTaskReportPayload(statusReport, null, null, null);
   }
 
   @Override
@@ -2928,5 +2941,11 @@ public class ControllerImpl implements Controller
   public ControllerContext getControllerContext()
   {
     return context;
+  }
+
+  @Override
+  public QueryContext getQueryContext()
+  {
+    return querySpec.getContext();
   }
 }

@@ -42,7 +42,6 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -140,8 +139,7 @@ public class SinkTest extends InitializedNullHandlingTest
           {
             return 0;
           }
-        },
-        false
+        }
     );
 
     FireHydrant currHydrant = sink.getCurrHydrant();
@@ -194,8 +192,7 @@ public class SinkTest extends InitializedNullHandlingTest
           {
             return 0;
           }
-        },
-        false
+        }
     );
 
     Assert.assertEquals(currHydrant, swapHydrant);
@@ -252,7 +249,7 @@ public class SinkTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetSinkSignature() throws IndexSizeExceededException
+  public void testGetSinkSignature()
   {
     final DataSchema schema =
         DataSchema.builder()
@@ -278,11 +275,13 @@ public class SinkTest extends InitializedNullHandlingTest
         TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
-    sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("dim1", "dimLong"),
-        ImmutableMap.of("dim1", "value1", "dimLong", "20")
-    ), false);
+    sink.add(
+        new MapBasedInputRow(
+            DateTimes.of("2013-01-01"),
+            ImmutableList.of("dim1", "dimLong"),
+            ImmutableMap.of("dim1", "value1", "dimLong", "20")
+        )
+    );
 
     Map<String, ColumnType> expectedColumnTypeMap = Maps.newLinkedHashMap();
     expectedColumnTypeMap.put("__time", ColumnType.LONG);
@@ -293,11 +292,13 @@ public class SinkTest extends InitializedNullHandlingTest
     RowSignature signature = sink.getSignature();
     Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
-    sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("dim1", "dimLong", "newCol1"),
-        ImmutableMap.of("dim1", "value2", "dimLong", "30", "newCol1", "value")
-    ), false);
+    sink.add(
+        new MapBasedInputRow(
+            DateTimes.of("2013-01-01"),
+            ImmutableList.of("dim1", "dimLong", "newCol1"),
+            ImmutableMap.of("dim1", "value2", "dimLong", "30", "newCol1", "value")
+        )
+    );
 
     expectedColumnTypeMap.remove("rows");
     expectedColumnTypeMap.put("newCol1", ColumnType.STRING);
@@ -307,32 +308,38 @@ public class SinkTest extends InitializedNullHandlingTest
 
     sink.swap();
 
-    sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("dim1", "dimLong", "newCol2"),
-        ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol2", "value")
-    ), false);
+    sink.add(
+        new MapBasedInputRow(
+            DateTimes.of("2013-01-01"),
+            ImmutableList.of("dim1", "dimLong", "newCol2"),
+            ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol2", "value")
+        )
+    );
 
     expectedColumnTypeMap.put("newCol2", ColumnType.STRING);
     signature = sink.getSignature();
     Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
-    sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("dim1", "dimLong", "newCol3"),
-        ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol3", "value")
-    ), false);
+    sink.add(
+        new MapBasedInputRow(
+            DateTimes.of("2013-01-01"),
+            ImmutableList.of("dim1", "dimLong", "newCol3"),
+            ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol3", "value")
+        )
+    );
 
     expectedColumnTypeMap.put("newCol3", ColumnType.STRING);
     signature = sink.getSignature();
     Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
     sink.swap();
 
-    sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("dim1", "dimLong", "newCol4"),
-        ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol4", "value")
-    ), false);
+    sink.add(
+        new MapBasedInputRow(
+            DateTimes.of("2013-01-01"),
+            ImmutableList.of("dim1", "dimLong", "newCol4"),
+            ImmutableMap.of("dim1", "value3", "dimLong", "30", "newCol4", "value")
+        )
+    );
 
     expectedColumnTypeMap.put("newCol4", ColumnType.STRING);
     signature = sink.getSignature();

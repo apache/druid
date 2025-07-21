@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryTimeoutException;
@@ -51,6 +50,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.Mockito.mock;
@@ -81,13 +81,12 @@ public class DataServerClientTest
     target = new DataServerClient(
         serviceClientFactory,
         mock(ServiceLocation.class),
-        jsonMapper,
-        Execs.scheduledSingleThreaded("query-cancellation-executor")
+        jsonMapper
     );
   }
 
   @Test
-  public void testFetchSegmentFromDataServer() throws JsonProcessingException
+  public void testFetchSegmentFromDataServer() throws JsonProcessingException, ExecutionException, InterruptedException
   {
     ScanResultValue scanResultValue = new ScanResultValue(
         null,
@@ -112,7 +111,7 @@ public class DataServerClientTest
         responseContext,
         jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
         Closer.create()
-    );
+    ).get();
 
     Assert.assertEquals(ImmutableList.of(scanResultValue), result.toList());
   }
@@ -170,7 +169,7 @@ public class DataServerClientTest
             responseContext,
             jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
             Closer.create()
-        ).toList()
+        ).get().toList()
     );
   }
 
