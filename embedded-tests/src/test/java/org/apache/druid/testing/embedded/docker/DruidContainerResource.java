@@ -32,6 +32,8 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -178,7 +180,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     );
 
     // Create the log directory upfront to avoid permission issues
-    mkdirpUnchecked(new File(containerDirectory, "log"));
+    createLogDirectory(new File(containerDirectory, "log"));
   }
 
   @Override
@@ -279,10 +281,11 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     return serverProperties;
   }
 
-  private static void mkdirpUnchecked(File dir)
+  private static void createLogDirectory(File dir)
   {
     try {
       FileUtils.mkdirp(dir);
+      Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
