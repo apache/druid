@@ -38,6 +38,9 @@ public class MinIOStorageResourceTest
   {
     final MinIOStorageResource resource = new MinIOStorageResource("test-bucket", "test/base");
     final EmbeddedDruidCluster cluster = Mockito.mock(EmbeddedDruidCluster.class);
+    Mockito.when(cluster.getEmbeddedConnectUri(Mockito.anyString()))
+           .thenAnswer(i -> i.getArgument(0));
+    resource.beforeStart(cluster);
 
     resource.start();
     assertTrue(resource.isRunning());

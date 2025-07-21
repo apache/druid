@@ -174,8 +174,12 @@ jobs:
       DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
       DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
+  docker-tests:
+    needs: [build]
+    uses: ./.github/workflows/docker-tests.yml
+
   actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its]
+    needs: [build, unit-tests, revised-its, standard-its, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
