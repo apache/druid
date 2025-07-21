@@ -162,7 +162,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   standard-its:
-    needs: [build]
+    needs: [build, unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
