@@ -28,9 +28,9 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.internal.AssumptionViolatedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.opentest4j.TestAbortedException;
 
 import java.util.List;
 import java.util.Random;
@@ -327,7 +327,7 @@ public class PrioritizedExecutorServiceTest
         future.get();
       }
       catch (ExecutionException e) {
-        if (!(e.getCause() instanceof AssumptionViolatedException)) {
+        if (!(e.getCause() instanceof TestAbortedException)) {
           throw e;
         }
       }
