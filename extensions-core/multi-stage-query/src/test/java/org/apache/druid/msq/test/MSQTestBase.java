@@ -244,9 +244,6 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -646,11 +643,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
-    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
-    doReturn(dataServerQueryHandler)
-        .when(mockFactory)
-        .createDataServerQueryHandler(anyString(), any(), any());
-    return mockFactory;
+    return (inputNumber, dataSourceName, channelCounters, dataServerRequestDescriptor) -> dataServerQueryHandler;
   }
 
   protected List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)

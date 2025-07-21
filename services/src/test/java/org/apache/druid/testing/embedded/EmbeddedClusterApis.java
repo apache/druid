@@ -104,11 +104,21 @@ public class EmbeddedClusterApis
    */
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
+    waitForTaskToFinish(taskId, overlord);
+    verifyTaskHasStatus(taskId, TaskStatus.success(taskId));
+  }
+
+  /**
+   * Waits for the given task to finish (either successfully or unsuccessfully). If the given
+   * {@link EmbeddedOverlord} is not the leader, this method can only return by
+   * throwing an exception upon timeout.
+   */
+  public void waitForTaskToFinish(String taskId, EmbeddedOverlord overlord)
+  {
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );
-    verifyTaskHasStatus(taskId, TaskStatus.success(taskId));
   }
 
   /**
