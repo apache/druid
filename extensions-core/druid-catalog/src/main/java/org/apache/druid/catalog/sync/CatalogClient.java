@@ -104,6 +104,12 @@ public class CatalogClient implements CatalogSource
     return table == null ? null : tableRegistry.resolve(table.spec());
   }
 
+  /**
+   * Creates a table for the given {@link TableId} and {@link TableSpec}.
+   * If a table already exists for this id, it is overwritten.
+   * <p>
+   * This method is currently used only in tests.
+   */
   public void createTable(TableId tableId, TableSpec tableSpec)
   {
     getResult(postCreateTable(tableId, tableSpec));
