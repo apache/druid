@@ -1900,7 +1900,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
-          final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
+          final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
+          log.info("Reset supervisor[%s] for dataSource[%s] to new meta [%s]", supervisorId, dataSource, newMetadata);
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
           }
@@ -3992,31 +3993,43 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (sequence != null) {
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
-        if (!checkOffsetAvailability(partition, sequence)) {
-          if (taskTuningConfig.isResetOffsetAutomatically()) {
+        SequenceOffsetType earliestOffset = getOffsetFromStreamForPartition(partition, true);
+        boolean isOffsetAvailable = earliestOffset != null
+               && makeSequenceNumber(sequence).isAvailableWithEarliest(makeSequenceNumber(earliestOffset));
+
+        if (!isOffsetAvailable) {
+          if (taskTuningConfig.isResetOffsetAutomatically() && earliestOffset != null) {
             resetInternal(
-                createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
+                createDataSourceMetaDataForReset(ioConfig.getStream(),
+                                                 // Reset to the earliest offset for the partition
+                                                 ImmutableMap.of(partition, earliestOffset))
             );
-            throw new StreamException(
-                new ISE(
-                    "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting"
-                    + " sequence",
-                    sequence,
-                    partition
-                )
+            log.makeAlert("Offsets were reset automatically, potential data duplication or loss")
+               .addData("dataSource", this.dataSource)
+               .addData("partition", partition)
+               .addData("offset", sequence.toString())
+               .addData("newOffset", earliestOffset.toString())
+               .emit();
+
+            // Return the earliest offset as the new sequence number
+            return makeSequenceNumber(
+                earliestOffset,
+                useExclusiveStartSequenceNumberForNonFirstSequence()
             );
           } else {
             throw new StreamException(
                 new ISE(
-                    "Previous sequenceNumber [%s] is no longer available for partition [%s]. You can clear the previous"
+                    "Previous sequenceNumber [%s] is no longer available for partition [%s] which now has the least sequence number [%s]. You can clear the previous"
                     + " sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
-                    sequence,
+                    sequence.toString(),
+                    earliestOffset == null ? "null" : earliestOffset.toString(),
                     partition
                 )
             );
           }
         }
       }
+
       return makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence());
     } else {
       boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
