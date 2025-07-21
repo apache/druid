@@ -79,7 +79,19 @@ jobs:
 
       - name: Upload Druid service logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: failure-service-logs
           path: service-logs.tgz
+
+      - name: Collect surefire reports on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          tar cvzf ./surefire-logs.tgz ./embedded-tests/target/surefire-reports
+
+      - name: Upload surefire reports to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-surefire-logs
+          path: surefire-logs.tgz
