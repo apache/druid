@@ -253,7 +253,7 @@ class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
         )
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
     Assertions.assertEquals(TaskState.SUCCESS, payload.getStatus().getStatus());
     Assertions.assertEquals(24, payload.getStatus().getSegmentLoadWaiterStatus().getTotalSegments());
     Assertions.assertNull(payload.getStatus().getErrorReport());
