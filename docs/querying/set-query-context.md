@@ -170,7 +170,7 @@ You cannot use SET statements in JDBC connections.
 
 ## Native queries
 
-For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [Web Console](./set-query-context.md#druid-web-console).
+For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [Web Console](./set-query-context.md#web-console).
 
 The following example shows a native query that sets the given query id through context paramters from dataset `wikipedia`:
 
