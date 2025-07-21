@@ -37,9 +37,6 @@ public class IngestionBackwardCompatibilityDockerTest
     {
       coordinator.withImage(DruidContainer.Image.APACHE_31);
       overlordLeader.withImage(DruidContainer.Image.APACHE_31);
-      historical.withImage(DruidContainer.Image.APACHE_31);
-      broker1.withImage(DruidContainer.Image.APACHE_31);
-      middleManager.withImage(DruidContainer.Image.APACHE_31);
       return super.createCluster();
     }
   }
