@@ -180,12 +180,14 @@ public class SegmentCacheBootstrapper
 
     // Start a temporary thread pool to load segments into page cache during bootstrap
     final ExecutorService bootstrapExecutor = Execs.multiThreaded(
-        config.getNumBootstrapThreads(), "Segment-Bootstrap-%s"
+        config.getNumBootstrapThreads(),
+        "Segment-Bootstrap-%s"
     );
 
     // Start a temporary scheduled executor for background segment announcing
     final ScheduledExecutorService backgroundAnnouncerExecutor = Executors.newScheduledThreadPool(
-        config.getNumLoadingThreads(), Execs.makeThreadFactory("Background-Segment-Announcer-%s")
+        config.getNumLoadingThreads(),
+        Execs.makeThreadFactory("Background-Segment-Announcer-%s")
     );
 
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
