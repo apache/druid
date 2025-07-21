@@ -294,7 +294,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                 intervalToVersion,
                 interval
             ), "version for interval[%s]", interval),
-            null
+            0
         );
 
         final DataSegment segment = segmentPusher.push(
