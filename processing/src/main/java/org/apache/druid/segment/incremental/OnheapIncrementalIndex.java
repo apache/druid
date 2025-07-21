@@ -144,12 +144,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
       if (projections.containsKey(projectionSpec.getName())) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "Found duplicate projection[%s], please remove and resubmit the ingestion.",
-                                projectionSpec.getName()
-                            );
+        throw DruidException.defensive("duplicate projection[%s]", projectionSpec.getName());
       }
 
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(

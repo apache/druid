@@ -36,6 +36,7 @@ public class TaskConfigBuilder
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
+  private boolean allowHadoopTaskExecution;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
   {
@@ -97,6 +98,12 @@ public class TaskConfigBuilder
     return this;
   }
 
+  public TaskConfigBuilder setAllowHadoopTaskExecution(boolean allowHadoopTaskExecution)
+  {
+    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
+    return this;
+  }
+
   public TaskConfig build()
   {
     return new TaskConfig(
@@ -109,7 +116,8 @@ public class TaskConfigBuilder
         ignoreTimestampSpecForDruidInputSource,
         storeEmptyColumns,
         enableTaskLevelLogPush,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        allowHadoopTaskExecution
     );
   }
 }

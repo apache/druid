@@ -28,7 +28,8 @@ import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 public interface DataServerQueryHandlerFactory
 {
   DataServerQueryHandler createDataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       DataServerRequestDescriptor dataServerRequestDescriptor
   );

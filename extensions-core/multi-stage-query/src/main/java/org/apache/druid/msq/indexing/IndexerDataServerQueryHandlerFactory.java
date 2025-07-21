@@ -52,13 +52,15 @@ public class IndexerDataServerQueryHandlerFactory implements DataServerQueryHand
 
   @Override
   public IndexerDataServerQueryHandler createDataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       DataServerRequestDescriptor requestDescriptor
   )
   {
     return new IndexerDataServerQueryHandler(
-        dataSource,
+        inputNumber,
+        dataSourceName,
         channelCounters,
         serviceClientFactory,
         coordinatorClient,
