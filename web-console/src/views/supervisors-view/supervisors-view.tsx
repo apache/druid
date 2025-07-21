@@ -782,7 +782,10 @@ export class SupervisorsView extends React.PureComponent<
     switch (supervisor.type) {
       case 'kafka':
       case 'kinesis':
-        goToTasks(`index_${supervisor.type}_${supervisor.supervisor_id}`, `index_${supervisor.type}`);
+        goToTasks(
+          `index_${supervisor.type}_${supervisor.supervisor_id}`,
+          `index_${supervisor.type}`,
+        );
         return;
 
       case 'autocompact':
