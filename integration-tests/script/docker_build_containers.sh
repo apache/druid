@@ -19,11 +19,6 @@ set -e
 # Build Druid Cluster Image
 set -e
 
-if [ -z "$MYSQL_DRIVER_CLASSNAME" ]
-then
-  export MYSQL_DRIVER_CLASSNAME="com.mysql.jdbc.Driver"
-fi
-
 if [ -z "$DRUID_INTEGRATION_TEST_JVM_RUNTIME" ]
 then
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is not set. Building druid-cluster with default Java version"

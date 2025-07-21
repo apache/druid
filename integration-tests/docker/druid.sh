@@ -78,28 +78,21 @@ setupConfig()
       var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
       setKey $DRUID_SERVICE "$var" "$val"
   done
-
-  setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
+  if [ "$MYSQL_DRIVER_CLASSNAME" != "com.mysql.jdbc.Driver" ] ; then
+    setKey $DRUID_SERVICE druid.metadata.mysql.driver.driverClassName $MYSQL_DRIVER_CLASSNAME
+  fi
 }
 
 setupData()
 {
   # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
-  if [ ! -f /usr/lib/druid/conf/metadata-storage.conf ]; then
-    # Only metadata storage server need to set up data.
-    echo "Skip setup data. Metadata store is not configured."
+  if [ -n "$DRUID_SERVICE" ]; then
+    echo "DRUID_SERVICE is set, skipping data setup"
     return
   fi
+  # note: this function exists for legacy reasons, ideally we should do data insert in IT's setup method.
 
-  service mariadb start
-  for i in {30..0}; do
-    mysqladmin ping --silent && break
-    sleep 1
-  done
-  if [ "$i" = 0 ]; then
-    echo "MySQL did not start"
-    exit 1
-  fi
+  bash /run-mysql.sh
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
@@ -112,5 +105,4 @@ setupData()
     echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid
     cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid
   fi
-  service mariadb stop
 }
