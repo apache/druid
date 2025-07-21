@@ -4031,8 +4031,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     "Previous sequenceNumber [%s] is no longer available for partition [%s] which now has the least sequence number [%s]. You can clear the previous"
                     + " sequenceNumber and start reading from a valid message by using the supervisor's reset API.",
                     sequence.toString(),
-                    earliestSequenceNumber == null ? "null" : earliestSequenceNumber.toString(),
-                    partition
+                    partition,
+                    earliestSequenceNumber == null ? "null" : earliestSequenceNumber.toString()
                 )
             );
           }
