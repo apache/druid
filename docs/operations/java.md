@@ -27,7 +27,7 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
- The project team recommends Java 17. Although, you can use Java 11, support for it is deprecated.
+ The project team recommends Java 17. Although you can use Java 11, support for it is deprecated.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
