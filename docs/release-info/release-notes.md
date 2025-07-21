@@ -321,9 +321,9 @@ The following metrics that correspond to Kafka metrics have been added:
 
 [#18028](https://github.com/apache/druid/pull/18028)
 
-#### MSQ task engine metrics
+#### New task metrics
 
-The MSQ task engine now supports the following metrics:
+The MSQ task engine and Dart now support the following metrics:
 
 - `query/time`: Reported by controller and worker at the end of the query.
 - `query/cpu/time`: Reported by each worker at the end of the query.
