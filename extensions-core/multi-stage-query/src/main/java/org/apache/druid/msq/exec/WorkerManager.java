@@ -42,7 +42,7 @@ public interface WorkerManager
    * resolves to an exception if one of the workers fails without being explicitly canceled, or if something else
    * goes wrong.
    */
-  ListenableFuture<?> start();
+  ListenableFuture<?> start(WorkerFailureListener workerFailureListener);
 
   /**
    * Launch additional workers, if needed, to bring the number of running workers up to {@code workerCount}.
@@ -56,13 +56,14 @@ public interface WorkerManager
    */
   void waitForWorkers(Set<Integer> workerNumbers) throws InterruptedException;
 
+
   /**
-   * List of currently-active workers.
+   * List of currently active workers.
    */
   List<String> getWorkerIds();
 
   /**
-   * Number of currently-active and currently-pending workers.
+   * Number of currently active and currently-pending workers.
    */
   WorkerCount getWorkerCount();
 

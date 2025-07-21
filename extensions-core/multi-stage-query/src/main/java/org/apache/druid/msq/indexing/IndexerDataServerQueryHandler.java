@@ -78,7 +78,8 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
   private static final Logger log = new Logger(IndexerDataServerQueryHandler.class);
   private static final int DEFAULT_NUM_TRIES = 3;
   private static final int PER_SERVER_QUERY_NUM_TRIES = 5;
-  private final String dataSource;
+  private final int inputNumber;
+  private final String dataSourceName;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
   private final CoordinatorClient coordinatorClient;
@@ -87,7 +88,8 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
   private final DataServerRequestDescriptor dataServerRequestDescriptor;
 
   public IndexerDataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
@@ -96,7 +98,8 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
       DataServerRequestDescriptor dataServerRequestDescriptor
   )
   {
-    this.dataSource = dataSource;
+    this.inputNumber = inputNumber;
+    this.dataSourceName = dataSourceName;
     this.channelCounters = channelCounters;
     this.serviceClientFactory = serviceClientFactory;
     this.coordinatorClient = coordinatorClient;
@@ -140,7 +143,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
       Closer closer
   )
   {
-    final Query<QueryType> preparedQuery = DataServerQueryHandlerUtils.prepareQuery(query, dataSource);
+    final Query<QueryType> preparedQuery = DataServerQueryHandlerUtils.prepareQuery(query, inputNumber, dataSourceName);
     final List<Yielder<RowType>> yielders = new ArrayList<>();
     final List<RichSegmentDescriptor> handedOffSegments = new ArrayList<>();
 
@@ -206,7 +209,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
     // Not actually async. The retry logic above is written in synchronous fashion. Just return an immediate-future
     // when we actually have all queries issued and all yielders set up.
-    return Futures.immediateFuture(new DataServerQueryResult<>(yielders, handedOffSegments, dataSource));
+    return Futures.immediateFuture(new DataServerQueryResult<>(yielders, handedOffSegments, dataSourceName));
   }
 
   private <QueryType, RowType> Yielder<RowType> fetchRowsFromDataServerInternal(
@@ -286,7 +289,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
     Iterable<ImmutableSegmentLoadInfo> immutableSegmentLoadInfos =
         coordinatorClient.fetchServerViewSegments(
-            dataSource,
+            dataSourceName,
             richSegmentDescriptors.stream().map(RichSegmentDescriptor::getFullInterval).collect(Collectors.toList())
         );
 
@@ -358,7 +361,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
       for (SegmentDescriptor segmentDescriptor : segmentDescriptors) {
         Boolean wasHandedOff = FutureUtils.get(
-            coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor),
+            coordinatorClient.isHandoffComplete(dataSourceName, segmentDescriptor),
             true
         );
         if (Boolean.TRUE.equals(wasHandedOff)) {

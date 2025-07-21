@@ -99,16 +99,14 @@ public interface ControllerContext
   /**
    * Provides services about workers: starting, canceling, obtaining status.
    *
-   * @param queryId               query ID
-   * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec)}
-   * @param workerFailureListener listener that receives callbacks when workers fail
+   * @param queryId           query ID
+   * @param querySpec         query spec
+   * @param queryKernelConfig config from {@link #queryKernelConfig(MSQSpec)}
    */
   WorkerManager newWorkerManager(
       String queryId,
       MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig,
-      WorkerFailureListener workerFailureListener
+      ControllerQueryKernelConfig queryKernelConfig
   );
 
   /**
