@@ -17,12 +17,17 @@
 set -e
 set -x
 
-export INSTALL_K3S_VERSION=v1.21.14+k3s1
+export INSTALL_K3S_VERSION=v1.33.2+k3s1
 export KUBECONFIG=$HOME/.kube/config
 
 # Launch K8S cluster
-curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-curl -sfL https://get.k3s.io | bash /dev/stdin  --docker
+curl -Lo kubectl https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+## Errors are usually found in journalctl logs, hence we use `|| true` to avoid script failure
+curl -sfL https://get.k3s.io | bash /dev/stdin  --docker || true
+systemctl status k3s.service || true
+journalctl -u k3s.service
+
 mkdir -p $HOME/.kube
 sudo cp /etc/rancher/k3s/k3s.yaml $KUBECONFIG
 sudo chmod 777 $KUBECONFIG
