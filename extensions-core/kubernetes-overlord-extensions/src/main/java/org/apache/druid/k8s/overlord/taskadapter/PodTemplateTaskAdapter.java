@@ -221,6 +221,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValue(Paths.get(taskConfig.getBaseDir()).resolve(task.getId()).toString())
             .build(),
         new EnvVarBuilder()
+            .withName("druid_indexer_task_baseTaskDir")
+            .withValue(taskConfig.getBaseDir())
+            .build(),
+        new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_ID_ENV)
             .withValue(task.getId())
             .build(),
