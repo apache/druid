@@ -48,13 +48,15 @@ public class DartDataServerQueryHandlerFactory implements DataServerQueryHandler
 
   @Override
   public DartDataServerQueryHandler createDataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       DataServerRequestDescriptor requestDescriptor
   )
   {
     return new DartDataServerQueryHandler(
-        dataSource,
+        inputNumber,
+        dataSourceName,
         channelCounters,
         serviceClientFactory,
         objectMapper,

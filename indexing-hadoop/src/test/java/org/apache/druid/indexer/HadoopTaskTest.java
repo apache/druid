@@ -58,7 +58,7 @@ public class HadoopTaskTest
       @Override
       public String getType()
       {
-        return null;
+        return "hadoop-test";
       }
 
       @Override

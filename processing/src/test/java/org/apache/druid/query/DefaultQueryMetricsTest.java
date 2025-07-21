@@ -66,11 +66,11 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of("testKey", "testValue"))
         .build();
     queryMetrics.query(query);
-    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     // No way to verify this right now since DefaultQueryMetrics implements a no-op for sqlQueryId(String) and queryId(String)
     // This change is done to keep the code coverage tool happy by exercising the implementation
     queryMetrics.sqlQueryId("dummy");
     queryMetrics.queryId("dummy");
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
     Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));

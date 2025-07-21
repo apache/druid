@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.TypedInFilter;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -503,6 +504,15 @@ public class QueryContext
             timeout
         )
     );
+  }
+
+  @Nullable
+  public Duration getTimeoutDuration()
+  {
+    if (hasTimeout()) {
+      return Duration.ofMillis(getTimeout());
+    }
+    return null;
   }
 
   public long getDefaultTimeout()

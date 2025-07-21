@@ -29,6 +29,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -149,6 +150,10 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         buildSpec.getAggregators()
     );
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(
+        descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder(),
+        buildSpec.getPreferredOrdering()
+    );
   }
 
   @Test
@@ -200,6 +205,10 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()
+    );
+    Assert.assertEquals(
+        descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder(),
+        buildSpec.getPreferredOrdering()
     );
   }
 }
