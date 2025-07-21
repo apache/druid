@@ -54,7 +54,7 @@ import java.util.Set;
 
 import static org.apache.druid.segment.TestSegmentUtils.makeSegment;
 
-public class SegmentBootstrapperTest
+public class SegmentCacheBootstrapperTest
 {
   private static final int COUNT = 50;
 
@@ -128,7 +128,7 @@ public class SegmentBootstrapperTest
         segmentAnnouncer,
         segmentManager
     );
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -187,7 +187,7 @@ public class SegmentBootstrapperTest
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager(segments);
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
     final SegmentLoadDropHandler handler = new SegmentLoadDropHandler(segmentLoaderConfig, segmentAnnouncer, segmentManager);
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -243,7 +243,7 @@ public class SegmentBootstrapperTest
         segmentAnnouncer,
         segmentManager
     );
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -308,7 +308,7 @@ public class SegmentBootstrapperTest
         segmentAnnouncer,
         segmentManager
     );
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -368,7 +368,7 @@ public class SegmentBootstrapperTest
         segmentAnnouncer,
         segmentManager
     );
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
@@ -409,7 +409,7 @@ public class SegmentBootstrapperTest
         segmentAnnouncer,
         segmentManager
     );
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,

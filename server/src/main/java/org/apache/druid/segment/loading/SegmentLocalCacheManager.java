@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -56,8 +57,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -74,9 +73,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private final ObjectMapper jsonMapper;
 
   private final List<StorageLocation> locations;
-
-  private final ReadWriteLock directoryWriteRemoveLock = new ReentrantReadWriteLock();
-
 
   /**
    * A map between segment and referenceCountingLocks.
@@ -205,6 +201,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           removeInfo = true;
           final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
           for (StorageLocation location : locations) {
+            // check for migrate from old nested local storage path format
+            final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+            if (legacyPath.exists()) {
+              FileUtils.mkdirp(new File(location.getPath(), segment.getId().toString()));
+              Files.move(legacyPath.toPath(), cacheEntry.toPotentialLocation(location.getPath()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+              cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+            }
+
             if (cacheEntry.checkExists(location.getPath())) {
               removeInfo = false;
               final boolean reserveResult;
@@ -452,6 +456,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     loadOnBootstrapExec.shutdown();
   }
 
+  @Override
+  public void shutdown()
+  {
+    if (loadOnDownloadExec != null) {
+      loadOnDownloadExec.shutdown();
+    }
+    if (virtualStorageFabricLoadOnDemandExec != null) {
+      virtualStorageFabricLoadOnDemandExec.shutdown();
+    }
+  }
+
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
@@ -585,7 +600,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             entry.mount(location.getPath());
             return entry;
           } else {
-            cleanupCacheFiles(location.getPath(), cacheEntry.toPotentialLocation(location.getPath()));
+            // entry is not reserved, clean it up
+            deleteCacheEntryDirectory(cacheEntry.toPotentialLocation(location.getPath()));
           }
         }
       }
@@ -611,38 +627,40 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     throw new SegmentLoadingException("Failed to load segment[%s] in all locations.", cacheEntry.id);
   }
 
-  private void cleanupCacheFiles(final File baseFile, final File cacheFile)
+  /**
+   * Deletes a directory and logs about it. This method should only be called under the lock of a {@link #segmentLocks}
+   */
+  private static void deleteCacheEntryDirectory(final File path)
+  {
+    log.info("Deleting directory[%s]", path);
+    try {
+      FileUtils.deleteDirectory(path);
+    }
+    catch (Exception e) {
+      log.error(e, "Unable to remove directory[%s]", path);
+    }
+  }
+
+  /**
+   * Calls {@link #deleteCacheEntryDirectory(File)} and then checks parent path if it is empty, and recursively
+   * continues until a non-empty directory or the base path is reached. This method is not thread-safe, and should only
+   * be used by a single caller.
+   */
+  private static void cleanupLegacyCacheLocation(final File baseFile, final File cacheFile)
   {
     if (cacheFile.equals(baseFile)) {
       return;
     }
 
-    directoryWriteRemoveLock.writeLock().lock();
-    try {
-      log.info("Deleting directory[%s]", cacheFile);
-      try {
-        FileUtils.deleteDirectory(cacheFile);
-      }
-      catch (Exception e) {
-        log.error(e, "Unable to remove directory[%s]", cacheFile);
-      }
+    deleteCacheEntryDirectory(cacheFile);
 
-      File parent = cacheFile.getParentFile();
-      if (parent != null) {
-        File[] children = parent.listFiles();
-        if (children == null || children.length == 0) {
-          cleanupCacheFiles(baseFile, parent);
-        }
+    File parent = cacheFile.getParentFile();
+    if (parent != null) {
+      File[] children = parent.listFiles();
+      if (children == null || children.length == 0) {
+        cleanupLegacyCacheLocation(baseFile, parent);
       }
     }
-    finally {
-      directoryWriteRemoveLock.writeLock().unlock();
-    }
-  }
-
-  private static String getSegmentDir(final DataSegment segment)
-  {
-    return DataSegmentPusher.getDefaultStorageDir(segment, false);
   }
 
   /**
@@ -694,7 +712,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     {
       this.dataSegment = dataSegment;
       this.id = new SegmentCacheEntryIdentifier(dataSegment.getId());
-      this.relativePathString = getSegmentDir(dataSegment);
+      this.relativePathString = dataSegment.getId().toString();
     }
 
     @Override
@@ -752,7 +770,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 "[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.",
                 storageDir.getAbsolutePath()
             );
-            cleanupCacheFiles(locationRoot, storageDir);
+            deleteCacheEntryDirectory(storageDir);
           } else {
             needsLoad = false;
           }
@@ -796,7 +814,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return;
       }
       if (storageDir != null) {
-        cleanupCacheFiles(locationRoot, storageDir);
+        deleteCacheEntryDirectory(storageDir);
         storageDir = null;
         locationRoot = null;
       }
@@ -824,7 +842,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // We use a marker to prevent the case where a segment is downloaded, but before the download completes,
       // the parent directories of the segment are removed
       final File downloadStartMarker = new File(storageDir, DOWNLOAD_START_MARKER_FILE_NAME);
-      directoryWriteRemoveLock.readLock().lock();
       try {
         FileUtils.mkdirp(storageDir);
 
@@ -839,9 +856,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Unable to create marker file for [%s]", storageDir);
-      }
-      finally {
-        directoryWriteRemoveLock.readLock().unlock();
       }
     }
 

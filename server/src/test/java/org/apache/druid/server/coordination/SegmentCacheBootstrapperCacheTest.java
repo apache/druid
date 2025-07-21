@@ -51,10 +51,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Similar to {@link SegmentBootstrapperTest}. This class includes tests that cover the
+ * Similar to {@link SegmentCacheBootstrapperTest}. This class includes tests that cover the
  * storage location layer as well.
  */
-public class SegmentBootstrapperCacheTest
+public class SegmentCacheBootstrapperCacheTest
 {
   private static final long MAX_SIZE = 1000L;
   private static final long SEGMENT_SIZE = 100L;
@@ -130,7 +130,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
@@ -158,7 +158,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
@@ -199,7 +199,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,

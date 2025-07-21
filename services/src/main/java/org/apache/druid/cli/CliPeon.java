@@ -118,7 +118,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
-import org.apache.druid.server.coordination.SegmentBootstrapper;
+import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
@@ -590,7 +590,7 @@ public class CliPeon extends GuiceRunnable
       if (isZkEnabled) {
         LifecycleModule.register(binder, ZkCoordinator.class);
       }
-      LifecycleModule.register(binder, SegmentBootstrapper.class);
+      LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
     }
 
     @Provides

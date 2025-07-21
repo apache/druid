@@ -133,4 +133,6 @@ public interface SegmentCacheManager
    * segments.
    */
   void shutdownBootstrap();
+
+  void shutdown();
 }

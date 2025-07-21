@@ -259,7 +259,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     File segmentsPath = new File(
         virtualStorageFabricManager.getLocations().get(0).getPath(),
-        DataSegmentPusher.getDefaultStorageDir(segmentsToWeakLoad.get(0), false)
+        segmentsToWeakLoad.get(0).getId().toString()
     ).getParentFile();
 
     Assert.assertEquals(8, segmentsPath.listFiles().length);

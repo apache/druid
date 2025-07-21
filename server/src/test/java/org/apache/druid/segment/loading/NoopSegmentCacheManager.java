@@ -102,4 +102,10 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void shutdown()
+  {
+    throw new UnsupportedOperationException();
+  }
 }

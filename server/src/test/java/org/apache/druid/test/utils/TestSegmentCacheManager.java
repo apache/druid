@@ -155,13 +155,21 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
+  public void shutdown()
+  {
+    // do nothing
+  }
+
+  @Override
   public void storeInfoFile(DataSegment segment)
   {
+    // do nothing
   }
 
   @Override
   public void removeInfoFile(DataSegment segment)
   {
+    // do nothing
   }
 
   @Override

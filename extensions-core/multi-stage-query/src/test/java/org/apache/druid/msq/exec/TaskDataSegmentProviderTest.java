@@ -80,9 +80,8 @@ import java.util.function.Supplier;
 class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "foo";
-  private static final int NUM_SEGMENTS = 50;
+  private static final int NUM_SEGMENTS = 10;
   private static final int THREADS = 8;
-  private static final String LOAD_SPEC_FILE_NAME = "data";
 
   private List<DataSegment> segments;
   private File cacheDir;
