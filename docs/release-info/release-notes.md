@@ -93,9 +93,9 @@ When you query your data using the native query engine, you can prefer (`preferC
 As part of this change, new Coordinator APIs are available. For more information, see [Coordinator APIs for clones](#coordinator-apis-for-clones).
 
 [#17863](https://github.com/apache/druid/pull/17863) [#17899](https://github.com/apache/druid/pull/17899) [#17956](https://github.com/apache/druid/pull/17956) 
-### Overlord kill tasks
+### Embedded kill tasks on the Overlord (Experimental)
 
-You can now run kill tasks directly on the Overlord itself. Running kill tasks on the Overlord provides the following benefits:
+You can now run kill tasks directly on the Overlord itself. Embedded kill tasks provide several benefits as they:
 
 - Unused segments are killed as soon as they're eligible and are killed faster
 - Doesn't require a task slot
@@ -160,7 +160,7 @@ The web console supports using SET statements to specify query context parameter
 
 ##### Multi-stream supervisors (experimental)
 
-You can now use more than one supervisor to ingest data into the same datasource. Include the `spec.dataSchema.dataSource` field to help identify the supervisor.
+You can now use more than one supervisor to ingest data into the same datasource. Use the `id` field to distinguish between supervisors ingesting into the same datasource (identified by `spec.dataSchema.dataSource` for streaming supervisors).
 
 When using this feature, make sure you set `useConcurrentLocks` to `true` for the `context` field in the supervisor spec.
 
@@ -168,7 +168,7 @@ When using this feature, make sure you set `useConcurrentLocks` to `true` for th
 
 ##### Supervisors and the underlying input stream
 
-Seekable stream supervisors (Kafka, Kinesis, and Rabbit) can no longer update the underlying input stream (such as a topic for Kafka) that is persisted for it. This action was previously allowed by the API, but it isn't fully supported by the underlying system. Going forward, a request to make such a change results in a 400 error from the Supervisor API that explains why it isn't allowed. 
+Seekable stream supervisors (Kafka, Kinesis, and Rabbit) can no longer be updated to ingest from a different input stream (such as a topic for Kafka). Since such a change is not fully supported by the underlying system, a request to make such a change will result in a 400 error. 
 
 [#17955](https://github.com/apache/druid/pull/17955) [#17975](https://github.com/apache/druid/pull/17975)
 
@@ -198,7 +198,7 @@ You can use a segment metadata query to find the list of projections attached to
 
 You can now configure a timeout for `index_parallel` and `compact` type tasks. Set the context parameter `subTaskTimeoutMillis` to the maximum time in milliseconds you want to wait before a subtask gets canceled. By default, there's no timeout.
 
-Using this config helps parent tasks fail sooner instead of getting stuck and can free up tasks slots from zombie tasks.
+Using this config helps parent tasks fail sooner instead of being stuck running zombie sub-tasks.
 
 [#18039](https://github.com/apache/druid/pull/18039)
 
