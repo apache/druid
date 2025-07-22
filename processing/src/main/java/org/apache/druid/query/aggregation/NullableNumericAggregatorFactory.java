@@ -50,7 +50,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
 {
   /**
    * If true, the aggregator will not return null values, even if there's no data to aggregate. In this case, it would
-   * rely on its successor to return a non-null value.
+   * rely on the concrete implementation to return a non-null value.
    */
   public boolean forceNotNullable()
   {
