@@ -22,8 +22,10 @@ package org.apache.druid.segment.shim;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -32,11 +34,14 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.vector.VectorCursor;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -52,8 +57,12 @@ import java.util.Map;
 /**
  * Compares the results between using a {@link ShimCursor} and {@link Cursor}
  */
- public class ShimCursorTest
+public class ShimCursorTest
 {
+  static {
+    ExpressionProcessing.initializeForTests();
+  }
+
   @Parameterized.Parameters
   public static Collection<Object> data()
   {
@@ -89,8 +98,8 @@ import java.util.Map;
     incrementalIndex.add(autoRow(signature, null, 423, 13));
     incrementalIndex.add(autoRow(signature, 51, 0, null));
     incrementalIndex.add(autoRow(signature, 0, null, 331));
-    incrementalIndex.add(autoRow(signature, Long.MAX_VALUE, Double.MAX_VALUE, Long.MIN_VALUE));
-    incrementalIndex.add(autoRow(signature, -1, -2.0, 112));
+    incrementalIndex.add(autoRow(signature, Long.MAX_VALUE, -824.0f, Long.MIN_VALUE));
+    incrementalIndex.add(autoRow(signature, -1, -2.0d, 112));
 
     final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
@@ -217,7 +226,66 @@ import java.util.Map;
   @MethodSource("data")
   public void testNonDictStringColumns(int vectorSize)
   {
-    // TODO: add
+    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+        .setMaxRowCount(100)
+        .setIndexSchema(
+            IncrementalIndexSchema.builder()
+                                  .withDimensionsSpec(
+                                      DimensionsSpec.builder()
+                                                    .useSchemaDiscovery(false)
+                                                    .setIncludeAllDimensions(true)
+                                                    .build()
+                                  )
+                                  .withVirtualColumns(
+                                      VirtualColumns.create(
+                                                        new ExpressionVirtualColumn(
+                                                            "v1",
+                                                            "concat(\"A\", \"B\")",
+                                                            ColumnType.STRING,
+                                                            TestExprMacroTable.INSTANCE)
+                                                        )
+                                                    )
+                                  .withRollup(false)
+                                  .build()
+        )
+        .build();
+
+    final List<String> signature = List.of("A", "B");
+
+    incrementalIndex.add(autoRow(signature, 1, "Tom"));
+    incrementalIndex.add(autoRow(signature, 2, "Bob"));
+    incrementalIndex.add(autoRow(signature, 3, "Jack"));
+    incrementalIndex.add(autoRow(signature, 4, "Will"));
+    incrementalIndex.add(autoRow(signature, 5, "Smith"));
+    incrementalIndex.add(autoRow(signature, 6, "Cat"));
+    incrementalIndex.add(autoRow(signature, 7, "Drew"));
+
+    final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
+    final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
+
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setQueryContext(
+                                                         QueryContext.of(
+                                                             Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
+                                                         )
+                                                     )
+        .setVirtualColumns(VirtualColumns.create(
+                               new ExpressionVirtualColumn(
+                                   "v1",
+                                   "concat(\"A\", \"B\")",
+                                   ColumnType.STRING,
+                                   TestExprMacroTable.INSTANCE)
+                           )
+        )
+                                                     .build();
+    CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
+    Assertions.assertTrue(cursorHolder.canVectorize());
+    VectorCursor vectorCursor = cursorHolder.asVectorCursor();
+
+    Cursor cursor = cursorHolder.asCursor();
+    ShimCursor shimCursor = new ShimCursor(vectorCursor);
+
+    compareCursors(List.of("A", "B", "v1"), cursor, shimCursor);
   }
 
   private static List<Object> arr(Object... vals)
