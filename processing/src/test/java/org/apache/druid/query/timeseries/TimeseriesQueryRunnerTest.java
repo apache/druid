@@ -583,8 +583,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9,
                                 QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 78L,
-                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1522.043701171875
-                )
+                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1522.043701171875)
             )
         ),
         new Result<>(
@@ -592,8 +591,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9,
                                 QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 97L,
-                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1321.375F
-                )
+                                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC, 1321.375F)
             )
         )
     );
@@ -2741,8 +2739,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               .toArray(String[]::new);
 
     final Long expectedLast = descending ?
-                              QueryRunnerTestHelper.EARLIEST.getMillis() :
-                              QueryRunnerTestHelper.LAST.getMillis();
+                                  QueryRunnerTestHelper.EARLIEST.getMillis() :
+                                  QueryRunnerTestHelper.LAST.getMillis();
 
     int count = 0;
     Object[] lastResult = null;
@@ -3129,7 +3127,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 6626.151569,
                     "diy_decomposed_sum", 6626.151569,
-                    "array_agg_distinct", new String[]{"spot", "total_market", "upfront"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         ),
@@ -3140,7 +3138,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 5833.209718,
                     "diy_decomposed_sum", 5833.209718,
-                    "array_agg_distinct", new String[]{"spot", "total_market", "upfront"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         )
@@ -3194,26 +3192,21 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   public void testTimeseriesCardinalityAggOnMultiStringExpression()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-                                  .virtualColumns(
-                                      new ExpressionVirtualColumn(
-                                          "v0",
-                                          "concat(quality,market)",
-                                          ColumnType.STRING,
-                                          TestExprMacroTable.INSTANCE
-                                      )
-                                  )
-                                  .aggregators(
-                                      QueryRunnerTestHelper.ROWS_COUNT,
-                                      new CardinalityAggregatorFactory(
-                                          "numVals",
-                                          ImmutableList.of(DefaultDimensionSpec.of("v0")),
-                                          false
-                                      )
-                                  )
-                                  .granularity(QueryRunnerTestHelper.ALL_GRAN)
-                                  .build();
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .virtualColumns(
+            new ExpressionVirtualColumn("v0", "concat(quality,market)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        )
+        .aggregators(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "numVals",
+                ImmutableList.of(DefaultDimensionSpec.of("v0")),
+                false
+            )
+        )
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
@@ -3239,19 +3232,19 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     // Cardinality aggregator on complex columns (like hyperUnique) returns 0.
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-                                  .aggregators(
-                                      QueryRunnerTestHelper.ROWS_COUNT,
-                                      new CardinalityAggregatorFactory(
-                                          "cardinality",
-                                          ImmutableList.of(DefaultDimensionSpec.of("quality_uniques")),
-                                          false
-                                      ),
-                                      new HyperUniquesAggregatorFactory("hyperUnique", "quality_uniques", false, false)
-                                  )
-                                  .granularity(QueryRunnerTestHelper.ALL_GRAN)
-                                  .build();
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new CardinalityAggregatorFactory(
+                "cardinality",
+                ImmutableList.of(DefaultDimensionSpec.of("quality_uniques")),
+                false
+            ),
+            new HyperUniquesAggregatorFactory("hyperUnique", "quality_uniques", false, false)
+        )
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
