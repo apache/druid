@@ -60,7 +60,7 @@ The following steps show you how to set the query context using the web console:
 
    ![Adding query](../assets/set-query-context-insert-query.png)
 
-3. Select **Edit query context** button in the **Select language and engine** dropdown menu.
+3. Select **Edit query context** button in the **Select language and engine** menu.
 
    ![Opening context dialog](../assets/set-query-context-open-context-dialog.png)
 
