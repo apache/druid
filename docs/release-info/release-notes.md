@@ -154,11 +154,11 @@ This feature is controlled by the following configs:
 - `druid.manager.segments.killUnused.enabled` - Whether the feature is enabled or not
 - `druid.manager.segments.killUnused.bufferPeriod` - The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused.
 
-T use embedded kill tasks, you need to have segment metadata cache enabled.
+To use embedded kill tasks, you need to have segment metadata cache enabled.
 
 As part of this feature, [new metrics](#overlord-kill-task-metrics) have been added.
 
-[#18028](https://github.com/apache/druid/pull/18028)
+[#18028](https://github.com/apache/druid/pull/18028) [#18124](https://github.com/apache/druid/pull/18124)
 
 ### Preferred tier selection 
 You can now configure the Broker service to prefer  Historicals on a specific tier. This can help ensure Druid executes queries within the same availability zone if you have Druid deployed across multiple availability zones.
@@ -232,7 +232,7 @@ You can use a segment metadata query to find the list of projections attached to
 
 - You can now perform big decimal aggregations using the MSQ task engine [#18164](https://github.com/apache/druid/pull/18164)
 - Changed `MV_OVERLAP` and `MV_CONTAINS` functions now aligns more closely with the native `inType` filter [#18084](https://github.com/apache/druid/pull/18084)
-- Improved query handling when some segments are missing on Historicals. Druid no longer incorrectly returns partial results [#18025](https://github.com/apache/druid/pull/18025)
+- Improved query handling when segments are temporarily missing on Historicals but not detected by Brokers. Druid doesn't return partial results incorrectly in such cases. [#18025](https://github.com/apache/druid/pull/18025)
 
 ### Cluster management
 
