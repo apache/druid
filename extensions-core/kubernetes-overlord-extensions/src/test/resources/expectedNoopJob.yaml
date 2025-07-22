@@ -43,7 +43,7 @@ spec:
             - "3600"
           env:
             - name: "TASK_DIR"
-              value: "/tmp"
+              value: "/tmp/id"
             - name: "druid_indexer_task_baseTaskDir"
               value: "/tmp"
             - name: "TASK_ID"
