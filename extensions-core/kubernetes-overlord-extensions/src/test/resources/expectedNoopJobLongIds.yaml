@@ -44,6 +44,8 @@ spec:
           env:
             - name: "TASK_DIR"
               value: "/tmp/api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+            - name: "druid_indexer_task_baseTaskDir"
+              value: "/tmp"
             - name: "TASK_ID"
               value: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
             - name: "LOAD_BROADCAST_DATASOURCE_MODE"
