@@ -38,27 +38,26 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 
   /**
    * If true, the aggregator will return null when there are no values to aggregate. This is the default behavior.
-   * Otherwise, it will delegate to the aggregator to return a default value.
+   * Otherwise, the aggregator must return a default non-null value. This is only used internally and not user-facing.
    */
   private final boolean isNullable;
 
   public LongSumAggregatorFactory(String name, String fieldName)
   {
-    this(name, fieldName, null, ExprMacroTable.nil(), null);
+    this(name, fieldName, null, ExprMacroTable.nil(), true);
   }
 
   public LongSumAggregatorFactory(String name, String fieldName, String expression, ExprMacroTable macroTable)
   {
-    this(name, fieldName, expression, macroTable, null);
+    this(name, fieldName, expression, macroTable, true);
   }
 
-  @JsonCreator
   public LongSumAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") @Nullable String expression,
-      @JacksonInject ExprMacroTable macroTable,
-      @JsonProperty("isNullable") @Nullable Boolean isNullable
+      String name,
+      String fieldName,
+      @Nullable String expression,
+      ExprMacroTable macroTable,
+      boolean isNullable
   )
   {
     super(macroTable, name, fieldName, expression);
@@ -67,11 +66,18 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
         fieldName,
         fieldExpression
     );
-    if (isNullable == null || isNullable == Boolean.TRUE) {
-      this.isNullable = true; // Default to nullable if not specified
-    } else {
-      this.isNullable = false; // If explicitly set to false, then not nullable
-    }
+    this.isNullable = isNullable;
+  }
+
+  @JsonCreator
+  public static LongSumAggregatorFactory create(
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
+  )
+  {
+    return new LongSumAggregatorFactory(name, fieldName, expression, macroTable, true);
   }
 
   @Override
