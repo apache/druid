@@ -380,7 +380,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_count");
+    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
     // act
