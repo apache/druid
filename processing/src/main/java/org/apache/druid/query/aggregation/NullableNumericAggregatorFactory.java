@@ -95,12 +95,18 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
     AggregateCombiner<?> combiner = makeAggregateCombiner();
+    if (this.forceNotNullable()) {
+      return combiner;
+    }
     return new NullableNumericAggregateCombiner<>(combiner);
   }
 
   @Override
   public final int getMaxIntermediateSizeWithNulls()
   {
+    if (this.forceNotNullable()) {
+      return getMaxIntermediateSize();
+    }
     return getMaxIntermediateSize() + Byte.BYTES;
   }
 
