@@ -190,7 +190,7 @@ For more information about syntax, see [`CLUSTERED BY`](./reference.md#clustered
 
 For more information about the mechanics of clustering, refer to
 [Secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) and
-[Sorting](../ingestion/partitioning#sorting).
+[Sorting](../ingestion/partitioning.md#sorting).
 
 ### Rollup
 
