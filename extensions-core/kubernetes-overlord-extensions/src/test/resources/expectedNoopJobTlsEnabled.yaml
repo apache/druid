@@ -44,6 +44,8 @@ spec:
           env:
             - name: "TASK_DIR"
               value: "/tmp"
+            - name: "druid_indexer_task_baseTaskDir"
+              value: "/tmp"
             - name: "TASK_ID"
               value: "id"
             - name: "LOAD_BROADCAST_SEGMENTS"
