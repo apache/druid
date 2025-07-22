@@ -227,6 +227,9 @@ You can use a segment metadata query to find the list of projections attached to
 
 [#18119](https://github.com/apache/druid/pull/18119)
 
+#### `json_merge()` improvement
+
+`json_merge()` is now SQL-compliant when arguments are null. The function now returns null if any argument is null. For example, queries like SELECT JSON_MERGE(null, null) and SELECT JSON_MERGE(null, '{}') will return null instead of throwing an error.
 
 #### Other querying improvements
 
