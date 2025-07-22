@@ -36,12 +36,33 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 {
   private final Supplier<byte[]> cacheKey;
 
+  /**
+   * The initValue is the value that will be returned when the aggregator doesn't collect any values.
+   * <p>
+   * For example,
+   * <li> the sum(column) should return null when there's no rows in the segment, thus initValue is null.
+   * <li> the count(column) should return 0 when there's no rows in the segment, thus initValue is 0.
+   */
+  @Nullable
+  private final Long initValue;
+
+  public LongSumAggregatorFactory(String name, String fieldName)
+  {
+    this(name, fieldName, null, ExprMacroTable.nil(), null);
+  }
+
+  public LongSumAggregatorFactory(String name, String fieldName, String expression, ExprMacroTable macroTable)
+  {
+    this(name, fieldName, expression, macroTable, null);
+  }
+
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") @Nullable String expression,
-      @JacksonInject ExprMacroTable macroTable
+      @JacksonInject ExprMacroTable macroTable,
+      @JsonProperty("initValue") @Nullable Long initValue
   )
   {
     super(macroTable, name, fieldName, expression);
@@ -50,11 +71,14 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
         fieldName,
         fieldExpression
     );
+    this.initValue = initValue;
   }
 
-  public LongSumAggregatorFactory(String name, String fieldName)
+  @Nullable
+  @Override
+  public Number getDefaultValue()
   {
-    this(name, fieldName, null, ExprMacroTable.nil());
+    return initValue;
   }
 
   @Override
@@ -106,13 +130,13 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable, initValue);
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, null, macroTable);
+    return new LongSumAggregatorFactory(name, name, null, macroTable, initValue);
   }
 
   @Override
@@ -128,6 +152,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
            "fieldName='" + fieldName + '\'' +
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
+           ", initValue='" + initValue + '\'' +
            '}';
   }
 }
