@@ -67,13 +67,17 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
         fieldName,
         fieldExpression
     );
-    this.isNullable = Boolean.FALSE.equals(isNullable);
+    if (isNullable == null || isNullable == Boolean.TRUE) {
+      this.isNullable = true; // Default to nullable if not specified
+    } else {
+      this.isNullable = false; // If explicitly set to false, then not nullable
+    }
   }
 
   @Override
   public boolean forceNotNullable()
   {
-    return isNullable;
+    return !isNullable;
   }
 
   @Override
