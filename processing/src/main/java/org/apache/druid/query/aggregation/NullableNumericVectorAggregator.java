@@ -31,15 +31,15 @@ import java.util.Arrays;
  * A wrapper around a non-null-aware VectorAggregator that makes it null-aware. This removes the need for each
  * aggregator class to handle nulls on its own. This class only makes sense as a wrapper for "primitive" aggregators,
  * i.e., ones that take {@link VectorValueSelector} as input.
- * <p>
+ *
  * The result of this aggregator will be null if all the values to be aggregated are null values or no values are
  * aggregated at all. If any of the values are non-null, the result will be the aggregated value of the delegate
  * aggregator.
- * <p>
+ *
  * When wrapped by this class, the underlying aggregator's required storage space is increased by one byte. The extra
  * byte is a boolean that stores whether or not any non-null values have been seen. The extra byte is placed before
  * the underlying aggregator's normal state. (Buffer layout = [nullability byte] [delegate storage bytes])
- * <p>
+ *
  * The result of a NullableAggregator will be null if all the values to be aggregated are null values
  * or no values are aggregated at all. If any of the value is non-null, the result would be the aggregated
  * value of the delegate aggregator. Note that the delegate aggregator is not required to perform check for
@@ -59,25 +59,17 @@ public class NullableNumericVectorAggregator implements VectorAggregator
   @Nullable
   private int[] vAggregationRows = null;
 
-  private final boolean defaultNull;
-
-  NullableNumericVectorAggregator(VectorAggregator delegate, VectorValueSelector selector, boolean defaultNull)
+  NullableNumericVectorAggregator(VectorAggregator delegate, VectorValueSelector selector)
   {
     this.delegate = delegate;
     this.selector = selector;
-    this.defaultNull = defaultNull;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    if (defaultNull) {
-      buf.put(position, TypeStrategies.IS_NULL_BYTE);
-      delegate.init(buf, position + Byte.BYTES);
-    } else {
-      buf.put(position, TypeStrategies.IS_NOT_NULL_BYTE);
-      delegate.init(buf, position + Byte.BYTES);
-    }
+    buf.put(position, TypeStrategies.IS_NULL_BYTE);
+    delegate.init(buf, position + Byte.BYTES);
   }
 
   @Override

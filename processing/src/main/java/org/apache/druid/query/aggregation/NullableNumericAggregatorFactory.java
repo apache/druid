@@ -30,8 +30,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-import javax.annotation.Nullable;
-
 /**
  * Abstract superclass for null-aware numeric aggregators.
  *
@@ -51,12 +49,12 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     extends AggregatorFactory
 {
   /**
-   * If this aggregator does not aggregate any values, it will return this value.
+   * If true, the aggregator will not return null values, even if there's no data to aggregate. In this case, it would
+   * rely on its successor to return a non-null value.
    */
-  @Nullable
-  public Number getDefaultValue()
+  public boolean forceNotNullable()
   {
-    return null;
+    return false;
   }
 
   @Override
@@ -64,7 +62,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    if (this.getDefaultValue() != null) {
+    if (this.forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -75,7 +73,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   {
     T selector = selector(columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    if (this.getDefaultValue() != null) {
+    if (this.forceNotNullable()) {
       return aggregator;
     }
     return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
@@ -87,7 +85,10 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    return new NullableNumericVectorAggregator(aggregator, selector, this.getDefaultValue() == null);
+    if (this.forceNotNullable()) {
+      return aggregator;
+    }
+    return new NullableNumericVectorAggregator(aggregator, selector);
   }
 
   @Override
