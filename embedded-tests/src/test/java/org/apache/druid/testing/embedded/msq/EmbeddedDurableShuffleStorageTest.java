@@ -153,7 +153,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -175,7 +175,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -203,7 +203,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -237,7 +237,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -274,7 +274,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         dataSource
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
 
     BaseCalciteQueryTest.assertResultsEquals(
         sql,
@@ -359,7 +359,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         )
     );
 
-    final MSQTaskReportPayload payload = msqApis.runTaskSql(sql);
+    final MSQTaskReportPayload payload = msqApis.runTaskSqlAndGetReport(sql);
     Assertions.assertEquals(TaskState.SUCCESS, payload.getStatus().getStatus());
     Assertions.assertEquals(1, payload.getStatus().getSegmentLoadWaiterStatus().getTotalSegments());
     Assertions.assertNull(payload.getStatus().getErrorReport());

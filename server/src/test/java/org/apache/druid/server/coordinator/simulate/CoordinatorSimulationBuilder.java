@@ -84,6 +84,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Builder for {@link CoordinatorSimulation}.
@@ -381,6 +382,16 @@ public class CoordinatorSimulationBuilder
     {
       if (segments != null) {
         segments.forEach(env.segmentManager::addSegment);
+      }
+    }
+
+    @Override
+    public void deleteSegments(List<DataSegment> segments)
+    {
+      if (segments != null) {
+        env.segmentManager.markSegmentsAsUnused(
+            segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+        );
       }
     }
 

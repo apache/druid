@@ -14,12 +14,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#--------------------------------------------------------------------
 
-set -e
-set -x
+echo "@ capturing threaddumps every minute for all java processes" >&2
 
-OPTS+="-pl !integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases"
-OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
-OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
-
-mvn -B $OPTS test "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+while :;do
+	sleep 60
+	t=`date +%s`
+	echo "@ capturing threaddumps $t" >&2
+	pgrep java | while read pid;do
+		jstack $pid > target/jstack.$pid.$t
+	done
+done

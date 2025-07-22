@@ -138,6 +138,7 @@ public class WorkerSketchFetcher implements AutoCloseable
     }
 
     try {
+      // since this is running another in thread, hence the controller thread does not block; hence we need not call with failure handler.
       workerManager.waitForWorkers(ImmutableSet.of(worker));
     }
     catch (InterruptedException interruptedException) {
@@ -146,7 +147,7 @@ public class WorkerSketchFetcher implements AutoCloseable
       return;
     }
 
-    // if task is not the latest task. It must have retried.
+    // if the task is not the latest task, it must have retried.
     if (!workerManager.isWorkerActive(taskId)) {
       log.info("Task[%s] is no longer the latest task for worker[%d]. Skipping fetch.", taskId, worker);
       return;

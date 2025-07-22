@@ -56,7 +56,8 @@ import java.util.stream.Collectors;
  */
 public class DartDataServerQueryHandler implements DataServerQueryHandler
 {
-  private final String dataSource;
+  private final int inputNumber;
+  private final String dataSourceName;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
@@ -64,7 +65,8 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
   private final DataServerRequestDescriptor requestDescriptor;
 
   public DartDataServerQueryHandler(
-      String dataSource,
+      int inputNumber,
+      String dataSourceName,
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       ObjectMapper objectMapper,
@@ -72,7 +74,8 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
       DataServerRequestDescriptor requestDescriptor
   )
   {
-    this.dataSource = dataSource;
+    this.inputNumber = inputNumber;
+    this.dataSourceName = dataSourceName;
     this.channelCounters = channelCounters;
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
@@ -97,7 +100,7 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
   {
     final Query<QueryType> preparedQuery =
         Queries.withSpecificSegments(
-            DataServerQueryHandlerUtils.prepareQuery(query, dataSource),
+            DataServerQueryHandlerUtils.prepareQuery(query, inputNumber, dataSourceName),
             requestDescriptor.getSegments()
                              .stream()
                              .map(RichSegmentDescriptor::toPlainDescriptor)
@@ -140,7 +143,7 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
           return new DataServerQueryResult<>(
               Collections.singletonList(yielder),
               Collections.emptyList(),
-              dataSource
+              dataSourceName
           );
         }
     );
