@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -269,15 +270,15 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     Set<KafkaTopicPartition> kafkaPartitions = latestSequenceFromStream.keySet();
     Set<KafkaTopicPartition> taskPartitions = highestCurrentOffsets.keySet();
     if (!kafkaPartitions.equals(taskPartitions)) {
-      List<KafkaTopicPartition> missingTaskPartitions = new ArrayList<>(
-          Sets.difference(kafkaPartitions, taskPartitions)
-      );
-      List<KafkaTopicPartition> missingKafkaPartitions = new ArrayList<>(
-          Sets.difference(taskPartitions, kafkaPartitions)
-      );
-
-      log.warn("Mismatched kafka and task partitions: Missing Task Partitions %s, Missing Kafka Partitions %s",
-               missingTaskPartitions, missingKafkaPartitions);
+      try {
+        log.warn("Mismatched kafka and task partitions: Missing Task Partitions %s, Missing Kafka Partitions %s",
+                sortingMapper.writeValueAsString(Sets.difference(kafkaPartitions, taskPartitions)),
+                 sortingMapper.writeValueAsString(Sets.difference(taskPartitions, kafkaPartitions)));
+      }
+      catch (JsonProcessingException e) {
+        throw DruidException.defensive("Failed to deserialize KafkaTopicPartition when getting partition record lag: ",
+                                       e.getMessage());
+      }
     }
 
     return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
