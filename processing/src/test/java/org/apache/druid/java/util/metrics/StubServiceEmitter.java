@@ -59,7 +59,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
       metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ConcurrentLinkedDeque<>())
-                  .add(metricEvent.copy());
+                  .add(metricEvent);
     } else if (event instanceof AlertEvent) {
       alertEvents.add((AlertEvent) event);
     }
