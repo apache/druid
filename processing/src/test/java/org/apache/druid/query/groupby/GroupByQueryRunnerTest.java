@@ -3399,26 +3399,36 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
-    GroupByQuery query = makeQueryBuilder()
+    // arrange
+    GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
-        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .build();
-
-    List<ResultRow> expectedResults = Collections.singletonList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "rows",
-            26L,
-            "cardinality",
-            QueryRunnerTestHelper.UNIQUES_9
-        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
+    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
+        QueryContexts.USE_PROJECTION,
+        "daily_countAndQualityCardinalityAndMaxLongNullable"
+    )).build();
+    // act
+    Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
+    Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
+        factory,
+        runner,
+        queryWithProjection
     );
+    // assert
+    List<ResultRow> expectedResults = Collections.singletonList(makeRow(
+        queryBuilder.build(),
+        "2011-04-01",
+        "rows",
+        26L,
+        "cardinality",
+        QueryRunnerTestHelper.UNIQUES_9
+    ));
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality");
+    TestHelper.assertExpectedObjects(expectedResults, resultsNoProjection, "cardinality");
+    TestHelper.assertExpectedObjects(expectedResults, resultsWithProjection, "cardinality");
   }
 
   @Test
@@ -5113,14 +5123,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-01-25/2011-01-28")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT,
-                            new DoubleSumAggregatorFactory("index", "index"),
-                            QueryRunnerTestHelper.INDEX_LONG_MIN,
-                            QueryRunnerTestHelper.INDEX_LONG_MAX,
-                            QueryRunnerTestHelper.INDEX_DOUBLE_MIN,
-                            QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
-                            QueryRunnerTestHelper.INDEX_FLOAT_MIN,
-                            QueryRunnerTestHelper.INDEX_FLOAT_MAX
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new DoubleSumAggregatorFactory("index", "index"),
+            QueryRunnerTestHelper.INDEX_LONG_MIN,
+            QueryRunnerTestHelper.INDEX_LONG_MAX,
+            QueryRunnerTestHelper.INDEX_DOUBLE_MIN,
+            QueryRunnerTestHelper.INDEX_DOUBLE_MAX,
+            QueryRunnerTestHelper.INDEX_FLOAT_MIN,
+            QueryRunnerTestHelper.INDEX_FLOAT_MAX
         )
         .setGranularity(Granularities.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
@@ -5134,110 +5145,115 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery fullQuery = builder.build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(fullQuery,
-                "2011-01-25",
-                "alias",
-                "business",
-                "rows",
-                3L,
-                "index",
-                312.38165283203125,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                101L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                105L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                101.624789D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                105.873942D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                101.62479F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                105.87394F
+        makeRow(
+            fullQuery,
+            "2011-01-25",
+            "alias",
+            "business",
+            "rows",
+            3L,
+            "index",
+            312.38165283203125,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            101L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            105L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            101.624789D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            105.873942D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            101.62479F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            105.87394F
         ),
-        makeRow(fullQuery,
-                "2011-01-25",
-                "alias",
-                "news",
-                "rows",
-                3L,
-                "index",
-                312.7834167480469,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                102L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                105L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                102.907866D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                105.266058D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                102.90787F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                105.26606F
+        makeRow(
+            fullQuery,
+            "2011-01-25",
+            "alias",
+            "news",
+            "rows",
+            3L,
+            "index",
+            312.7834167480469,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            102L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            105L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            102.907866D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            105.266058D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            102.90787F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            105.26606F
         ),
-        makeRow(fullQuery,
-                "2011-01-25",
-                "alias",
-                "technology",
-                "rows",
-                3L,
-                "index",
-                324.6412353515625,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                102L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                116L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                102.044542D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                116.979005D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                102.04454F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                116.979004F
+        makeRow(
+            fullQuery,
+            "2011-01-25",
+            "alias",
+            "technology",
+            "rows",
+            3L,
+            "index",
+            324.6412353515625,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            102L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            116L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            102.044542D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            116.979005D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            102.04454F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            116.979004F
         ),
-        makeRow(fullQuery,
-                "2011-01-25",
-                "alias",
-                "travel",
-                "rows",
-                3L,
-                "index",
-                393.36322021484375,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                122L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                149L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                122.077247D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                149.125271D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                122.07725F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                149.12527F
+        makeRow(
+            fullQuery,
+            "2011-01-25",
+            "alias",
+            "travel",
+            "rows",
+            3L,
+            "index",
+            393.36322021484375,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            122L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            149L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            122.077247D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            149.125271D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            122.07725F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            149.12527F
         ),
-        makeRow(fullQuery,
-                "2011-01-25",
-                "alias",
-                "health",
-                "rows",
-                3L,
-                "index",
-                511.2996826171875,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                159L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                180L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                159.988606D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                180.575246D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                159.9886F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                180.57524F
+        makeRow(
+            fullQuery,
+            "2011-01-25",
+            "alias",
+            "health",
+            "rows",
+            3L,
+            "index",
+            511.2996826171875,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            159L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            180L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            159.988606D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            180.575246D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            159.9886F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            180.57524F
         )
     );
 
@@ -5379,68 +5395,71 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery fullQuery = builder.build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(fullQuery,
-                "2011-04-01",
-                "alias",
-                "business",
-                "rows",
-                2L,
-                "idx",
-                217L,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                105L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                112L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                105.735462D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                112.987027D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                105.73546F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                112.98703F
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "business",
+            "rows",
+            2L,
+            "idx",
+            217L,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            105L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            112L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            105.735462D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            112.987027D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            105.73546F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            112.98703F
         ),
-        makeRow(fullQuery,
-                "2011-04-01",
-                "alias",
-                "mezzanine",
-                "rows",
-                6L,
-                "idx",
-                4420L,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                107L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                1193L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                107.047773D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                1193.556278D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                107.047775F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                1193.5563F
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "mezzanine",
+            "rows",
+            6L,
+            "idx",
+            4420L,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            107L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            1193L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            107.047773D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            1193.556278D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            107.047775F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            1193.5563F
         ),
-        makeRow(fullQuery,
-                "2011-04-01",
-                "alias",
-                "premium",
-                "rows",
-                6L,
-                "idx",
-                4416L,
-                QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                122L,
-                QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
-                1321L,
-                QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
-                122.141707D,
-                QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
-                1321.375057D,
-                QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
-                122.14171F,
-                QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
-                1321.375F
+        makeRow(
+            fullQuery,
+            "2011-04-01",
+            "alias",
+            "premium",
+            "rows",
+            6L,
+            "idx",
+            4416L,
+            QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
+            122L,
+            QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC,
+            1321L,
+            QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC,
+            122.141707D,
+            QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC,
+            1321.375057D,
+            QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC,
+            122.14171F,
+            QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC,
+            1321.375F
         )
     );
 
@@ -11834,7 +11853,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results = mergedRunner.run(
-         QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))
     ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
