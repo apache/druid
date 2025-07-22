@@ -50,21 +50,37 @@ The following steps show you how to set the query context using the web console:
 
 1. In the web console, select **Query** from the top-level navigation.
 
+   ![Query view](../assets/set-query-context-query-view.png)
+
 1. **Click** the **Engine** selector next to the **Run** button to choose the appropriate query type. Unless otherwise instructed, you can leave the engine as `Auto` to let Druid choose the best engine for you.
+
+   ![Engine selection](../assets/set-query-context-select-engine.png)
 
 2. Enter the query you want to run.
 
-3. Select **Edit context** button.
+   ![Adding query](../assets/set-query-context-insert-query.png)
+
+3. Select **Edit query context** button in the **Select language and engine** dropdown menu.
+
+   ![Opening context dialog](../assets/set-query-context-open-context-dialog.png)
+
 4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs and then click **Save**. For example,you can insert the following context parameters:
+
    ```json
    {
      "timeout": 300000,
      "useCache": false
    }
    ```
+
+   The web console validates the JSON object containing the query context parameters and highlights any syntax errors before you click **Run** the query.
+
+   ![Setting the context parameters](../assets/set-query-context-set-context-parameters.png)
+
 6. Click **Run** to execute your query with the specified context parameters.
 
-The web console validates the JSON object containing the query context parameters and highlights any syntax errors before you click **Run** the query.
+   ![Running the query](../assets/set-query-context-run-the-query.png)
+
 
 For more information about using the web console Query view, see [Query view](../operations/web-console.md#query).
 
