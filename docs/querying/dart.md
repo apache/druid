@@ -27,7 +27,7 @@ To enable Dart, add the following line to your `broker/runtime.properties` and `
 druid.msq.dart.enabled = true
 ```
 
-### Additional configs
+### Configure resource consumption
 
 You can configure the Broker and the Historical to tune Dart's resource consumption.
 
