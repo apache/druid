@@ -1966,7 +1966,7 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
