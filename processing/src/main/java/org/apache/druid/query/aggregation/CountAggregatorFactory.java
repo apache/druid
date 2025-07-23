@@ -92,7 +92,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, null, ExprMacroTable.nil(), false);
+    return new LongSumAggregatorFactory(name, name, null, ExprMacroTable.nil(), true);
   }
 
   @Override

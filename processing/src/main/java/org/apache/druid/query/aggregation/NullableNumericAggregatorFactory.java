@@ -80,7 +80,7 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   }
 
   @Override
-  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  public final VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);

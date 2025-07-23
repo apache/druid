@@ -37,19 +37,25 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   private final Supplier<byte[]> cacheKey;
 
   /**
-   * If true, the aggregator will return null when there are no values to aggregate. This is the default behavior.
+   * If false, the aggregator will return null when there are no values to aggregate. This is the default behavior.
    * Otherwise, the aggregator must return a default non-null value. This is only used internally and not user-facing.
    */
-  private final boolean isNullable;
+  private final boolean forceNotNullable;
 
   public LongSumAggregatorFactory(String name, String fieldName)
   {
-    this(name, fieldName, null, ExprMacroTable.nil(), true);
+    this(name, fieldName, null, ExprMacroTable.nil(), false);
   }
 
-  public LongSumAggregatorFactory(String name, String fieldName, String expression, ExprMacroTable macroTable)
+  @JsonCreator
+  public LongSumAggregatorFactory(
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
+  )
   {
-    this(name, fieldName, expression, macroTable, true);
+    this(name, fieldName, expression, macroTable, false);
   }
 
   public LongSumAggregatorFactory(
@@ -57,7 +63,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
       String fieldName,
       @Nullable String expression,
       ExprMacroTable macroTable,
-      boolean isNullable
+      boolean forceNotNullable
   )
   {
     super(macroTable, name, fieldName, expression);
@@ -66,24 +72,13 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
         fieldName,
         fieldExpression
     );
-    this.isNullable = isNullable;
-  }
-
-  @JsonCreator
-  public static LongSumAggregatorFactory create(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") @Nullable String expression,
-      @JacksonInject ExprMacroTable macroTable
-  )
-  {
-    return new LongSumAggregatorFactory(name, fieldName, expression, macroTable, true);
+    this.forceNotNullable = forceNotNullable;
   }
 
   @Override
   public boolean forceNotNullable()
   {
-    return !isNullable;
+    return forceNotNullable;
   }
 
   @Override
@@ -135,13 +130,13 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable, isNullable);
+    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable, forceNotNullable);
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name, null, macroTable, isNullable);
+    return new LongSumAggregatorFactory(name, name, null, macroTable, forceNotNullable);
   }
 
   @Override
@@ -157,7 +152,7 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
            "fieldName='" + fieldName + '\'' +
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
-           ", isNullable='" + isNullable + '\'' +
+           ", forceNotNullable='" + forceNotNullable + '\'' +
            '}';
   }
 }
