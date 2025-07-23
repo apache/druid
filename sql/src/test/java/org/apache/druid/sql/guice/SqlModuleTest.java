@@ -29,11 +29,8 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -99,9 +96,6 @@ public class SqlModuleTest
   private TimelineServerView timelineServerView;
 
   @Mock
-  private DruidLeaderClient druidLeaderClient;
-
-  @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   @Mock
@@ -134,7 +128,6 @@ public class SqlModuleTest
         serviceEmitter,
         inventoryView,
         timelineServerView,
-        druidLeaderClient,
         druidNodeDiscoveryProvider,
         genericQueryMetricsFactory,
         querySegmentWalker,
@@ -201,8 +194,6 @@ public class SqlModuleTest
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
-              binder.bind(DruidLeaderClient.class).annotatedWith(Coordinator.class).toInstance(druidLeaderClient);
-              binder.bind(DruidLeaderClient.class).annotatedWith(IndexingService.class).toInstance(druidLeaderClient);
               binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
               binder.bind(GenericQueryMetricsFactory.class).toInstance(genericQueryMetricsFactory);
               binder.bind(QuerySegmentWalker.class).toInstance(querySegmentWalker);
