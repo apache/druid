@@ -31,6 +31,11 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 
 /**
+ * A null-aware aggregator factory. Note that the nullness is handled by {@link NullableNumericAggregatorFactory}, the
+ * {@link LongSumAggregator}, {@link LongSumBufferAggregator}, and {@link LongSumVectorAggregator} only aggregates
+ * non-null values, and returns 0 if no data has been aggregated.
+ * <p>
+ * If forceNotNullable is set to true, the aggregator factory will not allow null values.
  */
 public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 {
