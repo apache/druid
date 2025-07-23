@@ -185,11 +185,11 @@
 
     <modules>
         <module>processing</module>
-        <module>indexing-hadoop</module>
-        <module>indexing-service</module>
         <module>server</module>
-        <module>sql</module>
+        <module>indexing-service</module>
+        <module>indexing-hadoop</module>
         <module>services</module>
+        <module>sql</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>

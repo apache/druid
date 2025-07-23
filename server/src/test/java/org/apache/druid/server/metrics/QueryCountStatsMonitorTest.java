@@ -31,10 +31,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 public class QueryCountStatsMonitorTest
 {
@@ -111,18 +109,12 @@ public class QueryCountStatsMonitorTest
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
-    Map<String, Long> resultMap = emitter.getEvents()
-                                         .stream()
-                                         .collect(Collectors.toMap(
-                                             event -> (String) event.toMap().get("metric"),
-                                             event -> (Long) event.toMap().get("value")
-                                         ));
-    Assert.assertEquals(5, resultMap.size());
-    Assert.assertEquals(1L, (long) resultMap.get("query/success/count"));
-    Assert.assertEquals(2L, (long) resultMap.get("query/failed/count"));
-    Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
-    Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
-    Assert.assertEquals(10L, (long) resultMap.get("query/count"));
+    Assert.assertEquals(5, emitter.getNumEmittedEvents());
+    emitter.verifyValue("query/success/count", 1L);
+    emitter.verifyValue("query/failed/count", 2L);
+    emitter.verifyValue("query/interrupted/count", 3L);
+    emitter.verifyValue("query/timeout/count", 4L);
+    emitter.verifyValue("query/count", 10L);
   }
 
   @Test
@@ -137,18 +129,13 @@ public class QueryCountStatsMonitorTest
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
-    Map<String, Long> resultMap = emitter.getEvents()
-                                         .stream()
-                                         .collect(Collectors.toMap(
-                                             event -> (String) event.toMap().get("metric"),
-                                             event -> (Long) event.toMap().get("value")
-                                         ));
-    Assert.assertEquals(6, resultMap.size());
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-    Assert.assertEquals(1L, (long) resultMap.get("query/success/count"));
-    Assert.assertEquals(2L, (long) resultMap.get("query/failed/count"));
-    Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
-    Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
-    Assert.assertEquals(10L, (long) resultMap.get("query/count"));
+
+    Assert.assertEquals(6, emitter.getNumEmittedEvents());
+    emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
+    emitter.verifyValue("query/success/count", 1L);
+    emitter.verifyValue("query/failed/count", 2L);
+    emitter.verifyValue("query/interrupted/count", 3L);
+    emitter.verifyValue("query/timeout/count", 4L);
+    emitter.verifyValue("query/count", 10L);
   }
 }

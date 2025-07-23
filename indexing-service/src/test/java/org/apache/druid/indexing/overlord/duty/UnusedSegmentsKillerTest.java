@@ -32,6 +32,7 @@ import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.UnusedSegmentKillerConfig;
@@ -52,7 +53,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -329,8 +329,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
 
     // Verify that the kill intervals are sorted with the oldest interval first
-    final Queue<StubServiceEmitter.ServiceMetricEventSnapshot> events =
-        emitter.getMetricEvents().get(TaskMetrics.RUN_DURATION);
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents(TaskMetrics.RUN_DURATION);
     final List<Interval> killIntervals = events.stream().map(event -> {
       final String taskId = (String) event.getUserDims().get(DruidMetrics.TASK_ID);
       String[] splits = taskId.split("_");

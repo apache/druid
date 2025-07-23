@@ -381,7 +381,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     @Override
     public String getType()
     {
-      return null;
+      return "test";
     }
 
     @Override

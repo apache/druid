@@ -52,12 +52,12 @@ RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
     rpm -ivh zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
     yum -q -y update && \
     yum -q -y upgrade && \
-    yum -q -y install zulu17-jdk && \
+    yum -q -y install zulu11-jdk && \
     yum -q -y install nano net-tools telnet less unzip wget && \
     yum clean all && \
     rm -rf /var/cache/yum zulu-repo_${ZULU_REPO_VER}.noarch.rpm
 
-ENV JAVA_HOME=/usr/lib/jvm/zulu17
+ENV JAVA_HOME=/usr/lib/jvm/zulu11
 ENV PATH=$PATH:$JAVA_HOME/bin
 
 # hadoop
@@ -76,7 +76,7 @@ ENV YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
 # in hadoop 3 the example file is nearly empty so we can just append stuff
 RUN cat << EOT >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
-RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu17' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu11' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_HOME=/usr/local/hadoop' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HDFS_NAMENODE_USER=root' $HADOOP_HOME/etc/hadoop/hadoop-env.sh

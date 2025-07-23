@@ -51,14 +51,11 @@ public class DataSegmentWithLocation extends DataSegment
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
-      @JsonProperty("dimensions")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
+      @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
       List<String> dimensions,
-      @JsonProperty("metrics")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
-      List<String> metrics,
+      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
+      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
+      List<String> projections,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
@@ -67,7 +64,20 @@ public class DataSegmentWithLocation extends DataSegment
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
-    super(dataSource, interval, version, loadSpec, dimensions, metrics, shardSpec, lastCompactionState, binaryVersion, size, pruneSpecsHolder);
+    super(
+        dataSource,
+        interval,
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        projections,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        pruneSpecsHolder
+    );
     this.servers = Preconditions.checkNotNull(servers, "servers");
   }
 
@@ -83,9 +93,12 @@ public class DataSegmentWithLocation extends DataSegment
         dataSegment.getLoadSpec(),
         dataSegment.getDimensions(),
         dataSegment.getMetrics(),
+        dataSegment.getProjections(),
         dataSegment.getShardSpec(),
+        null,
         dataSegment.getBinaryVersion(),
-        dataSegment.getSize()
+        dataSegment.getSize(),
+        PruneSpecsHolder.DEFAULT
     );
     this.servers = servers;
   }

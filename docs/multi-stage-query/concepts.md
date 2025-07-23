@@ -189,8 +189,8 @@ available in the **Segments** view under the **Partitioning** column.
 For more information about syntax, see [`CLUSTERED BY`](./reference.md#clustered-by).
 
 For more information about the mechanics of clustering, refer to
-[Secondary partitioning](../ingestion/partitioning#secondary-partitioning) and
-[Sorting](../ingestion/partitioning#sorting).
+[Secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) and
+[Sorting](../ingestion/partitioning.md#sorting).
 
 ### Rollup
 

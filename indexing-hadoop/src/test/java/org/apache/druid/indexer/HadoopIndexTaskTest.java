@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task;
+package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexer.HadoopIOConfig;
-import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
+import org.apache.druid.indexing.overlord.TestTaskToolboxFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -42,6 +43,45 @@ import java.util.Collections;
 public class HadoopIndexTaskTest
 {
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  @Test
+  public void testHadoopTaskWontRunWithDefaultTaskConfig()
+  {
+    final HadoopIndexTask task = new HadoopIndexTask(
+        null,
+        new HadoopIngestionSpec(
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                          )
+                      )
+                      .withObjectMapper(jsonMapper)
+                      .build(),
+            new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null),
+            null
+        ),
+        null,
+        null,
+        "blah",
+        jsonMapper,
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        new HadoopTaskConfig(null, null)
+    );
+
+    TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder().setConfig(new TaskConfigBuilder().build());
+    TaskToolbox toolbox = new TestTaskToolboxFactory(builder).build(task);
+
+    Assert.assertEquals("Hadoop tasks are deprecated and will be removed in a future release. Currently, "
+                        + "they are not allowed to run on this cluster. If you wish to run them despite deprecation, "
+                        + "please set [druid.indexer.task.allowHadoopTaskExecution] to true.",
+                        task.runTask(toolbox).getErrorMsg());
+  }
 
   @Test
   public void testCorrectInputSourceResources()
@@ -69,7 +109,8 @@ public class HadoopIndexTaskTest
         jsonMapper,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
 
     Assert.assertEquals(
