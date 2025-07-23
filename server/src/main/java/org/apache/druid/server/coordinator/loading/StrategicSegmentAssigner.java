@@ -146,7 +146,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
                           .collect(Collectors.toList());
 
     if (eligibleDestinationServers.isEmpty()) {
-      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "No eligible server", segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "No eligible server", segment, sourceServer);
       return false;
     }
 
@@ -160,13 +160,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         strategy.findDestinationServerToMoveSegment(segment, sourceServer, eligibleDestinationServers);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
-      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Optimally placed", segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Optimally placed", segment, sourceServer);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
       incrementStat(Stats.Segments.MOVED, segment, tier, 1);
       return true;
     } else {
-      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Encountered error", segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Encountered error", segment, sourceServer);
       return false;
     }
   }
@@ -393,7 +393,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       skipReason = "Unknown error";
     }
 
-    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
+    incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server);
     return false;
   }
 
@@ -489,7 +489,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (dropped) {
         ++numDropsQueued;
       } else {
-        incrementSkipStat(Stats.Segments.DROP_SKIPPED, "Encountered error", segment, tier);
+        incrementSkipStat(Stats.Segments.DROP_SKIPPED, "Encountered error", segment, holder);
       }
     }
 
@@ -543,11 +543,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private boolean loadSegment(DataSegment segment, ServerHolder server)
   {
-    final String tier = server.getServer().getTier();
     final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD);
 
     if (!assigned) {
-      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, server);
     }
 
     return assigned;
@@ -557,13 +556,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final String tier = server.getServer().getTier();
     if (replicationThrottler.isReplicationThrottledForTier(tier)) {
-      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Throttled replication", segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Throttled replication", segment, server);
       return false;
     }
 
     final boolean assigned = loadQueueManager.loadSegment(segment, server, SegmentAction.REPLICATE);
     if (!assigned) {
-      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, server);
     } else {
       replicationThrottler.incrementAssignedReplicas(tier);
     }
@@ -613,6 +612,15 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final RowKey key = RowKey.with(Dimension.TIER, tier)
                              .with(Dimension.DATASOURCE, segment.getDataSource())
+                             .and(Dimension.DESCRIPTION, reason);
+    stats.add(stat, key, 1);
+  }
+
+  private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, ServerHolder server)
+  {
+    final RowKey key = RowKey.with(Dimension.TIER, server.getServer().getTier())
+                             .with(Dimension.DATASOURCE, segment.getDataSource())
+                             .with(Dimension.SERVER, server.getServer().getName())
                              .and(Dimension.DESCRIPTION, reason);
     stats.add(stat, key, 1);
   }
