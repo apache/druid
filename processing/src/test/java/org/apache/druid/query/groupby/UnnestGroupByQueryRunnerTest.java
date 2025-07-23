@@ -469,7 +469,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             new DefaultDimensionSpec("nonexistent0", "alias0"),
             new ExtractionDimensionSpec("nonexistent1", "alias1", new StringFormatExtractionFn("foo"))
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
-        .setContext(ImmutableMap.of(QueryContexts.NO_PROJECTIONS, "true")) // No projections to avoid issues with missing columns, this is temporary and not ideal.
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 

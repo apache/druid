@@ -46,6 +46,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -161,6 +162,7 @@ public class Projections
     private final Set<VirtualColumn> referencedVirtualColumns;
     private final Map<String, String> remapColumns;
     private final List<AggregatorFactory> combiningFactories;
+    private final Set<String> matchedQueryColumns;
 
     public ProjectionMatchBuilder()
     {
@@ -168,6 +170,7 @@ public class Projections
       this.referencedVirtualColumns = new HashSet<>();
       this.remapColumns = new HashMap<>();
       this.combiningFactories = new ArrayList<>();
+      this.matchedQueryColumns = new HashSet<>();
     }
 
     /**
@@ -214,6 +217,23 @@ public class Projections
     {
       combiningFactories.add(aggregator);
       return this;
+    }
+
+    public ProjectionMatchBuilder addMatchedQueryColumn(String queryColumn)
+    {
+      matchedQueryColumns.add(queryColumn);
+      return this;
+    }
+
+    public ProjectionMatchBuilder addMatchedQueryColumns(Collection<String> queryColumns)
+    {
+      matchedQueryColumns.addAll(queryColumns);
+      return this;
+    }
+
+    public Set<String> getMatchedQueryColumns()
+    {
+      return matchedQueryColumns;
     }
 
     public ProjectionMatch build(CursorBuildSpec queryCursorBuildSpec)
