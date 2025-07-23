@@ -276,7 +276,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
                  sortingMapper.writeValueAsString(Sets.difference(taskPartitions, kafkaPartitions)));
       }
       catch (JsonProcessingException e) {
-        throw DruidException.defensive("Failed to deserialize KafkaTopicPartition when getting partition record lag: %s",
+        throw DruidException.defensive("Failed to serialize KafkaTopicPartition when getting partition record lag: %s",
                                        e.getMessage());
       }
     }
