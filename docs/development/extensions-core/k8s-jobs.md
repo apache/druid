@@ -376,7 +376,7 @@ druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
 
-**Note**: Prior to Druid 34.0.0, you will need the `druid.indexer.task.baseTaskDir` runtime property, along with the `TASK_DIR` and `attemptId` arguments to `/peon.sh` to run your jobs. There is no need for that now as Druid will automatically configure the task directory. You can still choose to customize the target task directory by adjusting `druid.indexer.task.baseTaskDir` on the Overlord service.
+**Note**: Prior to Druid 35.0.0, you will need the `druid.indexer.task.baseTaskDir` runtime property, along with the `TASK_DIR` and `attemptId` arguments to `/peon.sh` to run your jobs. There is no need for that now as Druid will automatically configure the task directory. You can still choose to customize the target task directory by adjusting `druid.indexer.task.baseTaskDir` on the Overlord service.
 
 #### Example 1: Using a Pod Template that retrieves values from a ConfigMap 
 
