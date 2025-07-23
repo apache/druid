@@ -30,7 +30,7 @@ Apache Druid 34.0.0 contains over $NUMBER_FEATURES new features, bug fixes, perf
 Replace {{MILESTONE}} with the correct milestone number. For example: https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+
 -->
 
-See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A{{MILESTONE}}+sort%3Aupdated-desc+) for additional details, including bug fixes.
+See the [complete set of changes](https://github.com/apache/druid/milestone/62?closed=1) for additional details, including bug fixes.
 
 Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid \{\{DRUIDVERSION}}.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
@@ -109,14 +109,11 @@ curl --location 'http://HOST:PORT/druid/v2/sql' \
 }'
 ```
 
-
-
 This improvement also works for INSERT and REPLACE queries using the MSQ task engine. Note that JDBC isn't supported.
 
 #### Improved HTTP endpoints
 
 You can now use raw SQL in the HTTP body for `/druid/v2/sql` endpoints. You can set `Content-Type` to `text/plain` instead of `application/json`, so you can provide raw text that isn't escaped. 
-
 
  [#17937](https://github.com/apache/druid/pull/17937)
 
@@ -137,6 +134,7 @@ When you query your data using the native query engine, you can prefer (`preferC
 As part of this change, new Coordinator APIs are available. For more information, see [Coordinator APIs for clones](#coordinator-apis-for-clones).
 
 [#17863](https://github.com/apache/druid/pull/17863) [#17899](https://github.com/apache/druid/pull/17899) [#17956](https://github.com/apache/druid/pull/17956) 
+
 ### Embedded kill tasks on the Overlord (Experimental)
 
 You can now run kill tasks directly on the Overlord itself. Embedded kill tasks provide several benefits; they:
@@ -170,7 +168,9 @@ You can now configure the Broker service to prefer  Historicals on a specific ti
 Dart specific endpoints have been removed and folded into SqlResource. [#18003](https://github.com/apache/druid/pull/18003)
 Added a new engine QueryContext parameter. The value can be native or msq-dart. The value determines the engine used to run the query. The default value is native. [#18003](https://github.com/apache/druid/pull/18003)
 
-MSQ Dart is now able to query real-time tasks by setting the query context parameter includeSegmentSource to realtime, in a similar way to MSQ tasks. [#18076](https://github.com/apache/druid/pull/18076)
+MSQ Dart can now query real-time tasks by setting the query context parameter `includeSegmentSource` to `realtime`, in a similar way to MSQ tasks. You can run synchronous or asynchronous queries. 
+
+[#18076](https://github.com/apache/druid/pull/18076) [#18241](https://github.com/apache/druid/pull/18241)
 
 ### `SegmentMetadataCache` on the Coordinator
 
@@ -182,21 +182,16 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
-#### Other web console improvements
-
 - You can now assign tiered replications to tiers that aren't currently online [#18050](https://github.com/apache/druid/pull/18050)
 - You can now filter tasks by the error in the Task view [#18057](https://github.com/apache/druid/pull/18057)
 - Improved SQL autocomplete and added JSON autocomplete [#18126](https://github.com/apache/druid/pull/18126)
+- Changed how the web console determines what functions are available, improving things like autocompletion [#18214](https://github.com/apache/druid/pull/18214)
 - Updated the web console to use the Overlord APIs instead of Coordinator APIs when managing segments, such as marking them as unused [#18172](https://github.com/apache/druid/pull/18172)
 
 ### Ingestion
 
 - Improved concurrency for batch and streaming ingestion tasks [#17828](https://github.com/apache/druid/pull/17828)
 - Removed the `useMaxMemoryEstimates` config. When set to false, Druid used a much more accurate memory estimate that was introduced in Druid 0.23.0. That more accurate method is the only available method now. The config has defaulted to false for several releases [#17936](https://github.com/apache/druid/pull/17936)
-
-#### SQL-based ingestion
-
-##### Other SQL-based ingestion improvements
 
 #### Streaming ingestion
 
@@ -225,7 +220,7 @@ Seekable stream supervisors (Kafka, Kinesis, and Rabbit) can no longer be update
 
 You can use a segment metadata query to find the list of projections attached to a segment.
 
-[#18119](https://github.com/apache/druid/pull/18119)
+[#18119](https://github.com/apache/druid/pull/18119) [#18223](https://github.com/apache/druid/pull/)
 
 #### `json_merge()` improvement
 
@@ -417,4 +412,4 @@ The following dependencies have had their versions bumped:
 - `fabric8` from `6.13.1` to `7.2.0`
 - `org.apache.parquet:parquet-avro` from `1.15.1` to `1.15.2`  [#18131](https://github.com/apache/druid/pull/18131)
 - `commons-beanutils:commons-beanutils` from `1.9.4` to `1.11.0` [#18132](https://github.com/apache/druid/pull/18132)
-- 
+- `form-data` from `4.0.0` to `4.0.4` [18310](https://github.com/apache/druid/pull/18310)
