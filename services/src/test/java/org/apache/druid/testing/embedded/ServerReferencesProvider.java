@@ -99,4 +99,10 @@ public interface ServerReferencesProvider
    * {@link ObjectMapper} annotated with {@link Json}.
    */
   ObjectMapper jsonMapper();
+
+  /**
+   * Gets the injected instance of the object of the specified type.
+   * The returned object must be used for read-only purposes.
+   */
+  <T> T getInstance(Class<T> clazz);
 }
