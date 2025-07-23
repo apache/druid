@@ -165,10 +165,17 @@ You can now configure the Broker service to prefer  Historicals on a specific ti
 
 ### Dart improvements NEED TO WRITE
 
-Dart specific endpoints have been removed and folded into SqlResource. [#18003](https://github.com/apache/druid/pull/18003)
-Added a new engine QueryContext parameter. The value can be native or msq-dart. The value determines the engine used to run the query. The default value is native. [#18003](https://github.com/apache/druid/pull/18003)
+The Dart query engine now uses the `/druid/v2/sql` endpoint like other SQL query engines. The former Dart specific endpoint is no longer supported. To use Dart for a query, include the `engine` query context parameter and set it to `msq-dart`.
 
-MSQ Dart can now query real-time tasks by setting the query context parameter `includeSegmentSource` to `realtime`, in a similar way to MSQ tasks. You can run synchronous or asynchronous queries. 
+[#18003](https://github.com/apache/druid/pull/18003) [#18003](https://github.com/apache/druid/pull/18003)
+
+Enabling Dart remains the same, add the following line to your `broker/runtime.properties` and `historical/runtime.properties` files:
+
+```
+druid.msq.dart.enabled = true
+```
+
+Additionally, Dart can now query real-time tasks by setting the query context parameter `includeSegmentSource` to `realtime`, in a similar way to MSQ tasks. You can run synchronous or asynchronous queries. 
 
 [#18076](https://github.com/apache/druid/pull/18076) [#18241](https://github.com/apache/druid/pull/18241)
 
@@ -185,7 +192,7 @@ This section contains detailed release notes separated by areas.
 - You can now assign tiered replications to tiers that aren't currently online [#18050](https://github.com/apache/druid/pull/18050)
 - You can now filter tasks by the error in the Task view [#18057](https://github.com/apache/druid/pull/18057)
 - Improved SQL autocomplete and added JSON autocomplete [#18126](https://github.com/apache/druid/pull/18126)
-- Changed how the web console determines what functions are available, improving things like autocompletion [#18214](https://github.com/apache/druid/pull/18214)
+- Changed how the web console determines what functions are available, improving things like auto-completion [#18214](https://github.com/apache/druid/pull/18214)
 - Updated the web console to use the Overlord APIs instead of Coordinator APIs when managing segments, such as marking them as unused [#18172](https://github.com/apache/druid/pull/18172)
 
 ### Ingestion
