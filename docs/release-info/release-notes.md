@@ -151,8 +151,8 @@ You can now run kill tasks directly on the Overlord itself. Embedded kill tasks 
 
 This feature is controlled by the following configs:
 
-- `druid.manager.segments.killUnused.enabled` - Whether the feature is enabled or not
-- `druid.manager.segments.killUnused.bufferPeriod` - The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused.
+- `druid.manager.segments.killUnused.enabled` - Whether the feature is enabled or not (Defaults to `false`)
+- `druid.manager.segments.killUnused.bufferPeriod` - The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused (Defaults to `P30D`)
 
 To use embedded kill tasks, you need to have segment metadata cache enabled.
 
