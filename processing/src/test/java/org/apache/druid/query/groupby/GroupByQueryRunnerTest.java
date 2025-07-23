@@ -3399,7 +3399,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
-    // arrange
+
     GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -3417,7 +3417,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         runner,
         queryWithProjection
     );
-    // assert
+
     List<ResultRow> expectedResults = Collections.singletonList(makeRow(
         queryBuilder.build(),
         "2011-04-01",
@@ -3434,7 +3434,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinalityNoData()
   {
-    // arrange
+
     GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-01-21T00:00:00.000Z/P1D")
@@ -3445,14 +3445,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         QueryContexts.USE_PROJECTION,
         "daily_countAndQualityCardinalityAndMaxLongNullable"
     )).build();
-    // act
+
     Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
     Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
         factory,
         runner,
         queryWithProjection
     );
-    // assert
+
     List<ResultRow> expectedResults = Collections.singletonList(makeRow(
         queryBuilder.build(),
         "2011-04-01",
