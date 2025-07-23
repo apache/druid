@@ -78,7 +78,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -2279,17 +2278,15 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
     int segments = segmentIds.size();
-    Assert.assertEquals(4, events.size());
-    Assert.assertTrue(events.containsKey("query/cpu/time"));
-    Assert.assertEquals(segments, events.get("query/segment/time").size());
-    Assert.assertEquals(segments, events.get("query/segmentAndCache/time").size());
-    Assert.assertEquals(segments, events.get("query/wait/time").size());
+    emitter.verifyEmitted("query/cpu/time", 1);
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/segment/time").size());
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/segmentAndCache/time").size());
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/wait/time").size());
     for (String id : segmentIds) {
-      Assert.assertTrue(events.get("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(events.get("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(events.get("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
     }
   }
 

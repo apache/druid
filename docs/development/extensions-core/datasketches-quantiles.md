@@ -23,7 +23,7 @@ title: "DataSketches Quantiles Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on numeric quantiles DoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. Quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesOverview).
+This module provides Apache Druid aggregators based on numeric quantiles DoublesSketch from [Apache DataSketches](https://datasketches.apache.org/) library. Quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cumulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.apache.org/docs/Quantiles/QuantilesSketchOverview.html).
 
 There are three major modes of operation:
 
@@ -57,7 +57,7 @@ The result of the aggregation is a DoublesSketch that is the union of all sketch
 |`type`|This string should always be "quantilesDoublesSketch"|yes|
 |`name`|String representing the output column to store sketch values.|yes|
 |`fieldName`|A string for the name of the input field (can contain sketches or raw numeric values).|yes|
-|`k`|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2 from 2 to 32768. See [accuracy information](https://datasketches.apache.org/docs/Quantiles/OrigQuantilesSketch) in the DataSketches documentation for details.|no, defaults to 128|
+|`k`|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2 from 2 to 32768. See [accuracy information](https://datasketches.apache.org/docs/Quantiles/ClassicQuantilesSketch.html#accuracy-and-size) in the DataSketches documentation for details.|no, defaults to 128|
 |`maxStreamLength`|This parameter defines the number of items that can be presented to each sketch before it may need to move from off-heap to on-heap memory. This is relevant to query types that use off-heap memory, including [TopN](../../querying/topnquery.md) and [GroupBy](../../querying/groupbyquery.md). Ideally, should be set high enough such that most sketches can stay off-heap.|no, defaults to 1000000000|
 |`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 

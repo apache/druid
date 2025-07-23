@@ -38,7 +38,6 @@ public class IndexTaskUtilsTest
   private static final Map<String, Object> METRIC_TAGS = ImmutableMap.of("k1", "v1", "k2", 20);
 
   private static final String GROUP_ID = "groupId123";
-  @Mock
   private Task task;
   @Mock
   private AbstractTask abstractTask;
@@ -48,10 +47,13 @@ public class IndexTaskUtilsTest
   public void setUp()
   {
     metricBuilder = ServiceMetricEvent.builder();
-    Mockito.when(task.getContextValue(DruidMetrics.TAGS)).thenReturn(METRIC_TAGS);
-    Mockito.when(task.getGroupId()).thenReturn(GROUP_ID);
+    task = new NoopTask(GROUP_ID, GROUP_ID, "wiki", 1L, 0L, Map.of(DruidMetrics.TAGS, METRIC_TAGS));
     Mockito.when(abstractTask.getContextValue(DruidMetrics.TAGS)).thenReturn(METRIC_TAGS);
     Mockito.when(abstractTask.getGroupId()).thenReturn(GROUP_ID);
+    Mockito.when(abstractTask.getId()).thenReturn(GROUP_ID);
+    Mockito.when(abstractTask.getType()).thenReturn("test");
+    Mockito.when(abstractTask.getDataSource()).thenReturn("wiki");
+    Mockito.when(abstractTask.getIngestionMode()).thenReturn(AbstractTask.IngestionMode.APPEND);
   }
 
   @Test
@@ -71,7 +73,7 @@ public class IndexTaskUtilsTest
   @Test
   public void testSetTaskDimensionsWithoutTagsShouldNotSetTags()
   {
-    Mockito.when(task.getContextValue(DruidMetrics.TAGS)).thenReturn(null);
+    task = new NoopTask(null, null, "wiki", 1L, 0L, null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     Assert.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
   }
@@ -89,14 +91,6 @@ public class IndexTaskUtilsTest
   {
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     Assert.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
-  }
-
-  @Test
-  public void testSetTaskDimensionsWithoutGroupIdShouldNotSetGroupId()
-  {
-    Mockito.when(task.getGroupId()).thenReturn(null);
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
   }
 
   @Test

@@ -116,7 +116,6 @@ public class TaskToolboxTest
 
     TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFile().toString())
-        .setDefaultRowFlushBoundary(50000)
         .build();
 
     taskToolbox = new TaskToolboxFactory(

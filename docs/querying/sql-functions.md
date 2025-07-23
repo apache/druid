@@ -285,7 +285,7 @@ Returns the following:
 
 ## APPROX_COUNT_DISTINCT_DS_THETA
 
-Returns the approximate number of distinct values in a Theta sketch column or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns the approximate number of distinct values in a Theta sketch column or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`
 * **Function type:** Aggregation
@@ -2305,7 +2305,7 @@ Returns a result similar to the following:
 
 ## DS_THETA
 
-Creates a Theta sketch on a column containing Theta sketches or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Creates a Theta sketch on a column containing Theta sketches or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `DS_THETA(expr, [size])`
 * **Function type:** Aggregation
@@ -5551,7 +5551,7 @@ Returns the following:
 
 ## THETA_SKETCH_INTERSECT
 
-Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters. 
+Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters. 
 
 * **Syntax:** `THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
@@ -5585,7 +5585,7 @@ Returns the following:
 
 ## THETA_SKETCH_NOT
 
-Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `THETA_SKETCH_NOT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
@@ -5620,7 +5620,7 @@ Returns the following:
 
 ## THETA_SKETCH_UNION
 
-Returns a union of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns a union of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:**`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch

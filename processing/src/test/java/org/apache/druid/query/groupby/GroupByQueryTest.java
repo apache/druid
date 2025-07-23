@@ -41,6 +41,7 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -206,6 +207,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("quality", "market", "v0"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(List.of(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -258,6 +260,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
+    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -311,6 +314,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
+    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test

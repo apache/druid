@@ -95,7 +95,6 @@ public class SingleTaskBackgroundRunnerTest
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFile().toString())
-        .setDefaultRowFlushBoundary(50000)
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();

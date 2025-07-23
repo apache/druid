@@ -207,11 +207,13 @@ public class BroadcastDistributionRuleTest
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
     RowKey metricKey = RowKey.with(Dimension.DATASOURCE, TestDataSource.WIKI)
                              .with(Dimension.TIER, TIER_1)
+                             .with(Dimension.SERVER, serverWithNoDiskSpace.getServer().getName())
                              .and(Dimension.DESCRIPTION, "Not enough disk space");
     Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
 
     metricKey = RowKey.with(Dimension.DATASOURCE, TestDataSource.WIKI)
                       .with(Dimension.TIER, TIER_1)
+                      .with(Dimension.SERVER, serverWithFullQueue.getServer().getName())
                       .and(Dimension.DESCRIPTION, "Load queue is full");
     Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
   }
