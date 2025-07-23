@@ -15,7 +15,7 @@ Dart is experimental. For production use, we recommend using the other available
 :::
 
 
-Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine. For example, use Dart for GROUP BY queries that have intermediate results consisting of hundreds of millions of rows. Dart works well for these sorts of queries  because its multi-threaded workers perform in-memory shuffles using locally cached data. There's no time spent hitting deep storage.
+Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine. For example, use Dart for GROUP BY queries that have intermediate results consisting of hundreds of millions of rows. In this case, the Dart engine's multi-threaded workers perform in-memory shuffles using locally cached data without pulling from deep storage.
 
 You can query batch or realtime datasources with Dart.
 
@@ -29,12 +29,12 @@ druid.msq.dart.enabled = true
 
 ### Additional configs
 
-There are additional configs that provide some control over Dart's resource consumption.
+You can configure the Broker and the Historical to tune Dart's resource consumption.
 
 For Brokers, you can set the following configs:
 
 - `druid.msq.dart.controller.concurrentQueries`: The maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Defaults to 1.
-- `druid.msq.dart.query.context.targetPartitionsPerWorker`: The number of partitions per worker to create during a shuffle. We recommend setting this to the number of threads available on workers to fully take advantage of multi-threaded processing of shuffled data.
+- `druid.msq.dart.query.context.targetPartitionsPerWorker`: The number of partitions per worker to create during a shuffle. Set this to the number of available threads on workers to fully take advantage of multi-threaded processing of shuffled data.
 
 For Historicals, you can set the following configs:
 
@@ -44,7 +44,7 @@ For Historicals, you can set the following configs:
 
 ## Run a Dart query
 
-Once enabled, you can select Dart from the available engines in the Druid console or the API to issue queries like with other query engines.
+Once enabled, you can use Dart in the Druid console or the SQL query API to issue queries.
 
 ### Druid console
 
@@ -52,7 +52,7 @@ In the **Query** view, select **Engine: SQL (Dart)** from the engine selector me
 
 ### API
 
-Dart uses the SQL endpoint `/druid/v2/sql` like the other SQL query engines. To use Dart, include the query context parameter `engine` and set it to `msq-dart`:
+Dart uses the SQL endpoint `/druid/v2/sql`. To use Dart, include the query context parameter `engine` and set it to `msq-dart`:
 
 <Tabs>
   <TabItem value="SET" label="SET" default>
