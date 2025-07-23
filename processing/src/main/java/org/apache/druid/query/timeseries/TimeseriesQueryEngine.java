@@ -181,8 +181,7 @@ public class TimeseriesQueryEngine
               .simple(granularizer.getBucketIterable())
               .map(
                   bucketInterval -> {
-                    // If current bucket is empty and skipEmptyBuckets is true, return null.
-                    // Otherwise, always call aggregators.init, then aggregators.aggregateVector if there's any data.
+                    // Whether or not the current bucket is empty
                     boolean emptyBucket = true;
 
                     while (!cursor.isDone()) {

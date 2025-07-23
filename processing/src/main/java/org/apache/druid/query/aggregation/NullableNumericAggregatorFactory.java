@@ -49,8 +49,9 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     extends AggregatorFactory
 {
   /**
-   * If true, the aggregator will not return null values, even if there's no data to aggregate. In this case, it would
-   * rely on the concrete implementation to return a non-null value.
+   * If true, this aggregator will not check for null inputs, instead directly delegating to the underlying aggregator.
+   * Currently, this is only used by {@link CountAggregatorFactory#getCombiningFactory}.
+   * This isn't entirely safe, as some selectors might throw an exception when attempting to retrieve a primitive value from `null`.
    */
   public boolean forceNotNullable()
   {

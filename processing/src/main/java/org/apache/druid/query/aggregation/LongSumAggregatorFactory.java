@@ -36,10 +36,6 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 {
   private final Supplier<byte[]> cacheKey;
 
-  /**
-   * If false, the aggregator will return null when there are no values to aggregate. This is the default behavior.
-   * Otherwise, the aggregator must return a default non-null value. This is only used internally and not user-facing.
-   */
   private final boolean forceNotNullable;
 
   public LongSumAggregatorFactory(String name, String fieldName)
