@@ -73,7 +73,7 @@ import java.util.function.Supplier;
  * reclaimed, in which case the new reservation fails.
  * <p>
  * This class is thread-safe, so that multiple threads can update its state at the same time.
- * One example usage is that a historical can use multiple threads to load different segments in parallel
+ * One example usage is that a historical server can use multiple threads to load different segments in parallel
  * from deep storage.
  */
 @ThreadSafe
@@ -103,6 +103,10 @@ public class StorageLocation
   @GuardedBy("lock")
   private long currWeakSizeBytes = 0;
 
+  /**
+   * This lock is for all operations to traverse or modify the {@link WeakCacheEntry} double linked list, through
+   * {@link #head}, {@link #tail}, or {@link #hand}.
+   */
   private final Object lock = new Object();
 
 
@@ -125,6 +129,9 @@ public class StorageLocation
     }
   }
 
+  /**
+   * The place where the files are stored
+   */
   public File getPath()
   {
     return path;
@@ -229,6 +236,14 @@ public class StorageLocation
     }
   }
 
+  /**
+   * Returns a {@link ReservationHold} of a {@link CacheEntry} with a 'hold' placed on it, preventing it from being
+   * automatically removed by {@link #reclaim(long)} if the {@link CacheEntry} is one of {@link #weakCacheEntries} until
+   * the hold is released by {@link ReservationHold#close()}. Callers must call close on the returned object.
+   * <p>
+   * This method only returns already existing entries, if callers want to insert a new entry if it doesn't already
+   * exist, use {@link #addWeakReservationHold(CacheEntryIdentifier, Supplier)}
+   */
   @Nullable
   public <T extends CacheEntry> ReservationHold<T> addWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
   {
@@ -253,6 +268,14 @@ public class StorageLocation
     return null;
   }
 
+  /**
+   * Returns a {@link ReservationHold} of a {@link CacheEntry} with a 'hold' placed on it, preventing it from being
+   * automatically removed by {@link #reclaim(long)} if the {@link CacheEntry} is one of {@link #weakCacheEntries} until
+   * the hold is released by {@link ReservationHold#close()}. Callers must call close on the returned object.
+   * <p>
+   * If the entry already exists, this method will return it, else it will create a new entry if there is space
+   * available.
+   */
   @Nullable
   public <T extends CacheEntry> ReservationHold<T> addWeakReservationHold(
       CacheEntryIdentifier entryId,
@@ -269,26 +292,32 @@ public class StorageLocation
       if (canHandle(newEntry)) {
         final WeakCacheEntry newWeakEntry = new WeakCacheEntry(newEntry);
         newWeakEntry.hold();
-        weakCacheEntries.put(newEntry.getId(), newWeakEntry);
         linkNewWeakEntry(newWeakEntry);
-        return new ReservationHold<>((T) newEntry, () -> {
-          newWeakEntry.release();
-          // if we never successfully mounted, go ahead and remove so we don't have a dead entry
-          if (!newEntry.isMounted()) {
-            synchronized (lock) {
-              weakCacheEntries.remove(newEntry.getId());
-              unlinkAndUnmountWeakEntry(newWeakEntry);
+        weakCacheEntries.put(newEntry.getId(), newWeakEntry);
+        return new ReservationHold<>(
+            (T) newEntry,
+            () -> {
+              newWeakEntry.release();
+              // if we never successfully mounted, go ahead and remove so we don't have a dead entry
+              if (!newEntry.isMounted()) {
+                synchronized (lock) {
+                  weakCacheEntries.remove(newEntry.getId());
+                  unlinkAndUnmountWeakEntry(newWeakEntry);
+                }
+              }
             }
-          }
-        });
+        );
       }
       return null;
     }
   }
 
+  /**
+   * Removes an item from {@link #staticCacheEntries} or {@link #weakCacheEntries}, reducing {@link #currSizeBytes}
+   * by {@link CacheEntry#getSize()}
+   */
   public void release(CacheEntry entry)
   {
-    final boolean present = staticCacheEntries.containsKey(entry.getId());
     staticCacheEntries.computeIfPresent(
         entry.getId(),
         (identifier, cacheEntry) -> {
@@ -297,7 +326,7 @@ public class StorageLocation
           return null;
         }
     );
-    if (present) {
+    if (!weakCacheEntries.containsKey(entry.getId())) {
       return;
     }
 
@@ -313,7 +342,8 @@ public class StorageLocation
   }
 
   /**
-   * Inserts a new
+   * Inserts a new {@link WeakCacheEntry}, inserting it as {@link #head} (or both {@link #head} and {@link #tail} if it
+   * is the only entry), tracking size in {@link #currSizeBytes} and {@link #currWeakSizeBytes}
    */
   @GuardedBy("lock")
   private void linkNewWeakEntry(WeakCacheEntry newWeakEntry)
@@ -452,9 +482,16 @@ public class StorageLocation
     return currSizeBytes.get();
   }
 
+  /**
+   * Cache entry which can be reclaimed
+   */
   private static final class WeakCacheEntry
   {
     private final CacheEntry cacheEntry;
+    /**
+     * Phaser that allows callers to place a hold on an entry, which will prevent {@link #reclaim(long)} from being able
+     * to remove this entry until the hold is released. When the phaser arrives at 0, calls {@link CacheEntry#unmount()}
+     */
     private final Phaser holdReferents = new Phaser(1)
     {
       @Override
@@ -480,8 +517,14 @@ public class StorageLocation
       }
     };
 
+
     private WeakCacheEntry prev;
     private WeakCacheEntry next;
+
+    /**
+     * Set to true when an entry is used by a caller, which will cause {@link #reclaim(long)} to skip this entry
+     * (and set to false). this is volatile because we allow setting it to true without holding {@link #lock}
+     */
     private volatile boolean visited;
 
     private WeakCacheEntry(CacheEntry cacheEntry)
@@ -489,27 +532,51 @@ public class StorageLocation
       this.cacheEntry = cacheEntry;
     }
 
+    /**
+     * Returns true if there is 1 or more {@link #hold()} currently placed on this entry
+     */
     private boolean isHeld()
     {
       return holdReferents.getRegisteredParties() > 1;
     }
 
+    /**
+     * Place a hold on this entry to prevent it from being dropped by {@link #reclaim(long)}
+     */
     private boolean hold()
     {
       return holdReferents.register() >= 0;
     }
 
+    /**
+     * Release a {@link #hold()}
+     */
     private int release()
     {
       return holdReferents.arriveAndDeregister();
     }
 
+    /**
+     * Call {@link CacheEntry#unmount()} after all holds are released ({@link #holdReferents})
+     */
     private void unmount()
     {
       holdReferents.arriveAndDeregister();
     }
   }
 
+  /**
+   * A {@link Closeable} {@link CacheEntry} wrapper representing both the entry and a 'hold' that is placed on it to
+   * prevent the entry from being dropped by {@link #reclaim(long)} at least until the wrapper is closed.
+   * <p>
+   * In practice, if the entry is {@link #weakCacheEntries} the entry contained in this object was placed under a hold
+   * with {@link WeakCacheEntry#hold()}, and {@link #close()} with then call {@link WeakCacheEntry#release()} to finish
+   * the hold. If the entry is instead {@link #staticCacheEntries}, a hold is not necessary since these entries will
+   * not be removed automatically during {@link #reclaim(long)}, and instead are only ever being dropped if
+   * {@link #release(CacheEntry)} is explicitly called. Close is a no-op for these entries.
+   * <p>
+   * Callers MUST be sure to close this object when finished to release the hold
+   */
   public static class ReservationHold<TEntry extends CacheEntry> implements Closeable
   {
     private final TEntry entry;

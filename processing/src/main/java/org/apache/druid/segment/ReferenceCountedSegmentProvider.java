@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -38,9 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * with reference counting, releasing the reference on close. Closing this provider closes the underlying
  * {@link Segment} once all references are returned, ensuring that a segment cannot be dropped while it is actively
  * being used.
- * <p>
- * This also implements {@link Overshadowable}, so the providers can be arranged in a
- * {@link org.apache.druid.timeline.TimelineLookup}.
  */
 public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableObject<Segment>
     implements ReferenceCountedObjectProvider<Segment>
@@ -56,17 +52,6 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   public static Optional<Segment> unmanaged(Segment segment)
   {
     return Optional.of(new UnmanagedReference(segment));
-  }
-
-  /**
-   * Returns a {@link ReferenceCountedObjectProvider<Segment>} that simply returns a wrapper around the supplied
-   * {@link Segment} that prevents closing the segment, and does not provide any reference tracking functionality.
-   * Useful for participating in places that require the interface (such as {@link SegmentMapFunction}) in cases where
-   * the lifecycle of the segment is managed externally.
-   */
-  public static ReferenceCountedObjectProvider<Segment> wrapUnmanaged(Segment segment)
-  {
-    return () -> Optional.of(new UnmanagedReference(segment));
   }
 
   public ReferenceCountedSegmentProvider(Segment baseSegment)
