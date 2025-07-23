@@ -388,6 +388,9 @@ public class StorageLocation
   }
 
   /**
+   * Checks if this location can store a new {@link CacheEntry}, calling {@link #reclaim(long)} to drop
+   * {@link #weakCacheEntries} if possible.
+   * <p>
    * This method is only package-private to use it in unit tests. Production code must not call this method directly.
    * Use {@link #reserve} instead.
    */
@@ -431,6 +434,18 @@ public class StorageLocation
     return true;
   }
 
+  /**
+   * Tries to reclaim the specified number of bytes by removing {@link WeakCacheEntry}, starting from {@link #hand}.
+   * <p>
+   * If {@link WeakCacheEntry#visited} is set, the entry is skipped moving {@link #hand} to {@link WeakCacheEntry#prev}
+   * and setting {@link WeakCacheEntry#visited} to false so we can consider it for removal the next time it is the
+   * {@link #hand}.
+   * <p>
+   * If {@link WeakCacheEntry#isHeld()}, it is also skipped, moving {@link #hand} to {@link WeakCacheEntry#prev}.
+   *
+   * Otherwise, this method will remove entries until either it frees up enough space or runs out of entries to remove
+   * (either because there are no more entries or all remaining entries are under a hold).
+   */
   @GuardedBy("lock")
   private boolean reclaim(long sizeToReclaim)
   {
@@ -438,20 +453,26 @@ public class StorageLocation
       return false;
     }
     long sizeFreed = 0;
+    // keep track of where we start so if we get back to the same entry we know when to stop
     WeakCacheEntry startEntry = null;
+    // keep track of if we unset visited from any entries, allowing us to try again if we reach startEntry but didn't
+    // reclaim enough space yet and know there will likely still be candidates if we check again
     boolean unmarked = false;
+    // run until we reclaim enough space, end up where we started, or remove everything
     while (hand != null && sizeFreed < sizeToReclaim && startEntry != hand) {
       if (startEntry == null) {
         startEntry = hand;
       }
       if (hand.isHeld()) {
-        // dont touch bulk reservations
+        // item has one or more holds - move along
         hand = hand.prev;
       } else if (hand.visited) {
+        // item is visited, unmark so we can consider it the next time it is hand
         unmarked = true;
         hand.visited = false;
         hand = hand.prev;
       } else {
+        // item is valid
         WeakCacheEntry toRemove = hand;
         hand = hand.prev;
         weakCacheEntries.remove(toRemove.cacheEntry.getId());
@@ -460,12 +481,12 @@ public class StorageLocation
         startEntry = null;
       }
 
-      // loop around
+      // if we reach the end of the queue, loop around
       if (hand == null) {
         hand = tail;
       }
     }
-    // if we unmarked stuff, loop again
+    // if we unmarked visited stuff, try again
     if (unmarked && sizeFreed < sizeToReclaim) {
       return reclaim(sizeToReclaim - sizeFreed);
     }
@@ -483,7 +504,8 @@ public class StorageLocation
   }
 
   /**
-   * Cache entry which can be reclaimed
+   * Wrapper for a {@link CacheEntry} which can be reclaimed if there is not enough space available to add some other
+   * {@link CacheEntry} later.
    */
   private static final class WeakCacheEntry
   {
