@@ -24,9 +24,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -265,12 +267,18 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       return null;
     }
 
-    if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
-      log.warn(
-          "Kafka partitions[%s] do not match task partitions[%s]",
-          latestSequenceFromStream.keySet(),
-          highestCurrentOffsets.keySet()
-      );
+    Set<KafkaTopicPartition> kafkaPartitions = latestSequenceFromStream.keySet();
+    Set<KafkaTopicPartition> taskPartitions = highestCurrentOffsets.keySet();
+    if (!kafkaPartitions.equals(taskPartitions)) {
+      try {
+        log.warn("Mismatched kafka and task partitions: Missing Task Partitions %s, Missing Kafka Partitions %s",
+                sortingMapper.writeValueAsString(Sets.difference(kafkaPartitions, taskPartitions)),
+                 sortingMapper.writeValueAsString(Sets.difference(taskPartitions, kafkaPartitions)));
+      }
+      catch (JsonProcessingException e) {
+        throw DruidException.defensive("Failed to serialize KafkaTopicPartition when getting partition record lag: %s",
+                                       e.getMessage());
+      }
     }
 
     return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
