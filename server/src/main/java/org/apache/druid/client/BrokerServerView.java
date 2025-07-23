@@ -37,10 +37,15 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.metrics.SegmentDiscoveryStatsProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
+import org.checkerframework.checker.lock.qual.GuardedBy;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,6 +57,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -59,7 +65,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class BrokerServerView implements TimelineServerView
+public class BrokerServerView implements TimelineServerView, SegmentDiscoveryStatsProvider
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
@@ -76,6 +82,10 @@ public class BrokerServerView implements TimelineServerView
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final ConcurrentHashMap<RowKey, AtomicLong> totalSuccessfulSegmentLoadCount = new ConcurrentHashMap<>();
+  @GuardedBy("totalSuccessfulSegmentLoadCount")
+  private Map<RowKey, Long> previousSuccessfulSegmentLoadCount = new HashMap<>();
+
 
   @Inject
   public BrokerServerView(
@@ -281,6 +291,7 @@ public class BrokerServerView implements TimelineServerView
 
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
+          incrementAndGetLong(totalSuccessfulSegmentLoadCount, getMetricKey(segment));
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -435,5 +446,45 @@ public class BrokerServerView implements TimelineServerView
     return clients.values().stream()
                   .map(queryableDruidServer -> queryableDruidServer.getServer().toImmutableDruidServer())
                   .collect(Collectors.toList());
+  }
+
+  @Override
+  public Map<RowKey, Long> getTotalSuccessfulSegmentLoadCount()
+  {
+    final Map<RowKey, Long> total = CollectionUtils.mapValues(totalSuccessfulSegmentLoadCount, AtomicLong::get);
+    synchronized (totalSuccessfulSegmentLoadCount) {
+      final Map<RowKey, Long> delta = getDeltaValues(total, previousSuccessfulSegmentLoadCount);
+      previousSuccessfulSegmentLoadCount = total;
+      return delta;
+    }
+  }
+
+  private static long incrementAndGetLong(ConcurrentHashMap<RowKey, AtomicLong> counters, RowKey key)
+  {
+    AtomicLong counter = counters.get(key);
+    if (counter == null) {
+      counter = counters.computeIfAbsent(key, k -> new AtomicLong());
+    }
+    return counter.incrementAndGet();
+  }
+
+  private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
+  {
+    final Map<RowKey, Long> deltaValues = new HashMap<>();
+    total.forEach(
+        (dataSource, totalCount) -> deltaValues.put(
+            dataSource,
+            totalCount - prev.getOrDefault(dataSource, 0L)
+        )
+    );
+    return deltaValues;
+  }
+
+  private static RowKey getMetricKey(final DataSegment segment)
+  {
+    if (segment == null) {
+      return RowKey.empty();
+    }
+    return RowKey.with(Dimension.DATASOURCE, segment.getDataSource()).build();
   }
 }
