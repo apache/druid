@@ -76,22 +76,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   /**
    * A map between segment and referenceCountingLocks.
-   *
+   * <p>
    * These locks should be acquired whenever getting or deleting files for a segment.
    * If different threads try to get or delete files simultaneously, one of them creates a lock first using
    * {@link #lock(DataSegment)}. And then, all threads compete with each other to get the lock.
-   * Finally, the lock should be released using {@link #unlock(DataSegment, ReferenceCountingLock)}.
-   *
+   * Finally, the lock should be released using {@link #unlock(DataSegment, ReferenceCountingLock)}. A lock must be
+   * acquired any time a {@link SegmentCacheEntry} needs to be added to or removed from a {@link StorageLocation} or
+   * modified in any way.
+   * <p>
    * An example usage is:
-   *
-   * final SegmentCacheEntry entry = new SegmentCacheEntry(segment);
-   * final ReferenceCountingLock lock = entry.lock();
+   * <p>
+   * final ReferenceCountingLock lock = lock(dataSegment);
    * synchronized (lock) {
    *   try {
    *     doSomething();
    *   }
    *   finally {
-   *     entry.unlock(lock);
+   *     unlock(dataSegment, lock);
    *   }
    * }
    */
@@ -204,8 +205,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             // check for migrate from old nested local storage path format
             final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
             if (legacyPath.exists()) {
-              FileUtils.mkdirp(new File(location.getPath(), segment.getId().toString()));
-              Files.move(legacyPath.toPath(), cacheEntry.toPotentialLocation(location.getPath()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+              final File destination = cacheEntry.toPotentialLocation(location.getPath());
+              FileUtils.mkdirp(destination);
+              Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
               cleanupLegacyCacheLocation(location.getPath(), legacyPath);
             }
 
