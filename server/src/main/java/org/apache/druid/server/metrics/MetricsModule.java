@@ -22,7 +22,6 @@ package org.apache.druid.server.metrics;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -34,6 +33,7 @@ import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -64,18 +64,14 @@ import java.util.stream.Collectors;
 /**
  * Sets up the {@link MonitorScheduler} to monitor things on a regular schedule.  {@link Monitor}s must be explicitly
  * bound in order to be loaded.
+ * <p>
+ * For any service, a monitor is loaded only if the {@link NodeRole} of the service
+ * is included in the {@link LoadScope} of the monitor.
  */
 public class MetricsModule implements Module
 {
   public static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
   private static final Logger log = new Logger(MetricsModule.class);
-  private Set<NodeRole> nodeRoles;
-
-  @Inject
-  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
-  {
-    this.nodeRoles = nodeRoles;
-  }
 
   public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
   {
@@ -107,6 +103,7 @@ public class MetricsModule implements Module
       Supplier<DruidMonitorSchedulerConfig> config,
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
+      @Self Set<NodeRole> nodeRoles,
       ServiceEmitter emitter,
       Injector injector
   )
@@ -117,12 +114,14 @@ public class MetricsModule implements Module
     // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
     injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      monitors.add(injector.getInstance(monitorClass));
+      if (shouldLoadMonitor(monitorClass, nodeRoles)) {
+        monitors.add(injector.getInstance(monitorClass));
+      }
     }
 
     if (!monitors.isEmpty()) {
       log.info(
-          "Loaded %d monitors: %s",
+          "Loaded [%d] monitors: %s",
           monitors.size(),
           monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
       );
@@ -217,5 +216,23 @@ public class MetricsModule implements Module
       );
       return new OshiSysMonitor(dimensions, oshiSysConfig);
     }
+  }
+
+  /**
+   * Checks if a monitor needs to be loaded on this service based on its node role.
+   */
+  private boolean shouldLoadMonitor(Class<?> monitorClass, Set<NodeRole> nodeRoles)
+  {
+    final LoadScope loadScope = monitorClass.getAnnotation(LoadScope.class);
+    if (loadScope == null) {
+      // always load if annotation is not specified
+      return true;
+    }
+    for (String role : loadScope.roles()) {
+      if (nodeRoles.contains(NodeRole.fromJsonName(role))) {
+        return true;
+      }
+    }
+    return false;
   }
 }

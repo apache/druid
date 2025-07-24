@@ -34,6 +34,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.initialization.ServerInjectorBuilder;
@@ -41,6 +42,7 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
@@ -159,6 +161,31 @@ public class MetricsModuleTest
   }
 
   @Test
+  public void test_monitorScheduler_addsMonitor_ifNodeRoleIsInLoadScope()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(
+        StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
+        BasicMonitorScheduler.class.getName()
+    );
+    properties.setProperty(
+        "druid.monitoring.monitors",
+        "[\"org.apache.druid.server.metrics.MetricsModuleTest$OverlordOnlyMonitor\"]"
+    );
+    final MonitorScheduler overlordMonitorScheduler =
+        createInjector(properties, ImmutableSet.of(NodeRole.OVERLORD))
+            .getInstance(MonitorScheduler.class);
+    Assert.assertSame(BasicMonitorScheduler.class, overlordMonitorScheduler.getClass());
+    Assert.assertTrue(overlordMonitorScheduler.findMonitor(OverlordOnlyMonitor.class).isPresent());
+
+    final MonitorScheduler brokerMonitorScheduler =
+        createInjector(properties, ImmutableSet.of(NodeRole.BROKER))
+            .getInstance(MonitorScheduler.class);
+    Assert.assertSame(BasicMonitorScheduler.class, brokerMonitorScheduler.getClass());
+    Assert.assertFalse(brokerMonitorScheduler.findMonitor(OverlordOnlyMonitor.class).isPresent());
+  }
+
+  @Test
   public void testGetMonitorSchedulerUnknownSchedulerException()
   {
     final Properties properties = new Properties();
@@ -258,5 +285,15 @@ public class MetricsModuleTest
         ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
         new MetricsModule()
     );
+  }
+
+  @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
+  public static class OverlordOnlyMonitor extends AbstractMonitor
+  {
+    @Override
+    public boolean doMonitor(ServiceEmitter emitter)
+    {
+      return false;
+    }
   }
 }
