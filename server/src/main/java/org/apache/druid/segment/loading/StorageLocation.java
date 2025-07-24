@@ -252,17 +252,15 @@ public class StorageLocation
       return new ReservationHold<>((T) entry, () -> {});
     }
 
+
     final WeakCacheEntry existingEntry = weakCacheEntries.computeIfPresent(
         entryId,
         (identifier, weakCacheEntry) -> {
-          if (weakCacheEntry.hold()) {
-            weakCacheEntry.visited = true;
-            return weakCacheEntry;
-          }
-          return null;
+          weakCacheEntry.visited = true;
+          return weakCacheEntry;
         }
     );
-    if (existingEntry != null) {
+    if (existingEntry != null && existingEntry.hold()) {
       return new ReservationHold<>((T) existingEntry.cacheEntry, existingEntry::release);
     }
     return null;
@@ -287,8 +285,8 @@ public class StorageLocation
       return existingEntry;
     }
 
-    final CacheEntry newEntry = entrySupplier.get();
     synchronized (lock) {
+      final CacheEntry newEntry = entrySupplier.get();
       if (canHandle(newEntry)) {
         final WeakCacheEntry newWeakEntry = new WeakCacheEntry(newEntry);
         newWeakEntry.hold();
@@ -434,6 +432,12 @@ public class StorageLocation
     return true;
   }
 
+  @VisibleForTesting
+  public long getActiveWeakHolds()
+  {
+    return weakCacheEntries.values().stream().filter(WeakCacheEntry::isHeld).count();
+  }
+
   /**
    * Tries to reclaim the specified number of bytes by removing {@link WeakCacheEntry}, starting from {@link #hand}.
    * <p>
@@ -507,7 +511,7 @@ public class StorageLocation
    * Wrapper for a {@link CacheEntry} which can be reclaimed if there is not enough space available to add some other
    * {@link CacheEntry} later.
    */
-  private static final class WeakCacheEntry
+  static final class WeakCacheEntry
   {
     private final CacheEntry cacheEntry;
     /**
@@ -539,7 +543,6 @@ public class StorageLocation
       }
     };
 
-
     private WeakCacheEntry prev;
     private WeakCacheEntry next;
 
@@ -557,7 +560,7 @@ public class StorageLocation
     /**
      * Returns true if there is 1 or more {@link #hold()} currently placed on this entry
      */
-    private boolean isHeld()
+    boolean isHeld()
     {
       return holdReferents.getRegisteredParties() > 1;
     }

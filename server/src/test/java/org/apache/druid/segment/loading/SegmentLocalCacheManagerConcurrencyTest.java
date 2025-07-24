@@ -29,8 +29,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
@@ -41,7 +41,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +57,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 class SegmentLocalCacheManagerConcurrencyTest
@@ -147,7 +147,10 @@ class SegmentLocalCacheManagerConcurrencyTest
         TestIndex.INDEX_IO,
         jsonMapper
     );
-    executorService = Execs.multiThreaded(10, "segment-loader-local-cache-manager-concurrency-test-%d");
+    executorService = Execs.multiThreaded(
+        10,
+        "segment-loader-local-cache-manager-concurrency-test-%d"
+    );
   }
 
   @AfterEach
@@ -208,23 +211,24 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertTrue(t.getCause().getMessage().contains("in all locations."));
   }
 
-
   @Test
   public void testAcquireSegmentOnDemand() throws IOException
   {
+    final int segmentCount = 100;
+    final int iterations = 1000;
+    final int concurrentReads = 10;
     final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
-    makeSegmentsToLoad(100, localStorageFolder, interval, segmentsToWeakLoad);
+    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
-
-    List<DataSegment> currentBatch = new ArrayList<>();
-    for (int i = 0; i < 1000; i++) {
+    final List<DataSegment> currentBatch = new ArrayList<>();
+    for (int i = 0; i < iterations; i++) {
       // process batches of 10 requests at a time
-      if (i > 0 && i % 10 == 0) {
+      if (i > 0 && i % concurrentReads == 0) {
         final List<Future<Integer>> futures = currentBatch
             .stream()
-            .map(segment -> executorService.submit(new WeakLoad(virtualStorageFabricManager, segment)))
+            .map(segment -> executorService.submit(new WeakLoad(virtualStorageFabricManager, segment, true)))
             .collect(Collectors.toList());
         List<Throwable> exceptions = new ArrayList<>();
         int success = 0;
@@ -248,23 +252,85 @@ class SegmentLocalCacheManagerConcurrencyTest
         for (Throwable t : exceptions) {
           Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
           Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
-          Assertions.assertTrue(t.getCause().getMessage().contains("on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
+          Assertions.assertTrue(t.getCause()
+                                 .getMessage()
+                                 .contains(
+                                     "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
         }
         currentBatch.clear();
         exceptions.clear();
-      } else {
-        currentBatch.add(segmentsToWeakLoad.get(i % 100));
+      }
+      currentBatch.add(segmentsToWeakLoad.get(i % segmentCount));
+    }
+
+    StorageLocation location = virtualStorageFabricManager.getLocations().get(0);
+    Assertions.assertEquals(8, location.getPath().listFiles().length);
+    Assertions.assertEquals(0, location.getActiveWeakHolds());
+  }
+
+  @Test
+  public void testAcquireSegmentOnDemandRandomSegment() throws IOException, InterruptedException
+  {
+    final int segmentCount = 8;
+    final int iterations = 1000;
+    final int concurrentReads = 10;
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
+
+    final Interval interval = Intervals.of("2019-01-01/P1D");
+
+    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
+
+    List<DataSegment> currentBatch = new ArrayList<>();
+    for (boolean sleepy : new boolean[]{true, false}) {
+      for (int i = 0; i < iterations; i++) {
+        // process batches of 10 requests at a time
+        if (i > 0 && i % concurrentReads == 0) {
+          final List<WeakLoad> weakLoads = currentBatch
+              .stream()
+              .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, sleepy))
+              .collect(Collectors.toList());
+          final List<Future<Integer>> futures = new ArrayList<>();
+          for (WeakLoad weakLoad : weakLoads) {
+            futures.add(executorService.submit(weakLoad));
+          }
+          List<Throwable> exceptions = new ArrayList<>();
+          int success = 0;
+          int rows = 0;
+          for (Future<Integer> future : futures) {
+            try {
+              Integer s = future.get();
+              if (s != null) {
+                success++;
+                rows += s;
+              }
+            }
+            catch (Throwable t) {
+              exceptions.add(t);
+            }
+          }
+          // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more
+          Assertions.assertTrue(success >= 8, "success[" + success + "] less than 8 after " + (i / 10) + " iterations");
+          Assertions.assertTrue(exceptions.size() <= 2);
+          Assertions.assertTrue(rows >= 9672);
+          for (Throwable t : exceptions) {
+            Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
+            Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
+            Assertions.assertTrue(t.getCause()
+                                   .getMessage()
+                                   .contains(
+                                       "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
+          }
+          currentBatch.clear();
+          exceptions.clear();
+        }
+        currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
       }
     }
 
-    File segmentsPath = new File(
-        virtualStorageFabricManager.getLocations().get(0).getPath(),
-        segmentsToWeakLoad.get(0).getId().toString()
-    ).getParentFile();
-
-    Assert.assertEquals(8, segmentsPath.listFiles().length);
+    StorageLocation location = virtualStorageFabricManager.getLocations().get(0);
+    Assertions.assertEquals(8, location.getPath().listFiles().length);
+    Assertions.assertEquals(0, location.getActiveWeakHolds());
   }
-
 
   private void makeSegmentsToLoad(
       int segmentCount,
@@ -344,42 +410,40 @@ class SegmentLocalCacheManagerConcurrencyTest
 
   private static class WeakLoad implements Callable<Integer>
   {
+    private final boolean isSleepy;
     private final SegmentLocalCacheManager segmentManager;
     private final DataSegment segment;
 
-    private WeakLoad(SegmentLocalCacheManager segmentManager, DataSegment segment)
+    private WeakLoad(SegmentLocalCacheManager segmentManager, DataSegment segment, boolean sleepy)
     {
       this.segmentManager = segmentManager;
       this.segment = segment;
+      this.isSleepy = sleepy;
     }
 
     @Override
     public Integer call() throws SegmentLoadingException
     {
-      final AcquireSegmentAction action = segmentManager.acquireSegment(
-          segment,
-          new SegmentDescriptor(segment.getId().getInterval(), segment.getId().getVersion(), segment.getId().getPartitionNum())
-      );
+      final Closer closer = Closer.create();
       try {
-        final Optional<Segment> segment = action.getSegmentFuture().get();
+        final AcquireSegmentAction action = closer.register(
+            segmentManager.acquireSegment(segment, segment.toDescriptor())
+        );
+        final Optional<Segment> segment = action.getSegmentFuture().get().map(closer::register);
         if (segment.isPresent()) {
-          try {
-            PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
-            // sleep to make tests well behaved and simulate doing query stuff or whatever
-            Thread.sleep(200);
-            return gadget.getNumRows();
+          PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
+          if (isSleepy) {
+            Thread.sleep(ThreadLocalRandom.current().nextInt(20));
           }
-          finally {
-            CloseableUtils.closeAndWrapExceptions(segment.get());
-          }
+          return gadget.getNumRows();
         }
         return null;
       }
-      catch (InterruptedException | ExecutionException e) {
+      catch (ExecutionException | InterruptedException e) {
         throw new RuntimeException(e);
       }
       finally {
-        CloseableUtils.closeAndWrapExceptions(action);
+        CloseableUtils.closeAndWrapExceptions(closer);
       }
     }
   }

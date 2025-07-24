@@ -292,56 +292,57 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final SegmentDescriptor descriptor
   ) throws SegmentLoadingException
   {
-
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
-    final ReferenceCountingLock lock = lock(dataSegment);
-    synchronized (lock) {
+    for (StorageLocation location : locations) {
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
+          location.addWeakReservationHoldIfExists(identifier);
       try {
-        for (StorageLocation location : locations) {
-          final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
-              location.addWeakReservationHoldIfExists(identifier);
-          try {
-            if (hold != null && hold.getEntry().referenceProvider != null) {
-              return new AcquireSegmentAction(
-                  descriptor,
-                  () -> Futures.immediateFuture(hold.getEntry().referenceProvider.acquireReference()),
-                  hold
-              );
-            }
-          }
-          catch (Throwable t) {
-            throw CloseableUtils.closeAndWrapInCatch(t, hold);
-          }
-        }
-        final Iterator<StorageLocation> iterator = strategy.getLocations();
-        while (iterator.hasNext()) {
-          final StorageLocation location = iterator.next();
-          final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
-              identifier,
-              () -> new SegmentCacheEntry(dataSegment)
-          );
-          try {
-            if (hold != null) {
-              return new AcquireSegmentAction(
-                  descriptor,
-                  makeOnDemandLoadSupplier(dataSegment, hold.getEntry(), location),
-                  hold
-              );
-            }
-          }
-          catch (Throwable t) {
-            throw CloseableUtils.closeAndWrapInCatch(t, hold);
+        if (hold != null) {
+          if (hold.getEntry().isMounted()) {
+            return new AcquireSegmentAction(
+                descriptor,
+                () -> Futures.immediateFuture(hold.getEntry().referenceProvider.acquireReference()),
+                hold
+            );
+          } else {
+            // go ahead and mount it, someone else is probably trying this as well, but mount is done under a segment
+            // lock and is a no-op if already mounted, and if we win we need it to be mounted
+            return new AcquireSegmentAction(
+                descriptor,
+                makeOnDemandLoadSupplier(dataSegment, hold.getEntry(), location),
+                hold
+            );
           }
         }
-        throw new SegmentLoadingException(
-            "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
-            dataSegment.getId()
-        );
       }
-      finally {
-        unlock(dataSegment, lock);
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, hold);
       }
     }
+    final Iterator<StorageLocation> iterator = strategy.getLocations();
+    while (iterator.hasNext()) {
+      final StorageLocation location = iterator.next();
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
+          identifier,
+          () -> new SegmentCacheEntry(dataSegment)
+      );
+      try {
+        if (hold != null) {
+          return new AcquireSegmentAction(
+              descriptor,
+              makeOnDemandLoadSupplier(dataSegment, hold.getEntry(), location),
+              hold
+          );
+        }
+      }
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, hold);
+      }
+    }
+    throw new SegmentLoadingException(
+        "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
+        dataSegment.getId()
+    );
   }
 
   @Override
@@ -708,7 +709,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private SegmentLazyLoadFailCallback lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
     private File locationRoot;
     private File storageDir;
-    private ReferenceCountedSegmentProvider referenceProvider;
+    // volatile so isMounted() doesn't need a segment lock
+    private volatile ReferenceCountedSegmentProvider referenceProvider;
 
     private SegmentCacheEntry(final DataSegment dataSegment)
     {
@@ -808,17 +810,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     @Override
     public void unmount()
     {
-      if (referenceProvider != null) {
-        referenceProvider.close();
-        referenceProvider = null;
+      final ReferenceCountingLock lock = SegmentLocalCacheManager.this.lock(dataSegment);
+      try {
+        synchronized (lock) {
+          if (referenceProvider != null) {
+            referenceProvider.close();
+            referenceProvider = null;
+          }
+          if (!config.isDeleteOnRemove()) {
+            return;
+          }
+          if (storageDir != null) {
+            deleteCacheEntryDirectory(storageDir);
+            storageDir = null;
+            locationRoot = null;
+          }
+        }
       }
-      if (!config.isDeleteOnRemove()) {
-        return;
-      }
-      if (storageDir != null) {
-        deleteCacheEntryDirectory(storageDir);
-        storageDir = null;
-        locationRoot = null;
+      finally {
+        SegmentLocalCacheManager.this.unlock(dataSegment, lock);
       }
     }
 

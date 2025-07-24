@@ -21,12 +21,14 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -35,12 +37,26 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
 class StorageLocationTest
 {
   @TempDir
   File tempDir;
+
+  ExecutorService executorService;
+
+  @BeforeEach
+  public void setup()
+  {
+    executorService = Execs.multiThreaded(
+        10,
+        "storage-location-test-%d"
+    );
+  }
 
   @Test
   public void testWeakReserveAndReclaim()
@@ -304,6 +320,41 @@ class StorageLocationTest
     Assertions.assertFalse(loc.isReserved(entry2.getId()));
 
     loc.release(entry2);
+  }
+
+  @Test
+  public void testReserveWeakExistsConcurrency() throws ExecutionException, InterruptedException
+  {
+    StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
+    final TestSegmentCacheEntry entry = makeSegmentEntry("2024/2025", 10);
+    loc.reserveWeak(entry);
+    entry.mount(loc.getPath());
+
+    for (int i = 0; i < 1000; i++) {
+      final List<Future<Boolean>> futures = new ArrayList<>();
+      for (int j = 0; j < 10; j++) {
+        futures.add(
+            executorService.submit(() -> {
+              try {
+                StorageLocation.ReservationHold<TestSegmentCacheEntry> hold =
+                    loc.addWeakReservationHoldIfExists(entry.getId());
+                Assertions.assertNotNull(hold);
+                hold.close();
+                return true;
+              }
+              catch (Throwable t) {
+                return false;
+              }
+            })
+        );
+      }
+
+      for (Future<Boolean> future : futures) {
+        Assertions.assertTrue(future.get());
+      }
+    }
+
+    Assertions.assertEquals(0, loc.getActiveWeakHolds());
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
