@@ -63,10 +63,6 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addCommonProperty(
-                                   "druid.monitoring.monitors",
-                                   "[\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]"
-                               )
                                .addServer(coordinator)
                                .addServer(indexer)
                                .addServer(overlord)
