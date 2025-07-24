@@ -369,6 +369,7 @@ public class SegmentManager
     cacheManager.shutdownBootstrap();
   }
 
+
   /**
    * Represent the state of a data source including the timeline, total segment size, and number of segments.
    */

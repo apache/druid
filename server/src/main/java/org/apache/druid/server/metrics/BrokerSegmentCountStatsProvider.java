@@ -17,41 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.stats;
+package org.apache.druid.server.metrics;
 
-/**
- * Dimensions used while collecting or reporting coordinator run stats.
- */
-public enum Dimension
+import org.apache.druid.server.coordinator.stats.RowKey;
+
+import java.util.Map;
+
+public interface BrokerSegmentCountStatsProvider
 {
-  TIER("tier"),
-  TASK_TYPE("taskType"),
-  DATASOURCE("dataSource"),
-  DUTY("duty"),
-  DUTY_GROUP("dutyGroup"),
-  DESCRIPTION("description"),
-  SERVER("server"),
-  INTERVAL("interval"),
-  VERSION("version");
-
-  private final String reportedName;
-
-  Dimension(String name)
-  {
-    this.reportedName = name;
-  }
-
   /**
-   * The name of this dimension used while emitting metrics.
+   * Return the number of available segments discovered by broker for a datasource.
    */
-  public String reportedName()
-  {
-    return reportedName;
-  }
-
-  @Override
-  public String toString()
-  {
-    return reportedName;
-  }
+  Map<RowKey, Long> getAvailableSegmentCount();
 }

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -70,6 +71,9 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   {
     overlord1.addProperty("druid.plaintextPort", "7090");
     coordinator1.addProperty("druid.plaintextPort", "7081");
+
+    broker.addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentCountStatsMonitor\"]")
+          .addProperty("druid.monitoring.emissionPeriod", "PT0.1s");
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
@@ -119,6 +123,10 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
     // Run sys queries, switch leaders, repeat
     ServerPair<EmbeddedOverlord> overlordPair = createServerPair(overlord1, overlord2);
     ServerPair<EmbeddedCoordinator> coordinatorPair = createServerPair(coordinator1, coordinator2);
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
     for (int i = 0; i < 3; ++i) {
       Assertions.assertEquals(
           "1",

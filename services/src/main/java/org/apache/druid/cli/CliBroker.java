@@ -75,8 +75,8 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.BrokerSegmentCountStatsProvider;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
-import org.apache.druid.server.metrics.SegmentDiscoveryStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -142,7 +142,7 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, MetadataSegmentView.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
           binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
-          binder.bind(SegmentDiscoveryStatsProvider.class).to(BrokerServerView.class);
+          binder.bind(BrokerSegmentCountStatsProvider.class).to(BrokerServerView.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
           binder.install(new CacheModule());

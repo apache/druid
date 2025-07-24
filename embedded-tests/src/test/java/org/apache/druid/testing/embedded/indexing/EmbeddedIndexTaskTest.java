@@ -61,7 +61,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    broker.addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.SegmentDiscoveryStatsMonitor\"]");
+    broker.addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentCountStatsMonitor\"]");
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
@@ -109,10 +109,9 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(10)
     );
-    broker.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/discover/success")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(10)
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));

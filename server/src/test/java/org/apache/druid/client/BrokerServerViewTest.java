@@ -47,6 +47,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.TestCoordinatorClient;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -64,11 +66,15 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.server.coordinator.stats.Dimension.INTERVAL;
 
 public class BrokerServerViewTest extends CuratorTestBase
 {
@@ -116,6 +122,17 @@ public class BrokerServerViewTest extends CuratorTestBase
     announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Map<RowKey, Long> availableSegmentCount = brokerServerView.getAvailableSegmentCount();
+    for (Map.Entry<RowKey, Long> entry : availableSegmentCount.entrySet()) {
+      Assert.assertEquals(
+          RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
+                .with(Dimension.INTERVAL, segment.getInterval().toString())
+                .with(Dimension.VERSION, segment.getVersion())
+                .build(),
+          entry.getKey()
+      );
+      Assert.assertEquals(1L, (long) entry.getValue());
+    }
 
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
         new TableDataSource("test_broker_server_view")
@@ -144,6 +161,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         0,
         timeline.lookup(intervals).size()
     );
+    Assert.assertEquals(0, brokerServerView.getAvailableSegmentCount().size());
     Assert.assertNull(timeline.findChunk(intervals, "v1", partition));
   }
 
@@ -194,6 +212,18 @@ public class BrokerServerViewTest extends CuratorTestBase
             )
         )
     );
+    Map<RowKey, Long> availableSegmentCount = brokerServerView.getAvailableSegmentCount();
+    Map<RowKey, Long> expectedSegmentCount = new HashMap<>();
+    for (DataSegment segment : segments) {
+      expectedSegmentCount.put(
+          RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
+                .with(INTERVAL, segment.getInterval().toString())
+                .with(Dimension.VERSION, segment.getVersion())
+                .build(),
+          1L
+      );
+    }
+    Assert.assertEquals(expectedSegmentCount, availableSegmentCount);
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
     unannounceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig);

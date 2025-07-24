@@ -27,12 +27,15 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
 
-public class SegmentDiscoveryStatsMonitor extends AbstractMonitor
+/**
+ * {@Code BrokerSegmentCountStatsMonitor} tracks the currently available segments that broker has discovered.
+ */
+public class BrokerSegmentCountStatsMonitor extends AbstractMonitor
 {
-  private final SegmentDiscoveryStatsProvider statsProvider;
+  private final BrokerSegmentCountStatsProvider statsProvider;
 
   @Inject
-  public SegmentDiscoveryStatsMonitor(SegmentDiscoveryStatsProvider statsProvider)
+  public BrokerSegmentCountStatsMonitor(BrokerSegmentCountStatsProvider statsProvider)
   {
     this.statsProvider = statsProvider;
   }
@@ -40,7 +43,7 @@ public class SegmentDiscoveryStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emit(emitter, "segment/discover/success", statsProvider.getTotalSuccessfulSegmentLoadCount());
+    emit(emitter, "segment/available/count", statsProvider.getAvailableSegmentCount());
     return true;
   }
 
