@@ -178,10 +178,11 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                       .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
         agg -> agg.hasSumAtLeast(totalRows)
     );
-    broker.latchableEmitter().waitForEventAggregate(
+    broker.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/available/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(10)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.INTERVAL, "2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.000Z")
+                      .hasValue(1)
     );
   }
 

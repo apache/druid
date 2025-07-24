@@ -113,7 +113,6 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
             .addProperty("druid.manager.segments.killUnused.bufferPeriod", "PT0.1s")
             .addProperty("druid.manager.segments.killUnused.dutyPeriod", "PT1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
-    broker.addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentCountStatsMonitor\"]");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)

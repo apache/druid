@@ -19,12 +19,10 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
@@ -41,23 +39,12 @@ public class BrokerSegmentCountStatsMonitorTest
                                                           .with(Dimension.INTERVAL, "2024-01-02T00:00:00.000Z/2024-01-03T00:00:00.000Z")
                                                           .build();
 
-  @Before
-  public void setUp()
-  {
-    statsProvider = new BrokerSegmentCountStatsProvider()
-    {
-      @Override
-      public Map<RowKey, Long> getAvailableSegmentCount()
-      {
-        return ImmutableMap.of(SEGMENT_METRIC_KEY1, 10L, SEGMENT_METRIC_KEY2, 5L);
-      }
-    };
-  }
-
   @Test
-  public void testMonitor()
+  public void test_monitor()
   {
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(statsProvider);
+    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(
+        () -> Map.of(SEGMENT_METRIC_KEY1, 10L, SEGMENT_METRIC_KEY2, 5L)
+    );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
 
@@ -68,37 +55,19 @@ public class BrokerSegmentCountStatsMonitorTest
   }
 
   @Test
-  public void testMonitorWithNullCounts()
+  public void test_monitor_withNullCounts()
   {
-    final BrokerSegmentCountStatsProvider nullStatsProvider = new BrokerSegmentCountStatsProvider()
-    {
-      @Override
-      public Map<RowKey, Long> getAvailableSegmentCount()
-      {
-        return null;
-      }
-    };
-
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(nullStatsProvider);
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(() -> null);
+    final StubServiceEmitter emitter = new StubServiceEmitter();
     Assert.assertTrue(monitor.doMonitor(emitter));
 
     Assert.assertEquals(0, emitter.getNumEmittedEvents());
   }
 
   @Test
-  public void testMonitorWithEmptyCounts()
+  public void test_monitor_withEmptyCounts()
   {
-    final BrokerSegmentCountStatsProvider emptyStatsProvider = new BrokerSegmentCountStatsProvider()
-    {
-      @Override
-      public Map<RowKey, Long> getAvailableSegmentCount()
-      {
-        return ImmutableMap.of();
-      }
-    };
-
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(emptyStatsProvider);
+    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(() -> Map.of());
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
 

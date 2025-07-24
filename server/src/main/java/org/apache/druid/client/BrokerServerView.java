@@ -44,7 +44,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,7 +55,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -81,8 +79,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentCountS
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
-
-  private final ConcurrentHashMap<RowKey, AtomicLong> segmentAvailableCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, Long> segmentAvailableCount = new ConcurrentHashMap<>();
 
   @Inject
   public BrokerServerView(
@@ -289,7 +286,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentCountS
 
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
-          incrementAndGetLong(segmentAvailableCount, getMetricKey(segment));
+          incrementSegmentCount(getMetricKey(segment));
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -366,7 +363,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentCountS
               segment.getVersion()
           );
         } else {
-          decrementAndGetLong(segmentAvailableCount, getMetricKey(segment));
+          decrementSegmentCount(getMetricKey(segment));
           runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
         }
       }
@@ -450,36 +447,24 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentCountS
   @Override
   public Map<RowKey, Long> getAvailableSegmentCount()
   {
-    return CollectionUtils.mapValues(segmentAvailableCount, AtomicLong::get);
+    return segmentAvailableCount;
   }
 
-  private static long incrementAndGetLong(ConcurrentHashMap<RowKey, AtomicLong> counters, RowKey key)
+  private void incrementSegmentCount(RowKey key)
   {
-    AtomicLong counter = counters.get(key);
-    if (counter == null) {
-      counter = counters.computeIfAbsent(key, k -> new AtomicLong());
-    }
-    return counter.incrementAndGet();
+    segmentAvailableCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
   }
 
-  private static long decrementAndGetLong(ConcurrentHashMap<RowKey, AtomicLong> counters, RowKey key)
+  private void decrementSegmentCount(RowKey key)
   {
-    AtomicLong counter = counters.get(key);
-    long cnt = 0L;
-    if (counter != null) {
-      cnt = counter.decrementAndGet();
-      if (cnt == 0) {
-        counters.remove(key, counter);
-      }
-    }
-    return cnt;
+    segmentAvailableCount.computeIfPresent(key, (k, currentValue) -> {
+      long newValue = currentValue - 1;
+      return newValue > 0 ? newValue : null;
+    });
   }
 
   private static RowKey getMetricKey(final DataSegment segment)
   {
-    if (segment == null) {
-      return RowKey.empty();
-    }
     return RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
                  .with(Dimension.INTERVAL, String.valueOf(segment.getInterval()))
                  .and(Dimension.VERSION, segment.getVersion());

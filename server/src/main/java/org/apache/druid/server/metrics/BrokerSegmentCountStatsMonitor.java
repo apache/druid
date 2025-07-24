@@ -28,7 +28,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import java.util.Map;
 
 /**
- * {@Code BrokerSegmentCountStatsMonitor} tracks the currently available segments that broker has discovered.
+ * Monitor that tracks the number of segments of a datasource currently queryable by this Broker.
  */
 public class BrokerSegmentCountStatsMonitor extends AbstractMonitor
 {

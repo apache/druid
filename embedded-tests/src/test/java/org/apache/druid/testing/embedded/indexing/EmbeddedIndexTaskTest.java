@@ -109,9 +109,10 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(10)
     );
-    broker.latchableEmitter().waitForEvent(
+    broker.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/available/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasCountAtLeast(10)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));

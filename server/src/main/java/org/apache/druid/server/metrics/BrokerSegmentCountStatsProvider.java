@@ -26,7 +26,7 @@ import java.util.Map;
 public interface BrokerSegmentCountStatsProvider
 {
   /**
-   * Return the number of available segments discovered by broker for a datasource.
+   * Return the number of segments queryable by a Broker for a datasource, interval and version.
    */
   Map<RowKey, Long> getAvailableSegmentCount();
 }

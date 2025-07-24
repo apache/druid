@@ -74,8 +74,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
-import static org.apache.druid.server.coordinator.stats.Dimension.INTERVAL;
-
 public class BrokerServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
@@ -217,7 +215,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (DataSegment segment : segments) {
       expectedSegmentCount.put(
           RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
-                .with(INTERVAL, segment.getInterval().toString())
+                .with(Dimension.INTERVAL, segment.getInterval().toString())
                 .with(Dimension.VERSION, segment.getVersion())
                 .build(),
           1L
