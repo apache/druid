@@ -25,18 +25,21 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -66,7 +69,7 @@ public class ShimCursorTest
   @Parameterized.Parameters
   public static Collection<Object> data()
   {
-    return List.of(1, 2, 4, 512);
+    return List.of(1, 2, 4, 7, 512);
   }
 
   /**
@@ -97,6 +100,8 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 4, 5, 6));
     incrementalIndex.add(autoRow(signature, null, 423, 13));
     incrementalIndex.add(autoRow(signature, 51, 0, null));
+    incrementalIndex.add(autoRow(signature, 51, -1.0, 4));
+    incrementalIndex.add(autoRow(signature, 123, 413.132, 2));
     incrementalIndex.add(autoRow(signature, 0, null, 331));
     incrementalIndex.add(autoRow(signature, Long.MAX_VALUE, -824.0f, Long.MIN_VALUE));
     incrementalIndex.add(autoRow(signature, -1, -2.0d, 112));
@@ -118,7 +123,7 @@ public class ShimCursorTest
     Cursor cursor = cursorHolder.asCursor();
     ShimCursor shimCursor = new ShimCursor(vectorCursor);
 
-    compareCursors(signature, cursor, shimCursor);
+    compareCursors(List.of("A", "B", "C", "non-existent"), cursor, shimCursor);
   }
 
   /**
@@ -238,13 +243,13 @@ public class ShimCursorTest
                                   )
                                   .withVirtualColumns(
                                       VirtualColumns.create(
-                                                        new ExpressionVirtualColumn(
-                                                            "v1",
-                                                            "concat(\"A\", \"B\")",
-                                                            ColumnType.STRING,
-                                                            TestExprMacroTable.INSTANCE)
-                                                        )
-                                                    )
+                                          new ExpressionVirtualColumn(
+                                              "v1",
+                                              "concat(\"A\", \"B\")",
+                                              ColumnType.STRING,
+                                              TestExprMacroTable.INSTANCE)
+                                      )
+                                  )
                                   .withRollup(false)
                                   .build()
         )
@@ -269,14 +274,14 @@ public class ShimCursorTest
                                                              Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
                                                          )
                                                      )
-        .setVirtualColumns(VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v1",
-                                   "concat(\"A\", \"B\")",
-                                   ColumnType.STRING,
-                                   TestExprMacroTable.INSTANCE)
-                           )
-        )
+                                                     .setVirtualColumns(VirtualColumns.create(
+                                                                            new ExpressionVirtualColumn(
+                                                                                "v1",
+                                                                                "concat(\"A\", \"B\")",
+                                                                                ColumnType.STRING,
+                                                                                TestExprMacroTable.INSTANCE)
+                                                                        )
+                                                     )
                                                      .build();
     CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
     Assertions.assertTrue(cursorHolder.canVectorize());
@@ -306,41 +311,86 @@ public class ShimCursorTest
     return retVal;
   }
 
-  public void compareCursors(List<String> signature, Cursor expected, ShimCursor actual)
+  /**
+   * Compares an expected {@link Cursor} to a {@link ShimCursor} and asserts that they perform in a similar way.
+   */
+  private static void compareCursors(List<String> signature, Cursor expected, ShimCursor actual)
   {
-    ColumnSelectorFactory expectedFactory = expected.getColumnSelectorFactory();
-    ColumnSelectorFactory actualFactory = actual.getColumnSelectorFactory();
+    final ColumnSelectorFactory expectedFactory = expected.getColumnSelectorFactory();
+    final ColumnSelectorFactory actualFactory = actual.getColumnSelectorFactory();
     while (!expected.isDone()) {
+      Assertions.assertFalse(actual.isDone());
       for (String columnName : signature) {
-        ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
-        ColumnCapabilities actualCapabilities = actualFactory.getColumnCapabilities(columnName);
-
-        ColumnValueSelector<?> expectedSelector = expectedFactory.makeColumnValueSelector(columnName);
-        ColumnValueSelector<?> actualSelector = actualFactory.makeColumnValueSelector(columnName);
-
-        Assertions.assertEquals(expectedCapabilities.hasMultipleValues(), actualCapabilities.hasMultipleValues());
-
-        if (expectedCapabilities.isNumeric()) {
-          Assertions.assertTrue(actualCapabilities.isNumeric());
-          Assertions.assertEquals(expectedSelector.getDouble(), actualSelector.getDouble());
-          Assertions.assertEquals(expectedSelector.getLong(), actualSelector.getLong());
-          Assertions.assertEquals(expectedSelector.getFloat(), actualSelector.getFloat());
-        } else if (expectedCapabilities.isArray()) {
-          Assertions.assertTrue(actualCapabilities.isArray());
-          Assertions.assertArrayEquals((Object[]) expectedSelector.getObject(), (Object[]) actualSelector.getObject());
-        } else {
-          Assertions.assertEquals(expectedSelector.getObject(), actualSelector.getObject());
-        }
+        compareColumnValueSelector(columnName, expectedFactory, actualFactory);
+        compareDimSelectorIfSupported(columnName, expectedFactory, actualFactory);
       }
+
       expected.advance();
       actual.advance();
-      Assertions.assertEquals(expected.isDone(), actual.isDone());
     }
 
     Assertions.assertTrue(actual.isDone());
   }
 
-  private MapBasedInputRow autoRow(List<String> signature, Object... values)
+  private static void compareColumnValueSelector(
+      String columnName,
+      ColumnSelectorFactory expectedFactory,
+      ColumnSelectorFactory actualFactory
+  )
+  {
+    final ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
+    final ColumnCapabilities actualCapabilities = actualFactory.getColumnCapabilities(columnName);
+
+    final ColumnValueSelector<?> expectedSelector = expectedFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> actualSelector = actualFactory.makeColumnValueSelector(columnName);
+
+    if (expectedCapabilities == null) {
+      Assertions.assertNull(actualCapabilities);
+      Assertions.assertTrue(actualSelector.isNull());
+      return;
+    }
+
+    if (expectedCapabilities.isNumeric()) {
+      Assertions.assertTrue(actualCapabilities.isNumeric());
+      Assertions.assertEquals(expectedSelector.getDouble(), actualSelector.getDouble());
+      Assertions.assertEquals(expectedSelector.getLong(), actualSelector.getLong());
+      Assertions.assertEquals(expectedSelector.getFloat(), actualSelector.getFloat());
+    } else if (expectedCapabilities.isArray()) {
+      Assertions.assertTrue(actualCapabilities.isArray());
+      Assertions.assertArrayEquals((Object[]) expectedSelector.getObject(), (Object[]) actualSelector.getObject());
+    } else {
+      Assertions.assertEquals(expectedSelector.getObject(), actualSelector.getObject());
+    }
+  }
+
+  private static void compareDimSelectorIfSupported(
+      String columnName,
+      ColumnSelectorFactory expectedFactory,
+      ColumnSelectorFactory actualFactory
+  )
+  {
+    final ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
+
+    if (expectedCapabilities != null && expectedCapabilities.toColumnType().equals(ColumnType.STRING)) {
+      final DimensionSelector expectedDimSelector = expectedFactory.makeDimensionSelector(DefaultDimensionSpec.of(
+          columnName));
+      final DimensionSelector actualDimSelector = actualFactory.makeDimensionSelector(DefaultDimensionSpec.of(
+          columnName));
+
+      Assertions.assertEquals(expectedDimSelector.getObject(), actualDimSelector.getObject());
+      if (expectedDimSelector.idLookup() != null) {
+        // TODO: is this correct?
+        IndexedInts expectedInts = expectedDimSelector.getRow();
+        IndexedInts actualInts = actualDimSelector.getRow();
+        Assertions.assertEquals(expectedInts.size(), actualInts.size());
+        for (int i = 0; i < expectedInts.size(); i++) {
+          Assertions.assertEquals(expectedInts.get(i), actualInts.get(i));
+        }
+      }
+    }
+  }
+
+  private static MapBasedInputRow autoRow(List<String> signature, Object... values)
   {
     if (signature.size() != values.length) {
       throw new RuntimeException("Signature and values do not match");
