@@ -281,6 +281,27 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @Override
+  public void testTimeseriesNullableLongMax()
+  {
+    // Skip this test because the timeseries test expects a null value to be returned for the aggregator even if
+    // there's no data for a period in query, but group by doesn't return data for periods that have no data.
+  }
+
+  @Override
+  public void testTimeseriesProjections()
+  {
+    // Skip this test because the timeseries test expects a null value to be returned for the aggregator even if
+    // there's no data for a period in query, but group by doesn't return data for periods that have no data.
+  }
+
+  @Override
+  public void testTimeseriesProjectionsCounts()
+  {
+    // Skip this test because the timeseries test expects a 0 value to be returned for the count aggregator even if
+    // there's no data for a period in query, but group by doesn't return data for periods that have no data.
+  }
+
+  @Override
   public void testEmptyTimeseries()
   {
     // Skip this test because the timeseries test expects the empty range to have one entry, but group by

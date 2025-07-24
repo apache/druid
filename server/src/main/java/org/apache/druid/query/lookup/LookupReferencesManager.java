@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -41,10 +40,9 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -475,19 +473,13 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       return coordinatorClient.fetchLookupsForTierSync(tier);
     }
     catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      if (rootCause instanceof HttpResponseException) {
-        final HttpResponseException httpException = (HttpResponseException) rootCause;
-        if (httpException.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-          LOG.info(
-              "No lookups found for tier [%s], status [%s]",
-              tier,
-              httpException.getResponse().getStatus()
-          );
-          return null;
-        }
-      }
-      throw e;
+      return ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(
+          e,
+          () -> {
+            LOG.info("No lookups found for tier[%s], status [404, Not Found]", tier);
+            return null;
+          }
+      );
     }
   }
 
