@@ -80,7 +80,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
       super(args);
 
       final Expr patternExpr = args.get(1);
-      if (patternExpr.getLiteralValue() == null) {
+      if (!ExprUtils.isStringLiteral(patternExpr)) {
         throw validationFailed("pattern must be a STRING literal");
       }
 
@@ -118,7 +118,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
     public ExprEval<?> eval(final ObjectBinding bindings)
     {
       final Expr patternExpr = args.get(1).eval(bindings).toExpr();
-      if (!ExprUtils.isStringLiteral(patternExpr) || patternExpr.getLiteralValue() == null) {
+      if (!ExprUtils.isStringLiteral(patternExpr)) {
         throw validationFailed("pattern must be a STRING literal");
       }
 
