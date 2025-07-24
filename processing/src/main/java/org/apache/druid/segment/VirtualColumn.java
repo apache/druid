@@ -59,8 +59,8 @@ import java.util.List;
     @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class),
     @JsonSubTypes.Type(name = "fallback", value = FallbackVirtualColumn.class),
     @JsonSubTypes.Type(name = "mv-filtered", value = ListFilteredVirtualColumn.class),
-    @JsonSubTypes.Type(name = "regex-filtered", value = RegexFilteredVirtualColumn.class),
-    @JsonSubTypes.Type(name = "prefix-filtered", value = PrefixFilteredVirtualColumn.class)
+    @JsonSubTypes.Type(name = "mv-regex-filtered", value = RegexFilteredVirtualColumn.class),
+    @JsonSubTypes.Type(name = "mv-prefix-filtered", value = PrefixFilteredVirtualColumn.class)
 })
 public interface VirtualColumn extends Cacheable
 {
