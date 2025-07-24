@@ -815,7 +815,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // (1) catch all exceptions while reading from kafka
         caughtExceptionInner = e;
         if (Throwables.getRootCause(e) instanceof InterruptedException) {
-          // InterruptedException stack trace is not that useful and will clog up the logs.
+          // Suppress InterruptedException stack trace to avoid flooding the logs
           log.error("Encounted InterrupedException in run() before persisting");
         } else {
           log.error(e, "Encountered exception in run() before persisting.");
