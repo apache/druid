@@ -5875,7 +5875,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Felix Geisendörfer
-version: 4.0.0
+version: 4.0.4
 license_file_path: licenses/bin/form-data.MIT
 
 ---

@@ -228,7 +228,7 @@ public interface Expr extends Cacheable
       if (delegateIndexSupplier == null) {
         // if the column doesn't exist, check to see if the expression evaluates to a non-null result... if so, we might
         // need to make a value matcher anyway
-        if (eval(InputBindings.nilBindings()).valueOrDefault() != null) {
+        if (eval(InputBindings.nilBindings()).value() != null) {
           return NoIndexesColumnIndexSupplier.getInstance();
         }
         return null;

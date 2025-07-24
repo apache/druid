@@ -234,7 +234,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
       return elementIndexes.containsValue(elementMatchValueEval.value(), elementMatchValueType);
     }
 
-    if (elementMatchValueEval.valueOrDefault() != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
+    if (elementMatchValueEval.value() != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
       // column is not an array, behave like a normal equality filter
       return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector, predicateFactory);
     }
@@ -257,7 +257,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
   {
     final ColumnCapabilities capabilities = factory.getColumnCapabilities(column);
 
-    if (elementMatchValueEval.valueOrDefault() != null && elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
+    if (elementMatchValueEval.value() != null && elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
       return ColumnProcessors.makeVectorProcessor(
           column,
           VectorValueMatcherColumnProcessorFactory.instance(),
@@ -327,7 +327,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
       this.elementMatchValue = elementMatchValue;
       this.equalityPredicateFactory = new EqualityFilter.EqualityPredicateFactory(elementMatchValue);
       // if element match value is an array, scalar matches can never be true
-      final Object matchVal = elementMatchValue.valueOrDefault();
+      final Object matchVal = elementMatchValue.value();
       if (matchVal == null || (elementMatchValue.isArray() && elementMatchValue.asArray().length > 1)) {
         this.stringPredicateSupplier = DruidObjectPredicate::alwaysFalseWithNullUnknown;
         this.longPredicateSupplier = () -> DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
@@ -488,7 +488,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
-      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
+      if (matchValue.value() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeDimensionProcessor(selector, multiValue);
       }
       return super.makeDimensionProcessor(selector, multiValue);
@@ -497,7 +497,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     @Override
     public ValueMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
-      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
+      if (matchValue.value() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeFloatProcessor(selector);
       }
       return super.makeFloatProcessor(selector);
@@ -506,7 +506,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     @Override
     public ValueMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
-      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
+      if (matchValue.value() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeDoubleProcessor(selector);
       }
       return super.makeDoubleProcessor(selector);
@@ -515,7 +515,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     @Override
     public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
+      if (matchValue.value() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeLongProcessor(selector);
       }
       return super.makeLongProcessor(selector);

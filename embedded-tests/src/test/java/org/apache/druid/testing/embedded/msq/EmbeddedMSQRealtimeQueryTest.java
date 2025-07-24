@@ -176,6 +176,9 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                       .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
         agg -> agg.hasSumAtLeast(totalRows)
     );
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   @Test

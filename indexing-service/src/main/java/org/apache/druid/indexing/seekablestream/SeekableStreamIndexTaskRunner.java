@@ -814,7 +814,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       catch (Exception e) {
         // (1) catch all exceptions while reading from kafka
         caughtExceptionInner = e;
-        log.error(e, "Encountered exception in run() before persisting.");
+        if (Throwables.getRootCause(e) instanceof InterruptedException) {
+          // Suppress InterruptedException stack trace to avoid flooding the logs
+          log.error("Encounted InterrupedException in run() before persisting");
+        } else {
+          log.error(e, "Encountered exception in run() before persisting.");
+        }
         throw e;
       }
       finally {
