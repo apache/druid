@@ -111,7 +111,7 @@ public class QueryResultStageProcessor extends BasicStandardStageProcessor
 
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(processors),
-        OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
+        OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
     );
   }
 

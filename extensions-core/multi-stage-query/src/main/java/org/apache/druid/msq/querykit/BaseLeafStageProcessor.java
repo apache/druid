@@ -176,7 +176,7 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
     }
 
     //noinspection unchecked,rawtypes
-    return new ProcessorsAndChannels<>(processorManager, OutputChannels.wrapReadOnly(outputChannels));
+    return new ProcessorsAndChannels<>(processorManager, OutputChannels.wrap(outputChannels));
   }
 
   private ProcessorManager<Object, Long> createBaseLeafProcessorManagerWithHandoff(
