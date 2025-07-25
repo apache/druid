@@ -21,12 +21,12 @@ package org.apache.druid.segment.shim;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.ZeroIndexedInts;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -35,21 +35,17 @@ import javax.annotation.Nullable;
  * {@link DimensionSelector} that internally uses a {@link VectorObjectSelector}. Does not support any dictionary
  * operations.
  */
-public class ShimVectorObjectDimSelector implements DimensionSelector
+public class ShimVectorObjectDimSelector extends ShimObjectColumnValueSelector implements DimensionSelector
 {
-  private final ShimCursor shimCursor;
-  private final VectorObjectSelector vectorObjectSelector;
-
   public ShimVectorObjectDimSelector(ShimCursor shimCursor, VectorObjectSelector vectorObjectSelector)
   {
-    this.shimCursor = shimCursor;
-    this.vectorObjectSelector = vectorObjectSelector;
+    super(shimCursor, vectorObjectSelector);
   }
 
   @Override
   public IndexedInts getRow()
   {
-    throw new UnsupportedOperationException("ShimVectorObjectDimSelector does not support getRow");
+    return ZeroIndexedInts.instance();
   }
 
   @Override
@@ -62,24 +58,6 @@ public class ShimVectorObjectDimSelector implements DimensionSelector
   public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
     return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return vectorObjectSelector.getObjectVector()[shimCursor.currentIndexInVector];
-  }
-
-  @Override
-  public Class<?> classOfObject()
-  {
-    return Object.class;
   }
 
   @Override

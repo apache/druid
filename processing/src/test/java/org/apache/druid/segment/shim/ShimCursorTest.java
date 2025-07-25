@@ -378,14 +378,12 @@ public class ShimCursorTest
           columnName));
 
       Assertions.assertEquals(expectedDimSelector.getObject(), actualDimSelector.getObject());
-      if (expectedDimSelector.idLookup() != null) {
-        // TODO: is this correct?
-        IndexedInts expectedInts = expectedDimSelector.getRow();
-        IndexedInts actualInts = actualDimSelector.getRow();
-        Assertions.assertEquals(expectedInts.size(), actualInts.size());
-        for (int i = 0; i < expectedInts.size(); i++) {
-          Assertions.assertEquals(expectedInts.get(i), actualInts.get(i));
-        }
+      IndexedInts expectedInts = expectedDimSelector.getRow();
+      IndexedInts actualInts = actualDimSelector.getRow();
+      int numValues = expectedInts.size();
+      Assertions.assertEquals(numValues, actualInts.size());
+      for (int i = 0; i < numValues; i++) {
+        Assertions.assertEquals(expectedInts.get(i), actualInts.get(i));
       }
     }
   }
