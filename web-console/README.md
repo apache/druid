@@ -43,6 +43,16 @@ You should use a TypeScript friendly IDE (such as [WebStorm](https://www.jetbrai
 
 The console relies on [eslint](https://eslint.org) (and various plugins), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce code style. If you are going to do any non-trivial development you should set up your IDE to automatically lint and fix your code as you make changes.
 
+#### Updating dependencies due to CVEs
+
+Sometimes a scanner flags an issue with a dependency of the console, if you want to fix it with minimal effort, follow these steps:
+
+1. From the web-console directory run `npm audit` to get a list of dependencies with issues as reported by npm. Make sure that whatever CVE leads you to follow these steps is also being flagged by npm (it almost always is).
+2. Run `npm audit --fix` to fix the issues, npm will bump the dependencies minimally.
+3. Run `script/licenses` to update the Druid license file with the changes from the audit fix command.
+4. Bonus points: start the console with `npm start` and make sure it loads and basically works. CI tests will also do that but it's good practice to verify yourself first.
+5. Commit the changes in a branch and make a pull request.
+
 #### Configuring WebStorm
 
 - **Preferences | Languages & Frameworks | JavaScript | Code Quality Tools | ESLint**
