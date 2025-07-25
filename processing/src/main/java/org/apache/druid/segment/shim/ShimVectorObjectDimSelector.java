@@ -76,7 +76,7 @@ public class ShimVectorObjectDimSelector extends ShimObjectColumnValueSelector i
   @Override
   public String lookupName(int id)
   {
-    throw new UnsupportedOperationException("ShimVectorObjectDimSelector does not support lookupName");
+    return (String) getObject();
   }
 
   @Nullable

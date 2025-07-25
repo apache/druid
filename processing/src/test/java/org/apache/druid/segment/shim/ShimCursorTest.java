@@ -22,6 +22,7 @@ package org.apache.druid.segment.shim;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -45,11 +46,14 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -72,6 +76,20 @@ public class ShimCursorTest
     return List.of(1, 2, 4, 7, 512);
   }
 
+  private Closer closer;
+
+  @BeforeEach
+  void setUp()
+  {
+    closer = Closer.create();
+  }
+
+  @AfterEach
+  void tearDown() throws IOException
+  {
+    closer.close();
+  }
+
   /**
    * Tests long and double columns.
    */
@@ -79,7 +97,7 @@ public class ShimCursorTest
   @MethodSource("data")
   public void testNumberColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
         .setMaxRowCount(100)
         .setIndexSchema(
             IncrementalIndexSchema.builder()
@@ -92,7 +110,7 @@ public class ShimCursorTest
                                   .withRollup(false)
                                   .build()
         )
-        .build();
+        .build());
 
     final List<String> signature = List.of("A", "B", "C");
 
@@ -106,7 +124,7 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, Long.MAX_VALUE, -824.0f, Long.MIN_VALUE));
     incrementalIndex.add(autoRow(signature, -1, -2.0d, 112));
 
-    final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
+    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -116,7 +134,7 @@ public class ShimCursorTest
                                                          )
                                                      )
                                                      .build();
-    CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
+    CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
     Assertions.assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
@@ -133,7 +151,7 @@ public class ShimCursorTest
   @MethodSource("data")
   public void testDictionaryColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
         .setMaxRowCount(100)
         .setIndexSchema(
             IncrementalIndexSchema.builder()
@@ -146,7 +164,7 @@ public class ShimCursorTest
                                   .withRollup(false)
                                   .build()
         )
-        .build();
+        .build());
 
     final List<String> signature = List.of("A", "B", "C", "D", "E", "F");
 
@@ -158,7 +176,7 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, -1, "Cat", arr(), obj("Bat", "Knife"), null));
     incrementalIndex.add(autoRow(signature, 7, -2.0, "Drew", arr("Machine", "Rabbit"), obj("bat", "knife"), null));
 
-    final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
+    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -168,7 +186,7 @@ public class ShimCursorTest
                                                          )
                                                      )
                                                      .build();
-    CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
+    CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
     Assertions.assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
@@ -182,7 +200,7 @@ public class ShimCursorTest
   @MethodSource("data")
   public void testMultiDimColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
         .setMaxRowCount(100)
         .setIndexSchema(
             IncrementalIndexSchema.builder()
@@ -195,7 +213,7 @@ public class ShimCursorTest
                                   .withRollup(false)
                                   .build()
         )
-        .build();
+        .build());
 
     final List<String> signature = List.of("A", "B");
 
@@ -207,7 +225,7 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, arr()));
     incrementalIndex.add(autoRow(signature, 7, arr("Machine", "Rabbit")));
 
-    final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
+    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -217,7 +235,7 @@ public class ShimCursorTest
                                                          )
                                                      )
                                                      .build();
-    CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
+    CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
     Assertions.assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
@@ -231,7 +249,7 @@ public class ShimCursorTest
   @MethodSource("data")
   public void testNonDictStringColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
         .setMaxRowCount(100)
         .setIndexSchema(
             IncrementalIndexSchema.builder()
@@ -253,7 +271,7 @@ public class ShimCursorTest
                                   .withRollup(false)
                                   .build()
         )
-        .build();
+        .build());
 
     final List<String> signature = List.of("A", "B");
 
@@ -265,7 +283,7 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, "Cat"));
     incrementalIndex.add(autoRow(signature, 7, "Drew"));
 
-    final SimpleQueryableIndex index = (SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex);
+    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -283,7 +301,7 @@ public class ShimCursorTest
                                                                         )
                                                      )
                                                      .build();
-    CursorHolder cursorHolder = queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec);
+    CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
     Assertions.assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
