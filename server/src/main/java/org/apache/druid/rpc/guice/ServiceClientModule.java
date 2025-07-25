@@ -120,6 +120,11 @@ public class ServiceClientModule implements DruidModule
     );
   }
 
+  /**
+   * Creates a {@link CoordinatorServiceClient} used by extensions to send
+   * requests to the Coordinator. For core Coordinator APIs,
+   * {@link CoordinatorClient} should be used instead.
+   */
   @Provides
   @LazySingleton
   public static CoordinatorServiceClient createCoordinatorServiceClient(
