@@ -120,7 +120,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.mergedRealtimeIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID),
+            new QueryableIndexSegment(TestIndex.mergedRtIndex(), SEGMENT_ID),
             null
         )
     );

@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
@@ -53,8 +54,10 @@ import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -66,6 +69,8 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import java.io.File;
@@ -74,11 +79,11 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.query.QueryRunnerTestHelper.QUALITY_CARDINALITY;
 
 /**
  *
@@ -198,7 +203,11 @@ public class TestIndex
           List.of(new LongDimensionSchema("__gran")),
           new AggregatorFactory[]{
               new CountAggregatorFactory("count"),
-              QUALITY_CARDINALITY,
+              new CardinalityAggregatorFactory(
+                  "cardinality",
+                  List.of(new DefaultDimensionSpec("quality", "quality")),
+                  false
+              ),
               new LongMaxAggregatorFactory("longNullableMax", "longNumericNull")
           }
       )
@@ -221,51 +230,51 @@ public class TestIndex
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
-  private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> rtIndex = Suppliers.memoize(
       TestIndex::makeSampleNumericIncrementalIndex
   );
-  private static Supplier<IncrementalIndex> realtimeIndexPartialSchemaLegacyStringDiscovery = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> rtPartialSchemaStringDiscoveryIndex = Suppliers.memoize(
       () -> fromJsonResource(
           SAMPLE_NUMERIC_JSON,
           true,
           DIMENSIONS_SPEC_PARTIAL_NO_STRINGS
       )
   );
-  private static Supplier<IncrementalIndex> nonTimeOrderedRealtimeIndex = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> nonTimeOrderedRtIndex = Suppliers.memoize(
       () -> fromJsonResource(SAMPLE_NUMERIC_JSON, true, DIMENSIONS_SPEC_NON_TIME_ORDERED)
   );
-  private static Supplier<IncrementalIndex> nonTimeOrderedNoRollupRealtimeIndex = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> nonTimeOrderedNoRollupRtIndex = Suppliers.memoize(
       () -> fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC_NON_TIME_ORDERED)
   );
-  private static Supplier<IncrementalIndex> noRollupRealtimeIndex = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> noRollupRtIndex = Suppliers.memoize(
       () -> fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC)
   );
-  private static Supplier<IncrementalIndex> noBitmapRealtimeIndex = Suppliers.memoize(
+  private static Supplier<IncrementalIndex> noBitmapRtIndex = Suppliers.memoize(
       () -> fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC_NO_BITMAPS)
   );
-  private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> mMappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(makeSampleNumericIncrementalIndex())
   );
 
-  private static Supplier<QueryableIndex> mmappedIndexCompressedComplex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> mMappedCompressedComplexIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(
           makeSampleNumericIncrementalIndex(),
           IndexSpec.builder().withComplexMetricCompression(CompressionStrategy.LZ4).build()
       )
   );
-  private static Supplier<QueryableIndex> nonTimeOrderedMmappedIndex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> nonTimeOrderedMMappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(fromJsonResource(SAMPLE_NUMERIC_JSON, true, DIMENSIONS_SPEC_NON_TIME_ORDERED))
   );
-  private static Supplier<QueryableIndex> nonTimeOrderedNoRollupMmappedIndex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> nonTimeOrderedNoRollupMMappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC_NON_TIME_ORDERED))
   );
-  private static Supplier<QueryableIndex> noRollupMmappedIndex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> noRollupMMappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC))
   );
   private static Supplier<QueryableIndex> noBitmapMmappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(fromJsonResource(SAMPLE_NUMERIC_JSON, false, DIMENSIONS_SPEC_NO_BITMAPS))
   );
-  private static Supplier<QueryableIndex> mergedRealtime = Suppliers.memoize(() -> {
+  private static Supplier<QueryableIndex> mergedRtIndex = Suppliers.memoize(() -> {
     try {
       IncrementalIndex top = makeSampleNumericTopIncrementalIndex();
       IncrementalIndex bottom = makeSampleNumericBottomIncrementalIndex();
@@ -303,7 +312,7 @@ public class TestIndex
       throw new RuntimeException(e);
     }
   });
-  private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
+  private static Supplier<QueryableIndex> frontCodedMMappedIndex = Suppliers.memoize(
       () -> persistAndMemoryMap(
           makeSampleNumericIncrementalIndex(),
           IndexSpec.builder()
@@ -319,27 +328,22 @@ public class TestIndex
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
-    return realtimeIndex.get();
-  }
-
-  public static IncrementalIndex getIncrementalTestIndexPartialSchemaLegacyStringDiscovery()
-  {
-    return realtimeIndexPartialSchemaLegacyStringDiscovery.get();
+    return rtIndex.get();
   }
 
   public static IncrementalIndex getNoRollupIncrementalTestIndex()
   {
-    return noRollupRealtimeIndex.get();
+    return noRollupRtIndex.get();
   }
 
   public static IncrementalIndex getNoBitmapIncrementalTestIndex()
   {
-    return noBitmapRealtimeIndex.get();
+    return noBitmapRtIndex.get();
   }
 
   public static QueryableIndex getMMappedTestIndex()
   {
-    return mmappedIndex.get();
+    return mMappedIndex.get();
   }
 
   public static QueryableIndex getMMappedWikipediaIndex()
@@ -349,7 +353,7 @@ public class TestIndex
 
   public static QueryableIndex getNoRollupMMappedTestIndex()
   {
-    return noRollupMmappedIndex.get();
+    return noRollupMMappedIndex.get();
   }
 
   public static QueryableIndex getNoBitmapMMappedTestIndex()
@@ -359,37 +363,37 @@ public class TestIndex
 
   public static IncrementalIndex getNonTimeOrderedRealtimeTestIndex()
   {
-    return nonTimeOrderedRealtimeIndex.get();
+    return nonTimeOrderedRtIndex.get();
   }
 
   public static IncrementalIndex getNonTimeOrderedNoRollupRealtimeTestIndex()
   {
-    return nonTimeOrderedNoRollupRealtimeIndex.get();
+    return nonTimeOrderedNoRollupRtIndex.get();
   }
 
   public static QueryableIndex getNonTimeOrderedMMappedTestIndex()
   {
-    return nonTimeOrderedMmappedIndex.get();
+    return nonTimeOrderedMMappedIndex.get();
   }
 
   public static QueryableIndex getNonTimeOrderedNoRollupMMappedTestIndex()
   {
-    return nonTimeOrderedNoRollupMmappedIndex.get();
+    return nonTimeOrderedNoRollupMMappedIndex.get();
   }
 
-  public static QueryableIndex mergedRealtimeIndex()
+  public static QueryableIndex mergedRtIndex()
   {
-    return mergedRealtime.get();
+    return mergedRtIndex.get();
   }
 
   public static QueryableIndex getFrontCodedMMappedTestIndex()
   {
-    return frontCodedMmappedIndex.get();
+    return frontCodedMMappedIndex.get();
   }
 
   public static QueryableIndex getMMappedTestIndexCompressedComplex()
   {
-    return mmappedIndexCompressedComplex.get();
+    return mMappedCompressedComplexIndex.get();
   }
 
   public static IncrementalIndex makeSampleNumericIncrementalIndex()
@@ -626,5 +630,59 @@ public class TestIndex
     log.info("Loaded %,d lines in %,d millis.", lineCount, System.currentTimeMillis() - startTime.get());
 
     return retVal;
+  }
+
+  public static Map<String, Supplier<QueryableIndex>> queryableIndexSupplierMap(boolean includeNonTimeOrdered)
+  {
+    Map<String, Supplier<QueryableIndex>> indexSuppliers = new HashMap<>(Map.of(
+        "mMappedIndex", mMappedIndex,
+        "noRollupMMappedIndex", noRollupMMappedIndex,
+        "mergedRtIndex", mergedRtIndex,
+        "frontCodedMMappedIndex", frontCodedMMappedIndex,
+        "mMappedCompressedComplexIndex", mMappedCompressedComplexIndex
+    ));
+    if (includeNonTimeOrdered) {
+      indexSuppliers.putAll(Map.of(
+          "nonTimeOrderedMMappedIndex", nonTimeOrderedMMappedIndex,
+          "nonTimeOrderedNoRollupMMappedIndex", nonTimeOrderedNoRollupMMappedIndex
+      ));
+    }
+    return indexSuppliers;
+  }
+
+  public static Map<String, Supplier<IncrementalIndex>> incrementalIndexSupplierMap(boolean includeNonTimeOrdered)
+  {
+    Map<String, Supplier<IncrementalIndex>> indexSuppliers = new HashMap<>(Map.of(
+        "rtIndex", rtIndex,
+        "rtPartialSchemaStringDiscoveryIndex", rtPartialSchemaStringDiscoveryIndex,
+        "noRollupRtIndex", noRollupRtIndex
+    ));
+    if (includeNonTimeOrdered) {
+      indexSuppliers.putAll(Map.of(
+          "nonTimeOrderedRtIndex", nonTimeOrderedRtIndex,
+          "nonTimeOrderedNoRollupRtIndex", nonTimeOrderedNoRollupRtIndex
+      ));
+    }
+    return indexSuppliers;
+  }
+
+  public static final String DATA_SOURCE = "testing";
+  public static final Interval FULL_ON_INTERVAL = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
+  public static final SegmentId SEGMENT_ID = SegmentId.of(DATA_SOURCE, FULL_ON_INTERVAL, "dummy_version", 0);
+
+  public static Map<String, Segment> getAllSegments(boolean includeNonTimeOrdered)
+  {
+    ImmutableMap.Builder<String, Supplier<?>> builder = new ImmutableMap.Builder<>();
+    builder.putAll(incrementalIndexSupplierMap(includeNonTimeOrdered));
+    builder.putAll(queryableIndexSupplierMap(includeNonTimeOrdered));
+    return CollectionUtils.mapValues(builder.build(), indexSupplier -> {
+      Object index = indexSupplier.get();
+      if (index instanceof QueryableIndex) {
+        return new QueryableIndexSegment((QueryableIndex) index, SEGMENT_ID);
+      } else if (index instanceof IncrementalIndex) {
+        return new IncrementalIndexSegment((IncrementalIndex) index, SEGMENT_ID);
+      }
+      throw new AssertionError("unreachable");
+    });
   }
 }

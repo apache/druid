@@ -20,7 +20,6 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -62,8 +61,6 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
@@ -83,7 +80,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -96,9 +92,16 @@ public class QueryRunnerTestHelper
   public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
   };
 
+  /**
+   * @deprecated use {@link TestIndex#DATA_SOURCE} instead.
+   */
+  @Deprecated
   public static final String DATA_SOURCE = "testing";
-  public static final Interval FULL_ON_INTERVAL = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
-  public static final SegmentId SEGMENT_ID = SegmentId.of(DATA_SOURCE, FULL_ON_INTERVAL, "dummy_version", 0);
+  /**
+   * @deprecated use {@link TestIndex#SEGMENT_ID} instead.
+   */
+  @Deprecated
+  public static final SegmentId SEGMENT_ID = TestIndex.SEGMENT_ID;
   public static final UnionDataSource UNION_DATA_SOURCE = new UnionDataSource(
       Stream.of(DATA_SOURCE, DATA_SOURCE, DATA_SOURCE, DATA_SOURCE)
             .map(TableDataSource::new)
@@ -324,7 +327,7 @@ public class QueryRunnerTestHelper
   );
 
   public static final QuerySegmentSpec FULL_ON_INTERVAL_SPEC = new MultipleIntervalSegmentSpec(
-      Collections.singletonList(FULL_ON_INTERVAL)
+      Collections.singletonList(TestIndex.FULL_ON_INTERVAL)
   );
   public static final QuerySegmentSpec EMPTY_INTERVAL = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
@@ -420,71 +423,11 @@ public class QueryRunnerTestHelper
       boolean includeNonTimeOrdered
   )
   {
-    BiFunction<String, Segment, TestQueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
-
-    final ImmutableList.Builder<TestQueryRunner<T>> retVal = ImmutableList.builder();
-
-    retVal.addAll(
-        Arrays.asList(
-            maker.apply(
-                "rtIndex",
-                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "rtIndexPartialSchemaStringDiscovery",
-                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "noRollupRtIndex",
-                new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "mMappedTestIndex",
-                new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "noRollupMMappedTestIndex",
-                new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "mergedRealtimeIndex",
-                new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "frontCodedMMappedTestIndex",
-                new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
-            ),
-            maker.apply(
-                "mMappedTestIndexCompressedComplex",
-                new QueryableIndexSegment(TestIndex.getMMappedTestIndexCompressedComplex(), SEGMENT_ID)
-            )
-        )
-    );
-
-    if (includeNonTimeOrdered) {
-      retVal.addAll(
-          Arrays.asList(
-              maker.apply(
-                  "nonTimeOrderedRtIndex",
-                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedRealtimeTestIndex(), SEGMENT_ID)
-              ),
-              maker.apply(
-                  "nonTimeOrderedNoRollupRtIndex",
-                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedNoRollupRealtimeTestIndex(), SEGMENT_ID)
-              ),
-              maker.apply(
-                  "nonTimeOrderedMMappedTestIndex",
-                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedMMappedTestIndex(), SEGMENT_ID)
-              ),
-              maker.apply(
-                  "nonTimeOrderedNoRollupMMappedTestIndex",
-                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedNoRollupMMappedTestIndex(), SEGMENT_ID)
-              )
-          )
-      );
-    }
-
-    return retVal.build();
+    return TestIndex.getAllSegments(includeNonTimeOrdered)
+                    .entrySet()
+                    .stream()
+                    .map(entry -> makeQueryRunner(factory, entry.getValue(), entry.getKey()))
+                    .collect(Collectors.toList());
   }
 
   /**
