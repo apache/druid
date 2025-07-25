@@ -85,7 +85,11 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(10)
+    );
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
         overlord.bindings().segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
@@ -112,7 +116,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     broker.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/available/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(10)
+        agg -> agg.hasSumAtLeast(10)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
