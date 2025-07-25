@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
@@ -64,6 +65,7 @@ import org.mockito.Mockito;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.Properties;
+import java.util.Set;
 
 public class MetricsModuleTest
 {
@@ -165,24 +167,48 @@ public class MetricsModuleTest
   {
     final Properties properties = new Properties();
     properties.setProperty(
-        StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
-        BasicMonitorScheduler.class.getName()
+        "druid.monitoring.monitors",
+        StringUtils.format("[\"%s\"]", OverlordOnlyMonitor.class.getName())
     );
+
+    verifyThatMonitorIsLoadedOnlyOn(
+        OverlordOnlyMonitor.class,
+        properties,
+        NodeRole.OVERLORD
+    );
+  }
+
+  @Test
+  public void test_monitorScheduler_addsMonitor_ifNodeRoleIsInLoadScopeOfSuperClass()
+  {
+    final Properties properties = new Properties();
     properties.setProperty(
         "druid.monitoring.monitors",
-        "[\"org.apache.druid.server.metrics.MetricsModuleTest$OverlordOnlyMonitor\"]"
+        StringUtils.format("[\"%s\"]", OverlordAndCoordinatorMonitor2.class.getName())
     );
-    final MonitorScheduler overlordMonitorScheduler =
-        createInjector(properties, ImmutableSet.of(NodeRole.OVERLORD))
-            .getInstance(MonitorScheduler.class);
-    Assert.assertSame(BasicMonitorScheduler.class, overlordMonitorScheduler.getClass());
-    Assert.assertTrue(overlordMonitorScheduler.findMonitor(OverlordOnlyMonitor.class).isPresent());
 
-    final MonitorScheduler brokerMonitorScheduler =
-        createInjector(properties, ImmutableSet.of(NodeRole.BROKER))
-            .getInstance(MonitorScheduler.class);
-    Assert.assertSame(BasicMonitorScheduler.class, brokerMonitorScheduler.getClass());
-    Assert.assertFalse(brokerMonitorScheduler.findMonitor(OverlordOnlyMonitor.class).isPresent());
+    verifyThatMonitorIsLoadedOnlyOn(
+        OverlordAndCoordinatorMonitor2.class,
+        properties,
+        NodeRole.COORDINATOR,
+        NodeRole.OVERLORD
+    );
+  }
+
+  @Test
+  public void test_monitorScheduler_addsMonitor_ifNoLoadScopeIsDefined()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(
+        "druid.monitoring.monitors",
+        StringUtils.format("[\"%s\"]", AllNodeMonitor.class.getName())
+    );
+
+    verifyThatMonitorIsLoadedOnlyOn(
+        AllNodeMonitor.class,
+        properties,
+        NodeRole.values()
+    );
   }
 
   @Test
@@ -287,13 +313,46 @@ public class MetricsModuleTest
     );
   }
 
-  @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
-  public static class OverlordOnlyMonitor extends AbstractMonitor
+  private <T extends Monitor> void verifyThatMonitorIsLoadedOnlyOn(
+      Class<T> monitorClass,
+      Properties properties,
+      NodeRole... supportedRoles
+  )
+  {
+    final Set<NodeRole> supportedRoleSet = Set.of(supportedRoles);
+    for (NodeRole role : NodeRole.values()) {
+      final MonitorScheduler monitorScheduler = createInjector(properties, ImmutableSet.of(role))
+          .getInstance(MonitorScheduler.class);
+      Assert.assertEquals(
+          supportedRoleSet.contains(role),
+          monitorScheduler.findMonitor(monitorClass).isPresent()
+      );
+    }
+  }
+
+  public static class AllNodeMonitor extends AbstractMonitor
   {
     @Override
     public boolean doMonitor(ServiceEmitter emitter)
     {
       return false;
     }
+  }
+
+  @LoadScope(roles = {NodeRole.COORDINATOR_JSON_NAME, NodeRole.OVERLORD_JSON_NAME})
+  public static class OverlordAndCoordinatorMonitor extends AllNodeMonitor
+  {
+  }
+
+  @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
+  public static class OverlordOnlyMonitor extends OverlordAndCoordinatorMonitor
+  {
+  }
+
+  /**
+   * Uses load scope of super class.
+   */
+  public static class OverlordAndCoordinatorMonitor2 extends OverlordAndCoordinatorMonitor
+  {
   }
 }

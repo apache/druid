@@ -225,8 +225,9 @@ public class MetricsModule implements Module
   {
     final LoadScope loadScope = monitorClass.getAnnotation(LoadScope.class);
     if (loadScope == null) {
-      // always load if annotation is not specified
-      return true;
+      // If annotation is not specified, check superclass (if one exists), otherwise load the monitor
+      Class<?> superClass = monitorClass.getSuperclass();
+      return superClass == null || shouldLoadMonitor(superClass, nodeRoles);
     }
     for (String role : loadScope.roles()) {
       if (nodeRoles.contains(NodeRole.fromJsonName(role))) {
