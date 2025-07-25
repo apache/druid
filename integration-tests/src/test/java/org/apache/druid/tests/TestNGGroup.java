@@ -41,13 +41,7 @@ public class TestNGGroup
 
   public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
-  public static final String COMPACTION = "compaction";
-
-  public static final String UPGRADE = "upgrade";
-
   public static final String APPEND_INGESTION = "append-ingestion";
-
-  public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
 
   /**
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
@@ -152,11 +146,7 @@ public class TestNGGroup
 
   public static final String HIGH_AVAILABILTY = "high-availability";
 
-  public static final String SHUFFLE_DEEP_STORE = "shuffle-deep-store";
-
   public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
-
-  public static final String HTTP_ENDPOINT = "http-endpoint";
 
   public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
 

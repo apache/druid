@@ -74,7 +74,7 @@ public class InMemoryDerbyModule extends SQLMetadataStorageDruidModule implement
         MetadataStorageConnectorConfig.create(connectURI, null, null, null),
         MetadataStorageTablesConfig.fromBase(properties.getProperty("druid.metadata.storage.tables.base")),
         connectURI,
-        CentralizedDatasourceSchemaConfig.create()
+        createSchemaConfig()
     );
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageProvider.class))
@@ -94,5 +94,13 @@ public class InMemoryDerbyModule extends SQLMetadataStorageDruidModule implement
             .addBinding(TYPE)
             .to(DerbyMetadataStorageActionHandlerFactory.class)
             .in(LazySingleton.class);
+  }
+
+  private CentralizedDatasourceSchemaConfig createSchemaConfig()
+  {
+    final Boolean isEnabled = Boolean.parseBoolean(
+        properties.getProperty("druid.centralizedDatasourceSchema.enabled")
+    );
+    return new CentralizedDatasourceSchemaConfig(isEnabled, null, null, null);
   }
 }
