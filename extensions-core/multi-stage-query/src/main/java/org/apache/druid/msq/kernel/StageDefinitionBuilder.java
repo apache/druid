@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.RowSignature;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Builder for {@link StageDefinition}. See class-level javadoc for that class for a description of the parameters.
@@ -76,7 +77,7 @@ public class StageDefinitionBuilder
     return inputs(Arrays.asList(inputSpecs));
   }
 
-  public StageDefinitionBuilder broadcastInputs(final IntSet broadcastInputNumbers)
+  public StageDefinitionBuilder broadcastInputs(final Set<Integer> broadcastInputNumbers)
   {
     this.broadcastInputNumbers.clear();
 

@@ -127,7 +127,7 @@ public class QueryTestBuilder
 
   public QueryTestBuilder queryContext(Map<String, Object> queryContext)
   {
-    this.queryContext = QueryContexts.override(config.baseQueryContext(), queryContext);
+    this.queryContext = QueryContexts.override(this.queryContext, queryContext);
     return this;
   }
 
