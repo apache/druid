@@ -215,52 +215,57 @@ class SegmentLocalCacheManagerConcurrencyTest
   public void testAcquireSegmentOnDemand() throws IOException
   {
     final int segmentCount = 100;
-    final int iterations = 1000;
+    final int iterations = 2001;
     final int concurrentReads = 10;
     final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
-    final List<DataSegment> currentBatch = new ArrayList<>();
-    for (int i = 0; i < iterations; i++) {
-      // process batches of 10 requests at a time
-      if (i > 0 && i % concurrentReads == 0) {
-        final List<Future<Integer>> futures = currentBatch
-            .stream()
-            .map(segment -> executorService.submit(new WeakLoad(virtualStorageFabricManager, segment, true)))
-            .collect(Collectors.toList());
-        List<Throwable> exceptions = new ArrayList<>();
-        int success = 0;
-        int rows = 0;
-        for (Future<Integer> future : futures) {
-          try {
-            Integer s = future.get();
-            if (s != null) {
-              success++;
-              rows += s;
+    for (boolean sleepy : new boolean[]{true, false}) {
+      final List<DataSegment> currentBatch = new ArrayList<>();
+      for (int i = 0; i < iterations; i++) {
+        // process batches of 10 requests at a time
+        if (i > 0 && i % concurrentReads == 0) {
+          final List<WeakLoad> weakLoads = currentBatch
+              .stream()
+              .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, sleepy))
+              .collect(Collectors.toList());
+          final List<Future<Integer>> futures = new ArrayList<>();
+          for (WeakLoad weakLoad : weakLoads) {
+            futures.add(executorService.submit(weakLoad));
+          }
+          List<Throwable> exceptions = new ArrayList<>();
+          int success = 0;
+          int rows = 0;
+          for (Future<Integer> future : futures) {
+            try {
+              Integer s = future.get();
+              if (s != null) {
+                success++;
+                rows += s;
+              }
+            }
+            catch (Throwable t) {
+              exceptions.add(t);
             }
           }
-          catch (InterruptedException | ExecutionException e) {
-            exceptions.add(e);
+          // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more
+          Assertions.assertTrue(success >= 8);
+          Assertions.assertTrue(exceptions.size() <= 2);
+          Assertions.assertTrue(rows >= 9672);
+          for (Throwable t : exceptions) {
+            Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
+            Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
+            Assertions.assertTrue(t.getCause()
+                                   .getMessage()
+                                   .contains(
+                                       "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
           }
+          currentBatch.clear();
         }
-        // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more
-        Assertions.assertTrue(success >= 8);
-        Assertions.assertTrue(exceptions.size() <= 2);
-        Assertions.assertTrue(rows >= 9672);
-        for (Throwable t : exceptions) {
-          Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
-          Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
-          Assertions.assertTrue(t.getCause()
-                                 .getMessage()
-                                 .contains(
-                                     "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
-        }
-        currentBatch.clear();
-        exceptions.clear();
+        currentBatch.add(segmentsToWeakLoad.get(i % segmentCount));
       }
-      currentBatch.add(segmentsToWeakLoad.get(i % segmentCount));
     }
 
     StorageLocation location = virtualStorageFabricManager.getLocations().get(0);
@@ -272,7 +277,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   public void testAcquireSegmentOnDemandRandomSegment() throws IOException, InterruptedException
   {
     final int segmentCount = 8;
-    final int iterations = 1000;
+    final int iterations = 2001;
     final int concurrentReads = 10;
     final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
@@ -280,8 +285,8 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
-    List<DataSegment> currentBatch = new ArrayList<>();
     for (boolean sleepy : new boolean[]{true, false}) {
+      final List<DataSegment> currentBatch = new ArrayList<>();
       for (int i = 0; i < iterations; i++) {
         // process batches of 10 requests at a time
         if (i > 0 && i % concurrentReads == 0) {
