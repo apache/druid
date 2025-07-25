@@ -262,7 +262,7 @@ public class ShimCursorTest
                                   .withVirtualColumns(
                                       VirtualColumns.create(
                                           new ExpressionVirtualColumn(
-                                              "v1",
+                                              "v0",
                                               "concat(\"A\", \"B\")",
                                               ColumnType.STRING,
                                               TestExprMacroTable.INSTANCE)
@@ -294,7 +294,7 @@ public class ShimCursorTest
                                                      )
                                                      .setVirtualColumns(VirtualColumns.create(
                                                                             new ExpressionVirtualColumn(
-                                                                                "v1",
+                                                                                "v0",
                                                                                 "concat(\"A\", \"B\")",
                                                                                 ColumnType.STRING,
                                                                                 TestExprMacroTable.INSTANCE)
@@ -308,7 +308,7 @@ public class ShimCursorTest
     Cursor cursor = cursorHolder.asCursor();
     ShimCursor shimCursor = new ShimCursor(vectorCursor);
 
-    compareCursors(List.of("A", "B", "v1"), cursor, shimCursor);
+    compareCursors(List.of("A", "B", "v0"), cursor, shimCursor);
   }
 
   private static List<Object> arr(Object... vals)

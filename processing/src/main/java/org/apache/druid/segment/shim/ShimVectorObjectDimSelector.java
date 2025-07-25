@@ -21,30 +21,85 @@ package org.apache.druid.segment.shim;
 
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 
 /**
  * {@link DimensionSelector} that internally uses a {@link VectorObjectSelector}. Does not support any dictionary
  * operations.
  */
-public class ShimVectorObjectDimSelector extends ShimObjectColumnValueSelector implements DimensionSelector
+public class ShimVectorObjectDimSelector implements DimensionSelector
 {
-  public ShimVectorObjectDimSelector(ShimCursor shimCursor, VectorObjectSelector vectorObjectSelector)
+  private final ShimCursor cursor;
+  private final ReadableVectorInspector vectorInspector;
+  private final VectorObjectSelector vectorSelector;
+  private final boolean hasMultipleValues;
+
+  private Object[] objectVector;
+  private int objectId = ReadableVectorInspector.NULL_ID;
+
+  public ShimVectorObjectDimSelector(
+      final ShimCursor cursor,
+      final VectorObjectSelector vectorSelector,
+      boolean hasMultipleValues
+  )
   {
-    super(shimCursor, vectorObjectSelector);
+    this.cursor = cursor;
+    this.vectorInspector = cursor.vectorColumnSelectorFactory.getReadableVectorInspector();
+    this.vectorSelector = vectorSelector;
+    this.hasMultipleValues = hasMultipleValues;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    populateObjectVector();
+    return objectVector[cursor.currentIndexInVector];
+  }
+
+  @Override
+  public Class<?> classOfObject()
+  {
+    return Object.class;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // Don't bother.
+  }
+
+  private void populateObjectVector()
+  {
+    final int id = vectorInspector.getId();
+    if (id != objectId) {
+      objectVector = vectorSelector.getObjectVector();
+      objectId = id;
+    }
   }
 
   @Override
   public IndexedInts getRow()
   {
+    if (hasMultipleValues) {
+      Object object = getObject();
+      ArrayList arrayList = (ArrayList) object;
+      RangeIndexedInts rangeIndexedInts = new RangeIndexedInts();
+      rangeIndexedInts.setSize(arrayList.size());
+      return rangeIndexedInts;
+    }
     return ZeroIndexedInts.instance();
   }
 
@@ -76,7 +131,12 @@ public class ShimVectorObjectDimSelector extends ShimObjectColumnValueSelector i
   @Override
   public String lookupName(int id)
   {
-    return (String) getObject();
+    Object object = getObject();
+    if (hasMultipleValues) {
+      ArrayList arrayList = (ArrayList) object;
+      object = arrayList.get(id);
+    }
+    return object == null ? null : object.toString();
   }
 
   @Nullable

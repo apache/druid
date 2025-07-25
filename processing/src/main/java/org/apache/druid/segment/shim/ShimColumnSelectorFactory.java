@@ -76,7 +76,7 @@ public class ShimColumnSelectorFactory implements ColumnSelectorFactory
             // Non-dictionary encoded column, like virtual columns.
             VectorObjectSelector vectorObjectSelector =
                 cursor.vectorColumnSelectorFactory.makeObjectSelector(spec.getDimension());
-            return new ShimVectorObjectDimSelector(cursor, vectorObjectSelector);
+            return new ShimVectorObjectDimSelector(cursor, vectorObjectSelector, capabilities.hasMultipleValues().isTrue());
           }
         }
     );
