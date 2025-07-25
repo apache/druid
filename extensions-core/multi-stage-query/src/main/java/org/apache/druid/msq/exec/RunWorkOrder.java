@@ -327,7 +327,6 @@ public class RunWorkOrder
                 stageOutputChannels.sort(Comparator.comparing(OutputChannel::getPartitionNumber));
                 outputChannels = OutputChannels.wrap(
                     stageOutputChannels.stream()
-                                       .map(OutputChannel::readOnly)
                                        .sorted(Comparator.comparing(OutputChannel::getPartitionNumber))
                                        .collect(Collectors.toList()));
                 stageOutputChannels.clear();
@@ -493,7 +492,7 @@ public class RunWorkOrder
         outputChannelFactory,
         channel -> {
           synchronized (stageOutputChannels) {
-            stageOutputChannels.add(channel);
+            stageOutputChannels.add(channel.readOnly());
           }
         }
     );
