@@ -119,7 +119,11 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addCommonProperty("druid.monitoring.monitors", "[\"org.apache.druid.java.util.metrics.JvmMonitor\"]")
+           .addCommonProperty(
+               "druid.monitoring.monitors",
+               "[\"org.apache.druid.java.util.metrics.JvmMonitor\","
+               + "\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]"
+           )
            .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
@@ -208,6 +212,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         o -> o.postSupervisor(kafkaSupervisorSpec)
     );
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for some segments to be published
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/txn/success")

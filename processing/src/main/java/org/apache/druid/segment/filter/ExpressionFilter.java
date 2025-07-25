@@ -97,7 +97,7 @@ public class ExpressionFilter implements Filter
       // evaluate the expression, just in case it does actually match nulls
       final ExprEval<?> constantEval = theExpr.eval(InputBindings.nilBindings());
       final ConstantMatcherType constantMatcherType;
-      if (constantEval.valueOrDefault() == null) {
+      if (constantEval.value() == null) {
         constantMatcherType = ConstantMatcherType.ALL_UNKNOWN;
       } else {
         constantMatcherType = constantEval.asBoolean() ? ConstantMatcherType.ALL_TRUE : ConstantMatcherType.ALL_FALSE;
@@ -200,7 +200,7 @@ public class ExpressionFilter implements Filter
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
       final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-      if (eval.valueOrDefault() == null) {
+      if (eval.value() == null) {
         return new AllUnknownBitmapColumnIndex(selector);
       }
       if (eval.asBoolean()) {

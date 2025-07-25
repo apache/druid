@@ -99,7 +99,7 @@ public class ExpressionTransform implements Transform
     public Object eval(final Row row)
     {
       try {
-        return expr.eval(InputBindings.forRow(row)).valueOrDefault();
+        return expr.eval(InputBindings.forRow(row)).value();
       }
       catch (Throwable t) {
         throw new ISE(t, "Could not transform value for %s reason: %s", name, t.getMessage());
@@ -110,7 +110,7 @@ public class ExpressionTransform implements Transform
     public List<String> evalDimension(Row row)
     {
       try {
-        return Rows.objectToStrings(expr.eval(InputBindings.forRow(row)).valueOrDefault());
+        return Rows.objectToStrings(expr.eval(InputBindings.forRow(row)).value());
       }
       catch (Throwable t) {
         throw new ISE(t, "Could not transform dimension value for %s reason: %s", name, t.getMessage());

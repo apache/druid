@@ -78,7 +78,7 @@ public class ExprUtils
       origin = null;
     } else {
       Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
-      final Object value = originArg.eval(bindings).valueOrDefault();
+      final Object value = originArg.eval(bindings).value();
       origin = value != null ? new DateTime(value, chronology) : null;
     }
 

@@ -41,7 +41,7 @@ public class ProcessorsAndChannels<T, R>
   )
   {
     this.processorManager = processorManager;
-    this.outputChannels = outputChannels;
+    this.outputChannels = outputChannels.readOnly();
   }
 
   public ProcessorManager<T, R> getProcessorManager()

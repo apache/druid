@@ -105,7 +105,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()
@@ -159,7 +159,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()
@@ -215,7 +215,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()

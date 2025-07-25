@@ -150,10 +150,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         buildSpec.getAggregators()
     );
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertEquals(
-        descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder(),
-        buildSpec.getPreferredOrdering()
-    );
+    Assert.assertTrue(buildSpec.getPreferredOrdering().isEmpty());
   }
 
   @Test
