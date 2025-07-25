@@ -21,14 +21,13 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.function.Function;
@@ -43,13 +42,11 @@ import java.util.function.Supplier;
  */
 public class OutputChannel
 {
-  @GuardedBy("this")
   @Nullable
-  private WritableFrameChannel writableChannel;
+  private volatile WritableFrameChannel writableChannel;
 
-  @GuardedBy("this")
   @Nullable
-  private MemoryAllocator frameMemoryAllocator;
+  private volatile MemoryAllocator frameMemoryAllocator;
 
   private final Supplier<ReadableFrameChannel> readableChannelSupplier;
   private final int partitionNumber;
@@ -160,13 +157,18 @@ public class OutputChannel
    * Returns the writable channel of this pair. The producer writes to this channel. Throws ISE if the output channel is
    * read only.
    */
-  public synchronized WritableFrameChannel getWritableChannel()
+  public WritableFrameChannel getWritableChannel()
   {
-    if (writableChannel == null) {
-      throw new ISE("Writable channel is not available. The output channel might be marked as read-only,"
-                    + " hence no writes are allowed.");
+    // Store into a local since the field is volatile.
+    final WritableFrameChannel theWritableChannel = writableChannel;
+
+    if (theWritableChannel == null) {
+      throw DruidException.defensive(
+          "Writable channel is not available. "
+          + "The output channel might be marked as read-only, hence no writes are allowed."
+      );
     } else {
-      return writableChannel;
+      return theWritableChannel;
     }
   }
 
@@ -174,13 +176,18 @@ public class OutputChannel
    * Returns the memory allocator for the writable channel. The producer uses this to generate frames for the channel.
    * Throws ISE if the output channel is read only.
    */
-  public synchronized MemoryAllocator getFrameMemoryAllocator()
+  public MemoryAllocator getFrameMemoryAllocator()
   {
-    if (frameMemoryAllocator == null) {
-      throw new ISE("Frame allocator is not available. The output channel might be marked as read-only,"
-                    + " hence memory allocator is not required.");
+    // Store into a local since the field is volatile.
+    final MemoryAllocator theFrameMemoryAllocator = frameMemoryAllocator;
+
+    if (theFrameMemoryAllocator == null) {
+      throw DruidException.defensive(
+          "Frame memory allocator is not available. "
+          + "The output channel might be marked as read-only, hence no writes are allowed."
+      );
     } else {
-      return frameMemoryAllocator;
+      return theFrameMemoryAllocator;
     }
   }
 
@@ -203,14 +210,18 @@ public class OutputChannel
     return partitionNumber;
   }
 
-  public synchronized OutputChannel mapWritableChannel(final Function<WritableFrameChannel, WritableFrameChannel> mapFn)
+  public OutputChannel mapWritableChannel(final Function<WritableFrameChannel, WritableFrameChannel> mapFn)
   {
-    if (writableChannel == null) {
+    // Store into locals since the fields are volatile.
+    final WritableFrameChannel theWritableChannel = writableChannel;
+    final MemoryAllocator theFrameMemoryAllocator = frameMemoryAllocator;
+
+    if (theWritableChannel == null || theFrameMemoryAllocator == null) {
       return this;
     } else {
       return new OutputChannel(
-          mapFn.apply(writableChannel),
-          frameMemoryAllocator,
+          mapFn.apply(theWritableChannel),
+          theFrameMemoryAllocator,
           readableChannelSupplier,
           partitionNumber
       );
@@ -220,17 +231,27 @@ public class OutputChannel
   /**
    * Returns a read-only version of this instance. Read-only versions have neither {@link #getWritableChannel()} nor
    * {@link #getFrameMemoryAllocator()}, and therefore require substantially less memory.
+   *
+   * Returns the same instance if it is already read-only.
    */
   public OutputChannel readOnly()
   {
-    return OutputChannel.readOnly(readableChannelSupplier, partitionNumber);
+    return isReadOnly() ? this : OutputChannel.readOnly(readableChannelSupplier, partitionNumber);
+  }
+
+  /**
+   * Returns whether this instance is read-only (has no writable channel).
+   */
+  public boolean isReadOnly()
+  {
+    return writableChannel == null;
   }
 
   /**
    * Removes the reference to the {@link #writableChannel} and {@link #frameMemoryAllocator} from the object, making
    * it more efficient
    */
-  public synchronized void convertToReadOnly()
+  public void convertToReadOnly()
   {
     this.writableChannel = null;
     this.frameMemoryAllocator = null;
