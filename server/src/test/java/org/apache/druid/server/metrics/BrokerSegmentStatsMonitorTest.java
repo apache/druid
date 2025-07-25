@@ -27,9 +27,9 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class BrokerSegmentCountStatsMonitorTest
+public class BrokerSegmentStatsMonitorTest
 {
-  private BrokerSegmentCountStatsProvider statsProvider;
+  private BrokerSegmentStatsProvider statsProvider;
   private static final RowKey SEGMENT_METRIC_KEY1 = RowKey.with(Dimension.DATASOURCE, "dataSource1")
                                                           .with(Dimension.VERSION, "2024-01-01T00:00:00.000Z")
                                                           .with(Dimension.INTERVAL, "2024-01-01T00:00:00.000Z/2024-01-02T00:00:00.000Z")
@@ -42,7 +42,7 @@ public class BrokerSegmentCountStatsMonitorTest
   @Test
   public void test_monitor()
   {
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(
+    final BrokerSegmentStatsMonitor monitor = new BrokerSegmentStatsMonitor(
         () -> Map.of(SEGMENT_METRIC_KEY1, 10L, SEGMENT_METRIC_KEY2, 5L)
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
@@ -57,7 +57,7 @@ public class BrokerSegmentCountStatsMonitorTest
   @Test
   public void test_monitor_withNullCounts()
   {
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(() -> null);
+    final BrokerSegmentStatsMonitor monitor = new BrokerSegmentStatsMonitor(() -> null);
     final StubServiceEmitter emitter = new StubServiceEmitter();
     Assert.assertTrue(monitor.doMonitor(emitter));
 
@@ -67,7 +67,7 @@ public class BrokerSegmentCountStatsMonitorTest
   @Test
   public void test_monitor_withEmptyCounts()
   {
-    final BrokerSegmentCountStatsMonitor monitor = new BrokerSegmentCountStatsMonitor(() -> Map.of());
+    final BrokerSegmentStatsMonitor monitor = new BrokerSegmentStatsMonitor(() -> Map.of());
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
 

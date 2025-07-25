@@ -20,6 +20,8 @@
 package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -30,12 +32,13 @@ import java.util.Map;
 /**
  * Monitor that tracks the number of segments of a datasource currently queryable by this Broker.
  */
-public class BrokerSegmentCountStatsMonitor extends AbstractMonitor
+@LoadScope(roles = {NodeRole.BROKER_JSON_NAME})
+public class BrokerSegmentStatsMonitor extends AbstractMonitor
 {
-  private final BrokerSegmentCountStatsProvider statsProvider;
+  private final BrokerSegmentStatsProvider statsProvider;
 
   @Inject
-  public BrokerSegmentCountStatsMonitor(BrokerSegmentCountStatsProvider statsProvider)
+  public BrokerSegmentStatsMonitor(BrokerSegmentStatsProvider statsProvider)
   {
     this.statsProvider = statsProvider;
   }

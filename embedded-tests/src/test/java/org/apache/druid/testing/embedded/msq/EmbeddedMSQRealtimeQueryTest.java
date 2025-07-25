@@ -106,7 +106,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
           .addProperty("druid.query.default.context.maxConcurrentStages", "1")
           .addProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-          .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentCountStatsMonitor\"]");
+          .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentStatsMonitor\"]");
 
     historical.addProperty("druid.msq.dart.worker.heapFraction", "0.9")
               .addProperty("druid.msq.dart.worker.concurrentQueries", "1")

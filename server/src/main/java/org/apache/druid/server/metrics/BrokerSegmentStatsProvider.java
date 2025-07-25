@@ -23,7 +23,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
 
-public interface BrokerSegmentCountStatsProvider
+public interface BrokerSegmentStatsProvider
 {
   /**
    * Return the number of segments queryable by a Broker for a datasource, interval and version.

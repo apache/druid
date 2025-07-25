@@ -39,7 +39,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.metrics.BrokerSegmentCountStatsProvider;
+import org.apache.druid.server.metrics.BrokerSegmentStatsProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class BrokerServerView implements TimelineServerView, BrokerSegmentCountStatsProvider
+public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsProvider
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 

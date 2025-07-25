@@ -52,7 +52,9 @@ import java.util.stream.IntStream;
  */
 public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 {
-  protected final EmbeddedBroker broker = new EmbeddedBroker();
+  protected final EmbeddedBroker broker = new EmbeddedBroker()
+      .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentStatsMonitor\"]")
+      .addProperty("druid.monitoring.emissionPeriod", "PT0.1s");
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "25");
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
@@ -61,10 +63,8 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    broker.addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentCountStatsMonitor\"]");
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
                                .addServer(coordinator)
                                .addServer(indexer)
                                .addServer(overlord)
