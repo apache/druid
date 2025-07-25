@@ -65,6 +65,21 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testComputeOrdering_noOrdering()
+  {
+    AggregateProjectionSpec spec = new AggregateProjectionSpec(
+        "some_projection",
+        VirtualColumns.EMPTY,
+        List.of(),
+        new AggregatorFactory[] {
+            new CountAggregatorFactory("count"),
+            new LongSumAggregatorFactory("e", "e")
+        }
+    );
+    Assertions.assertTrue(spec.getOrdering().isEmpty());
+  }
+
+  @Test
   void testMissingName()
   {
     Throwable t = Assertions.assertThrows(

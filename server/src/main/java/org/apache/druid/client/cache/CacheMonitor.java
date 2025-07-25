@@ -20,11 +20,19 @@
 package org.apache.druid.client.cache;
 
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
+@LoadScope(roles = {
+    NodeRole.BROKER_JSON_NAME,
+    NodeRole.HISTORICAL_JSON_NAME,
+    NodeRole.INDEXER_JSON_NAME,
+    NodeRole.PEON_JSON_NAME
+})
 public class CacheMonitor extends AbstractMonitor
 {
   // package private for tests

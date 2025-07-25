@@ -471,11 +471,11 @@ public class ExpressionSelectors
       }
       return Arrays.stream(asArray).collect(Collectors.toList());
     }
-    return eval.valueOrDefault();
+    return eval.value();
   }
 
   /**
-   * Wraps a {@link ColumnValueSelector<ExprEval>} and calls {@link ExprEval#valueOrDefault()} on the output of
+   * Wraps a {@link ColumnValueSelector<ExprEval>} and calls {@link ExprEval#value()} on the output of
    * {@link #baseSelector#getObject()} in {@link #getObject()}.
    */
   private static class EvalUnwrappingColumnValueSelector implements ColumnValueSelector
@@ -517,7 +517,7 @@ public class ExpressionSelectors
     {
       // No need for null check on getObject() since baseSelector impls will never return null.
       ExprEval eval = baseSelector.getObject();
-      return eval.valueOrDefault();
+      return eval.value();
     }
 
     @Override

@@ -523,7 +523,7 @@ public class StandardShuffleOperations
         ),
         newResultAndChannels -> new ResultAndChannels<>(
             newResultAndChannels.resultFuture(),
-            newResultAndChannels.outputChannels().readOnly()
+            newResultAndChannels.outputChannels()
         )
     );
 
