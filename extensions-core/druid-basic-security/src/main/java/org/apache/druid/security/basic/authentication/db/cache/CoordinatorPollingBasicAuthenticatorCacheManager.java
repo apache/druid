@@ -41,7 +41,7 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;

@@ -26,7 +26,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;

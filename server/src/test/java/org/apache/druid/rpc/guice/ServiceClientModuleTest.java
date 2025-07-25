@@ -24,6 +24,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
@@ -102,5 +103,11 @@ public class ServiceClientModuleTest
   public void testGetBrokerClient()
   {
     assertNotNull(injector.getInstance(BrokerClient.class));
+  }
+
+  @Test
+  public void testGetCoordinatorServiceClient()
+  {
+    assertNotNull(injector.getInstance(CoordinatorServiceClient.class));
   }
 }

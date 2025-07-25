@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.security.basic;
+package org.apache.druid.client.coordinator;
 
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.rpc.ServiceClient;
@@ -26,7 +26,10 @@ import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 
 /**
- * Wrapper over {@link ServiceClient} used to query the Coordinator.
+ * Wrapper over {@link ServiceClient} used to send requests to the Coordinator.
+ * <p>
+ * This client should be used to hit Coordinator APIs added by extensions.
+ * For core Coordinator APIs, use {@link CoordinatorClient} instead.
  */
 public class CoordinatorServiceClient
 {
@@ -35,13 +38,13 @@ public class CoordinatorServiceClient
   public CoordinatorServiceClient(
       ServiceClientFactory clientFactory,
       ServiceLocator coordinatorServiceLocator,
-      BasicAuthCommonCacheConfig cacheConfig
+      int maxRetryAttempts
   )
   {
     this.serviceClient = clientFactory.makeClient(
         NodeRole.COORDINATOR.getJsonName(),
         coordinatorServiceLocator,
-        StandardRetryPolicy.builder().maxAttempts(cacheConfig.getMaxSyncRetries()).build()
+        StandardRetryPolicy.builder().maxAttempts(maxRetryAttempts).build()
     );
   }
 

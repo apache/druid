@@ -29,7 +29,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;

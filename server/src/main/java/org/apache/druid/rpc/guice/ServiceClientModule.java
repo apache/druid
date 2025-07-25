@@ -28,6 +28,7 @@ import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -117,6 +118,16 @@ public class ServiceClientModule implements DruidModule
         ),
         jsonMapper
     );
+  }
+
+  @Provides
+  @LazySingleton
+  public static CoordinatorServiceClient createCoordinatorServiceClient(
+      @EscalatedGlobal ServiceClientFactory clientFactory,
+      @Coordinator ServiceLocator serviceLocator
+  )
+  {
+    return new CoordinatorServiceClient(clientFactory, serviceLocator, CLIENT_MAX_ATTEMPTS);
   }
 
   @Provides
