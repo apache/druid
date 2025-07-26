@@ -42,6 +42,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -317,8 +318,31 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     } else if (matchValueType.isNumeric()) {
       final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
       if (rangeIndexes != null) {
-        final Number lower = (Number) lowerEval.value();
-        final Number upper = (Number) upperEval.value();
+        Number lower = (Number) lowerEval.value();
+        Number upper = (Number) upperEval.value();
+
+        ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
+        if (capabilities == null) {
+          return null;
+        }
+        ColumnType colType = capabilities.toColumnType();
+
+        // equality fast-path
+        if (!lowerOpen && !upperOpen && hasLowerBound() && hasUpperBound()) {
+          boolean sameWidth = (Objects.equals(colType, ColumnType.FLOAT) && matchValueType.is(ValueType.FLOAT))
+                              || (Objects.equals(colType, ColumnType.DOUBLE) && matchValueType.is(ValueType.DOUBLE));
+          if (sameWidth) {
+            if (colType.equals(ColumnType.FLOAT)) {
+              float key = (float) lowerEval.asDouble();
+              return rangeIndexes.forRange(key, false, key, false);
+            } else {
+              return null; // we cannot guess if that double is already casted float, delegating to predicate
+            }
+          }
+          // skip bitmap, let row predicate cast both sides
+          return null;
+        }
+
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
     }
@@ -926,10 +950,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           return DruidPredicateMatch.of((lowerComparing >= 0) && (upperComparing > 0));
         };
       case CLOSED:
+        if (Double.compare(lowerDoubleBound, upperDoubleBound) == 0) {
+          final long dblBits = Double.doubleToLongBits(lowerDoubleBound);
+          final int fltBits = Float.floatToIntBits((float) lowerDoubleBound);
+
+          return input -> {
+            long inDblBits = Double.doubleToLongBits(input);
+            if (inDblBits == dblBits) {
+              return DruidPredicateMatch.TRUE;
+            }
+            return DruidPredicateMatch.of(
+                Float.floatToIntBits((float) input) == fltBits
+            );
+          };
+        }
+
         return input -> {
-          final int lowerComparing = Double.compare(input, lowerDoubleBound);
-          final int upperComparing = Double.compare(upperDoubleBound, input);
-          return DruidPredicateMatch.of((lowerComparing >= 0) && (upperComparing >= 0));
+          int lowerComparing = Double.compare(input, lowerDoubleBound);
+          int upperComparing = Double.compare(upperDoubleBound, input);
+          return DruidPredicateMatch.of(lowerComparing >= 0 && upperComparing >= 0);
         };
       case LOWER_UNBOUNDED_UPPER_OPEN:
         return input -> {
