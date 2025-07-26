@@ -899,7 +899,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         SegmentPublishResult.retryableFailure(
             "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last committed"
-            + " end state[null]. Try resetting the supervisor."
+            + " end state[null]. Try resetting the supervisor for datasource[fooDataSource]."
         ),
         result1
     );
@@ -930,7 +930,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         SegmentPublishResult.fail(
             "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
-            + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor for datasource[fooDataSource]."
         ),
         result2
     );
@@ -1077,7 +1077,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         SegmentPublishResult.fail(
             "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
-            + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor for datasource[fooDataSource]."
         ),
         result2
     );
