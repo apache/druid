@@ -337,7 +337,7 @@ dictionary that can spill to disk. The outer query is run on the Broker in a sin
 
 ### Configurations
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and Middle Manager processes. You can set the query context parameters through the [query context](query-context.md).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and Middle Manager processes. You can set the query context parameters through the [query context](query-context-reference.md).
 
 Supported runtime properties:
 
