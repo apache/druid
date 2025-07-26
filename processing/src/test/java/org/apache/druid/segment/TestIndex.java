@@ -679,7 +679,7 @@ public class TestIndex
   {
     Map<String, Supplier<IncrementalIndex>> indexSuppliers = new HashMap<>(Map.of(
         "rtIndex", rtIndex,
-        "rtPartialSchemaStringDiscoveryIndex", rtPartialSchemaStringDiscoveryIndex,
+        "rtPartialSchemaStringDiscoveryIndex", rtIndex,
         "noRollupRtIndex", noRollupRtIndex
     ));
     if (includeNonTimeOrdered) {
