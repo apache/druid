@@ -52,7 +52,9 @@ import java.util.stream.IntStream;
  */
 public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 {
-  protected final EmbeddedBroker broker = new EmbeddedBroker();
+  protected final EmbeddedBroker broker = new EmbeddedBroker()
+      .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentStatsMonitor\"]")
+      .addProperty("druid.monitoring.emissionPeriod", "PT0.1s");
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "25");
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
@@ -83,7 +85,11 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(10)
+    );
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
         overlord.bindings().segmentsMetadataStorage().retrieveAllUsedSegments(dataSource, null)
@@ -107,8 +113,10 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(10)
     );
-    broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(10)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));

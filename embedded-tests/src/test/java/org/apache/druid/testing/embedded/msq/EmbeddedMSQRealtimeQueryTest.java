@@ -104,7 +104,9 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
-          .addProperty("druid.query.default.context.maxConcurrentStages", "1");
+          .addProperty("druid.query.default.context.maxConcurrentStages", "1")
+          .addProperty("druid.monitoring.emissionPeriod", "PT0.1s")
+          .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentStatsMonitor\"]");
 
     historical.addProperty("druid.msq.dart.worker.heapFraction", "0.9")
               .addProperty("druid.msq.dart.worker.concurrentQueries", "1")
@@ -177,7 +179,10 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         agg -> agg.hasSumAtLeast(totalRows)
     );
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+        event -> event.hasMetricName("segment/available/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.INTERVAL, "2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.000Z")
+                      .hasValue(1)
     );
   }
 

@@ -37,6 +37,9 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.metrics.BrokerSegmentStatsProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -59,7 +62,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class BrokerServerView implements TimelineServerView
+public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsProvider
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
@@ -76,6 +79,7 @@ public class BrokerServerView implements TimelineServerView
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final ConcurrentHashMap<RowKey, Long> segmentAvailableCount = new ConcurrentHashMap<>();
 
   @Inject
   public BrokerServerView(
@@ -159,7 +163,8 @@ public class BrokerServerView implements TimelineServerView
 
     baseView.registerServerCallback(
         exec,
-        new ServerCallback() {
+        new ServerCallback()
+        {
           @Override
           public CallbackAction serverAdded(DruidServer server)
           {
@@ -281,6 +286,7 @@ public class BrokerServerView implements TimelineServerView
 
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
+          incrementSegmentCount(getMetricKey(segment));
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -357,6 +363,7 @@ public class BrokerServerView implements TimelineServerView
               segment.getVersion()
           );
         } else {
+          decrementSegmentCount(getMetricKey(segment));
           runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
         }
       }
@@ -435,5 +442,31 @@ public class BrokerServerView implements TimelineServerView
     return clients.values().stream()
                   .map(queryableDruidServer -> queryableDruidServer.getServer().toImmutableDruidServer())
                   .collect(Collectors.toList());
+  }
+
+  @Override
+  public Map<RowKey, Long> getAvailableSegmentCount()
+  {
+    return segmentAvailableCount;
+  }
+
+  private void incrementSegmentCount(RowKey key)
+  {
+    segmentAvailableCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+  }
+
+  private void decrementSegmentCount(RowKey key)
+  {
+    segmentAvailableCount.computeIfPresent(key, (k, currentValue) -> {
+      long newValue = currentValue - 1;
+      return newValue > 0 ? newValue : null;
+    });
+  }
+
+  private static RowKey getMetricKey(final DataSegment segment)
+  {
+    return RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
+                 .with(Dimension.INTERVAL, String.valueOf(segment.getInterval()))
+                 .and(Dimension.VERSION, segment.getVersion());
   }
 }

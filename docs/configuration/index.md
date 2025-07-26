@@ -1955,6 +1955,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
+|`org.apache.druid.server.metrics.BrokerSegmentStatsMonitor`| Report the number of segments of a datasource currently queryable by a Broker.|Broker|
 
 For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
 
