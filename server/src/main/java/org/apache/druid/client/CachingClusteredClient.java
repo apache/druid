@@ -301,11 +301,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
       final QueryContext queryContext = query.context();
-      final int priority = queryContext.getPriority();
-      contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
-      final String lane = queryContext.getLane();
+      final int priority = queryContext.priority.value();
+      contextBuilder.put(QueryContexts.PRIORITY.name, priority);
+      final String lane = queryContext.lane.value();
       if (lane != null) {
-        contextBuilder.put(QueryContexts.LANE_KEY, lane);
+        contextBuilder.put(QueryContexts.LANE.name, lane);
       }
 
       if (populateCache) {
@@ -386,7 +386,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     {
       BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
       final QueryContext queryContext = query.context();
-      if (parallelMergeConfig.useParallelMergePool() && queryContext.getEnableParallelMerges() && mergeFn != null) {
+      if (parallelMergeConfig.useParallelMergePool() && queryContext.enableParallelMerges.value() && mergeFn != null) {
         final ParallelMergeCombiningSequence<T> parallelSequence = new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
@@ -394,7 +394,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             mergeFn,
             queryContext.hasTimeout(),
             queryContext.getTimeout(),
-            queryContext.getPriority(),
+            queryContext.priority.value(),
             queryContext.getParallelMergeParallelism(parallelMergeConfig.getDefaultMaxQueryParallelism()),
             queryContext.getParallelMergeInitialYieldRows(parallelMergeConfig.getInitialYieldNumRows()),
             queryContext.getParallelMergeSmallBatchRows(parallelMergeConfig.getSmallBatchNumRows()),
@@ -685,7 +685,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
 
         // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
-        final long maxQueuedBytes = query.context().getMaxQueuedBytes(httpClientConfig.getMaxQueuedBytes());
+        final long maxQueuedBytes = query.context().maxQueuedBytes.valueOrDefault(httpClientConfig.getMaxQueuedBytes());
         final long maxQueuedBytesPerServer = maxQueuedBytes / segmentsByServer.size();
         final Sequence<T> serverResults;
 

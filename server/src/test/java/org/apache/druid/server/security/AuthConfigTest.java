@@ -43,7 +43,7 @@ public class AuthConfigTest
     // No security
     {
       AuthConfig config = new AuthConfig();
-      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
+      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.SQL_QUERY_ID.name);
       assertTrue(config.contextKeysToAuthorize(keys).isEmpty());
     }
 
@@ -52,7 +52,7 @@ public class AuthConfigTest
       AuthConfig config = AuthConfig.newBuilder()
           .setAuthorizeQueryContextParams(true)
           .build();
-      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
+      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.SQL_QUERY_ID.name);
       assertEquals(ImmutableSet.of("a", "b"), config.contextKeysToAuthorize(keys));
     }
 
@@ -62,7 +62,7 @@ public class AuthConfigTest
           .setAuthorizeQueryContextParams(true)
           .setUnsecuredContextKeys(ImmutableSet.of("a"))
           .build();
-      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
+      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.SQL_QUERY_ID.name);
       assertEquals(ImmutableSet.of("b"), config.contextKeysToAuthorize(keys));
     }
 
@@ -72,7 +72,7 @@ public class AuthConfigTest
           .setAuthorizeQueryContextParams(true)
           .setSecuredContextKeys(ImmutableSet.of("a"))
           .build();
-      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
+      Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.SQL_QUERY_ID.name);
       assertEquals(ImmutableSet.of("a"), config.contextKeysToAuthorize(keys));
     }
 
@@ -83,7 +83,7 @@ public class AuthConfigTest
           .setUnsecuredContextKeys(ImmutableSet.of("a", "b"))
           .setSecuredContextKeys(ImmutableSet.of("b", "c"))
           .build();
-      Set<String> keys = ImmutableSet.of("a", "b", "c", "d", QueryContexts.CTX_SQL_QUERY_ID);
+      Set<String> keys = ImmutableSet.of("a", "b", "c", "d", QueryContexts.SQL_QUERY_ID.name);
       assertEquals(ImmutableSet.of("c"), config.contextKeysToAuthorize(keys));
     }
   }

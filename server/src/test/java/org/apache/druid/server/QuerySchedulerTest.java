@@ -160,7 +160,7 @@ public class QuerySchedulerTest
       try {
         Query<?> scheduledReport = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(report), ImmutableSet.of());
         Assert.assertNotNull(scheduledReport);
-        Assert.assertEquals(HiLoQueryLaningStrategy.LOW, scheduledReport.context().getLane());
+        Assert.assertEquals(HiLoQueryLaningStrategy.LOW, scheduledReport.context().lane.value());
 
         Sequence<Integer> underlyingSequence = makeSequence(10);
         underlyingSequence = Sequences.wrap(underlyingSequence, new SequenceWrapper()
@@ -533,8 +533,8 @@ public class QuerySchedulerTest
             EasyMock.createMock(SegmentServerSelector.class)
         )
     );
-    Assert.assertEquals(-5, query.context().getPriority());
-    Assert.assertEquals(HiLoQueryLaningStrategy.LOW, query.context().getLane());
+    Assert.assertEquals(-5, (int) query.context().priority.value());
+    Assert.assertEquals(HiLoQueryLaningStrategy.LOW, query.context().lane.value());
   }
 
   @Test

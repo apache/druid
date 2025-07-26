@@ -225,7 +225,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   )
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
-                    final int priority = query.context().getPriority();
+                    final int priority = query.context().priority.value();
                     final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<>(priority, input)

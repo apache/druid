@@ -2570,7 +2570,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             PLANNER_CONFIG_NO_HLL.withOverrides(
                 ImmutableMap.of(
                     PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "false",
-                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false
+                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false
                 )
             )
         )
@@ -15003,7 +15003,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
-            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true))
+            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, true))
             .sql("SELECT sum(distinct m1) from druid.foo")
             .run()
     );
@@ -15750,7 +15750,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorizeUnlessFallback();
     msqIncompatible();
     final Map<String, Object> queryContext = ImmutableMap.of(
-        PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false,
+        PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT.name, false,
         PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, true
     );
     testBuilder()
@@ -15828,7 +15828,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     expectedContext.put("timeout", 9000.0);
     expectedContext.put("vectorize", "force");
     // sql query id is also set in the base context sent with the query, expect the SET statement to override this
-    expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
+    expectedContext.put(QueryContexts.SQL_QUERY_ID.name, "dummy2");
 
     testBuilder().sql(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;;;"

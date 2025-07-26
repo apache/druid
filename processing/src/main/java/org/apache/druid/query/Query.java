@@ -200,7 +200,7 @@ public interface Query<T>
   String getId();
 
   /**
-   * Returns a copy of this query with a new subQueryId (see {@link #getSubQueryId()}.
+   * Returns a copy of this query with a new subQueryId (see {@link #getSubQueryId()}).
    */
   Query<T> withSubQueryId(String subQueryId);
 
@@ -225,7 +225,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return context().getString(BaseQuery.SQL_QUERY_ID);
+    return context().getValue(QueryContexts.SQL_QUERY_ID);
   }
 
   /**
@@ -248,12 +248,12 @@ public interface Query<T>
 
   default Query<T> withPriority(int priority)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY.name, priority));
   }
 
   default Query<T> withLane(String lane)
   {
-    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE.name, lane));
   }
 
   default VirtualColumns getVirtualColumns()

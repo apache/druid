@@ -26,8 +26,8 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Objects;
@@ -64,7 +64,7 @@ public class QueryDefMSQSpec extends MSQSpec
   @Override
   public String getId()
   {
-    return getContext().getString(BaseQuery.QUERY_ID);
+    return getContext().getValue(QueryContexts.QUERY_ID);
   }
 
   @Override

@@ -30,9 +30,9 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.setting.SettingEntry;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
@@ -72,8 +72,8 @@ public class QueryContext
     // Ensure that a context always exists to avoid the need to check for
     // a null context. Jackson serialization will omit empty contexts.
     this.context = context == null
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new TreeMap<>(context));
+                   ? Collections.emptyMap()
+                   : Collections.unmodifiableMap(new TreeMap<>(context));
   }
 
   public static QueryContext empty()
@@ -106,6 +106,11 @@ public class QueryContext
     return context.containsKey(key);
   }
 
+  public boolean containsKey(SettingEntry<?> entry)
+  {
+    return context.containsKey(entry.name);
+  }
+
   /**
    * Return a value as a generic {@code Object}, returning {@code null} if the
    * context value is not set.
@@ -131,6 +136,16 @@ public class QueryContext
   public String getString(String key, String defaultValue)
   {
     return QueryContexts.parseString(context, key, defaultValue);
+  }
+
+  public <T> T getValue(SettingEntry<T> entry)
+  {
+    return entry.valueOf(get(entry.name));
+  }
+
+  public <T> T getValue(SettingEntry<T> entry, T defaultValue)
+  {
+    return entry.valueOf(get(entry.name), defaultValue);
   }
 
   /**
@@ -297,21 +312,8 @@ public class QueryContext
     return getBoolean(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
   }
 
-  public boolean isUseResultLevelCache()
-  {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
-  }
-
-  public boolean isUseResultLevelCache(boolean defaultValue)
-  {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
-  }
-
-  public boolean isFinalize(boolean defaultValue)
-
-  {
-    return getBoolean(QueryContexts.FINALIZE_KEY, defaultValue);
-  }
+  public final QueryContextParameter<Boolean> useResultLevelCache = new QueryContextParameter<>(QueryContexts.USE_RESULT_LEVEL_CACHE, this);
+  public final QueryContextParameter<Boolean> finalize = new QueryContextParameter<>(QueryContexts.FINALIZE, this);
 
   public boolean isSerializeDateTimeAsLong(boolean defaultValue)
   {
@@ -392,28 +394,9 @@ public class QueryContext
     return getInt(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
   }
 
-  public int getPriority()
-  {
-    return getPriority(QueryContexts.DEFAULT_PRIORITY);
-  }
-
-  public int getPriority(int defaultValue)
-  {
-    return getInt(QueryContexts.PRIORITY_KEY, defaultValue);
-  }
-
-  public String getLane()
-  {
-    return getString(QueryContexts.LANE_KEY);
-  }
-
-  public boolean getEnableParallelMerges()
-  {
-    return getBoolean(
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY,
-        QueryContexts.DEFAULT_ENABLE_PARALLEL_MERGE
-    );
-  }
+  public final QueryContextParameter<Integer> priority = new QueryContextParameter<>(QueryContexts.PRIORITY, this);
+  public final QueryContextParameter<String> lane = new QueryContextParameter<>(QueryContexts.LANE, this);
+  public final QueryContextParameter<Boolean> enableParallelMerges = new QueryContextParameter<>(QueryContexts.BROKER_PARALLEL_MERGE, this);
 
   public int getParallelMergeInitialYieldRows(int defaultValue)
   {
@@ -462,15 +445,8 @@ public class QueryContext
     );
   }
 
-  public long getMaxQueuedBytes(long defaultValue)
-  {
-    return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);
-  }
-
-  public long getMaxScatterGatherBytes()
-  {
-    return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
-  }
+  public final QueryContextParameter<Long> maxQueuedBytes = new QueryContextParameter<>(QueryContexts.MAX_QUEUED_BYTES, this);
+  public final QueryContextParameter<Long> maxScatterGatherBytes = new QueryContextParameter<>(QueryContexts.MAX_SCATTER_GATHER_BYTES, this);
 
   public String getEngine()
   {
@@ -493,14 +469,14 @@ public class QueryContext
 
   public long getTimeout(long defaultTimeout)
   {
-    final long timeout = getLong(QueryContexts.TIMEOUT_KEY, defaultTimeout);
+    final long timeout = getValue(QueryContexts.TIMEOUT, defaultTimeout);
     if (timeout >= 0) {
       return timeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.TIMEOUT_KEY,
+            QueryContexts.TIMEOUT.name,
             timeout
         )
     );
@@ -517,14 +493,14 @@ public class QueryContext
 
   public long getDefaultTimeout()
   {
-    final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    final long defaultTimeout = getValue(QueryContexts.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     if (defaultTimeout >= 0) {
       return defaultTimeout;
     }
     throw new BadQueryContextException(
         StringUtils.format(
             "Timeout [%s] must be a non negative value, but was %d",
-            QueryContexts.DEFAULT_TIMEOUT_KEY,
+            QueryContexts.DEFAULT_TIMEOUT.name,
             defaultTimeout
         )
     );
@@ -537,7 +513,7 @@ public class QueryContext
       throw new BadQueryContextException(
           StringUtils.format(
               "Configured %s = %d is more than enforced limit of %d.",
-              QueryContexts.TIMEOUT_KEY,
+              QueryContexts.TIMEOUT.name,
               timeout,
               maxQueryTimeout
           )
@@ -547,14 +523,14 @@ public class QueryContext
 
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
   {
-    long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
+    long curr = getValue(QueryContexts.MAX_SCATTER_GATHER_BYTES, 0L);
     if (curr > maxScatterGatherBytesLimit) {
       throw new BadQueryContextException(
           StringUtils.format(
-            "Configured %s = %d is more than enforced limit of %d.",
-            QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
-            curr,
-            maxScatterGatherBytesLimit
+              "Configured %s = %d is more than enforced limit of %d.",
+              QueryContexts.MAX_SCATTER_GATHER_BYTES.name,
+              curr,
+              maxScatterGatherBytesLimit
           )
       );
     }
@@ -683,7 +659,7 @@ public class QueryContext
 
   public QueryResourceId getQueryResourceId()
   {
-    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
+    return new QueryResourceId(getValue(QueryContexts.QUERY_RESOURCE_ID));
   }
 
   public String getBrokerServiceName()

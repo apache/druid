@@ -2892,7 +2892,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 60000))
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT.name, 60000))
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -7208,7 +7208,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT.name, 10000))
         .build();
 
     List<ResultRow> expectedResults = Collections.singletonList(
@@ -7639,7 +7639,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new LongLastAggregatorFactory("innerlast", "index", null)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .overrideContext(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true))
+        .overrideContext(ImmutableMap.of(QueryContexts.FINALIZE.name, true))
         .build();
 
     GroupByQuery query = makeQueryBuilder()

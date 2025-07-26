@@ -170,7 +170,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     GroupByStatsProvider.PerQueryStats perQueryStats =
         groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
 
-    final int priority = queryContext.getPriority();
+    final int priority = queryContext.priority.value();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
