@@ -22,6 +22,7 @@ package org.apache.druid.query.metadata;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -30,12 +31,17 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -49,7 +55,11 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
@@ -363,5 +373,86 @@ public class SegmentAnalyzer
   private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
   {
     return ColumnAnalysis.builder().withCapabilities(capabilities).build();
+  }
+
+  public static Segment makeVirtualPlaceholderSegment(DataSegment dataSegment)
+  {
+    return new RowBasedSegment<>(
+        Sequences.empty(),
+        RowAdapters.standardRow(),
+        RowSignature.builder().addTimeColumn().build()
+    )
+    {
+      @Override
+      public SegmentId getId()
+      {
+        return dataSegment.getId();
+      }
+
+      @Override
+      @Nonnull
+      public Interval getDataInterval()
+      {
+        return dataSegment.getInterval();
+      }
+
+      @Nullable
+      @Override
+      public <T> T as(@Nonnull Class<T> clazz)
+      {
+        if (PhysicalSegmentInspector.class.equals(clazz)) {
+          return (T) EmptyPhysicalInspector.INSTANCE;
+        }
+        return super.as(clazz);
+      }
+    };
+  }
+
+  private static class EmptyPhysicalInspector implements PhysicalSegmentInspector
+  {
+    private static final EmptyPhysicalInspector INSTANCE = new EmptyPhysicalInspector();
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
+        return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG);
+      }
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Metadata getMetadata()
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Comparable getMinValue(String column)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Comparable getMaxValue(String column)
+    {
+      return null;
+    }
+
+    @Override
+    public int getDimensionCardinality(String column)
+    {
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    }
+
+    @Override
+    public int getNumRows()
+    {
+      return 0;
+    }
   }
 }

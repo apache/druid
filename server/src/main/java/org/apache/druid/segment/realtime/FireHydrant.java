@@ -48,7 +48,7 @@ public class FireHydrant
   {
     this.index = index;
     this.segmentReferenceProvider = new AtomicReference<>(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(new IncrementalIndexSegment(index, segmentId))
+        ReferenceCountedSegmentProvider.of(new IncrementalIndexSegment(index, segmentId))
     );
     this.count = count;
   }
@@ -57,7 +57,7 @@ public class FireHydrant
   {
     this.index = null;
     this.segmentReferenceProvider = new AtomicReference<>(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment)
+        ReferenceCountedSegmentProvider.of(segment)
     );
     this.count = count;
   }
@@ -130,7 +130,7 @@ public class FireHydrant
         throw new ISE("Cannot swap to the same segment");
       }
       ReferenceCountedSegmentProvider newReferenceCountingSegment =
-          newSegment != null ? ReferenceCountedSegmentProvider.wrapRootGenerationSegment(newSegment) : null;
+          newSegment != null ? ReferenceCountedSegmentProvider.of(newSegment) : null;
       if (segmentReferenceProvider.compareAndSet(currentSegment, newReferenceCountingSegment)) {
         if (currentSegment != null) {
           currentSegment.close();
@@ -179,7 +179,7 @@ public class FireHydrant
       return Optional.empty();
     }
 
-    Optional<Segment> segment = segmentMapFn.apply(sinkSegment);
+    Optional<Segment> segment = segmentMapFn.apply(sinkSegment.acquireReference());
     while (true) {
       if (segment.isPresent()) {
         return segment;
@@ -199,7 +199,7 @@ public class FireHydrant
         // of a HashJoinSegment created by segmentMapFn
         return Optional.empty();
       }
-      segment = segmentMapFn.apply(newSinkSegment);
+      segment = segmentMapFn.apply(newSinkSegment.acquireReference());
       // Spin loop.
     }
   }
