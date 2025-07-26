@@ -233,8 +233,9 @@ public class TestIndex
   private static Supplier<IncrementalIndex> rtIndex = Suppliers.memoize(
       TestIndex::makeSampleNumericIncrementalIndex
   );
+  // PROJECTIONS are defined on string dimensions, they can't be used with this index
   private static Supplier<IncrementalIndex> rtPartialSchemaStringDiscoveryIndex = Suppliers.memoize(
-      () -> fromJsonResource(
+      () -> fromJsonResourceWithNoProjection(
           SAMPLE_NUMERIC_JSON,
           true,
           DIMENSIONS_SPEC_PARTIAL_NO_STRINGS
@@ -442,6 +443,30 @@ public class TestIndex
             .withVirtualColumns(VIRTUAL_COLUMNS)
             .withMetrics(METRIC_AGGS)
             .withProjections(PROJECTIONS)
+            .withRollup(rollup)
+            .build(),
+        DEFAULT_JSON_INPUT_FORMAT
+    );
+  }
+
+  private static IncrementalIndex fromJsonResourceWithNoProjection(
+      final String resourceFilename,
+      boolean rollup,
+      DimensionsSpec dimensionsSpec
+  )
+  {
+    return makeIncrementalIndexFromResource(
+        resourceFilename,
+        new IncrementalIndexSchema.Builder()
+            .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
+            .withTimestampSpec(new TimestampSpec("ts", "iso", null))
+            .withDimensionsSpec(DimensionsSpec.builder()
+                                              .setDimensions(dimensionsSpec.getDimensions())
+                                              .setDimensionExclusions(ImmutableList.of("index"))
+                                              .setIncludeAllDimensions(true)
+                                              .build())
+            .withVirtualColumns(VIRTUAL_COLUMNS)
+            .withMetrics(METRIC_AGGS)
             .withRollup(rollup)
             .build(),
         DEFAULT_JSON_INPUT_FORMAT
