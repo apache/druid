@@ -23,7 +23,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.RestrictedDataSource;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -71,11 +71,15 @@ public class ProjectionsTest
 
   private static List<Arguments> getAllQueryableIndex()
   {
-    // make sure the index is built on main thread, so it won't be closed by the test framework.
     return TestIndex.queryableIndexSupplierMap(true)
                     .entrySet()
                     .stream()
-                    .map(entry -> Arguments.of(entry.getKey(), entry.getValue().get()))
+                    .map(entry -> {
+                      // return a mmaped index that can be spied on and its fileMapper can't be closed by the test framework.
+                      QueryableIndex openIndex = Mockito.spy(entry.getValue().get());
+                      Mockito.doNothing().when(openIndex).close();
+                      return Arguments.of(entry.getKey(), openIndex);
+                    })
                     .collect(Collectors.toList());
   }
 
@@ -87,44 +91,20 @@ public class ProjectionsTest
                     .stream()
                     .filter(entry -> !entry.getKey()
                                            .equals("rtPartialSchemaStringDiscoveryIndex")) // exclude this index since it doesn't have our projection dimensions
-                    .map(entry -> Arguments.of(entry.getKey(), entry.getValue().get()))
+                    .map(entry -> {
+                      // return a heap index that can be spied on and its maps never be cleared.
+                      IncrementalIndex openIndex = Mockito.spy(entry.getValue().get());
+                      Mockito.doNothing().when(openIndex).close();
+                      return Arguments.of(entry.getKey(), openIndex);
+                    })
                     .collect(Collectors.toList());
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("getAllQueryableIndex")
-  void testProjectionMatch_withQueryableIndex(String indexName, QueryableIndex index)
+  void testProjectionMatch_withQueryableIndex(String indexName, QueryableIndex indexSpy)
   {
-    QueryableIndex indexSpy = Mockito.spy(index);
-    ReferenceCountedSegmentProvider segmentProvider = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        new QueryableIndexSegment(indexSpy, TestIndex.SEGMENT_ID));
-    ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
-    Druids.TimeseriesQueryBuilder queryBuilder =
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource(TestIndex.DATA_SOURCE)
-              .intervals("2011-01-20/2011-01-22")
-              .aggregators(new CountAggregatorFactory("count"));
-
-    final Query<?> noProjectionQuery = queryBuilder.context(NO_PROJECTIONS_CONTEXT).build();
-    List<?> noProjectionResult = QUERY_RUNNER_KIT.run(segmentProvider, noProjectionQuery, indexName).toList();
-    Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
-    Assertions.assertNull(index.getProjection(cursorCaptor.getValue()));
-
-    final Query<?> projectionquery = queryBuilder.context(FORCE_PROJECTION_CONTEXT).build();
-    List<?> projectionResult = QUERY_RUNNER_KIT.run(segmentProvider, projectionquery, indexName).toList();
-    Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
-    Assertions.assertNotNull(index.getProjection(cursorCaptor.getValue()));
-
-    Assertions.assertEquals(noProjectionResult, projectionResult);
-  }
-
-  @ParameterizedTest(name = "{0}")
-  @MethodSource("getAllIncrementalIndex")
-  void testProjectionMatch_withIncrementalIndex(String indexName, IncrementalIndex index)
-  {
-    IncrementalIndex indexSpy = Mockito.spy(index);
-    ReferenceCountedSegmentProvider segmentProvider = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        new IncrementalIndexSegment(indexSpy, TestIndex.SEGMENT_ID));
+    ReferenceCountedSegmentProvider segmentProvider = segmentProvider(indexSpy);
     ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
     Druids.TimeseriesQueryBuilder queryBuilder =
         Druids.newTimeseriesQueryBuilder()
@@ -135,24 +115,50 @@ public class ProjectionsTest
     final TimeseriesQuery noProjectionQuery = queryBuilder.context(NO_PROJECTIONS_CONTEXT).build();
     List<?> noProjectionResult = QUERY_RUNNER_KIT.run(segmentProvider, noProjectionQuery, indexName).toList();
     Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
-    // Query specified not to use projections, so it should return null
-    Assertions.assertNull(index.getProjection(cursorCaptor.getValue()));
+    CursorBuildSpec noProjectioncursorBuildSpec = cursorCaptor.getValue();
 
     final TimeseriesQuery projectionquery = queryBuilder.context(FORCE_PROJECTION_CONTEXT).build();
     List<?> projectionResult = QUERY_RUNNER_KIT.run(segmentProvider, projectionquery, indexName).toList();
     Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
-    Assertions.assertNotNull(index.getProjection(cursorCaptor.getValue()));
-    // The results should be the same whether projections are used or not
+    CursorBuildSpec projectionCursorBuildSpec = cursorCaptor.getValue();
+
+    Assertions.assertNull(indexSpy.getProjection(noProjectioncursorBuildSpec));
+    Assertions.assertNotNull(indexSpy.getProjection(projectionCursorBuildSpec));
+    Assertions.assertEquals(noProjectionResult, projectionResult);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("getAllIncrementalIndex")
+  void testProjectionMatch_withIncrementalIndex(String indexName, IncrementalIndex indexSpy)
+  {
+    ReferenceCountedSegmentProvider segmentProvider = segmentProvider(indexSpy);
+    ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
+    Druids.TimeseriesQueryBuilder queryBuilder =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(TestIndex.DATA_SOURCE)
+              .intervals("2011-01-20/2011-01-22")
+              .aggregators(new CountAggregatorFactory("count"));
+
+    final TimeseriesQuery noProjectionQuery = queryBuilder.context(NO_PROJECTIONS_CONTEXT).build();
+    List<?> noProjectionResult = QUERY_RUNNER_KIT.run(segmentProvider, noProjectionQuery, indexName).toList();
+    Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
+    CursorBuildSpec noProjectionCursorBuildSpec = cursorCaptor.getValue();
+
+    final TimeseriesQuery projectionquery = queryBuilder.context(FORCE_PROJECTION_CONTEXT).build();
+    List<?> projectionResult = QUERY_RUNNER_KIT.run(segmentProvider, projectionquery, indexName).toList();
+    Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
+    CursorBuildSpec projectionCursorBuildSpec = cursorCaptor.getValue();
+
+    Assertions.assertNull(indexSpy.getProjection(noProjectionCursorBuildSpec));
+    Assertions.assertNotNull(indexSpy.getProjection(projectionCursorBuildSpec));
     Assertions.assertEquals(noProjectionResult, projectionResult);
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("getAllQueryableIndex")
-  void testProjectionNoMatch_withQueryableIndexOnUnnest(String indexName, QueryableIndex index)
+  void testProjectionNoMatch_withQueryableIndexOnUnnest(String indexName, QueryableIndex indexSpy)
   {
-    QueryableIndex indexSpy = Mockito.spy(index);
-    ReferenceCountedSegmentProvider segmentProvider = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        new QueryableIndexSegment(indexSpy, TestIndex.SEGMENT_ID));
+    ReferenceCountedSegmentProvider segmentProvider = segmentProvider(indexSpy);
     ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
     UnnestDataSource unnestDataSource =
         UnnestDataSource.create(
@@ -175,8 +181,8 @@ public class ProjectionsTest
     GroupByQuery bestEffortProjectionQuery = queryBuilder.build();
     QUERY_RUNNER_KIT.run(segmentProvider, bestEffortProjectionQuery, indexName).toList();
     Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
-    // No projection match, so it should return null
-    Assertions.assertNull(index.getProjection(cursorCaptor.getValue()));
+    // To the best efforct, could not find a projection match
+    Assertions.assertNull(indexSpy.getProjection(cursorCaptor.getValue()));
 
     GroupByQuery forceProjectionquery = queryBuilder.setContext(FORCE_PROJECTION_CONTEXT).build();
     DruidException e = Assertions.assertThrows(
@@ -184,16 +190,13 @@ public class ProjectionsTest
         () -> QUERY_RUNNER_KIT.run(segmentProvider, forceProjectionquery, indexName).toList()
     );
     Assertions.assertEquals("Force projections specified, but none satisfy query", e.getMessage());
-    Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("getAllQueryableIndex")
-  void testProjectionMatch_withQueryableIndexOnRestricted(String indexName, QueryableIndex index)
+  void testProjectionMatch_withQueryableIndexOnRestricted(String indexName, QueryableIndex indexSpy)
   {
-    QueryableIndex indexSpy = Mockito.spy(index);
-    ReferenceCountedSegmentProvider segmentProvider = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        new QueryableIndexSegment(indexSpy, TestIndex.SEGMENT_ID));
+    ReferenceCountedSegmentProvider segmentProvider = segmentProvider(indexSpy);
     ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
     RestrictedDataSource restrictDataSource = RestrictedDataSource.create(
         new TableDataSource(TestIndex.DATA_SOURCE),
@@ -217,25 +220,24 @@ public class ProjectionsTest
     final TopNQuery noProjectionQuery = queryBuilder.context(NO_PROJECTIONS_CONTEXT).build();
     List<?> noProjectionResult = QUERY_RUNNER_KIT.run(segmentProvider, noProjectionQuery, indexName).toList();
     Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
-    // Query specified not to use projections, so it should return null
-    Assertions.assertNull(index.getProjection(cursorCaptor.getValue()));
+    CursorBuildSpec noProjectionCursorBuildSpec = cursorCaptor.getValue();
 
     final TopNQuery projectionquery = queryBuilder.context(FORCE_PROJECTION_CONTEXT).build();
     List<?> projectionResult = QUERY_RUNNER_KIT.run(segmentProvider, projectionquery, indexName).toList();
     Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
-    Assertions.assertNotNull(index.getProjection(cursorCaptor.getValue()));
-    // The results should be the same whether projections are used or not
+    CursorBuildSpec projectionCursorBuildSpec = cursorCaptor.getValue();
+
+    Assertions.assertNull(indexSpy.getProjection(noProjectionCursorBuildSpec));
+    Assertions.assertNotNull(indexSpy.getProjection(projectionCursorBuildSpec));
     Assertions.assertEquals(noProjectionResult, projectionResult);
   }
 
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("getAllQueryableIndex")
-  void testProjectionNoMatch_withQueryableIndexOnRestricted(String indexName, QueryableIndex index)
+  void testProjectionNoMatch_withQueryableIndexOnRestricted(String indexName, QueryableIndex indexSpy)
   {
-    QueryableIndex indexSpy = Mockito.spy(index);
-    ReferenceCountedSegmentProvider segmentProvider = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
-        new QueryableIndexSegment(indexSpy, TestIndex.SEGMENT_ID));
+    ReferenceCountedSegmentProvider segmentProvider = segmentProvider(indexSpy);
     ArgumentCaptor<CursorBuildSpec> cursorCaptor = ArgumentCaptor.forClass(CursorBuildSpec.class);
     RestrictedDataSource restrictDataSource = RestrictedDataSource.create(
         new TableDataSource(TestIndex.DATA_SOURCE),
@@ -260,8 +262,8 @@ public class ProjectionsTest
     TopNQuery bestEffortProjectionQuery = queryBuilder.build();
     QUERY_RUNNER_KIT.run(segmentProvider, bestEffortProjectionQuery, indexName).toList();
     Mockito.verify(indexSpy, times(1)).getProjection(cursorCaptor.capture());
-    // No projection match, so it should return null
-    Assertions.assertNull(index.getProjection(cursorCaptor.getValue()));
+    // To the best efforct, could not find a projection match
+    Assertions.assertNull(indexSpy.getProjection(cursorCaptor.getValue()));
 
     TopNQuery forceProjectionquery = queryBuilder.context(FORCE_PROJECTION_CONTEXT).build();
     DruidException e = Assertions.assertThrows(
@@ -269,6 +271,18 @@ public class ProjectionsTest
         () -> QUERY_RUNNER_KIT.run(segmentProvider, forceProjectionquery, indexName).toList()
     );
     Assertions.assertEquals("Force projections specified, but none satisfy query", e.getMessage());
-    Mockito.verify(indexSpy, times(2)).getProjection(cursorCaptor.capture());
+  }
+
+  private static ReferenceCountedSegmentProvider segmentProvider(Object indexSpy)
+  {
+    final Segment segment;
+    if (indexSpy instanceof QueryableIndex) {
+      segment = new QueryableIndexSegment((QueryableIndex) indexSpy, TestIndex.SEGMENT_ID);
+    } else if (indexSpy instanceof IncrementalIndex) {
+      segment = new IncrementalIndexSegment((IncrementalIndex) indexSpy, TestIndex.SEGMENT_ID);
+    } else {
+      throw new AssertionError("unreachable");
+    }
+    return ReferenceCountedSegmentProvider.wrapRootGenerationSegment(segment);
   }
 }
