@@ -32,6 +32,12 @@ jobs:
       artifact_prefix: "unit-test-reports"
       key: "test-jdk17-[${{ matrix.pattern }}]"
 
+  validate-dist:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/validate-dist
+      key: "validate-dist"
+
   test-report:
     name: "test-report"
     needs: run-unit-tests
