@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -138,7 +139,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    Assert.assertEquals(TestIndex.FULL_ON_INTERVAL, buildSpec.getInterval());
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertEquals(
         ImmutableList.of(
@@ -182,7 +183,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    Assert.assertEquals(TestIndex.FULL_ON_INTERVAL, buildSpec.getInterval());
     Assert.assertEquals(
         Collections.singletonList(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
         buildSpec.getGroupingColumns()
