@@ -20,7 +20,6 @@
 package org.apache.druid.sql.guice;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -32,7 +31,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.SqlLifecycleManager;
@@ -172,7 +170,6 @@ public class SqlModule implements Module
         final ServiceEmitter emitter,
         final RequestLogger requestLogger,
         final QueryScheduler queryScheduler,
-        final Supplier<DefaultQueryConfig> defaultQueryConfig,
         final SqlLifecycleManager sqlLifecycleManager
     )
     {
@@ -182,7 +179,6 @@ public class SqlModule implements Module
           emitter,
           requestLogger,
           queryScheduler,
-          defaultQueryConfig.get(),
           sqlLifecycleManager
       );
     }

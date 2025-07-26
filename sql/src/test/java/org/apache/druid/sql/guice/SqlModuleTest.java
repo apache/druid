@@ -212,6 +212,7 @@ public class SqlModuleTest
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
               binder.bind(CentralizedDatasourceSchemaConfig.class)
                     .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
+              binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
             },
             sqlModule,
             new TestViewManagerModule()

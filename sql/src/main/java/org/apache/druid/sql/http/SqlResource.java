@@ -30,6 +30,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
@@ -72,6 +73,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +95,7 @@ public class SqlResource
   private final AuthorizerMapper authorizerMapper;
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
+  private final DefaultQueryConfig defaultQueryConfig;
   private final DruidNode selfNode;
   private final SqlLifecycleManager sqlLifecycleManager;
   private final SqlEngineRegistry sqlEngineRegistry;
@@ -105,8 +108,9 @@ public class SqlResource
       final ServerConfig serverConfig,
       final SqlLifecycleManager sqlLifecycleManager,
       final SqlEngineRegistry sqlEngineRegistry,
-      ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode
+      final ResponseContextConfig responseContextConfig,
+      final DefaultQueryConfig defaultQueryConfig,
+      @Self final DruidNode selfNode
   )
   {
     this.sqlEngineRegistry = Preconditions.checkNotNull(sqlEngineRegistry, "sqlEngineRegistry");
@@ -114,6 +118,7 @@ public class SqlResource
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
+    this.defaultQueryConfig = Preconditions.checkNotNull(defaultQueryConfig, "defaultQueryConfig");
     this.selfNode = selfNode;
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
   }
@@ -187,7 +192,7 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req);
+      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
       queryContext = new QueryContext(sqlQueryPlus.context()); // Redefine queryContext to include SET parameters
       final String engineName = queryContext.getEngine();
       final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
@@ -448,11 +453,23 @@ public class SqlResource
    * Create a {@link SqlQueryPlus}, which involves parsing the query from {@link SqlQuery#getQuery()} and
    * extracing any SET parameters into the query context.
    */
-  public static SqlQueryPlus makeSqlQueryPlus(final SqlQuery sqlQuery, final HttpServletRequest req)
+  public static SqlQueryPlus makeSqlQueryPlus(
+      final SqlQuery sqlQuery,
+      final HttpServletRequest req,
+      final DefaultQueryConfig defaultQueryConfig
+  )
   {
+    final Map<String, Object> queryContext;
+    if (!defaultQueryConfig.getContext().isEmpty()) {
+      queryContext = new HashMap<>(defaultQueryConfig.getContext());
+      queryContext.putAll(sqlQuery.getContext());
+    } else {
+      queryContext = sqlQuery.getContext();
+    }
+
     return SqlQueryPlus.builder()
                        .sql(sqlQuery.getQuery())
-                       .context(sqlQuery.getContext())
+                       .context(queryContext)
                        .parameters(sqlQuery.getParameterList())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))
                        .build();
