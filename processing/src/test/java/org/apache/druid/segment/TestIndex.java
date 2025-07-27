@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
@@ -675,11 +676,27 @@ public class TestIndex
     return indexSuppliers;
   }
 
+  public static ImmutableSet<String> notVectorizableIndex()
+  {
+    return ImmutableSet.of(
+        "rtIndex",
+        "rtPartialSchemaStringDiscoveryIndex",
+        "noRollupRtIndex",
+        "nonTimeOrderedRtIndex",
+        "nonTimeOrderedNoRollupRtIndex"
+    );
+  }
+
+  public static ImmutableSet<String> noProjectionIndex()
+  {
+    return ImmutableSet.of("rtPartialSchemaStringDiscoveryIndex");
+  }
+
   public static Map<String, Supplier<IncrementalIndex>> incrementalIndexSupplierMap(boolean includeNonTimeOrdered)
   {
     Map<String, Supplier<IncrementalIndex>> indexSuppliers = new HashMap<>(Map.of(
         "rtIndex", rtIndex,
-        "rtPartialSchemaStringDiscoveryIndex", rtIndex,
+        "rtPartialSchemaStringDiscoveryIndex", rtPartialSchemaStringDiscoveryIndex,
         "noRollupRtIndex", noRollupRtIndex
     ));
     if (includeNonTimeOrdered) {

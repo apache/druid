@@ -403,12 +403,15 @@ public class QueryRunnerTestHelper
    */
   public static boolean isTestRunnerVectorizable(QueryRunner runner)
   {
-    final String runnerName = runner.toString();
-    return !("rtIndex".equals(runnerName)
-             || "rtPartialSchemaStringDiscoveryIndex".equals(runnerName)
-             || "noRollupRtIndex".equals(runnerName)
-             || "nonTimeOrderedRtIndex".equals(runnerName)
-             || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
+    return !TestIndex.notVectorizableIndex().contains(runner.toString());
+  }
+
+  /**
+   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory, boolean)} has projection.
+   */
+  public static boolean testRunnerHasProjection(QueryRunner runner)
+  {
+    return !TestIndex.noProjectionIndex().contains(runner.toString());
   }
 
   /**

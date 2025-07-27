@@ -3399,6 +3399,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
+    Assume.assumeTrue(QueryRunnerTestHelper.testRunnerHasProjection(originalRunner));
 
     GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3434,6 +3435,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinalityNoData()
   {
+    Assume.assumeTrue(QueryRunnerTestHelper.testRunnerHasProjection(originalRunner));
 
     GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
