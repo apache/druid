@@ -405,7 +405,7 @@ public class QueryRunnerTestHelper
   {
     final String runnerName = runner.toString();
     return !("rtIndex".equals(runnerName)
-             || "rtIndexPartialSchemaStringDiscovery".equals(runnerName)
+             || "rtPartialSchemaStringDiscoveryIndex".equals(runnerName)
              || "noRollupRtIndex".equals(runnerName)
              || "nonTimeOrderedRtIndex".equals(runnerName)
              || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
