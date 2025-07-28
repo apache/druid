@@ -446,7 +446,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
                   .collect(Collectors.toList());
   }
 
-  private static RowKey getMetricKey(final DataSegment segment, DruidServerMetadata serverMetadata)
+  private static RowKey getMetricKey(final DataSegment segment, final DruidServerMetadata serverMetadata)
   {
     return RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
                  .with(Dimension.SERVER, serverMetadata.getName())

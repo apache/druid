@@ -31,6 +31,7 @@ public enum Dimension
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
   SERVER("server");
+
   private final String reportedName;
 
   Dimension(String name)
