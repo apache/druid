@@ -277,7 +277,7 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
 }
 
 export function formatNumberAbbreviated(n: NumberLike): string {
