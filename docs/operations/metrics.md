@@ -92,7 +92,6 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-
 |`serverview/segment/added`|Number of segments added to the broker|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
 |`serverview/segment/removed`|Number of segments removed from the broker|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
 
