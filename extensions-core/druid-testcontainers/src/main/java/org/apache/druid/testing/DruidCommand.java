@@ -32,7 +32,11 @@ public enum DruidCommand
    */
   COORDINATOR(
       "coordinator",
-      Map.of(),
+      Map.of(
+          "druid.coordinator.startDelay", "PT0.1S",
+          "druid.coordinator.period", "PT0.5S",
+          "druid.manager.segments.pollDuration", "PT0.1S"
+      ),
       8081
   ),
 
@@ -42,7 +46,14 @@ public enum DruidCommand
    */
   OVERLORD(
       "overlord",
-      Map.of(),
+      Map.of(
+          "druid.indexer.storage.type", "metadata",
+          "druid.indexer.queue.startDelay", "PT0S",
+          "druid.indexer.queue.restartDelay", "PT0S",
+          // Keep a small sync timeout so that Peons and Indexers are not stuck
+          // handling a change request when Overlord has already shutdown
+          "druid.indexer.runner.syncRequestTimeout", "PT1S"
+      ),
       8090
   ),
 
@@ -54,7 +65,13 @@ public enum DruidCommand
    */
   INDEXER(
       "indexer",
-      Map.of("druid.worker.capacity", "2"),
+      Map.of(
+          "druid.lookup.enableLookupSyncOnStartup", "false",
+          "druid.worker.capacity", "2",
+          "druid.processing.buffer.sizeBytes", "50MiB",
+          "druid.processing.numMergeBuffers", "2",
+          "druid.processing.numThreads", "5"
+      ),
       8091
   ),
 
@@ -67,7 +84,13 @@ public enum DruidCommand
    */
   MIDDLE_MANAGER(
       "middleManager",
-      Map.of("druid.worker.capacity", "2"),
+      Map.of(
+          "druid.lookup.enableLookupSyncOnStartup", "false",
+          "druid.worker.capacity", "2",
+          "druid.processing.buffer.sizeBytes", "50MiB",
+          "druid.processing.numMergeBuffers", "2",
+          "druid.processing.numThreads", "5"
+      ),
       8091, 8100, 8101
   ),
 
@@ -78,8 +101,10 @@ public enum DruidCommand
   HISTORICAL(
       "historical",
       Map.of(
-          "druid.segmentCache.locations",
-          "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"10M\"}]"
+          "druid.segmentCache.locations", "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"10M\"}]",
+          "druid.processing.buffer.sizeBytes", "10MiB",
+          "druid.processing.numMergeBuffers", "2",
+          "druid.processing.numThreads", "5"
       ),
       8083
   ),
@@ -90,7 +115,12 @@ public enum DruidCommand
    */
   BROKER(
       "broker",
-      Map.of(),
+      Map.of(
+          "druid.lookup.enableLookupSyncOnStartup", "false",
+          "druid.processing.buffer.sizeBytes", "50MiB",
+          "druid.processing.numMergeBuffers", "2",
+          "druid.processing.numThreads", "5"
+      ),
       8082
   ),
 

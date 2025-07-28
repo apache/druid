@@ -34,84 +34,28 @@ public final class DruidContainers
     // no instantiation
   }
 
-  /**
-   * Creates a new {@link DruidContainerResource} to run a Coordinator node.
-   */
   public static DruidContainerResource newCoordinator()
   {
-    return new DruidContainerResource(DruidCommand.COORDINATOR)
-        .addProperty("druid.coordinator.startDelay", "PT0.1S")
-        .addProperty("druid.coordinator.period", "PT0.5S")
-        .addProperty("druid.manager.segments.pollDuration", "PT0.1S");
+    return new DruidContainerResource(DruidCommand.COORDINATOR);
   }
 
-  /**
-   * Creates a new {@link DruidContainerResource} to run an Overlord node.
-   */
   public static DruidContainerResource newOverlord()
   {
-    // Keep a small sync timeout so that Peons and Indexers are not stuck
-    // handling a change request when Overlord has already shutdown
-    return new DruidContainerResource(DruidCommand.OVERLORD)
-        .addProperty("druid.indexer.storage.type", "metadata")
-        .addProperty("druid.indexer.queue.startDelay", "PT0S")
-        .addProperty("druid.indexer.queue.restartDelay", "PT0S")
-        .addProperty("druid.indexer.runner.syncRequestTimeout", "PT1S");
+    return new DruidContainerResource(DruidCommand.OVERLORD);
   }
 
-  /**
-   * Creates a new {@link DruidContainerResource} to run an Indexer node.
-   */
-  public static DruidContainerResource newIndexer()
-  {
-    return new DruidContainerResource(DruidCommand.INDEXER)
-        .addProperty("druid.lookup.enableLookupSyncOnStartup", "false")
-        .addProperty("druid.processing.buffer.sizeBytes", "50MiB")
-        .addProperty("druid.processing.numMergeBuffers", "2")
-        .addProperty("druid.processing.numThreads", "5");
-  }
-
-  /**
-   * Creates a new {@link DruidContainerResource} to run a MiddleManager node.
-   */
   public static DruidContainerResource newMiddleManager()
   {
-    return new DruidContainerResource(DruidCommand.MIDDLE_MANAGER)
-        .addProperty("druid.lookup.enableLookupSyncOnStartup", "false")
-        .addProperty("druid.processing.buffer.sizeBytes", "50MiB")
-        .addProperty("druid.processing.numMergeBuffers", "2")
-        .addProperty("druid.processing.numThreads", "5");
+    return new DruidContainerResource(DruidCommand.MIDDLE_MANAGER);
   }
 
-  /**
-   * Creates a new {@link DruidContainerResource} to run a Historical node.
-   */
   public static DruidContainerResource newHistorical()
   {
-    return new DruidContainerResource(DruidCommand.HISTORICAL)
-        .addProperty("druid.processing.buffer.sizeBytes", "10MiB")
-        .addProperty("druid.processing.numMergeBuffers", "2")
-        .addProperty("druid.processing.numThreads", "5");
+    return new DruidContainerResource(DruidCommand.HISTORICAL);
   }
 
-  /**
-   * Creates a new {@link DruidContainerResource} to run a Broker node.
-   */
   public static DruidContainerResource newBroker()
   {
-    return new DruidContainerResource(DruidCommand.BROKER)
-        .addProperty("druid.lookup.enableLookupSyncOnStartup", "false")
-        .addProperty("druid.processing.buffer.sizeBytes", "50MiB")
-        .addProperty("druid.processing.numMergeBuffers", "2")
-        .addProperty("druid.processing.numThreads", "5");
+    return new DruidContainerResource(DruidCommand.BROKER);
   }
-
-  /**
-   * Creates a new {@link DruidContainerResource} to run a Router node.
-   */
-  public static DruidContainerResource newRouter()
-  {
-    return new DruidContainerResource(DruidCommand.ROUTER);
-  }
-
 }

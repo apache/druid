@@ -88,7 +88,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private DockerImageName imageName;
   private EmbeddedDruidCluster cluster;
 
-  private String containerDirectory;
+  private File containerDirectory;
 
   private MountedDir indexerLogsDeepStorageDirectory;
   private MountedDir serviceLogsDirectory;
@@ -162,23 +162,25 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     // Mount directories used by the entire cluster (including embedded servers)
     this.segmentDeepStorageDirectory = new MountedDir(
-        "/tmp/druid/deep-store",
-        cluster.getTestFolder().getOrCreateFolder("deep-store").getAbsolutePath()
+        new File("/druid/deep-store"),
+        cluster.getTestFolder().getOrCreateFolder("deep-store")
     );
     this.indexerLogsDeepStorageDirectory = new MountedDir(
-        "/tmp/druid/indexer-logs",
-        cluster.getTestFolder().getOrCreateFolder("indexer-logs").getAbsolutePath()
+        new File("/druid/indexer-logs"),
+        cluster.getTestFolder().getOrCreateFolder("indexer-logs")
     );
 
     // Mount directories used by this container for easier debugging with service logs
-    this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name).getAbsolutePath();
+    this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
+
+    final File logDirectory = new File(containerDirectory, "log");
     this.serviceLogsDirectory = new MountedDir(
-        "/opt/druid/log",
-        containerDirectory + "/log"
+        new File("/opt/druid/log"),
+        logDirectory
     );
 
     // Create the log directory upfront to avoid permission issues
-    createLogDirectory(new File(containerDirectory, "log"));
+    createLogDirectory(logDirectory);
   }
 
   @Override
@@ -196,18 +198,18 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         .withCommonProperties(getCommonProperties())
         .withServiceProperties(getServerProperties())
         .withFileSystemBind(
-            segmentDeepStorageDirectory.hostPath,
-            segmentDeepStorageDirectory.containerPath,
+            segmentDeepStorageDirectory.hostFile.getAbsolutePath(),
+            segmentDeepStorageDirectory.containerFile.getAbsolutePath(),
             BindMode.READ_WRITE
         )
         .withFileSystemBind(
-            indexerLogsDeepStorageDirectory.hostPath,
-            indexerLogsDeepStorageDirectory.containerPath,
+            indexerLogsDeepStorageDirectory.hostFile.getAbsolutePath(),
+            indexerLogsDeepStorageDirectory.containerFile.getAbsolutePath(),
             BindMode.READ_WRITE
         )
         .withFileSystemBind(
-            serviceLogsDirectory.hostPath,
-            serviceLogsDirectory.containerPath,
+            serviceLogsDirectory.hostFile.getAbsolutePath(),
+            serviceLogsDirectory.containerFile.getAbsolutePath(),
             BindMode.READ_WRITE
         )
         .withEnv(
@@ -229,11 +231,6 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     return container;
   }
 
-  /**
-   * Writes the common properties to a file.
-   *
-   * @return Name of the file.
-   */
   private Properties getCommonProperties()
   {
     final Properties commonProperties = new Properties();
@@ -242,11 +239,11 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     commonProperties.setProperty(
         "druid.storage.storageDirectory",
-        segmentDeepStorageDirectory.containerPath
+        segmentDeepStorageDirectory.containerFile.getAbsolutePath()
     );
     commonProperties.setProperty(
         "druid.indexer.logs.directory",
-        indexerLogsDeepStorageDirectory.containerPath
+        indexerLogsDeepStorageDirectory.containerFile.getAbsolutePath()
     );
 
     log.info(
@@ -257,11 +254,6 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     return commonProperties;
   }
 
-  /**
-   * Writes the server properties to a file.
-   *
-   * @return Name of the file.
-   */
   private Properties getServerProperties()
   {
     FORBIDDEN_PROPERTIES.forEach(properties::remove);
@@ -298,13 +290,13 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
   private static class MountedDir
   {
-    final String hostPath;
-    final String containerPath;
+    final File hostFile;
+    final File containerFile;
 
-    MountedDir(String containerPath, String hostPath)
+    MountedDir(File containerFile, File hostFile)
     {
-      this.hostPath = hostPath;
-      this.containerPath = containerPath;
+      this.hostFile = hostFile;
+      this.containerFile = containerFile;
     }
   }
 }
