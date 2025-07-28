@@ -75,6 +75,8 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
 |`serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled. This metric can be used in conjunction with `serverview/sync/unstableTime` to debug slow startup of Brokers.|`server`, `tier`|1 for fully synced servers, 0 otherwise|
+|`serverview/segment/added`|Number of segments discovered and added by the Broker to its server view.|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
+|`serverview/segment/removed`|Number of segments removed by the Broker from its server view.|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`subquery/rows`|Number of rows materialized by the subquery's results. |`id`, `subqueryId`| Varies |
 |`subquery/bytes`|Number of bytes materialized by the subquery's results. This metric is only emitted if the query uses [byte-based subquery guardrails](https://druid.apache.org/docs/latest/configuration/#guardrails-for-materialization-of-subqueries) |`id`, `subqueryId` | Varies |
@@ -92,8 +94,6 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`serverview/segment/added`|Number of segments added to the broker|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
-|`serverview/segment/removed`|Number of segments removed from the broker|This metric is only available if the `BrokerSegmentStatsMonitor` module is included.|Varies|
 
 ### Historical
 
