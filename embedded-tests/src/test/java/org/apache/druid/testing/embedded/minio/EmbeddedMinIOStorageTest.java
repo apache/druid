@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.minio;
 
+import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.EmbeddedIndexTaskTest;
@@ -31,6 +32,9 @@ public class EmbeddedMinIOStorageTest extends EmbeddedIndexTaskTest
   @Override
   public EmbeddedDruidCluster createCluster()
   {
+    final EmbeddedBroker broker = new EmbeddedBroker()
+        .addProperty("druid.monitoring.monitors", "[\"org.apache.druid.server.metrics.BrokerSegmentStatsMonitor\"]")
+        .addProperty("druid.monitoring.emissionPeriod", "PT0.1s");
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .addResource(new MinIOStorageResource())

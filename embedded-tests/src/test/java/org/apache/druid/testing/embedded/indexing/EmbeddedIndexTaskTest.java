@@ -86,7 +86,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     broker.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/available/count")
+        event -> event.hasMetricName("serverview/segment/added")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(10)
     );
@@ -114,9 +114,9 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(10)
     );
     broker.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/available/count")
+        event -> event.hasMetricName("serverview/segment/added")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(10)
+        agg -> agg.hasSumAtLeast(30)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));

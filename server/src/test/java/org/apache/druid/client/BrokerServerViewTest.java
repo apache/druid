@@ -120,8 +120,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
-    Map<RowKey, Long> availableSegmentCount = brokerServerView.getAvailableSegmentCount();
-    for (Map.Entry<RowKey, Long> entry : availableSegmentCount.entrySet()) {
+    Map<RowKey, Long> segmentAddedCount = brokerServerView.getSegmentAddedCount();
+    for (Map.Entry<RowKey, Long> entry : segmentAddedCount.entrySet()) {
       Assert.assertEquals(
           RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
                 .with(Dimension.INTERVAL, segment.getInterval().toString())
@@ -159,7 +159,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         0,
         timeline.lookup(intervals).size()
     );
-    Assert.assertEquals(0, brokerServerView.getAvailableSegmentCount().size());
+    Assert.assertEquals(1L, brokerServerView.getSegmentRemovedCount().size());
     Assert.assertNull(timeline.findChunk(intervals, "v1", partition));
   }
 
@@ -210,7 +210,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             )
         )
     );
-    Map<RowKey, Long> availableSegmentCount = brokerServerView.getAvailableSegmentCount();
+    Map<RowKey, Long> availableSegmentCount = brokerServerView.getSegmentAddedCount();
     Map<RowKey, Long> expectedSegmentCount = new HashMap<>();
     for (DataSegment segment : segments) {
       expectedSegmentCount.put(

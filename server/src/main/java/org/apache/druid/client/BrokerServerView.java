@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -79,7 +80,12 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
-  private final ConcurrentHashMap<RowKey, Long> segmentAvailableCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, Long> totalSegmentAddCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, Long> totalSegmentRemoveCount = new ConcurrentHashMap<>();
+  @GuardedBy("totalSegmentAddCount")
+  private Map<RowKey, Long> previousSegmentAddCount = new HashMap<>();
+  @GuardedBy("totalSegmentRemoveCount")
+  private Map<RowKey, Long> previousSegmentRemoveCount = new HashMap<>();
 
   @Inject
   public BrokerServerView(
@@ -444,23 +450,48 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
                   .collect(Collectors.toList());
   }
 
-  @Override
-  public Map<RowKey, Long> getAvailableSegmentCount()
-  {
-    return segmentAvailableCount;
-  }
-
   private void incrementSegmentCount(RowKey key)
   {
-    segmentAvailableCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+    totalSegmentAddCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+  }
+
+  @Override
+  public Map<RowKey, Long> getSegmentAddedCount()
+  {
+    final ConcurrentHashMap<RowKey, Long> total = totalSegmentAddCount;
+    synchronized (totalSegmentAddCount) {
+      final Map<RowKey, Long> delta = getDeltaValues(total, previousSegmentAddCount);
+      previousSegmentAddCount = total;
+      return delta;
+    }
+  }
+
+  @Override
+  public Map<RowKey, Long> getSegmentRemovedCount()
+  {
+    final ConcurrentHashMap<RowKey, Long> total = totalSegmentRemoveCount;
+    synchronized (totalSegmentRemoveCount) {
+      final Map<RowKey, Long> delta = getDeltaValues(total, previousSegmentRemoveCount);
+      previousSegmentRemoveCount = total;
+      return delta;
+    }
   }
 
   private void decrementSegmentCount(RowKey key)
   {
-    segmentAvailableCount.computeIfPresent(key, (k, currentValue) -> {
-      long newValue = currentValue - 1;
-      return newValue > 0 ? newValue : null;
-    });
+    totalSegmentRemoveCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+  }
+
+  private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
+  {
+    final Map<RowKey, Long> deltaValues = new HashMap<>();
+    total.forEach(
+        (dataSource, totalCount) -> deltaValues.put(
+            dataSource,
+            totalCount - prev.getOrDefault(dataSource, 0L)
+        )
+    );
+    return deltaValues;
   }
 
   private static RowKey getMetricKey(final DataSegment segment)

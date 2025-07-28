@@ -46,7 +46,8 @@ public class BrokerSegmentStatsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emit(emitter, "segment/available/count", statsProvider.getAvailableSegmentCount());
+    emit(emitter, "serverview/segment/added", statsProvider.getSegmentAddedCount());
+    emit(emitter, "serverview/segment/removed", statsProvider.getSegmentRemovedCount());
     return true;
   }
 
