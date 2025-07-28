@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -69,7 +70,12 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
   protected EmbeddedDruidCluster createCluster()
   {
     overlord1.addProperty("druid.plaintextPort", "7090");
-    coordinator1.addProperty("druid.plaintextPort", "7081");
+
+    // Use incremental cache on coordinator1 so that we can wait for the
+    // segment count metric before querying sys.segments for the first time
+    coordinator1
+        .addProperty("druid.plaintextPort", "7081")
+        .addProperty("druid.manager.segments.useIncrementalCache", "always");
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
@@ -115,6 +121,11 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
         o -> o.runTask(taskId, EmbeddedClusterApis.createTaskFromPayload(taskId, taskPayload))
     );
     cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
+    coordinator1.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/metadataCache/used/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasValue(10)
+    );
 
     // Run sys queries, switch leaders, repeat
     ServerPair<EmbeddedOverlord> overlordPair = createServerPair(overlord1, overlord2);
