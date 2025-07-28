@@ -88,7 +88,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     broker.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("serverview/segment/added")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(10)
+        agg -> agg.hasCountAtLeast(10)
     );
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
@@ -116,7 +116,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     broker.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("serverview/segment/added")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(30)
+        agg -> agg.hasCountAtLeast(10)
     );
     Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
