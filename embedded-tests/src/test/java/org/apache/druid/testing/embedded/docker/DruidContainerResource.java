@@ -24,25 +24,20 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.DruidContainer;
+import org.apache.druid.testing.MountedDir;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.BindMode;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * {@link TestcontainerResource} to run Druid services.
@@ -82,9 +77,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private final String name;
   private final DruidCommand command;
   private final Map<String, String> properties = new HashMap<>();
-  private final List<Integer> taskPorts = new ArrayList<>();
 
-  private int servicePort;
   private DockerImageName imageName;
   private EmbeddedDruidCluster cluster;
 
@@ -102,32 +95,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         SERVER_ID.incrementAndGet()
     );
     this.command = command;
-
-    Integer[] exposedPorts = command.getExposedPorts();
-    servicePort = exposedPorts[0];
-    taskPorts.addAll(Arrays.asList(exposedPorts).subList(1, exposedPorts.length));
-  }
-
-  public DruidContainerResource withPort(int port)
-  {
-    this.servicePort = port;
-    return this;
-  }
-
-  /**
-   * Used to bind the task ports on middle managers.
-   */
-  public DruidContainerResource withTaskPorts(int startPort, int workerCapacity)
-  {
-    taskPorts.clear();
-    for (int i = 0; i < workerCapacity; ++i) {
-      taskPorts.add(startPort + i);
-    }
-    addProperty("druid.worker.capacity", String.valueOf(workerCapacity));
-    addProperty("druid.indexer.runner.startPort", String.valueOf(startPort));
-    addProperty("druid.indexer.runner.endPort", String.valueOf(startPort + workerCapacity));
-
-    return this;
+    addProperty("druid.host", EmbeddedDruidCluster.getDefaultHost());
   }
 
   public DruidContainerResource withImage(DockerImageName imageName)
@@ -174,10 +142,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
 
     final File logDirectory = new File(containerDirectory, "log");
-    this.serviceLogsDirectory = new MountedDir(
-        new File("/opt/druid/log"),
-        logDirectory
-    );
+    this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
 
     // Create the log directory upfront to avoid permission issues
     createLogDirectory(logDirectory);
@@ -186,52 +151,29 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   @Override
   protected DruidContainer createContainer()
   {
-    final List<Integer> exposedPorts = new ArrayList<>(taskPorts);
-    exposedPorts.add(servicePort);
-    log.info(
-        "Starting Druid container[%s] on port[%d] with mounted directory[%s] and exposed ports[%s].",
-        name, servicePort, containerDirectory, exposedPorts
-    );
-
     final DruidContainer container = new DruidContainer(command, imageName)
-        .withExposedPorts(exposedPorts.toArray(new Integer[0]))
-        .withCommonProperties(getCommonProperties())
-        .withServiceProperties(getServerProperties())
-        .withFileSystemBind(
-            segmentDeepStorageDirectory.hostFile.getAbsolutePath(),
-            segmentDeepStorageDirectory.containerFile.getAbsolutePath(),
-            BindMode.READ_WRITE
-        )
-        .withFileSystemBind(
-            indexerLogsDeepStorageDirectory.hostFile.getAbsolutePath(),
-            indexerLogsDeepStorageDirectory.containerFile.getAbsolutePath(),
-            BindMode.READ_WRITE
-        )
-        .withFileSystemBind(
-            serviceLogsDirectory.hostFile.getAbsolutePath(),
-            serviceLogsDirectory.containerFile.getAbsolutePath(),
-            BindMode.READ_WRITE
-        )
+        .withFileSystemBind(segmentDeepStorageDirectory)
+        .withFileSystemBind(indexerLogsDeepStorageDirectory)
+        .withFileSystemBind(serviceLogsDirectory)
         .withEnv(
             Map.of(
                 "DRUID_SET_HOST_IP", "0",
                 "DRUID_SET_HOST", "0"
             )
-        )
-        .waitingFor(Wait.forHttp("/status/health").forPort(servicePort));
+        );
 
-    // Bind the ports statically (rather than using a mapped port) to the same
-    // value used in `druid.plaintextPort` to make this node discoverable
-    // by other services (both embedded and dockerized).
-    List<String> portBindings = exposedPorts.stream().map(
-        port -> StringUtils.format("%d:%d", port, port)
-    ).collect(Collectors.toList());
-    container.setPortBindings(portBindings);
+    log.info(
+        "Starting Druid container[%s] with mounted directory[%s] and exposed ports[%s].",
+        name, containerDirectory, command.getExposedPorts()
+    );
+
+    setCommonProperties(container);
+    setServerProperties(container);
 
     return container;
   }
 
-  private Properties getCommonProperties()
+  private void setCommonProperties(DruidContainer container)
   {
     final Properties commonProperties = new Properties();
     commonProperties.putAll(cluster.getCommonProperties());
@@ -239,11 +181,11 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     commonProperties.setProperty(
         "druid.storage.storageDirectory",
-        segmentDeepStorageDirectory.containerFile.getAbsolutePath()
+        segmentDeepStorageDirectory.containerFile().getAbsolutePath()
     );
     commonProperties.setProperty(
         "druid.indexer.logs.directory",
-        indexerLogsDeepStorageDirectory.containerFile.getAbsolutePath()
+        indexerLogsDeepStorageDirectory.containerFile().getAbsolutePath()
     );
 
     log.info(
@@ -251,24 +193,20 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         name, commonProperties
     );
 
-    return commonProperties;
+    for (String key : commonProperties.stringPropertyNames()) {
+      container.withCommonProperty(key, commonProperties.getProperty(key));
+    }
   }
 
-  private Properties getServerProperties()
+  private void setServerProperties(DruidContainer container)
   {
     FORBIDDEN_PROPERTIES.forEach(properties::remove);
-    addProperty("druid.host", EmbeddedDruidCluster.getDefaultHost());
-    addProperty("druid.plaintextPort", String.valueOf(servicePort));
-
-    final Properties serverProperties = new Properties();
-    serverProperties.putAll(properties);
-
     log.info(
         "Writing runtime properties for Druid container[%s]: [%s]",
-        name, serverProperties
+        name, properties
     );
 
-    return serverProperties;
+    properties.forEach(container::withServiceProperty);
   }
 
   private static void createLogDirectory(File dir)
@@ -288,15 +226,4 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     return name;
   }
 
-  private static class MountedDir
-  {
-    final File hostFile;
-    final File containerFile;
-
-    MountedDir(File containerFile, File hostFile)
-    {
-      this.hostFile = hostFile;
-      this.containerFile = containerFile;
-    }
-  }
 }

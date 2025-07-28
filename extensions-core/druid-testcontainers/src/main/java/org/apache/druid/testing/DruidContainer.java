@@ -19,14 +19,20 @@
 
 package org.apache.druid.testing;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.shaded.com.google.common.base.Throwables;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Testcontainer for running Apache Druid services.
@@ -89,30 +95,56 @@ public class DruidContainer extends GenericContainer<DruidContainer>
     super(imageName);
 
     setCommand(command.getName());
-    withExposedPorts(command.getExposedPorts());
     withEnv("DRUID_CONFIG_COMMON", COMMON_PROPERTIES_PATH);
     withEnv("DRUID_CONFIG_" + command.getName(), SERVICE_PROPERTIES_PATH);
 
+    final Integer[] exposedPorts = command.getExposedPorts();
+    withExposedPorts(exposedPorts);
+
     serviceProperties.putAll(command.getDefaultProperties());
+
+    final int servicePort = exposedPorts[0];
+    serviceProperties.setProperty("druid.plaintextPort", String.valueOf(servicePort));
+    waitingFor(Wait.forHttp("/status/health").forPort(servicePort));
+
+    // Bind the ports statically (rather than using a mapped port) so that this
+    // Druid service is discoverable with the Druid service discovery
+    List<String> portBindings = Stream.of(exposedPorts).map(
+        port -> StringUtils.format("%d:%d", port, port)
+    ).collect(Collectors.toList());
+    setPortBindings(portBindings);
   }
 
   /**
-   * Sets the common properties to be used for the service running on this container.
+   * Binds the host path in the given {@link MountedDir} to the corresponding
+   * container path with read-write permissions.
+   */
+  public DruidContainer withFileSystemBind(MountedDir mountedDir)
+  {
+    return withFileSystemBind(
+        mountedDir.hostFile().getAbsolutePath(),
+        mountedDir.containerFile().getAbsolutePath(),
+        BindMode.READ_WRITE
+    );
+  }
+
+  /**
+   * Sets a common property to be used for the service running on this container.
    * The properties are written out to the file {@link #COMMON_PROPERTIES_PATH}.
    */
-  public DruidContainer withCommonProperties(Properties commonProperties)
+  public DruidContainer withCommonProperty(String key, String value)
   {
-    this.commonProperties.putAll(commonProperties);
+    commonProperties.setProperty(key, value);
     return this;
   }
 
   /**
-   * Sets the runtime properties to be used for the service running on this container.
+   * Sets a runtime property to be used for the service running on this container.
    * The properties are written out to the file {@link #SERVICE_PROPERTIES_PATH}.
    */
-  public DruidContainer withServiceProperties(Properties serviceProperties)
+  public DruidContainer withServiceProperty(String key, String value)
   {
-    this.serviceProperties.putAll(serviceProperties);
+    serviceProperties.setProperty(key, value);
     return this;
   }
 
