@@ -30,10 +30,7 @@ public enum Dimension
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
-  SERVER("server"),
-  INTERVAL("interval"),
-  VERSION("version");
-
+  SERVER("server");
   private final String reportedName;
 
   Dimension(String name)

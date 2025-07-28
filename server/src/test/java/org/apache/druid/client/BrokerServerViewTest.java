@@ -124,8 +124,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (Map.Entry<RowKey, Long> entry : segmentAddedCount.entrySet()) {
       Assert.assertEquals(
           RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
-                .with(Dimension.INTERVAL, segment.getInterval().toString())
-                .with(Dimension.VERSION, segment.getVersion())
+                .with(Dimension.DESCRIPTION, segment.getId().toString())
+                .with(Dimension.SERVER, druidServer.getName())
                 .build(),
           entry.getKey()
       );
@@ -212,15 +212,16 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
     Map<RowKey, Long> availableSegmentCount = brokerServerView.getSegmentAddedCount();
     Map<RowKey, Long> expectedSegmentCount = new HashMap<>();
-    for (DataSegment segment : segments) {
+    for (int i = 0; i < 5; ++i) {
       expectedSegmentCount.put(
-          RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
-                .with(Dimension.INTERVAL, segment.getInterval().toString())
-                .with(Dimension.VERSION, segment.getVersion())
+          RowKey.with(Dimension.DATASOURCE, segments.get(i).getDataSource())
+                .with(Dimension.DESCRIPTION, segments.get(i).getId().toString())
+                .with(Dimension.SERVER, druidServers.get(i).getName())
                 .build(),
           1L
       );
     }
+
     Assert.assertEquals(expectedSegmentCount, availableSegmentCount);
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")

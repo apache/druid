@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -56,6 +55,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -80,12 +80,8 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
-  private final ConcurrentHashMap<RowKey, Long> totalSegmentAddCount = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<RowKey, Long> totalSegmentRemoveCount = new ConcurrentHashMap<>();
-  @GuardedBy("totalSegmentAddCount")
-  private Map<RowKey, Long> previousSegmentAddCount = new HashMap<>();
-  @GuardedBy("totalSegmentRemoveCount")
-  private Map<RowKey, Long> previousSegmentRemoveCount = new HashMap<>();
+  private final LinkedBlockingQueue<RowKey> segmentAddEvents = new LinkedBlockingQueue<>();
+  private final LinkedBlockingQueue<RowKey> segmentRemoveEvents = new LinkedBlockingQueue<>();
 
   @Inject
   public BrokerServerView(
@@ -292,7 +288,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
 
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
-          incrementSegmentCount(getMetricKey(segment));
+          segmentAddEvents.add(getMetricKey(segment, server));
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -369,7 +365,7 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
               segment.getVersion()
           );
         } else {
-          decrementSegmentCount(getMetricKey(segment));
+          segmentRemoveEvents.add(getMetricKey(segment, server));
           runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
         }
       }
@@ -450,54 +446,30 @@ public class BrokerServerView implements TimelineServerView, BrokerSegmentStatsP
                   .collect(Collectors.toList());
   }
 
-  private void incrementSegmentCount(RowKey key)
+  private static RowKey getMetricKey(final DataSegment segment, DruidServerMetadata serverMetadata)
   {
-    totalSegmentAddCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+    return RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
+                 .with(Dimension.SERVER, serverMetadata.getName())
+                 .and(Dimension.DESCRIPTION, segment.getId().toString());
   }
 
   @Override
   public Map<RowKey, Long> getSegmentAddedCount()
   {
-    final ConcurrentHashMap<RowKey, Long> total = totalSegmentAddCount;
-    synchronized (totalSegmentAddCount) {
-      final Map<RowKey, Long> delta = getDeltaValues(total, previousSegmentAddCount);
-      previousSegmentAddCount = total;
-      return delta;
-    }
+    return drainAndCollectEvents(segmentAddEvents);
   }
 
   @Override
   public Map<RowKey, Long> getSegmentRemovedCount()
   {
-    final ConcurrentHashMap<RowKey, Long> total = totalSegmentRemoveCount;
-    synchronized (totalSegmentRemoveCount) {
-      final Map<RowKey, Long> delta = getDeltaValues(total, previousSegmentRemoveCount);
-      previousSegmentRemoveCount = total;
-      return delta;
-    }
+    return drainAndCollectEvents(segmentRemoveEvents);
   }
 
-  private void decrementSegmentCount(RowKey key)
+  private Map<RowKey, Long> drainAndCollectEvents(LinkedBlockingQueue<RowKey> eventQueue)
   {
-    totalSegmentRemoveCount.compute(key, (k, currentValue) -> currentValue == null ? 1 : currentValue + 1);
+    final List<RowKey> currentEvents = new ArrayList<>();
+    eventQueue.drainTo(currentEvents);
+    return currentEvents.stream().collect(Collectors.groupingBy(e -> e, Collectors.counting()));
   }
 
-  private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
-  {
-    final Map<RowKey, Long> deltaValues = new HashMap<>();
-    total.forEach(
-        (dataSource, totalCount) -> deltaValues.put(
-            dataSource,
-            totalCount - prev.getOrDefault(dataSource, 0L)
-        )
-    );
-    return deltaValues;
-  }
-
-  private static RowKey getMetricKey(final DataSegment segment)
-  {
-    return RowKey.with(Dimension.DATASOURCE, segment.getDataSource())
-                 .with(Dimension.INTERVAL, String.valueOf(segment.getInterval()))
-                 .and(Dimension.VERSION, segment.getVersion());
-  }
 }

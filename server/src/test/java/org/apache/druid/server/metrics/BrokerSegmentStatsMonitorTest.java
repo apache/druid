@@ -30,12 +30,12 @@ import java.util.Map;
 public class BrokerSegmentStatsMonitorTest
 {
   private static final RowKey SEGMENT_METRIC_KEY1 = RowKey.with(Dimension.DATASOURCE, "dataSource1")
-                                                          .with(Dimension.VERSION, "2024-01-01T00:00:00.000Z")
-                                                          .with(Dimension.INTERVAL, "2024-01-01T00:00:00.000Z/2024-01-02T00:00:00.000Z")
+                                                          .with(Dimension.DESCRIPTION, "someSegmentID1")
+                                                          .with(Dimension.SERVER, "serverName1")
                                                           .build();
   private static final RowKey SEGMENT_METRIC_KEY2 = RowKey.with(Dimension.DATASOURCE, "dataSource2")
-                                                          .with(Dimension.VERSION, "2024-01-02T00:00:00.000Z")
-                                                          .with(Dimension.INTERVAL, "2024-01-02T00:00:00.000Z/2024-01-03T00:00:00.000Z")
+                                                          .with(Dimension.DESCRIPTION, "someSegmentID2")
+                                                          .with(Dimension.SERVER, "serverName2")
                                                           .build();
 
   @Test
@@ -61,9 +61,9 @@ public class BrokerSegmentStatsMonitorTest
 
     Assert.assertEquals(3, emitter.getNumEmittedEvents());
 
-    emitter.verifyValue("serverview/segment/added", Map.of("dataSource", "dataSource1", "version", "2024-01-01T00:00:00.000Z", "interval", "2024-01-01T00:00:00.000Z/2024-01-02T00:00:00.000Z"), 10L);
-    emitter.verifyValue("serverview/segment/added", Map.of("dataSource", "dataSource2", "version", "2024-01-02T00:00:00.000Z", "interval", "2024-01-02T00:00:00.000Z/2024-01-03T00:00:00.000Z"), 5L);
-    emitter.verifyValue("serverview/segment/removed", Map.of("dataSource", "dataSource1", "version", "2024-01-01T00:00:00.000Z", "interval", "2024-01-01T00:00:00.000Z/2024-01-02T00:00:00.000Z"), 1L);
+    emitter.verifyValue("serverview/segment/added", Map.of("dataSource", "dataSource1", "description", "someSegmentID1", "server", "serverName1"), 10L);
+    emitter.verifyValue("serverview/segment/added", Map.of("dataSource", "dataSource2", "description", "someSegmentID2", "server", "serverName2"), 5L);
+    emitter.verifyValue("serverview/segment/removed", Map.of("dataSource", "dataSource1", "description", "someSegmentID1", "server", "serverName1"), 1L);
   }
 
   @Test

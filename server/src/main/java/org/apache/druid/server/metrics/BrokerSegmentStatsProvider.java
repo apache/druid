@@ -26,12 +26,12 @@ import java.util.Map;
 public interface BrokerSegmentStatsProvider
 {
   /**
-   * Return the number of segments recently added by a Broker for a datasource, interval and version.
+   * Return the number of segments recently added by a Broker for a datasource, service and description.
    */
   Map<RowKey, Long> getSegmentAddedCount();
 
   /**
-   * Return the number of segments recently dropped by a Broker for a datasource, interval and version.
+   * Return the number of segments recently dropped by a Broker for a datasource, service and description.
    */
   Map<RowKey, Long> getSegmentRemovedCount();
 }
