@@ -3,7 +3,7 @@ id: set-query-context
 title: "Set query context"
 sidebar_label: "Set query context"
 description: 
-  "This document configure and apply query context in Apache Druid 
+  "Learn how to configure the query context
   to customize query execution behavior and optimize performance."
 ---
 
@@ -52,7 +52,7 @@ The following steps show you how to set the query context using the web console:
 
    ![Query view](../assets/set-query-context-query-view.png)
 
-1. **Click** the **Engine** selector next to the **Run** button to choose the appropriate query type. Unless otherwise instructed, you can leave the engine as `Auto` to let Druid choose the best engine for you.
+1. Click the **Engine** selector next to the **Run** button to choose the appropriate query type. In most cases, you can leave the engine as `Auto` to let Druid choose the best engine for you.
 
    ![Engine selection](../assets/set-query-context-select-engine.png)
 
@@ -60,11 +60,11 @@ The following steps show you how to set the query context using the web console:
 
    ![Adding query](../assets/set-query-context-insert-query.png)
 
-3. Select **Edit query context** button in the **Select language and engine** menu.
+3. In the menu for the engine selector, click **Edit query context**.
 
    ![Opening context dialog](../assets/set-query-context-open-context-dialog.png)
 
-4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs and then click **Save**. For example,you can insert the following context parameters:
+4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs and then click **Save**. For example, you can insert the following context parameters:
 
    ```json
    {
@@ -73,7 +73,7 @@ The following steps show you how to set the query context using the web console:
    }
    ```
 
-   The web console validates the JSON object containing the query context parameters and highlights any syntax errors before you click **Run** the query.
+   The web console validates the JSON object containing the query context parameters and highlights any syntax errors.
 
    ![Setting the context parameters](../assets/set-query-context-set-context-parameters.png)
 
@@ -82,10 +82,11 @@ The following steps show you how to set the query context using the web console:
    ![Running the query](../assets/set-query-context-run-the-query.png)
 
 
-For more information about using the web console Query view, see [Query view](../operations/web-console.md#query).
+For more information about the Query view in the web console, see [Query](../operations/web-console.md#query).
 
 ## Druid SQL
-When using Druid SQL programmatically—such as in applications, automated scripts, or database tools—you can set query context through various methods depending on how your queries are executed. 
+
+When using Druid SQL programmatically—such as in applications, automated scripts, or database tools—you can set the query context through various methods depending on how you submit your queries.
 
 ### HTTP API
 
@@ -120,7 +121,9 @@ You can set multiple context parameters in a single request:
 
 ### JDBC driver API
 
-You can connect to Druid over JDBC and issue Druid SQL queries using this [Druid SQL JDBC driver API](../api-reference/sql-jdbc.md). When connecting to Druid through JDBC, you set query context parameters a JDBC connection properties object. This approach is useful when integrating Druid with BI tools or Java applications.
+You can connect to Druid over JDBC and issue Druid SQL queries using this [Druid SQL JDBC driver API](../api-reference/sql-jdbc.md).
+This approach is useful when integrating Druid with BI tools or Java applications.
+When connecting to Druid through JDBC, you set query context parameters a JDBC connection properties object.
 
 For example, you can set query context parameters when creating your JDBC connection:
 
@@ -188,7 +191,7 @@ You cannot use SET statements in JDBC connections.
 
 For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [Web Console](./set-query-context.md#web-console).
 
-The following example shows a native query that sets the given query id through context parameters from dataset `wikipedia`:
+The following example shows a native query that sets the query ID to `only_query_id_test`:
 
 ```json
 {
@@ -218,7 +221,7 @@ For more information about native queries, see [Native queries](querying.md).
 
 ## Query Context Precedence
 
-When you set query context parameters in Druid, Druid determines which values to use based on the following order of precedence, from lowest to highest:
+You can set the query context using various methods. For a given parameter, Druid determines the value to use based on the following order of precedence, from lowest to highest:
 
 1. **Built-in hard-coded defaults** — these are the system’s default values used if you don’t specify anything else.
 2. **Runtime properties** — if you configure parameters as `druid.query.default.context.{property_key}` in Druid’s configuration files, these override the built-in defaults and act as your system-wide defaults.  For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
@@ -226,12 +229,15 @@ When you set query context parameters in Druid, Druid determines which values to
 3. **Context parameters you set in your query** — whether in the JSON `context` object or included directly in your queries, these override both the built-in defaults and the runtime properties.
 4. **SET statements** — when using SET, any parameters you set with `SET key = value;` commands take the highest precedence and override all other settings.
 
-This also means that higher precedence values overwrite lower ones. For example, if you set a parameter both in the runtime properties and in your query, Druid will use the value you set in the query.
+For example, if you set a parameter both in the runtime properties and in your query, Druid will use the value you set in the query.
 
-So if you don’t set a parameter anywhere, Druid uses the built-in default. If you set it as a runtime property, that overrides the built-in default. But if you explicitly set the parameter in your query or with a SET statement, that value overrides all others.
+If you don’t set a parameter anywhere, Druid uses the built-in default. If you set it as a runtime property, that overrides the built-in default. If you explicitly set the parameter in your query, that value overrides all others.
 
 
 ## Learn more
+
+For more information, see the following topics:
+
 - [Query context reference](query-context-reference.md) for available query context parameters.
 - [SQL query context](sql-query-context.md) for SQL-specific context parameters.
 - [Multi-stage query context](../multi-stage-query/reference.md#context-parameters) for context parameters specific to SQL-based ingestion.
