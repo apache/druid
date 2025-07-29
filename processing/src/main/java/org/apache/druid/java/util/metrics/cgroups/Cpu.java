@@ -77,7 +77,7 @@ public class Cpu
       }
     }
     catch (IOException | RuntimeException ex) {
-      LOG.noStackTrace().error(ex, "Unable to fetch cpu snapshot");
+      LOG.noStackTrace().warn(ex, "Unable to fetch CPU snapshot. Cgroup metrics will not be emitted.");
     }
 
 
