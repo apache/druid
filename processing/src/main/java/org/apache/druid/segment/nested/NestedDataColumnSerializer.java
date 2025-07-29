@@ -184,14 +184,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   }
 
   @Override
-  public void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup)
-  {
-    this.globalDictionaryIdLookup = dictionaryIdLookup;
-    this.writeDictionary = false;
-    this.dictionarySerialized = true;
-  }
-
-  @Override
   public boolean hasNulls()
   {
     return !nullRowsBitmap.isEmpty();
@@ -489,8 +481,18 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     log.info("Column [%s] serialized successfully with [%d] nested columns.", name, fields.size());
   }
 
+  @Override
+  public void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup)
+  {
+    this.globalDictionaryIdLookup = dictionaryIdLookup;
+    this.writeDictionary = false;
+    this.dictionarySerialized = true;
+  }
+
   public void setFieldsAndOpenWriters(NestedDataColumnSerializer serializer) throws IOException
   {
+    // this is almost the same loop as serializeFields, but doesn't serialize the fields since we are re-using the
+    // base fields list from the parent column
     fields = serializer.fields;
     this.fieldWriters = Maps.newHashMapWithExpectedSize(fields.size());
     int ctr = 0;
@@ -547,6 +549,5 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       writer.open();
       fieldWriters.put(fieldName, writer);
     }
-
   }
 }
