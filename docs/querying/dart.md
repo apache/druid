@@ -88,11 +88,7 @@ Dart uses the SQL endpoint `/druid/v2/sql`. To use Dart, include the query conte
   </TabItem>
   </Tabs>
 
-  ### Get the query status
-
-  ### Cancel a query
-
-  
+Dart supports many of the same [query context parameters as the MSQ task engine](../multi-stage-query/reference.md#context-parameters).
 
   ## Known issues and limitations
 
