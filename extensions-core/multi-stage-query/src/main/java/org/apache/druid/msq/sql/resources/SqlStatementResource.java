@@ -68,6 +68,7 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -133,7 +134,7 @@ public class SqlStatementResource
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
-
+  private final DefaultQueryConfig defaultQueryConfig;
 
   @Inject
   public SqlStatementResource(
@@ -141,7 +142,8 @@ public class SqlStatementResource
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -149,6 +151,7 @@ public class SqlStatementResource
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
   }
 
   /**
@@ -186,9 +189,9 @@ public class SqlStatementResource
 
     try {
       sqlQuery = createModifiedSqlQuery(sqlQuery);
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
       queryContext = QueryContext.of(sqlQueryPlus.context());
-      stmt = msqSqlStatementFactory.httpStatement(SqlResource.makeSqlQueryPlus(sqlQuery, req), req);
+      stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {
       return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());

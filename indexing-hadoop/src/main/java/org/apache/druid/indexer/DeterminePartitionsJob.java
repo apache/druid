@@ -414,7 +414,10 @@ public class DeterminePartitionsJob implements Jobby
     {
       final List<Object> timeAndDims = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(key.getBytes(), List.class);
 
-      final DateTime timestamp = new DateTime(timeAndDims.get(0), ISOChronology.getInstanceUTC());
+      final Object timestampObj = timeAndDims.get(0);
+      final long longTimestamp = ((Number) timestampObj).longValue();
+      final DateTime timestamp = new DateTime(longTimestamp, ISOChronology.getInstanceUTC());
+
       final Map<String, Iterable<String>> dims = (Map<String, Iterable<String>>) timeAndDims.get(1);
 
       helper.emitDimValueCounts(context, timestamp, dims);

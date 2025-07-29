@@ -38,6 +38,7 @@ export default [
     rules: {
       'notice/notice': [2, { mustMatch: 'Licensed to the Apache Software Foundation \\(ASF\\).+' }],
       'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
+      '@typescript-eslint/switch-exhaustiveness-check': [0], // ToDo: `considerDefaultExhaustiveForUnions: true` should be set upstream on awesome-code-style, then this rule can be re-enabled
     },
   },
   {

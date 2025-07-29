@@ -285,7 +285,6 @@ public class SqlResourceTest extends CalciteTestBase
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        defaultQueryConfig,
         lifecycleManager
     );
     sqlStatementFactory = new SqlStatementFactory(null)
@@ -331,6 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
   }
@@ -571,6 +571,46 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", "1999-12-31T16:00:00.000-08:00", "t2", "1999-12-31T00:00:00.000-08:00")
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponseLosAngelesTimeZone_setViaDefaultQueryConfig() throws Exception
+  {
+    // Create a new SqlResource with a DefaultQueryConfig that sets sqlTimeZone
+    final DefaultQueryConfig queryConfigWithTimezone = new DefaultQueryConfig(
+        ImmutableMap.of("sqlTimeZone", "America/Los_Angeles")
+    );
+
+    // We need to create a new SqlResource instance with our custom DefaultQueryConfig
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        queryConfigWithTimezone,
+        DUMMY_DRUID_NODE
+    );
+
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            null,
             null
         )
     ).rhs;
@@ -1668,6 +1708,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
 
