@@ -130,7 +130,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
@@ -146,7 +147,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     ) {
       @Override
       protected State getState()
@@ -169,7 +171,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     ) {
       @Override
       protected State getState()
@@ -192,7 +195,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     ) {
       @Override
       protected State getState()
@@ -215,7 +219,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
@@ -230,7 +235,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        true
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
