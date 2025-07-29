@@ -20,10 +20,7 @@
 package org.apache.druid.testing.embedded.compact;
 
 import org.apache.druid.indexing.common.task.TaskBuilder;
-import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -31,16 +28,12 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.Closeable;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 {
@@ -66,9 +59,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
    */
   protected Closeable unloader(String dataSource)
   {
-    return () -> {
-      overlord.bindings().segmentsMetadataStorage().markAllSegmentsAsUnused(dataSource);
-    };
+    return cluster.callApi().createUnloader(dataSource);
   }
 
   /**
@@ -78,17 +69,15 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
    */
   protected String runTask(TaskBuilder<?, ?, ?> taskBuilder, String dataSource)
   {
-    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, taskBuilder.dataSource(dataSource).withId(taskId))
+    return cluster.callApi().runTask(
+        (ds, taskId) -> taskBuilder.dataSource(ds).withId(taskId),
+        dataSource,
+        overlord,
+        coordinator
     );
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
-
-    return taskId;
   }
 
-  protected void checkCompactionIntervals(List<String> expectedIntervals)
+  protected void verifySegmentIntervals(List<Interval> expectedIntervals)
   {
     Assertions.assertEquals(
         Set.copyOf(expectedIntervals),
@@ -96,39 +85,13 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
     );
   }
 
-  protected Set<DataSegment> getFullSegmentsMetadata(String dataSource)
+  protected List<Interval> getSegmentIntervals(String dataSource)
   {
-    return overlord
-        .bindings()
-        .segmentsMetadataStorage()
-        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE);
-  }
-
-  protected List<String> getSegmentIntervals(String dataSource)
-  {
-    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
-    final Set<Interval> sortedIntervals = new TreeSet<>(comparator);
-
-    final Set<DataSegment> allUsedSegments = getFullSegmentsMetadata(dataSource);
-    for (DataSegment segment : allUsedSegments) {
-      sortedIntervals.add(segment.getInterval());
-    }
-
-    return sortedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
+    return cluster.callApi().getSortedSegmentIntervals(dataSource, overlord);
   }
 
   protected void verifySegmentsCount(int numExpectedSegments)
   {
-    int segmentCount = getFullSegmentsMetadata(dataSource).size();
-    Assertions.assertEquals(numExpectedSegments, segmentCount, "Segment count mismatch");
-    Assertions.assertEquals(
-        String.valueOf(segmentCount),
-        cluster.runSql(
-            "SELECT COUNT(*) FROM sys.segments"
-            + " WHERE datasource='%s' AND is_overshadowed = 0 AND is_available = 1",
-            dataSource
-        ),
-        "Segment count mismatch in sys table"
-    );
+    cluster.callApi().verifyNumVisibleSegmentsIs(numExpectedSegments, dataSource, overlord);
   }
 }

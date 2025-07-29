@@ -41,13 +41,14 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ import java.util.stream.Collectors;
 
 public class CompactionTaskTest extends CompactionTestBase
 {
-  private static final Supplier<TaskBuilder.Index> INDEX_TASK = Resources.Task.BASIC_INDEX;
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK = MoreResources.Task.BASIC_INDEX;
 
   private static final List<Pair<String, String>> INDEX_QUERIES_RESOURCE = List.of(
       Pair.of(Resources.Query.SELECT_MIN_MAX_TIME, "2013-08-31T01:02:33.000Z,2013-09-01T12:41:27.000Z"),
@@ -103,7 +104,7 @@ public class CompactionTaskTest extends CompactionTestBase
           .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), true);
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_TIMESTAMP =
-      () -> Resources.Task.BASIC_INDEX.get().dimensions(
+      () -> MoreResources.Task.BASIC_INDEX.get().dimensions(
           "page",
           "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
           "namespace", "continent", "country", "region", "city", "timestamp"
@@ -160,8 +161,7 @@ public class CompactionTaskTest extends CompactionTestBase
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       runQueries(INDEX_QUERIES_RESOURCE);
@@ -174,7 +174,7 @@ public class CompactionTaskTest extends CompactionTestBase
       checkNumberOfSegments(2);
       runQueries(INDEX_QUERIES_HOUR_RESOURCE);
       verifySegmentsHaveQueryGranularity("HOUR", 2);
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
+      verifySegmentIntervals(expectedIntervalAfterCompaction);
 
       // QueryGranularity was HOUR, now we will change it to MINUTE (QueryGranularity changed to finer)
       compactData(COMPACTION_TASK_ALLOW_NON_ALIGNED.get(), null, Granularities.MINUTE);
@@ -186,7 +186,7 @@ public class CompactionTaskTest extends CompactionTestBase
       checkNumberOfSegments(2);
       runQueries(INDEX_QUERIES_HOUR_RESOURCE);
       verifySegmentsHaveQueryGranularity("MINUTE", 2);
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
+      verifySegmentIntervals(expectedIntervalAfterCompaction);
     }
   }
 
@@ -197,8 +197,7 @@ public class CompactionTaskTest extends CompactionTestBase
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       runQueries(INDEX_QUERIES_RESOURCE);
@@ -209,8 +208,7 @@ public class CompactionTaskTest extends CompactionTestBase
       runQueries(INDEX_QUERIES_RESOURCE);
       verifySegmentsHaveQueryGranularity("SECOND", 2);
 
-
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
+      verifySegmentIntervals(expectedIntervalAfterCompaction);
 
       Map<String, TaskReport> reports = cluster.callApi().onLeaderOverlord(o -> o.taskReportAsMap(taskId));
       Assertions.assertTrue(reports != null && !reports.isEmpty());
@@ -241,8 +239,7 @@ public class CompactionTaskTest extends CompactionTestBase
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       runQueries(INDEX_QUERIES_RESOURCE);
@@ -253,14 +250,11 @@ public class CompactionTaskTest extends CompactionTestBase
       runQueries(INDEX_QUERIES_YEAR_RESOURCE);
       verifySegmentsHaveQueryGranularity("YEAR", 1);
 
-      List<String> newIntervals = new ArrayList<>();
-      for (String interval : expectedIntervalAfterCompaction) {
-        for (Interval newinterval : Granularities.YEAR.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
-          newIntervals.add(newinterval.toString());
-        }
-      }
-      expectedIntervalAfterCompaction = newIntervals;
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
+      expectedIntervalAfterCompaction = EmbeddedClusterApis.createAlignedIntervals(
+          expectedIntervalAfterCompaction,
+          Granularities.YEAR
+      );
+      verifySegmentIntervals(expectedIntervalAfterCompaction);
     }
   }
 
@@ -280,8 +274,7 @@ public class CompactionTaskTest extends CompactionTestBase
       runTask(indexTask, fullDatasourceName);
       // 4 segments across 2 days
       checkNumberOfSegments(4);
-      List<String> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
-      expectedIntervalAfterCompaction.sort(null);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       runQueries(INDEX_QUERIES_RESOURCE);
@@ -294,15 +287,12 @@ public class CompactionTaskTest extends CompactionTestBase
       verifySegmentsHaveQueryGranularity("SECOND", 2);
 
       if (newSegmentGranularity != null) {
-        List<String> newIntervals = new ArrayList<>();
-        for (String interval : expectedIntervalAfterCompaction) {
-          for (Interval newinterval : newSegmentGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
-            newIntervals.add(newinterval.toString());
-          }
-        }
-        expectedIntervalAfterCompaction = newIntervals;
+        expectedIntervalAfterCompaction = EmbeddedClusterApis.createAlignedIntervals(
+            expectedIntervalAfterCompaction,
+            newSegmentGranularity
+        );
       }
-      checkCompactionIntervals(expectedIntervalAfterCompaction);
+      verifySegmentIntervals(expectedIntervalAfterCompaction);
     }
   }
 

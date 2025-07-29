@@ -19,15 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.indexing.common.task.TaskBuilder;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
-
-import java.util.function.Supplier;
-
 /**
  * Constants and utility methods used in embedded cluster tests.
  */
@@ -102,39 +93,5 @@ public class Resources
         + " WHERE \"language\" = 'zh' AND __time < '2013-09-01'"
         + " GROUP BY 1"
         + " HAVING added_times_ten > 9000";
-  }
-
-  /**
-   * Task payload builders.
-   */
-  public static class Task
-  {
-    public static final Supplier<TaskBuilder.Index> BASIC_INDEX =
-        () -> TaskBuilder
-            .ofTypeIndex()
-            .jsonInputFormat()
-            .localInputSourceWithFiles(
-                DataFile.TINY_WIKI_1_JSON,
-                DataFile.TINY_WIKI_2_JSON,
-                DataFile.TINY_WIKI_3_JSON
-            )
-            .timestampColumn("timestamp")
-            .dimensions(
-                "page",
-                "language", "tags", "user", "unpatrolled", "newPage", "robot",
-                "anonymous", "namespace", "continent", "country", "region", "city"
-            )
-            .metricAggregates(
-                new CountAggregatorFactory("ingested_events"),
-                new DoubleSumAggregatorFactory("added", "added"),
-                new DoubleSumAggregatorFactory("deleted", "deleted"),
-                new DoubleSumAggregatorFactory("delta", "delta"),
-                new SketchMergeAggregatorFactory("thetaSketch", "user", null, null, null, null),
-                new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", null, null, null, null, true),
-                new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", null)
-            )
-            .dynamicPartitionWithMaxRows(3)
-            .granularitySpec("DAY", "SECOND", true)
-            .appendToExisting(false);
   }
 }

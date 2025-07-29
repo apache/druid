@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Simulation tests for batch {@link IndexTask} using inline datasources.
+ * Embedded tests for batch {@link IndexTask} using inline datasources.
  */
 public class IndexTaskTest extends EmbeddedClusterTestBase
 {

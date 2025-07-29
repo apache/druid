@@ -64,7 +64,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Simulation test to emit cluster metrics using a {@link KafkaEmitter} and then
+ * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
  * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
 @SuppressWarnings("resource")
