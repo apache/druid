@@ -445,14 +445,16 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
       }
     } else {
-      serializer = new NestedDataColumnSerializer(
+      NestedDataColumnSerializer nestedSerializer = new NestedDataColumnSerializer(
           outputName,
           indexSpec,
           segmentWriteOutMedium,
           closer
       );
+      nestedSerializer.setDictionaryIdLookup(autoParent.getIdLookup());
+      nestedSerializer.setFieldsAndOpenWriters((NestedDataColumnSerializer) autoParent.serializer);
+      serializer = nestedSerializer;
     }
-
     serializer.setDictionaryIdLookup(autoParent.getIdLookup());
     serializer.open();
   }
