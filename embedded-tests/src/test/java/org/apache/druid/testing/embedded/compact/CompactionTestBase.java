@@ -64,11 +64,9 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   }
 
   /**
-   * Creates a Task using the given builder and runs it.
-   *
-   * @return ID of the task.
+   * Creates and runs a task for the current {@link #dataSource}.
    */
-  protected String runTask(TaskBuilder<?, ?, ?> taskBuilder, String dataSource)
+  protected String runTask(TaskBuilder<?, ?, ?> taskBuilder)
   {
     return cluster.callApi().runTask(
         (ds, taskId) -> taskBuilder.dataSource(ds).withId(taskId),
@@ -82,11 +80,11 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   {
     Assertions.assertEquals(
         Set.copyOf(expectedIntervals),
-        Set.copyOf(getSegmentIntervals(dataSource))
+        Set.copyOf(getSegmentIntervals())
     );
   }
 
-  protected List<Interval> getSegmentIntervals(String dataSource)
+  protected List<Interval> getSegmentIntervals()
   {
     return cluster.callApi().getSortedSegmentIntervals(dataSource, overlord);
   }
@@ -98,9 +96,6 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 
   protected void verifyQuery(List<Pair<String, String>> queries)
   {
-    if (queries == null) {
-      return;
-    }
     queries.forEach(
         pair -> cluster.callApi().verifySqlQuery(pair.lhs, dataSource, pair.rhs)
     );

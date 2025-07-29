@@ -38,7 +38,6 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -48,6 +47,10 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The methods in this class should eventually be updated to use
+ * {@code CoordinatorClient} or {@code OverlordClient} as applicable.
+ */
 public class CompactionResourceTestClient
 {
   private static final Logger log = new Logger(CompactionResourceTestClient.class);
@@ -137,27 +140,6 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-  }
-
-  /**
-   * For all purposes, use the new APIs {@link #getClusterConfig()} or
-   * {@link #getAllCompactionConfigs()}.
-   */
-  @Deprecated
-  public DruidCompactionConfig getCoordinatorCompactionConfig() throws Exception
-  {
-    String url = StringUtils.format("%sconfig/compaction", getCoordinatorURL());
-    StatusResponseHolder response = httpClient().go(
-        new Request(HttpMethod.GET, new URL(url)), responseHandler
-    ).get();
-    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE(
-          "Error while getting compaction config status[%s] content[%s]",
-          response.getStatus(),
-          response.getContent()
-      );
-    }
-    return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
   public List<DataSourceCompactionConfig> getAllCompactionConfigs() throws Exception

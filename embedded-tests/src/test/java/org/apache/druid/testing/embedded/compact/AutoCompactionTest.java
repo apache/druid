@@ -234,7 +234,7 @@ public class AutoCompactionTest extends CompactionTestBase
     // added = 31, count = null, sum_added = null, quantilesDoublesSketch = null, thetaSketch = null, HLLSketchBuild = null
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
@@ -290,7 +290,7 @@ public class AutoCompactionTest extends CompactionTestBase
     // added = 31, count = null, sum_added = null, quantilesDoublesSketch = null, thetaSketch = null, HLLSketchBuild = null
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
@@ -354,7 +354,7 @@ public class AutoCompactionTest extends CompactionTestBase
     // added = 31, count = null, sum_added = null
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
@@ -404,7 +404,7 @@ public class AutoCompactionTest extends CompactionTestBase
       updateCompactionTaskSlot(0.1, 2);
     }
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
@@ -447,7 +447,7 @@ public class AutoCompactionTest extends CompactionTestBase
     // added = null, count = 2, sum_added = 62
     loadData(INDEX_TASK_WITH_ROLLUP_FOR_PRESERVE_METRICS);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
@@ -560,7 +560,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -611,7 +611,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -677,7 +677,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -703,7 +703,7 @@ public class AutoCompactionTest extends CompactionTestBase
     updateCompactionTaskSlot(0, 0);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -787,7 +787,7 @@ public class AutoCompactionTest extends CompactionTestBase
     loadData(INDEX_TASK);
 
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -833,7 +833,7 @@ public class AutoCompactionTest extends CompactionTestBase
       // Hence, we will only have 2013-08 to 2013-09 months with data
       // plus 12 tombstones
       final List<Interval> intervalsAfterYEARCompactionButBeforeMONTHCompaction =
-          getSegmentIntervals(fullDatasourceName);
+          getSegmentIntervals();
       expectedIntervalAfterCompaction = EmbeddedClusterApis.createAlignedIntervals(
           intervalsAfterYEARCompactionButBeforeMONTHCompaction,
           newGranularity
@@ -910,7 +910,7 @@ public class AutoCompactionTest extends CompactionTestBase
     loadData(INDEX_TASK);
 
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -956,7 +956,7 @@ public class AutoCompactionTest extends CompactionTestBase
       // Hence, we will only have 2013-08 to 2013-09 months with data
       // plus 12 tombstones
       final List<Interval> intervalsAfterYEARCompactionButBeforeMONTHCompaction =
-          getSegmentIntervals(fullDatasourceName);
+          getSegmentIntervals();
       expectedIntervalAfterCompaction = EmbeddedClusterApis.createAlignedIntervals(
           intervalsAfterYEARCompactionButBeforeMONTHCompaction,
           newGranularity
@@ -1006,7 +1006,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1065,7 +1065,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1163,7 +1163,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1194,7 +1194,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       newGranularity = Granularities.MONTH;
       final List<Interval> intervalsAfterYEARButBeforeMONTHCompaction =
-          getSegmentIntervals(fullDatasourceName);
+          getSegmentIntervals();
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true, engine);
@@ -1221,7 +1221,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
 
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1481,7 +1481,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
       intervalsBeforeCompaction.sort(Comparators.intervalsByStartThenEnd().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1525,7 +1525,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals(fullDatasourceName);
+      final List<Interval> intervalsBeforeCompaction = getSegmentIntervals();
       intervalsBeforeCompaction.sort(Comparators.intervalsByStartThenEnd().reversed());
       // 4 segments across 2 days (4 total)...
       verifySegmentsCount(4);
@@ -1630,7 +1630,7 @@ public class AutoCompactionTest extends CompactionTestBase
       taskBuilder.granularitySpec(granularitySpec);
     }
 
-    runTask(taskBuilder, fullDatasourceName);
+    runTask(taskBuilder);
   }
 
   private void verifyDistinctCount(String result)

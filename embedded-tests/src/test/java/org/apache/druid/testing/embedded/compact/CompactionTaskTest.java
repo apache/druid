@@ -157,10 +157,10 @@ public class CompactionTaskTest extends CompactionTestBase
   public void testCompactionWithQueryGranularityInGranularitySpec() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      runTask(INDEX_TASK.get(), fullDatasourceName);
+      runTask(INDEX_TASK.get());
       // 4 segments across 2 days
       verifySegmentsCount(4);
-      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals();
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -193,10 +193,10 @@ public class CompactionTaskTest extends CompactionTestBase
   public void testParallelHashedCompaction() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      runTask(INDEX_TASK.get(), fullDatasourceName);
+      runTask(INDEX_TASK.get());
       // 4 segments across 2 days
       verifySegmentsCount(4);
-      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals();
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -235,10 +235,10 @@ public class CompactionTaskTest extends CompactionTestBase
   public void testCompactionWithSegmentGranularityAndQueryGranularityInGranularitySpec() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      runTask(INDEX_TASK.get(), fullDatasourceName);
+      runTask(INDEX_TASK.get());
       // 4 segments across 2 days
       verifySegmentsCount(4);
-      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals();
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -270,10 +270,10 @@ public class CompactionTaskTest extends CompactionTestBase
   ) throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      runTask(indexTask, fullDatasourceName);
+      runTask(indexTask);
       // 4 segments across 2 days
       verifySegmentsCount(4);
-      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
+      List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals();
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -310,7 +310,7 @@ public class CompactionTaskTest extends CompactionTestBase
     if (newSegmentGranularity != null) {
       template.segmentGranularity(newSegmentGranularity);
     }
-    return runTask(template, fullDatasourceName);
+    return runTask(template);
   }
 
   private void verifySegmentsHaveQueryGranularity(String expectedQueryGranularity, int segmentCount)

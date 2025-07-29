@@ -92,7 +92,7 @@ public class CompactionSparseColumnTest extends CompactionTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get(), dataSource);
+      runTask(COMPACTION_TASK.get());
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -119,7 +119,7 @@ public class CompactionSparseColumnTest extends CompactionTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dimensions("dimA", "dimB", "dimC"), dataSource);
+      runTask(COMPACTION_TASK.get().dimensions("dimA", "dimB", "dimC"));
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -145,7 +145,7 @@ public class CompactionSparseColumnTest extends CompactionTestBase
       // Load and verify initial data
       loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      runTask(COMPACTION_TASK.get().dimensions("dimC", "dimB", "dimA"), dataSource);
+      runTask(COMPACTION_TASK.get().dimensions("dimC", "dimB", "dimA"));
 
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
@@ -166,7 +166,7 @@ public class CompactionSparseColumnTest extends CompactionTestBase
 
   private void loadAndVerifyDataWithSparseColumn()
   {
-    runTask(INDEX_TASK.get(), dataSource);
+    runTask(INDEX_TASK.get());
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
