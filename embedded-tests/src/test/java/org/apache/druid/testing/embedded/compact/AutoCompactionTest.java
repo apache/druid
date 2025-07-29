@@ -238,9 +238,9 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
-      verifyScanResult("added", "...||31");
-      verifyScanResult("ingested_events", "2||...");
-      verifyScanResult("sum_added", "62||...");
+      verifyScanResult("added", "...\n31");
+      verifyScanResult("ingested_events", "2\n...");
+      verifyScanResult("sum_added", "62\n...");
       verifyScanResult("COUNT(*)", "2");
       verifyDistinctCount("2,2");
 
@@ -296,9 +296,9 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentsCount(2);
 
       verifyScanResult("COUNT(*)", "2");
-      verifyScanResult("added", "...||31");
-      verifyScanResult("ingested_events", "2||...");
-      verifyScanResult("sum_added", "62||...");
+      verifyScanResult("added", "...\n31");
+      verifyScanResult("ingested_events", "2\n...");
+      verifyScanResult("sum_added", "62\n...");
       verifyDistinctCount("2,2");
 
       submitCompactionConfig(
@@ -358,7 +358,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
-      verifyScanResult("added", "31||31");
+      verifyScanResult("added", "31\n31");
       verifyScanResult("COUNT(*)", "2");
 
       submitCompactionConfig(
@@ -408,7 +408,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
-      verifyScanResult("added", "31||31");
+      verifyScanResult("added", "31\n31");
       verifyScanResult("COUNT(*)", "2");
 
       submitCompactionConfig(
@@ -451,8 +451,8 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // 2 segments across 1 days...
       verifySegmentsCount(2);
-      verifyScanResult("ingested_events", "2||2");
-      verifyScanResult("sum_added", "62||62");
+      verifyScanResult("ingested_events", "2\n2");
+      verifyScanResult("sum_added", "62\n62");
       verifyScanResult("COUNT(*)", "2");
 
       submitCompactionConfig(
@@ -1291,7 +1291,7 @@ public class AutoCompactionTest extends CompactionTestBase
     GranularitySpec specs = new UniformGranularitySpec(Granularities.MONTH, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -1309,7 +1309,7 @@ public class AutoCompactionTest extends CompactionTestBase
       // does not have data on every week on the month
       forceTriggerAutoCompaction(3);
       // Make sure that no data is lost after compaction
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       List<TaskStatusPlus> tasks = getCompleteTasksForDataSource(fullDatasourceName);
@@ -1338,7 +1338,7 @@ public class AutoCompactionTest extends CompactionTestBase
     GranularitySpec specs = new UniformGranularitySpec(Granularities.WEEK, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -1353,7 +1353,7 @@ public class AutoCompactionTest extends CompactionTestBase
       // we expect the compaction task's interval to align with the MONTH segmentGranularity (2013-08-01 to 2013-10-01)
       forceTriggerAutoCompaction(2);
       // Make sure that no data is lost after compaction
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       List<TaskStatusPlus> tasks = getCompleteTasksForDataSource(fullDatasourceName);
@@ -1380,7 +1380,7 @@ public class AutoCompactionTest extends CompactionTestBase
     GranularitySpec specs = new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -1410,7 +1410,7 @@ public class AutoCompactionTest extends CompactionTestBase
     GranularitySpec specs = new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, true, List.of(new Interval("2013-08-31/2013-09-02", chrono)));
     loadData(INDEX_TASK_WITH_GRANULARITY_SPEC, specs);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -1444,7 +1444,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentsCount(4);
 
       // Result is not rollup
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       // Compact and change dimension to only "language"
@@ -1488,7 +1488,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       // Compact and filter with selector on dim "page" and value "Striker Eureka"
@@ -1531,7 +1531,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentsCount(4);
 
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       // Compact and add longSum and doubleSum metrics
@@ -1549,8 +1549,8 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // Result should be the same with the addition of new metrics, "double_sum_added" and "long_sum_added".
       // These new metrics should have the same value as the input field "added"
-      verifyScanResult("double_sum_added", "57.0||459.0");
-      verifyScanResult("long_sum_added", "57||459");
+      verifyScanResult("double_sum_added", "57.0\n459.0");
+      verifyScanResult("long_sum_added", "57\n459");
 
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
 
@@ -1578,7 +1578,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       // Result is not rollup
       // For dim "page", result has values "Gypsy Danger" and "Striker Eureka"
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       submitCompactionConfig(
@@ -1593,12 +1593,12 @@ public class AutoCompactionTest extends CompactionTestBase
       );
       // Compact the MONTH segment
       forceTriggerAutoCompaction(2);
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       // Compact the WEEK segment
       forceTriggerAutoCompaction(2);
-      verifyScanResult("added", "57.0||459.0");
+      verifyScanResult("added", "57.0\n459.0");
       verifyScanResult("COUNT(*)", "2");
 
       // Verify all task succeed
@@ -1646,8 +1646,7 @@ public class AutoCompactionTest extends CompactionTestBase
    * Verifies the result of a SELECT query
    *
    * @param field  Field to select
-   * @param result CSV result with special strings {@code ||} to represent
-   *               new-lines and {@code ...} to represent an empty string.
+   * @param result CSV result with special string {@code ...} to represent an empty string.
    */
   private void verifyScanResult(String field, String result)
   {
@@ -1658,7 +1657,6 @@ public class AutoCompactionTest extends CompactionTestBase
 
     // replace empty placeholder with empty string
     result = StringUtils.replace(result, "...", "\"\"");
-    result = StringUtils.replace(result, "||", "\n");
 
     Assertions.assertEquals(
         result,
