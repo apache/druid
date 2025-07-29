@@ -180,9 +180,17 @@ public class CompactionState
       @Nullable List<AggregateProjectionSpec> projections
   )
   {
+    DimensionsSpec effectiveDimensions = DimensionsSpec.builder(dimensionsSpec)
+                                                       .setDimensions(
+                                                           dimensionsSpec.getDimensions()
+                                                                         .stream()
+                                                                         .map(dim -> dim.getEffectiveSchema(indexSpec))
+                                                                         .collect(Collectors.toList())
+                                                       )
+                                             .build();
     CompactionState compactionState = new CompactionState(
         partitionsSpec,
-        dimensionsSpec,
+        effectiveDimensions,
         metricsSpec,
         transformSpec,
         indexSpec,

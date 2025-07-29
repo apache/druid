@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -164,6 +165,11 @@ public abstract class DimensionSchema
         IncrementalIndex.makeDefaultCapabilitiesFromValueType(getColumnType()),
         multiValueHandling
     );
+  }
+
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    return this;
   }
 
   @Override

@@ -135,6 +135,16 @@ public class AutoTypeColumnSchema extends DimensionSchema
   }
 
   @Override
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    return new AutoTypeColumnSchema(
+        getName(),
+        castToType,
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec)
+    );
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
