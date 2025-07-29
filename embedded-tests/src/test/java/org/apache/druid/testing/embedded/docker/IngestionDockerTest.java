@@ -71,10 +71,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class IngestionDockerTest extends EmbeddedClusterTestBase
 {
-  static {
-    System.setProperty("druid.testing.docker.image", "apache/druid:35.0.0-SNAPSHOT");
-  }
-
   // Druid Docker containers
   protected final DruidContainerResource overlordLeader = DruidContainers.newOverlord().usingTestImage();
   protected final DruidContainerResource coordinator = DruidContainers.newCoordinator().usingTestImage();

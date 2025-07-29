@@ -32,6 +32,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -164,7 +165,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
 
     log.info(
         "Starting Druid container[%s] with mounted directory[%s] and exposed ports[%s].",
-        name, containerDirectory, command.getExposedPorts()
+        name, containerDirectory, Arrays.toString(command.getExposedPorts())
     );
 
     setCommonProperties(container);
