@@ -484,13 +484,13 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         if (outputType != null && outputType.isArray()) {
           Assert.assertArrayEquals(
               StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              (Object[]) eval.valueOrDefault(),
+              (Object[]) eval.value(),
               (Object[]) vectorVals[i]
           );
         } else {
           Assert.assertEquals(
               StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              eval.valueOrDefault(),
+              eval.value(),
               vectorVals[i]
           );
         }
@@ -541,13 +541,13 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         if (outputType != null && outputType.isArray()) {
           Assert.assertArrayEquals(
               StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              (Object[]) eval.valueOrDefault(),
+              (Object[]) eval.value(),
               (Object[]) vectorVals[i]
           );
         } else {
           Assert.assertEquals(
               StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              eval.valueOrDefault(),
+              eval.value(),
               vectorVals[i]
           );
         }

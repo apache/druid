@@ -52,6 +52,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
@@ -87,6 +88,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -329,6 +331,99 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     }
 
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+  }
+
+  @Test
+  public void testTimeseriesProjections()
+  {
+
+    AggregatorFactory maxQuality = new LongMaxAggregatorFactory("maxQuality", "qualityLong");
+    Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
+                                                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                                              .granularity(Granularities.DAY)
+                                                              .intervals("2011-01-20/2011-01-22")
+                                                              .aggregators(List.of(maxQuality));
+    // construct a query to ignore projection
+    Map<String, Object> contextNoProjection = makeContext();
+    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
+    // construct a query to use projection
+    Map<String, Object> contextWithProjection = makeContext();
+    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_market_maxQuality");
+    TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
+
+
+    List<Result<TimeseriesResultValue>> resultNoProjection = runner.run(QueryPlus.wrap(queryNoProjection)).toList();
+    List<Result<TimeseriesResultValue>> resultWithProjection = runner.run(QueryPlus.wrap(queryWithProjection)).toList();
+
+    List<Result<TimeseriesResultValue>> expectedResults = List.of(
+        new Result<>(DateTimes.of("2011-01-20"), createTimeseriesResultValue("maxQuality", 1800L)),
+        new Result<>(DateTimes.of("2011-01-21"), createTimeseriesResultValue("maxQuality", null))
+    );
+    Assert.assertEquals(expectedResults, resultNoProjection);
+    Assert.assertEquals(expectedResults, resultWithProjection);
+  }
+
+  @Test
+  public void testTimeseriesProjectionsCounts()
+  {
+
+    AggregatorFactory countAgg = new CountAggregatorFactory("count");
+    Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
+                                                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                                              .granularity(Granularities.DAY)
+                                                              .intervals("2011-01-20/2011-01-22")
+                                                              .aggregators(List.of(countAgg));
+    // construct a query to ignore projection
+    Map<String, Object> contextNoProjection = makeContext();
+    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
+    // construct a query to use projection
+    Map<String, Object> contextWithProjection = makeContext();
+    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
+
+
+    List<Result<TimeseriesResultValue>> resultNoProjection = runner.run(QueryPlus.wrap(queryNoProjection)).toList();
+    List<Result<TimeseriesResultValue>> resultWithProjection = runner.run(QueryPlus.wrap(queryWithProjection)).toList();
+
+    List<Result<TimeseriesResultValue>> expectedResults = List.of(
+        new Result<>(DateTimes.of("2011-01-20"), createTimeseriesResultValue("count", 13L)),
+        new Result<>(DateTimes.of("2011-01-21"), createTimeseriesResultValue("count", 0L))
+    );
+    Assert.assertEquals(expectedResults, resultNoProjection);
+    Assert.assertEquals(expectedResults, resultWithProjection);
+  }
+
+  @Test
+  public void testTimeseriesNullableLongMax()
+  {
+
+    AggregatorFactory longNullableMax = new LongMaxAggregatorFactory("longNullableMax", "longNumericNull");
+    Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
+                                                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                                              .granularity(Granularities.DAY)
+                                                              .intervals("2011-01-20/2011-01-22")
+                                                              .aggregators(List.of(longNullableMax));
+    // construct a query to ignore projection
+    Map<String, Object> contextNoProjection = makeContext();
+    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
+    // construct a query to use projection
+    Map<String, Object> contextWithProjection = makeContext();
+    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
+
+
+    List<Result<TimeseriesResultValue>> resultNoProjection = runner.run(QueryPlus.wrap(queryNoProjection)).toList();
+    List<Result<TimeseriesResultValue>> resultWithProjection = runner.run(QueryPlus.wrap(queryWithProjection)).toList();
+
+    List<Result<TimeseriesResultValue>> expectedResults = List.of(
+        new Result<>(DateTimes.of("2011-01-20"), createTimeseriesResultValue("longNullableMax", 80L)),
+        new Result<>(DateTimes.of("2011-01-21"), createTimeseriesResultValue("longNullableMax", null))
+    );
+    Assert.assertEquals(expectedResults, resultNoProjection);
+    Assert.assertEquals(expectedResults, resultWithProjection);
   }
 
   @Test
@@ -3200,5 +3295,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }
+  }
+
+  private static TimeseriesResultValue createTimeseriesResultValue(String key, @Nullable Object val)
+  {
+    Map<String, Object> map = new HashMap<>();
+    map.put(key, val);
+    return new TimeseriesResultValue(map);
   }
 }

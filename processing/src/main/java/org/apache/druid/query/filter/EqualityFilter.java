@@ -511,7 +511,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         if (matchValue.type().equals(ExpressionType.NESTED_DATA)) {
           return input -> input == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.of(Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value())));
         }
-        return DruidObjectPredicate.equalTo(matchValue.valueOrDefault());
+        return DruidObjectPredicate.equalTo(matchValue.value());
       });
     }
 

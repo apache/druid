@@ -21,6 +21,8 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -29,6 +31,12 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.nio.ByteBuffer;
 
+@LoadScope(roles = {
+    NodeRole.BROKER_JSON_NAME,
+    NodeRole.HISTORICAL_JSON_NAME,
+    NodeRole.INDEXER_JSON_NAME,
+    NodeRole.PEON_JSON_NAME
+})
 public class GroupByStatsMonitor extends AbstractMonitor
 {
   private final GroupByStatsProvider groupByStatsProvider;

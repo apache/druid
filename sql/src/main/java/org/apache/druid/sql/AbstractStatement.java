@@ -91,9 +91,6 @@ public abstract class AbstractStatement implements Closeable
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
     this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
-    for (Map.Entry<String, Object> entry : sqlToolbox.defaultQueryConfig.getContext().entrySet()) {
-      this.queryContext.putIfAbsent(entry.getKey(), entry.getValue());
-    }
   }
 
   public String sqlQueryId()

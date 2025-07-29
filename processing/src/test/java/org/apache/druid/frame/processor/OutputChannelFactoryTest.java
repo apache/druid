@@ -20,6 +20,7 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -177,6 +178,6 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
 
     Assert.assertEquals(1, channel.getPartitionNumber());
     Assert.assertTrue(channel.getReadableChannel().isFinished());
-    Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
+    Assert.assertThrows(DruidException.class, channel::getWritableChannel);
   }
 }

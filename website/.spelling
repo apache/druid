@@ -470,6 +470,7 @@ pre-aggregating
 pre-aggregation
 pre-computation
 pre-compute
+pre-computed
 pre-computing
 preconfigured
 pre-existing
@@ -2289,6 +2290,8 @@ MV_CONCAT
 MV_CONTAINS
 MV_FILTER_NONE
 MV_FILTER_ONLY
+MV_FILTER_REGEX
+MV_FILTER_PREFIX
 MV_LENGTH
 MV_OFFSET
 MV_OFFSET_OF
@@ -2435,6 +2438,10 @@ quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
+
+- ../docs/development/extensions-contrib/druid-exact-count-bitmap.md
+Bitmap64ExactCountBuild
+Bitmap64ExactCountMerge
 
 - ../docs/development/extensions-core/catalog.md
 ColumnSpec

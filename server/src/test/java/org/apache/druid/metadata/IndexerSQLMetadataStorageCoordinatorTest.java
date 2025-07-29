@@ -4380,16 +4380,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
-    return new DataSegment(
-        id,
-        Map.of(id.toString(), id.toString()),
-        List.of(),
-        List.of(),
-        pendingSegment.getShardSpec(),
-        null,
-        0,
-        0
-    );
+    return DataSegment.builder(id)
+                      .shardSpec(pendingSegment.getShardSpec())
+                      .loadSpec(Map.of(id.toString(), id.toString()))
+                      .build();
   }
 
   private void verifyIntervalHasUsedSegments(

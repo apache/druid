@@ -84,7 +84,7 @@ public class DruidRexExecutor implements RexExecutor
         final RexNode literal;
 
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
-          if (exprResult.valueOrDefault() == null) {
+          if (exprResult.value() == null) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
             literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
@@ -212,7 +212,7 @@ public class DruidRexExecutor implements RexExecutor
             // column selector anyway
             literal = constExp;
           } else {
-            literal = rexBuilder.makeLiteral(exprResult.valueOrDefault(), constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
           }
         }
 
