@@ -17,68 +17,83 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.testing.embedded.compact;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
-import org.apache.druid.tests.TestNGGroup;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.TestHelper;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
-import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-@Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITCompactionSparseColumnTest extends AbstractIndexerTest
+public class CompactionSparseColumnTest extends CompactionTestBase
 {
-  private static final String INDEX_DATASOURCE = "sparse_column_index_test";
+  private static final Supplier<TaskBuilder.IndexParallel> INDEX_TASK =
+      () -> TaskBuilder
+          .ofTypeIndexParallel()
+          .jsonInputFormat()
+          .isoTimestampColumn("time")
+          .granularitySpec("HOUR", "HOUR", true)
+          .dimensions("dimB", "dimA", "dimC", "dimD", "dimE", "dimF")
+          .metricAggregates(
+              new CountAggregatorFactory("ingested_events"),
+              new LongSumAggregatorFactory("sum_metA", "metA")
+          )
+          .tuningConfig(t -> t.withPartitionsSpec(new DynamicPartitionsSpec(3, 3L)))
+          .inlineInputSourceWithData(
+              "{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"C\",\"dimB\":\"F\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"C\",\"dimB\":\"J\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"H\",\"dimB\":\"X\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"Z\",\"dimB\":\"S\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"H\",\"dimB\":\"X\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"H\",\"dimB\":\"Z\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"J\",\"dimB\":\"R\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"H\",\"dimB\":\"T\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimA\":\"H\",\"dimB\":\"X\",\"metA\":1}"
+              + "\n{\"time\":\"2015-09-12T00:46:58.771Z\",\"dimC\":\"A\",\"dimB\":\"X\",\"metA\":1}\n"
+          );
 
-  private static final String INDEX_TASK = "/indexer/sparse_column_index_task.json";
-  private static final String COMPACTION_QUERIES_RESOURCE = "/indexer/sparse_column_index_queries.json";
-
-  private static final String COMPACTION_TASK_WITHOUT_DIMENSION = "/indexer/sparse_column_without_dim_compaction_task.json";
-  private static final String COMPACTION_TASK_WITH_DIMENSION = "/indexer/sparse_column_with_dim_compaction_task.json";
-
-  @Inject
-  private IntegrationTestingConfig config;
-
-  private String fullDatasourceName;
-
-  @BeforeMethod
-  public void setFullDatasourceName(Method method)
-  {
-    fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix() + "-" + method.getName();
-  }
+  private static final Supplier<TaskBuilder.Compact> COMPACTION_TASK =
+      () -> TaskBuilder
+          .ofTypeCompact()
+          .interval(Intervals.of("2010-10-29T05:00:00Z/2030-10-29T06:00:00Z"))
+          .tuningConfig(
+              t -> t.withMaxRowsInMemory(3)
+                    .withMaxRowsPerSegment(3)
+                    .withMaxNumConcurrentSubTasks(2)
+                    .withForceGuaranteedRollup(true)
+                    .withPartitionsSpec(new HashedPartitionsSpec(null, 1, null))
+          );
 
   @Test
   public void testCompactionPerfectRollUpWithoutDimensionSpec() throws Exception
   {
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
+    try (final Closeable ignored = unloader(dataSource)) {
       // Load and verify initial data
-      loadAndVerifyDataWithSparseColumn(fullDatasourceName);
+      loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      String template = getResourceAsString(COMPACTION_TASK_WITHOUT_DIMENSION);
-      template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
-      final String taskID = indexer.submitTask(template);
-      indexer.waitUntilTaskCompletes(taskID);
-      ITRetryUtil.retryUntilTrue(
-          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-          "Segment Compaction"
-      );
+      runTask(COMPACTION_TASK.get());
+
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
       // The ordering of the columns will be "dimB", "dimA", "dimC", "dimD", "dimE", "dimF"
@@ -100,25 +115,12 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
   @Test
   public void testCompactionPerfectRollUpWithLexicographicDimensionSpec() throws Exception
   {
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
+    try (final Closeable ignored = unloader(dataSource)) {
       // Load and verify initial data
-      loadAndVerifyDataWithSparseColumn(fullDatasourceName);
+      loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      String template = getResourceAsString(COMPACTION_TASK_WITH_DIMENSION);
-      template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
-      //
-      List<String> dimensionsOrder = ImmutableList.of("dimA", "dimB", "dimC");
-      template = StringUtils.replace(
-          template,
-          "%%DIMENSION_NAMES%%",
-          jsonMapper.writeValueAsString(dimensionsOrder)
-      );
-      final String taskID = indexer.submitTask(template);
-      indexer.waitUntilTaskCompletes(taskID);
-      ITRetryUtil.retryUntilTrue(
-          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-          "Segment Compaction"
-      );
+      runTask(COMPACTION_TASK.get().dimensions("dimA", "dimB", "dimC"));
+
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
       // The ordering of the columns will be "dimA", "dimB", "dimC"
@@ -139,25 +141,12 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
   @Test
   public void testCompactionPerfectRollUpWithNonLexicographicDimensionSpec() throws Exception
   {
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
+    try (final Closeable ignored = unloader(dataSource)) {
       // Load and verify initial data
-      loadAndVerifyDataWithSparseColumn(fullDatasourceName);
+      loadAndVerifyDataWithSparseColumn();
       // Compaction with perfect roll up. Rolls with "X", "H" (for the first and second columns respectively) should be roll up
-      String template = getResourceAsString(COMPACTION_TASK_WITH_DIMENSION);
-      template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
-      //
-      List<String> dimensionsOrder = ImmutableList.of("dimC", "dimB", "dimA");
-      template = StringUtils.replace(
-          template,
-          "%%DIMENSION_NAMES%%",
-          jsonMapper.writeValueAsString(dimensionsOrder)
-      );
-      final String taskID = indexer.submitTask(template);
-      indexer.waitUntilTaskCompletes(taskID);
-      ITRetryUtil.retryUntilTrue(
-          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-          "Segment Compaction"
-      );
+      runTask(COMPACTION_TASK.get().dimensions("dimC", "dimB", "dimA"));
+
       // Verify compacted data.
       // Compacted data only have one segments. First segment have the following rows:
       // The ordering of the columns will be "dimC", "dimB", "dimA"
@@ -175,9 +164,9 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
     }
   }
 
-  private void loadAndVerifyDataWithSparseColumn(String fullDatasourceName) throws Exception
+  private void loadAndVerifyDataWithSparseColumn()
   {
-    loadData(INDEX_TASK, fullDatasourceName);
+    runTask(INDEX_TASK.get());
     List<Map<String, List<List<Object>>>> expectedResultBeforeCompaction = new ArrayList<>();
     // First segments have the following rows:
     List<List<Object>> segment1Rows = ImmutableList.of(
@@ -208,7 +197,7 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
     verifyQueryResult(expectedResultBeforeCompaction, 10, 10, 1);
   }
 
-  private void verifyCompactedData(List<List<Object>> segmentRows) throws Exception
+  private void verifyCompactedData(List<List<Object>> segmentRows)
   {
     List<Map<String, List<List<Object>>>> expectedResultAfterCompaction = new ArrayList<>();
     expectedResultAfterCompaction.add(ImmutableMap.of("events", segmentRows));
@@ -220,35 +209,57 @@ public class ITCompactionSparseColumnTest extends AbstractIndexerTest
       int expectedNumRoll,
       int expectedSumCount,
       double expectedRollupRatio
-  ) throws Exception
+  )
   {
-    InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(COMPACTION_QUERIES_RESOURCE);
-    String queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-    queryResponseTemplate = StringUtils.replace(
-        queryResponseTemplate,
-        "%%DATASOURCE%%",
-        fullDatasourceName
+    Assertions.assertEquals(
+        "2015-09-12T00:00:00.000Z,2015-09-12T00:00:00.000Z",
+        cluster.runSql("SELECT MIN(__time), MAX(__time) FROM %s", dataSource)
     );
-    queryResponseTemplate = StringUtils.replace(
-        queryResponseTemplate,
-        "%%EXPECTED_SCAN_RESULT%%",
-        jsonMapper.writeValueAsString(expectedScanResult)
+    Assertions.assertEquals(
+        StringUtils.format("%d,%d,%s", expectedNumRoll, expectedSumCount, expectedRollupRatio),
+        cluster.runSql(
+            "SELECT COUNT(*) as num_rows, SUM(ingested_events) as total_events,"
+            + " (COUNT(*) * 1.0) / SUM(ingested_events)"
+            + " FROM %s",
+            dataSource
+        )
     );
-    queryResponseTemplate = StringUtils.replace(
-        queryResponseTemplate,
-        "%%EXPECTED_SUM_COUNT%%",
-        jsonMapper.writeValueAsString(expectedSumCount)
+    final ScanQuery scanQuery = Druids
+        .newScanQueryBuilder()
+        .dataSource(dataSource)
+        .eternityInterval()
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+    Assertions.assertEquals(toJson(expectedScanResult), getScanEvents(scanQuery));
+  }
+
+  /**
+   * Runs the given scan query and extracts the "events" field from it.
+   */
+  private String getScanEvents(ScanQuery scanQuery)
+  {
+    final String resultAsJson =
+        FutureUtils.getUnchecked(cluster.anyBroker().submitNativeQuery(scanQuery), true);
+    final List<Map<String, Object>> resultList = JacksonUtils.readValue(
+        TestHelper.JSON_MAPPER,
+        resultAsJson.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
     );
-    queryResponseTemplate = StringUtils.replace(
-        queryResponseTemplate,
-        "%%EXPECTED_ROLLUP_RATIO%%",
-        jsonMapper.writeValueAsString(expectedRollupRatio)
-    );
-    queryResponseTemplate = StringUtils.replace(
-        queryResponseTemplate,
-        "%%EXPECTED_NUM_ROW%%",
-        jsonMapper.writeValueAsString(expectedNumRoll)
-    );
-    queryHelper.testQueriesFromString(queryResponseTemplate);
+
+    final List<Map<String, Object>> trimmedResult = resultList
+        .stream()
+        .map(map -> Map.of("events", map.getOrDefault("events", "")))
+        .collect(Collectors.toList());
+    return toJson(trimmedResult);
+  }
+
+  private String toJson(Object stuff)
+  {
+    try {
+      return TestHelper.JSON_MAPPER.writeValueAsString(stuff);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
