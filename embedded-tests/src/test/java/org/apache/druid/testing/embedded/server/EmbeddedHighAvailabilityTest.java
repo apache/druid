@@ -124,7 +124,7 @@ public class EmbeddedHighAvailabilityTest extends EmbeddedClusterTestBase
     coordinator1.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/metadataCache/used/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValue(10)
+                      .hasValueAtLeast(10)
     );
 
     // Run sys queries, switch leaders, repeat

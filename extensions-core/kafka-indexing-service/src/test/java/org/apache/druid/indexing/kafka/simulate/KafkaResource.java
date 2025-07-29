@@ -60,7 +60,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
       @Override
       public String getBootstrapServers()
       {
-        return cluster.getEmbeddedConnectUri(super.getBootstrapServers());
+        return cluster.getEmbeddedHostAndPort(super.getBootstrapServers());
       }
     };
   }

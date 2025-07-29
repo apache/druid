@@ -35,8 +35,8 @@ public class IngestionBackwardCompatibilityDockerTest
     @Override
     public EmbeddedDruidCluster createCluster()
     {
-      coordinator.withImage(DruidContainer.Image.APACHE_31);
-      overlordLeader.withImage(DruidContainer.Image.APACHE_31);
+      coordinator.usingImage(DruidContainer.Image.APACHE_31);
+      overlordLeader.usingImage(DruidContainer.Image.APACHE_31);
       return super.createCluster();
     }
   }

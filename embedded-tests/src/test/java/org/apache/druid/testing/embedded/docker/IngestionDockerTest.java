@@ -50,7 +50,9 @@ import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -61,6 +63,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Runs some basic ingestion tests using {@link DruidContainers}.
+ * <p>
+ * This test verifies functionality of Druid Docker images using
+ * {@link DruidContainerResource}. However, the underlying cluster also uses
+ * embedded servers either to provide visibility into the cluster state or to
+ * test backwards compatibility of a given feature.
  */
 public class IngestionDockerTest extends EmbeddedClusterTestBase
 {
@@ -69,13 +76,13 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
   }
 
   // Druid Docker containers
-  protected final DruidContainerResource overlordLeader = DruidContainers.newOverlord().withTestImage();
-  protected final DruidContainerResource coordinator = DruidContainers.newCoordinator().withTestImage();
-  protected final DruidContainerResource historical = DruidContainers.newHistorical().withTestImage();
-  protected final DruidContainerResource broker1 = DruidContainers.newBroker().withTestImage();
+  protected final DruidContainerResource overlordLeader = DruidContainers.newOverlord().usingTestImage();
+  protected final DruidContainerResource coordinator = DruidContainers.newCoordinator().usingTestImage();
+  protected final DruidContainerResource historical = DruidContainers.newHistorical().usingTestImage();
+  protected final DruidContainerResource broker1 = DruidContainers.newBroker().usingTestImage();
   protected final DruidContainerResource middleManager = DruidContainers
       .newMiddleManager()
-      .withTestImage()
+      .usingTestImage()
       .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
 
   // Follower EmbeddedOverlord to watch segment publish events
@@ -95,6 +102,8 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withZookeeper();
 
+    // Use DruidContainerResources in the cluster as they are the test target
+    // Use EmbeddedDruidServers to provide visiblility into the cluster state
     return cluster
         .useDruidContainers()
         .useLatchableEmitter()
@@ -117,22 +126,31 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
         .addServer(new EmbeddedRouter());
   }
 
+  @BeforeEach
+  @AfterEach
+  public void verifyOverlordLeader()
+  {
+    Assertions.assertFalse(
+        overlordFollower.bindings().overlordLeaderSelector().isLeader()
+    );
+  }
+
   @Test
   public void test_runIndexTask_andKillData()
   {
-
+    // To be populated once TaskBuilder is merged in #18207
   }
 
   @Test
   public void test_runIndexParallelTask_andCompactData()
   {
-
+    // To be populated once TaskBuilder is merged in #18207
   }
 
   @Test
   public void test_runMsqTask_andQueryData()
   {
-
+    // To be populated once TaskBuilder is merged in #18207
   }
 
   @Test
@@ -195,18 +213,12 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, taskStatuses.size());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
 
-    // Verify the count of rows ingested into the datasource so far
-    // Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-
     // Suspend the supervisor and verify the state
     cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
     );
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
-
-    // waitForCachedUsedSegmentCount(10);
-    // verifyUsedSegmentCount(10);
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)

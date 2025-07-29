@@ -21,13 +21,12 @@ package org.apache.druid.testing.embedded;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -35,8 +34,10 @@ import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
+import org.apache.http.client.utils.URIBuilder;
 
 import java.net.InetAddress;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +81,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
-  private final String id;
 
   private final List<EmbeddedDruidServer<?>> servers = new ArrayList<>();
   private final List<EmbeddedResource> resources = new ArrayList<>();
@@ -92,7 +92,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
 
   private EmbeddedDruidCluster()
   {
-    id = IdUtils.getRandomId();
     resources.add(testFolder);
     clusterApis = new EmbeddedClusterApis(this);
     addExtension(RuntimeInfoModule.class);
@@ -271,21 +270,43 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    * with {@link #getEmbeddedServiceHostname()}. Using the embedded URI ensures
    * that the underlying service is reachable by both EmbeddedDruidServers and
    * DruidContainers.
+   * <p>
+   * Similar to {@link #getEmbeddedHostAndPort(String)} but requires a syntactically
+   * valid connect URI, complete with a scheme, host and port.
    */
   public String getEmbeddedConnectUri(String connectUri)
   {
     if (!hasDruidContainers) {
       return connectUri;
-    } else if (connectUri.contains("localhost")) {
-      return StringUtils.replace(connectUri, "localhost", getEmbeddedServiceHostname());
-    } else if (connectUri.contains("127.0.0.1")) {
-      return StringUtils.replace(connectUri, "127.0.0.1", getEmbeddedServiceHostname());
-    } else {
-      throw new IAE(
-          "Connect URI[%s] must contain 'localhost' or '127.0.0.1' to be reachable.",
-          connectUri
-      );
     }
+
+    try {
+      final URIBuilder uri = new URIBuilder(connectUri);
+      validateEmbeddedHost(uri.getHost(), connectUri);
+      uri.setHost(getEmbeddedServiceHostname());
+      return uri.build().toString();
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Replaces {@code localhost} or {@code 127.0.0.1} in the given hostAndPort
+   * with {@link #getEmbeddedServiceHostname()}. Using the embedded hostAndPort
+   * ensures that the underlying service is reachable by both EmbeddedDruidServers
+   * and DruidContainers.
+   */
+  public String getEmbeddedHostAndPort(String hostAndPort)
+  {
+    if (!hasDruidContainers) {
+      return hostAndPort;
+    }
+
+    final HostAndPort parsedHostAndPort = HostAndPort.fromString(hostAndPort);
+    validateEmbeddedHost(parsedHostAndPort.getHost(), hostAndPort);
+
+    return HostAndPort.fromParts(getEmbeddedServiceHostname(), parsedHostAndPort.getPort()).toString();
   }
 
   /**
@@ -399,8 +420,13 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return "[" + csv + "]";
   }
 
-  public String getId()
+  private static void validateEmbeddedHost(String host, String connectUri)
   {
-    return id;
+    if (!"localhost".equals(host) && !"127.0.0.1".equals(host)) {
+      throw new IAE(
+          "Connect URI[%s] must contain 'localhost' or '127.0.0.1' to be reachable.",
+          connectUri
+      );
+    }
   }
 }

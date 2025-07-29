@@ -98,7 +98,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     addProperty("druid.host", EmbeddedDruidCluster.getDefaultHost());
   }
 
-  public DruidContainerResource withImage(DockerImageName imageName)
+  public DruidContainerResource usingImage(DockerImageName imageName)
   {
     this.imageName = imageName;
     return this;
@@ -108,13 +108,13 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
    * Uses the Docker test image specified by the system property
    * {@link #PROPERTY_TEST_IMAGE} for this container.
    */
-  public DruidContainerResource withTestImage()
+  public DruidContainerResource usingTestImage()
   {
     String imageName = Objects.requireNonNull(
         System.getProperty(PROPERTY_TEST_IMAGE),
         StringUtils.format("System property[%s] is not set", PROPERTY_TEST_IMAGE)
     );
-    return withImage(DockerImageName.parse(imageName));
+    return usingImage(DockerImageName.parse(imageName));
   }
 
   public DruidContainerResource addProperty(String key, String value)
