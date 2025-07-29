@@ -119,49 +119,49 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             ROW_SIGNATURE,
             TIMESTAMP,
             dimensions,
-            Arrays.asList("a", "aa", 1L, 1.0, null, Map.of("x", "a"))
+            Arrays.asList("a", "aa", 1L, 1.0, null, Map.of("x", "a", "y", 1L, "z", 1.0))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(2),
             dimensions,
-            Arrays.asList("a", "bb", 1L, 1.1, 1.1f, Map.of("x", "a"))
+            Arrays.asList("a", "bb", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(4),
             dimensions,
-            Arrays.asList("a", "cc", 2L, 2.2, 2.2f, Map.of("x", "a"))
+            Arrays.asList("a", "cc", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(6),
             dimensions,
-            Arrays.asList("b", "aa", 3L, 3.3, 3.3f, Map.of("x", "b"))
+            Arrays.asList("b", "aa", 3L, 3.3, 3.3f, Map.of("x", "b", "y", 3L, "z", 3.3))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(8),
             dimensions,
-            Arrays.asList("b", "aa", 4L, 4.4, 4.4f, Map.of("x", "b"))
+            Arrays.asList("b", "aa", 4L, 4.4, 4.4f, Map.of("x", "b", "y", 4L, "z", 4.4))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(10),
             dimensions,
-            Arrays.asList("b", "bb", 5L, 5.5, 5.5f, Map.of("x", "b"))
+            Arrays.asList("b", "bb", 5L, 5.5, 5.5f, Map.of("x", "b", "y", 5L, "z", 5.5))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusHours(1),
             dimensions,
-            Arrays.asList("a", "aa", 1L, 1.1, 1.1f, Map.of("x", "a"))
+            Arrays.asList("a", "aa", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusHours(1).plusMinutes(1),
             dimensions,
-            Arrays.asList("a", "dd", 2L, 2.2, 2.2f, Map.of("x", "a"))
+            Arrays.asList("a", "dd", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         )
     );
   }
@@ -286,7 +286,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
               new LongSumAggregatorFactory("csum", "c")
           }
       ),
-      new  AggregateProjectionSpec(
+      new AggregateProjectionSpec(
           "json",
           VirtualColumns.EMPTY,
           List.of(new AutoTypeColumnSchema("f", null)),
@@ -1730,7 +1730,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         rowCount++;
         cursor.advance();
       }
-      Assert.assertEquals(2, rowCount);
+      Assert.assertEquals(6, rowCount);
     }
 
     final CursorBuildSpec buildSpecNoProjection = GroupingEngine.makeCursorBuildSpec(queryNoProjection, null);
