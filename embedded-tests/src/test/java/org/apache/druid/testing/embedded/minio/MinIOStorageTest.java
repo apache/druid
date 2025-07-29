@@ -21,12 +21,12 @@ package org.apache.druid.testing.embedded.minio;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.indexing.EmbeddedIndexTaskTest;
+import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link EmbeddedIndexTaskTest}, but using a MinIO metadata store through the S3 extension.
+ * Same as {@link IndexTaskTest}, but using a MinIO metadata store through the S3 extension.
  */
-public class EmbeddedMinIOStorageTest extends EmbeddedIndexTaskTest
+public class MinIOStorageTest extends IndexTaskTest
 {
   @Override
   public EmbeddedDruidCluster createCluster()
@@ -34,9 +34,9 @@ public class EmbeddedMinIOStorageTest extends EmbeddedIndexTaskTest
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .addResource(new MinIOStorageResource())
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());

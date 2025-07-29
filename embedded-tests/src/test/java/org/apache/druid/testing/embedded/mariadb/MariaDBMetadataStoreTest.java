@@ -21,12 +21,12 @@ package org.apache.druid.testing.embedded.mariadb;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.indexing.EmbeddedIndexTaskTest;
+import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link EmbeddedIndexTaskTest}, but using a MariaDB metadata store instead of Derby.
+ * Same as {@link IndexTaskTest}, but using a MariaDB metadata store instead of Derby.
  */
-public class EmbeddedMariaDBMetadataStoreTest extends EmbeddedIndexTaskTest
+public class MariaDBMetadataStoreTest extends IndexTaskTest
 {
   @Override
   public EmbeddedDruidCluster createCluster()
@@ -34,9 +34,9 @@ public class EmbeddedMariaDBMetadataStoreTest extends EmbeddedIndexTaskTest
     return EmbeddedDruidCluster.withZookeeper()
                                .useLatchableEmitter()
                                .addResource(new MariaDBMetadataResource())
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
