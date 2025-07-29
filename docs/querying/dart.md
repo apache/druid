@@ -38,7 +38,7 @@ For Brokers, you can set the following configs:
 
 For Historicals, you can set the following configs:
 
-- `druid.msq.dart.worker.concurrentQueries`: The maximum number of query workers that can run concurrently on that Historical. Default is equal to the number of merge buffers because each query needs one merge buffer. Ideally, this should be equal to or larger than the sum of the `concurrentQueries` setting on yourl Brokers.
+- `druid.msq.dart.worker.concurrentQueries`: The maximum number of query workers that can run concurrently on that Historical. Default is equal to the number of merge buffers because each query needs one merge buffer. Ideally, this should be equal to or larger than the sum of the `concurrentQueries` setting on your Brokers.
 - `druid.msq.dart.worker.heapFraction`: The maximum amount of heap available for use across all Dart queries as a decimal. The default is 0.35, 35% of heap.
 
 
@@ -93,5 +93,5 @@ Dart supports many of the same [query context parameters as the MSQ task engine]
   ## Known issues and limitations
 
   - If you encounter an issue where Dart can't find a segment, try rerunning your query. 
-  - If your data includes HLL Sketches for realtime data, Dart returns a NPE.
+  - If your data includes HLL Sketches for realtime data, Dart returns a `NullPointerException`.
   - When a Dart query fails on a Historical with an error about no workers running for a query, it gets stuck retrying the query. If the query doesn't get canceled, it can cause other queries to fail.
