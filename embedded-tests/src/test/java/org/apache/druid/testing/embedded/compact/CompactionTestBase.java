@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.compact;
 
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -93,5 +94,10 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   protected void verifySegmentsCount(int numExpectedSegments)
   {
     cluster.callApi().verifyNumVisibleSegmentsIs(numExpectedSegments, dataSource, overlord);
+  }
+
+  protected void verifyQuery(List<Pair<String, String>> queries)
+  {
+    cluster.callApi().verifySqlQueries(queries, dataSource);
   }
 }

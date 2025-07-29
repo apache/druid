@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -160,19 +159,19 @@ public class CompactionTaskTest extends CompactionTestBase
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
-      checkNumberOfSegments(4);
+      verifySegmentsCount(4);
       List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // QueryGranularity was SECOND, now we will change it to HOUR (QueryGranularity changed to coarser)
       compactData(COMPACTION_TASK_ALLOW_NON_ALIGNED.get(), null, Granularities.HOUR);
 
       // The original 4 segments should be compacted into 2 new segments since data only has 2 days and the compaction
       // segmentGranularity is DAY
-      checkNumberOfSegments(2);
-      runQueries(INDEX_QUERIES_HOUR_RESOURCE);
+      verifySegmentsCount(2);
+      verifyQuery(INDEX_QUERIES_HOUR_RESOURCE);
       verifySegmentsHaveQueryGranularity("HOUR", 2);
       verifySegmentIntervals(expectedIntervalAfterCompaction);
 
@@ -183,8 +182,8 @@ public class CompactionTaskTest extends CompactionTestBase
       // is the same. Since QueryGranularity is changed to finer qranularity, the data will remains the same. (data
       // will just be bucketed to a finer qranularity but roll up will not be different
       // i.e. 2020-10-29T05:00 will just be bucketed to 2020-10-29T05:00:00)
-      checkNumberOfSegments(2);
-      runQueries(INDEX_QUERIES_HOUR_RESOURCE);
+      verifySegmentsCount(2);
+      verifyQuery(INDEX_QUERIES_HOUR_RESOURCE);
       verifySegmentsHaveQueryGranularity("MINUTE", 2);
       verifySegmentIntervals(expectedIntervalAfterCompaction);
     }
@@ -196,16 +195,16 @@ public class CompactionTaskTest extends CompactionTestBase
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
-      checkNumberOfSegments(4);
+      verifySegmentsCount(4);
       List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
       String taskId = compactData(PARALLEL_COMPACTION_TASK.get(), null, null);
 
       // The original 4 segments should be compacted into 2 new segments
-      checkNumberOfSegments(2);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCount(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsHaveQueryGranularity("SECOND", 2);
 
       verifySegmentIntervals(expectedIntervalAfterCompaction);
@@ -238,16 +237,16 @@ public class CompactionTaskTest extends CompactionTestBase
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       runTask(INDEX_TASK.get(), fullDatasourceName);
       // 4 segments across 2 days
-      checkNumberOfSegments(4);
+      verifySegmentsCount(4);
       List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
       compactData(COMPACTION_TASK_ALLOW_NON_ALIGNED.get(), Granularities.YEAR, Granularities.YEAR);
 
       // The original 4 segments should be compacted into 1 new segment
-      checkNumberOfSegments(1);
-      runQueries(INDEX_QUERIES_YEAR_RESOURCE);
+      verifySegmentsCount(1);
+      verifyQuery(INDEX_QUERIES_YEAR_RESOURCE);
       verifySegmentsHaveQueryGranularity("YEAR", 1);
 
       expectedIntervalAfterCompaction = EmbeddedClusterApis.createAlignedIntervals(
@@ -273,17 +272,17 @@ public class CompactionTaskTest extends CompactionTestBase
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       runTask(indexTask, fullDatasourceName);
       // 4 segments across 2 days
-      checkNumberOfSegments(4);
+      verifySegmentsCount(4);
       List<Interval> expectedIntervalAfterCompaction = getSegmentIntervals(fullDatasourceName);
 
       verifySegmentsHaveQueryGranularity("SECOND", 4);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
 
       compactData(compactionResource, newSegmentGranularity, null);
 
       // The original 4 segments should be compacted into 2 new segments
-      checkNumberOfSegments(2);
-      runQueries(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCount(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsHaveQueryGranularity("SECOND", 2);
 
       if (newSegmentGranularity != null) {
@@ -346,24 +345,5 @@ public class CompactionTaskTest extends CompactionTestBase
     }
 
     Assertions.assertEquals(expectedResults, trimmedResult);
-  }
-
-  private void checkNumberOfSegments(int numExpectedSegments)
-  {
-    verifySegmentsCount(numExpectedSegments);
-  }
-
-  private void runQueries(List<Pair<String, String>> queries)
-  {
-    if (queries == null) {
-      return;
-    }
-    for (Pair<String, String> query : queries) {
-      Assertions.assertEquals(
-          query.rhs,
-          cluster.runSql(query.lhs, dataSource),
-          StringUtils.format("Query[%s] failed", query.lhs)
-      );
-    }
   }
 }

@@ -118,7 +118,6 @@ public class AutoCompactionTest extends CompactionTestBase
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_DIMENSION_SPEC =
       () -> INDEX_TASK.get().granularitySpec("DAY", "DAY", true);
 
-  private static final String SELECT_APPROX_COUNT_DISTINCT = Resources.Query.SELECT_APPROX_COUNT_DISTINCT;
   private static final List<Pair<String, String>> INDEX_QUERIES_RESOURCE = List.of(
       Pair.of(Resources.Query.SELECT_MIN_MAX_TIME, "2013-08-31T01:02:33.000Z,2013-09-01T12:41:27.000Z"),
       Pair.of(Resources.Query.SELECT_APPROX_COUNT_DISTINCT, "5,5"),
@@ -243,7 +242,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifyScanResult("ingested_events", "2||...");
       verifyScanResult("sum_added", "62||...");
       verifyScanResult("COUNT(*)", "2");
-      verifyQuery(SELECT_APPROX_COUNT_DISTINCT, "2,2");
+      verifyDistinctCount("2,2");
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -270,7 +269,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifyScanResult("ingested_events", "3");
       verifyScanResult("sum_added", "93.0");
       verifyScanResult("COUNT(*)", "1");
-      verifyQuery(SELECT_APPROX_COUNT_DISTINCT, "3,3");
+      verifyDistinctCount("3,3");
 
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       verifySegmentIntervals(intervalsBeforeCompaction);
@@ -300,7 +299,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifyScanResult("added", "...||31");
       verifyScanResult("ingested_events", "2||...");
       verifyScanResult("sum_added", "62||...");
-      verifyQuery(SELECT_APPROX_COUNT_DISTINCT, "2,2");
+      verifyDistinctCount("2,2");
 
       submitCompactionConfig(
           MAX_ROWS_PER_SEGMENT_COMPACTED,
@@ -334,7 +333,7 @@ public class AutoCompactionTest extends CompactionTestBase
       verifyScanResult("ingested_events", "3");
       verifyScanResult("sum_added", "93");
       verifyScanResult("COUNT(*)", "1");
-      verifyQuery(SELECT_APPROX_COUNT_DISTINCT, "3,3");
+      verifyDistinctCount("3,3");
 
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       verifySegmentIntervals(intervalsBeforeCompaction);
@@ -1634,19 +1633,12 @@ public class AutoCompactionTest extends CompactionTestBase
     runTask(taskBuilder, fullDatasourceName);
   }
 
-  private void verifyQuery(List<Pair<String, String>> queries)
+  private void verifyDistinctCount(String result)
   {
-    queries.forEach(
-        query -> verifyQuery(query.lhs, query.rhs)
-    );
-  }
-
-  private void verifyQuery(String query, String result)
-  {
-    Assertions.assertEquals(
-        result,
-        cluster.runSql(query, dataSource),
-        StringUtils.format("Query[%s] failed", query)
+    cluster.callApi().verifySqlQuery(
+        Resources.Query.SELECT_APPROX_COUNT_DISTINCT,
+        dataSource,
+        result
     );
   }
 
