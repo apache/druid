@@ -409,6 +409,8 @@ Removed the `useMaxMemoryEstimates` config. When set to false, Druid used a much
 
 #### Dependency updates
 
+- Added `j2objc-annotations` [#18154](https://github.com/apache/druid/pull/18154)
+
 The following dependencies have had their versions bumped:
 
 - `apache.kafka` from `3.9.0` to `3.9.1` [#18178](https://github.com/apache/druid/pull/18178)
@@ -420,3 +422,23 @@ The following dependencies have had their versions bumped:
 - `org.apache.parquet:parquet-avro` from `1.15.1` to `1.15.2`  [#18131](https://github.com/apache/druid/pull/18131)
 - `commons-beanutils:commons-beanutils` from `1.9.4` to `1.11.0` [#18132](https://github.com/apache/druid/pull/18132)
 - `form-data` from `4.0.0` to `4.0.4` [18310](https://github.com/apache/druid/pull/18310)
+- `guava` from `32.0.1` to `32.1.3` [#18154](https://github.com/apache/druid/pull/18154)
+- `confluent` from `6.2.12` to `6.2.15` [#18154](https://github.com/apache/druid/pull/18154)
+- `netty4` from `4.1.118.Final` to `4.1.122.Final` [#18154](https://github.com/apache/druid/pull/18154)
+- `slf4j` from `1.7.36` to `2.0.16` [#18154](https://github.com/apache/druid/pull/18154)
+- `commons-logging` from `1.1.1` to `1.3.5` [#18154](https://github.com/apache/druid/pull/18154)
+- `commons-lang3` to `3.17.0` [#18154](https://github.com/apache/druid/pull/18154)
+- `commons-text` to `1.13.1` [#18154](https://github.com/apache/druid/pull/18154)
+- `json-smart` to `2.5.2` [#18154](https://github.com/apache/druid/pull/18154)
+- `kotlin-stdlib` to `1.9.25` [#18154](https://github.com/apache/druid/pull/18154)
+- `joda-time` to `2.14.0` [#18154](https://github.com/apache/druid/pull/18154)
+- `com.google.code.findbugs` to `3.0.2` [#18154](https://github.com/apache/druid/pull/18154)
+- `log4j-slf4j` updated to `log4j-slf4j2` [#18154](https://github.com/apache/druid/pull/18154)
+- `snappy-java` to `1.1.10.7` [#18154](https://github.com/apache/druid/pull/18154)
+- `httpcore` to `4.4.16` [#18154](https://github.com/apache/druid/pull/18154)
+- `asm` to `9.8` [#18154](https://github.com/apache/druid/pull/18154)
+- `async-http-client` to `3.0.2` [#18154](https://github.com/apache/druid/pull/18154)
+- `plexus-utils` to `3.1.0` [#18154](https://github.com/apache/druid/pull/18154)
+- `equalsverifier` to `3.15.8` [#18154](https://github.com/apache/druid/pull/18154)
+- `value-annotations` to `2.10.1` [#18154](https://github.com/apache/druid/pull/18154)
+- `form-data` to `4.0.4` [#18310](https://github.com/apache/druid/pull/18310)
