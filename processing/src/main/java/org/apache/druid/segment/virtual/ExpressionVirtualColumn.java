@@ -369,13 +369,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
-           Objects.equals(expression, that.expression);
+           Objects.equals(expression.expressionString, that.expression.expressionString) &&
+           Objects.equals(expression.outputType, that.expression.outputType);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, expression);
+    return Objects.hash(name, expression.expressionString, expression.outputType);
   }
 
   @Override
