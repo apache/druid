@@ -98,6 +98,11 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 
   protected void verifyQuery(List<Pair<String, String>> queries)
   {
-    cluster.callApi().verifySqlQueries(queries, dataSource);
+    if (queries == null) {
+      return;
+    }
+    queries.forEach(
+        pair -> cluster.callApi().verifySqlQuery(pair.lhs, dataSource, pair.rhs)
+    );
   }
 }

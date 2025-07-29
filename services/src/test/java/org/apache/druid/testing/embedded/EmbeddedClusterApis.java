@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -112,23 +111,6 @@ public class EmbeddedClusterApis
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Runs the given SQL queries and verifies the results.
-   *
-   * @param queryResultPairs List of SQL query and CSV result pairs. Each query
-   *                         must contain a {@code %s} placeholder for the datasource.
-   * @param dataSource       Datasource for which the queries should be run
-   */
-  public void verifySqlQueries(List<Pair<String, String>> queryResultPairs, String dataSource)
-  {
-    if (queryResultPairs == null) {
-      return;
-    }
-    queryResultPairs.forEach(
-        pair -> verifySqlQuery(pair.lhs, dataSource, pair.rhs)
-    );
   }
 
   /**
