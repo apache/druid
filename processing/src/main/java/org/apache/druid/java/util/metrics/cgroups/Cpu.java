@@ -77,7 +77,7 @@ public class Cpu
       }
     }
     catch (IOException | RuntimeException ex) {
-      LOG.error(ex, "Unable to fetch cpu snapshot");
+      LOG.noStackTrace().error(ex, "Unable to fetch cpu snapshot");
     }
 
 
