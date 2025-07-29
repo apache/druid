@@ -59,6 +59,7 @@ public class DruidMetrics
 
   public static final String CATEGORY = "category";
   public static final String WORKER_VERSION = "workerVersion";
+  public static final String SERVER = "server";
 
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {

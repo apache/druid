@@ -181,6 +181,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     broker.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("serverview/segment/added")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.SERVER, "localhost:8091")
     );
   }
 
