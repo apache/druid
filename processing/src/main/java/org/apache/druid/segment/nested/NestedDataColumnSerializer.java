@@ -196,7 +196,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     fieldsWriter = StringEncodingStrategies.getStringDictionaryWriter(
-        columnFormatSpec.getObjectFieldsEncoding(),
+        columnFormatSpec.getObjectFieldsDictionaryEncoding(),
         segmentWriteOutMedium,
         name
     );

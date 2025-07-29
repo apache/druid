@@ -39,7 +39,7 @@ public class NestedCommonFormatColumnFormatSpecTest
   {
     NestedCommonFormatColumnFormatSpec spec =
         NestedCommonFormatColumnFormatSpec.builder()
-                                          .setObjectFieldsEncoding(
+                                          .setObjectFieldsDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
                                           )
                                           .setObjectStorageCompression(CompressionStrategy.ZSTD)
@@ -66,7 +66,7 @@ public class NestedCommonFormatColumnFormatSpecTest
 
     Assert.assertEquals(
         StringEncodingStrategy.UTF8_STRATEGY,
-        defaults.getObjectFieldsEncoding()
+        defaults.getObjectFieldsDictionaryEncoding()
     );
     Assert.assertEquals(
         ObjectStorageEncoding.SMILE,
@@ -99,7 +99,7 @@ public class NestedCommonFormatColumnFormatSpecTest
   {
     NestedCommonFormatColumnFormatSpec merged = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
         NestedCommonFormatColumnFormatSpec.builder()
-                                          .setObjectFieldsEncoding(
+                                          .setObjectFieldsDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
                                           )
                                           .setObjectStorageCompression(CompressionStrategy.ZSTD)
@@ -113,7 +113,7 @@ public class NestedCommonFormatColumnFormatSpecTest
 
     Assert.assertEquals(
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
-        merged.getObjectFieldsEncoding()
+        merged.getObjectFieldsDictionaryEncoding()
     );
     Assert.assertEquals(
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),

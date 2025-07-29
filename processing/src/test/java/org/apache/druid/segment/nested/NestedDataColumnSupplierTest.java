@@ -151,7 +151,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     NestedCommonFormatColumnFormatSpec frontCodedKeysAndDicts =
         NestedCommonFormatColumnFormatSpec.builder()
-                                          .setObjectFieldsEncoding(
+                                          .setObjectFieldsDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                           )
                                           .setStringDictionaryEncoding(

@@ -46,7 +46,7 @@ public class NestedCommonFormatColumnFormatSpec
     return Objects.requireNonNullElseGet(
         columnFormatSpec,
         () -> NestedCommonFormatColumnFormatSpec.builder()
-                                                .setObjectFieldsEncoding(StringEncodingStrategy.UTF8_STRATEGY)
+                                                .setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                                                 .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
                                                 .build()
     ).getEffectiveSpec(indexSpec);
@@ -54,7 +54,7 @@ public class NestedCommonFormatColumnFormatSpec
 
   @Nullable
   @JsonProperty
-  private final StringEncodingStrategy objectFieldsEncoding;
+  private final StringEncodingStrategy objectFieldsDictionaryEncoding;
   @Nullable
   @JsonProperty
   private final ObjectStorageEncoding objectStorageEncoding;
@@ -82,7 +82,7 @@ public class NestedCommonFormatColumnFormatSpec
 
   @JsonCreator
   public NestedCommonFormatColumnFormatSpec(
-      @JsonProperty("objectFieldsEncoding") @Nullable StringEncodingStrategy objectFieldsEncoding,
+      @JsonProperty("objectFieldsDictionaryEncoding") @Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
       @JsonProperty("objectStorageEncoding") @Nullable ObjectStorageEncoding objectStorageEncoding,
       @JsonProperty("objectStorageCompression") @Nullable CompressionStrategy objectStorageCompression,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
@@ -93,7 +93,7 @@ public class NestedCommonFormatColumnFormatSpec
       @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
   )
   {
-    this.objectFieldsEncoding = objectFieldsEncoding;
+    this.objectFieldsDictionaryEncoding = objectFieldsDictionaryEncoding;
     this.objectStorageEncoding = objectStorageEncoding;
     this.objectStorageCompression = objectStorageCompression;
     this.stringDictionaryEncoding = stringDictionaryEncoding;
@@ -114,7 +114,7 @@ public class NestedCommonFormatColumnFormatSpec
       );
     }
     return new NestedCommonFormatColumnFormatSpec(
-        objectFieldsEncoding != null ? objectFieldsEncoding : StringEncodingStrategy.DEFAULT,
+        objectFieldsDictionaryEncoding != null ? objectFieldsDictionaryEncoding : StringEncodingStrategy.DEFAULT,
         objectStorageEncoding != null ? objectStorageEncoding : ObjectStorageEncoding.SMILE,
         objectStorageCompression != null
         ? objectStorageCompression
@@ -132,9 +132,9 @@ public class NestedCommonFormatColumnFormatSpec
 
   @Nullable
   @JsonProperty
-  public StringEncodingStrategy getObjectFieldsEncoding()
+  public StringEncodingStrategy getObjectFieldsDictionaryEncoding()
   {
-    return objectFieldsEncoding;
+    return objectFieldsDictionaryEncoding;
   }
 
   @Nullable
@@ -200,7 +200,7 @@ public class NestedCommonFormatColumnFormatSpec
       return false;
     }
     NestedCommonFormatColumnFormatSpec that = (NestedCommonFormatColumnFormatSpec) o;
-    return Objects.equals(objectFieldsEncoding, that.objectFieldsEncoding)
+    return Objects.equals(objectFieldsDictionaryEncoding, that.objectFieldsDictionaryEncoding)
            && objectStorageEncoding == that.objectStorageEncoding
            && objectStorageCompression == that.objectStorageCompression
            && Objects.equals(stringDictionaryEncoding, that.stringDictionaryEncoding)
@@ -215,7 +215,7 @@ public class NestedCommonFormatColumnFormatSpec
   public int hashCode()
   {
     return Objects.hash(
-        objectFieldsEncoding,
+        objectFieldsDictionaryEncoding,
         objectStorageEncoding,
         objectStorageCompression,
         stringDictionaryEncoding,
@@ -231,7 +231,7 @@ public class NestedCommonFormatColumnFormatSpec
   public String toString()
   {
     return "NestedCommonFormatColumnFormatSpec{" +
-           "objectKeysEncoding=" + objectFieldsEncoding +
+           "objectFieldsDictionaryEncoding=" + objectFieldsDictionaryEncoding +
            ", objectStorageEncoding=" + objectStorageEncoding +
            ", objectStorageCompression=" + objectStorageCompression +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
@@ -246,7 +246,7 @@ public class NestedCommonFormatColumnFormatSpec
   public static class Builder
   {
     @Nullable
-    private StringEncodingStrategy objectKeysEncoding;
+    private StringEncodingStrategy objectFieldsDictionaryEncoding;
     @Nullable
     private ObjectStorageEncoding objectStorageEncoding;
     @Nullable
@@ -264,9 +264,9 @@ public class NestedCommonFormatColumnFormatSpec
     @Nullable
     private BitmapSerdeFactory bitmapEncoding;
 
-    public Builder setObjectFieldsEncoding(@Nullable StringEncodingStrategy objectKeysEncoding)
+    public Builder setObjectFieldsDictionaryEncoding(@Nullable StringEncodingStrategy objectFieldsDictionaryEncoding)
     {
-      this.objectKeysEncoding = objectKeysEncoding;
+      this.objectFieldsDictionaryEncoding = objectFieldsDictionaryEncoding;
       return this;
     }
 
@@ -323,7 +323,7 @@ public class NestedCommonFormatColumnFormatSpec
     public NestedCommonFormatColumnFormatSpec build()
     {
       return new NestedCommonFormatColumnFormatSpec(
-          objectKeysEncoding,
+          objectFieldsDictionaryEncoding,
           objectStorageEncoding,
           objectStorageCompression,
           stringDictionaryEncoding,

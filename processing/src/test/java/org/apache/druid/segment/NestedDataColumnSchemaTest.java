@@ -35,7 +35,7 @@ public class NestedDataColumnSchemaTest
   private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null, null, null);
   private static final NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_SPEC =
       NestedCommonFormatColumnFormatSpec.builder()
-                                        .setObjectFieldsEncoding(
+                                        .setObjectFieldsDictionaryEncoding(
                                             new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1)
                                         )
                                         .setObjectStorageCompression(CompressionStrategy.ZSTD)
