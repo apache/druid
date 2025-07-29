@@ -28,6 +28,7 @@ import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
@@ -135,4 +136,6 @@ public interface Controller
   TaskReport.ReportMap liveReports();
 
   ControllerContext getControllerContext();
+
+  QueryContext getQueryContext();
 }

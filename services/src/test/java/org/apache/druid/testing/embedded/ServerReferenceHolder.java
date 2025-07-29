@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -86,6 +87,9 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   @Inject
   @Json
   private ObjectMapper jsonMapper;
+
+  @Inject
+  private Injector injector;
 
   @Override
   public DruidNode selfNode()
@@ -157,5 +161,11 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   public ObjectMapper jsonMapper()
   {
     return jsonMapper;
+  }
+
+  @Override
+  public <T> T getInstance(Class<T> clazz)
+  {
+    return injector.getInstance(clazz);
   }
 }

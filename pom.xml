@@ -235,6 +235,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
@@ -1965,7 +1966,7 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>

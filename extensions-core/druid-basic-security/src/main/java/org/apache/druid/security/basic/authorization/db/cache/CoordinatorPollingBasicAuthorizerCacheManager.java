@@ -23,9 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.FileUtils;
@@ -37,9 +36,9 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
@@ -79,7 +78,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
   private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private final DruidLeaderClient druidLeaderClient;
+  private final CoordinatorServiceClient coordinatorClient;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ScheduledExecutorService exec;
 
@@ -88,7 +87,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       Injector injector,
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
-      @Coordinator DruidLeaderClient druidLeaderClient
+      CoordinatorServiceClient coordinatorClient
   )
   {
     this.exec = Execs.scheduledSingleThreaded("CoordinatorPollingBasicAuthorizerCacheManager-Exec--%d");
@@ -100,7 +99,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     this.cachedGroupMappingMaps = new ConcurrentHashMap<>();
     this.cachedGroupMappingRoleMaps = new ConcurrentHashMap<>();
     this.authorizerPrefixes = new HashSet<>();
-    this.druidLeaderClient = druidLeaderClient;
+    this.coordinatorClient = coordinatorClient;
   }
 
   @LifecycleStart
@@ -397,11 +396,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    Request req = druidLeaderClient.makeRequest(
+    RequestBuilder req = new RequestBuilder(
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
+    BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
         req,
         new BytesFullResponseHandler()
     );
@@ -421,11 +420,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    Request req = druidLeaderClient.makeRequest(
+    RequestBuilder req = new RequestBuilder(
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = druidLeaderClient.go(
+    BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
         req,
         new BytesFullResponseHandler()
     );

@@ -90,7 +90,7 @@ public class ExpressionLambdaBufferAggregator implements BufferAggregator
     if (isNullUnlessAggregated && (buf.get(position) & NOT_AGGREGATED_BIT) != 0) {
       return null;
     }
-    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, false).valueOrDefault();
+    return ExprEval.deserialize(buf, position, maxSizeBytes, outputType, false).value();
   }
 
   @Override

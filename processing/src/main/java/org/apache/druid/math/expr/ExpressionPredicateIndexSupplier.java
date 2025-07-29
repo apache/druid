@@ -209,7 +209,7 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
       @Override
       boolean nextMatches(@Nullable Object nextValue)
       {
-        final Object result = evalFunction.apply(nextValue).valueOrDefault();
+        final Object result = evalFunction.apply(nextValue).value();
         return predicate.apply(result).matches(includeUnknown);
       }
     };

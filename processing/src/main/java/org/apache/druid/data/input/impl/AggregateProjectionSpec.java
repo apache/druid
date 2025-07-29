@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -73,9 +72,12 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
+    if (name == null || name.isEmpty()) {
+      throw InvalidInput.exception("projection name cannot be null or empty");
+    }
     this.name = name;
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
-      throw InvalidInput.exception("groupingColumns and aggregators must not both be null or empty");
+      throw InvalidInput.exception("projection[%s] groupingColumns and aggregators must not both be null or empty", name);
     }
     this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
@@ -172,8 +174,8 @@ public class AggregateProjectionSpec
   private static ProjectionOrdering computeOrdering(VirtualColumns virtualColumns, List<DimensionSchema> groupingColumns)
   {
     if (groupingColumns.isEmpty()) {
-      // call it time ordered, there is no grouping columns so there is only 1 row for this projection
-      return new ProjectionOrdering(Cursors.ascendingTimeOrder(), null);
+      // no ordering since there is only 1 row for this projection
+      return new ProjectionOrdering(List.of(), null);
     }
     final List<OrderBy> ordering = Lists.newArrayListWithCapacity(groupingColumns.size());
 

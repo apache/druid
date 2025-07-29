@@ -42,7 +42,7 @@ public class ResultAndChannels<T>
   )
   {
     this.result = result;
-    this.outputChannels = outputChannels;
+    this.outputChannels = outputChannels.readOnly();
   }
 
   /**

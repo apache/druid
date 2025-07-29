@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Aggregate projection schema and row count information to store in {@link Metadata} which itself is stored inside a
@@ -182,9 +183,15 @@ public class AggregateProjectionMetadata
         @JsonProperty("ordering") List<OrderBy> ordering
     )
     {
+      if (name == null || name.isEmpty()) {
+        throw DruidException.defensive("projection schema name cannot be null or empty");
+      }
       this.name = name;
       if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
-        throw DruidException.defensive("groupingColumns and aggregators must not both be null or empty");
+        throw DruidException.defensive("projection schema[%s] groupingColumns and aggregators must not both be null or empty", name);
+      }
+      if (ordering == null) {
+        throw DruidException.defensive("projection schema[%s] ordering must not be null", name);
       }
       this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
       this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
@@ -343,7 +350,8 @@ public class AggregateProjectionMetadata
             if (combining != null) {
               matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
                           .addReferencedPhysicalColumn(projectionAgg.getName())
-                          .addPreAggregatedAggregator(combining);
+                          .addPreAggregatedAggregator(combining)
+                          .addMatchedQueryColumns(queryAgg.requiredFields());
               foundMatch = true;
               break;
             }
@@ -352,6 +360,40 @@ public class AggregateProjectionMetadata
         }
         if (!allMatch) {
           return null;
+        }
+      }
+      // validate physical and virtual columns have all been accounted for
+      final Set<String> matchedQueryColumns = matchBuilder.getMatchedQueryColumns();
+      if (queryCursorBuildSpec.getPhysicalColumns() != null) {
+        for (String queryColumn : queryCursorBuildSpec.getPhysicalColumns()) {
+          // time is special handled
+          if (ColumnHolder.TIME_COLUMN_NAME.equals(queryColumn)) {
+            continue;
+          }
+          if (!matchedQueryColumns.contains(queryColumn)) {
+            matchBuilder = matchRequiredColumn(
+                matchBuilder,
+                queryColumn,
+                queryCursorBuildSpec.getVirtualColumns(),
+                physicalColumnChecker
+            );
+            if (matchBuilder == null) {
+              return null;
+            }
+          }
+        }
+        for (VirtualColumn vc : queryCursorBuildSpec.getVirtualColumns().getVirtualColumns()) {
+          if (!matchedQueryColumns.contains(vc.getOutputName())) {
+            matchBuilder = matchRequiredColumn(
+                matchBuilder,
+                vc.getOutputName(),
+                queryCursorBuildSpec.getVirtualColumns(),
+                physicalColumnChecker
+            );
+            if (matchBuilder == null) {
+              return null;
+            }
+          }
         }
       }
       return matchBuilder.build(queryCursorBuildSpec);
@@ -389,10 +431,12 @@ public class AggregateProjectionMetadata
         Projections.PhysicalColumnChecker physicalColumnChecker
     )
     {
-      final VirtualColumn buildSpecVirtualColumn = queryVirtualColumns.getVirtualColumn(column);
-      if (buildSpecVirtualColumn != null) {
+      final VirtualColumn queryVirtualColumn = queryVirtualColumns.getVirtualColumn(column);
+      if (queryVirtualColumn != null) {
+        matchBuilder.addMatchedQueryColumn(column)
+                    .addMatchedQueryColumns(queryVirtualColumn.requiredColumns());
         // check to see if we have an equivalent virtual column defined in the projection, if so we can
-        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
+        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(queryVirtualColumn);
         if (projectionEquivalent != null) {
           final String remapColumnName;
           if (Objects.equals(projectionEquivalent.getOutputName(), timeColumnName)) {
@@ -400,21 +444,18 @@ public class AggregateProjectionMetadata
           } else {
             remapColumnName = projectionEquivalent.getOutputName();
           }
-          if (!buildSpecVirtualColumn.getOutputName().equals(remapColumnName)) {
-            matchBuilder.remapColumn(
-                buildSpecVirtualColumn.getOutputName(),
-                remapColumnName
-            );
+          if (!queryVirtualColumn.getOutputName().equals(remapColumnName)) {
+            matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), remapColumnName);
           }
           return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
         }
 
-        matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
-        final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
+        matchBuilder.addReferenceedVirtualColumn(queryVirtualColumn);
+        final List<String> requiredInputs = queryVirtualColumn.requiredColumns();
         if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
           // special handle time granularity. in the future this should be reworked to push this concept into the
           // virtual column and underlying expression itself, but this will do for now
-          final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
+          final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
           if (virtualGranularity != null) {
             if (virtualGranularity.isFinerThan(granularity)) {
               return null;
@@ -428,7 +469,7 @@ public class AggregateProjectionMetadata
           } else {
             // anything else with __time requires none granularity
             if (Granularities.NONE.equals(granularity)) {
-              return matchBuilder;
+              return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
             }
             return null;
           }
@@ -448,7 +489,8 @@ public class AggregateProjectionMetadata
         }
       } else {
         if (physicalColumnChecker.check(name, column)) {
-          return matchBuilder.addReferencedPhysicalColumn(column);
+          return matchBuilder.addMatchedQueryColumn(column)
+                             .addReferencedPhysicalColumn(column);
         }
         return null;
       }

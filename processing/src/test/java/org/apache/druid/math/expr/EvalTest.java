@@ -917,13 +917,13 @@ public class EvalTest extends InitializedNullHandlingTest
 
     assertEquals(1L, eval("null || 1", bindings).value());
     assertEquals(1L, eval("1 || null", bindings).value());
-    assertNull(eval("null || 0", bindings).valueOrDefault());
-    assertNull(eval("0 || null", bindings).valueOrDefault());
-    assertNull(eval("null || null", bindings).valueOrDefault());
+    assertNull(eval("null || 0", bindings).value());
+    assertNull(eval("0 || null", bindings).value());
+    assertNull(eval("null || null", bindings).value());
 
-    assertNull(eval("null && 1", bindings).valueOrDefault());
-    assertNull(eval("1 && null", bindings).valueOrDefault());
-    assertNull(eval("null && null", bindings).valueOrDefault());
+    assertNull(eval("null && 1", bindings).value());
+    assertNull(eval("1 && null", bindings).value());
+    assertNull(eval("null && null", bindings).value());
     // if either side is false, output is false in both modes
     assertEquals(0L, eval("null && 0", bindings).value());
     assertEquals(0L, eval("0 && null", bindings).value());
@@ -1028,14 +1028,14 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testValueOrDefault()
+  public void testvalue()
   {
     ExprEval<?> longNull = ExprEval.ofLong(null);
     ExprEval<?> doubleNull = ExprEval.ofDouble(null);
     Assert.assertTrue(longNull.isNumericNull());
     Assert.assertTrue(doubleNull.isNumericNull());
-    Assert.assertNull(null, longNull.valueOrDefault());
-    Assert.assertNull(null, doubleNull.valueOrDefault());
+    Assert.assertNull(null, longNull.value());
+    Assert.assertNull(null, doubleNull.value());
   }
 
   @Test

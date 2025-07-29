@@ -21,6 +21,9 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -29,20 +32,23 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.SortedSet;
 
-public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
+class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerde() throws JsonProcessingException
+  void testSerde() throws JsonProcessingException
   {
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
@@ -66,7 +72,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ),
         12345
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         spec,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionMetadata.class)
     );
@@ -74,7 +80,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 
 
   @Test
-  public void testComparator()
+  void testComparator()
   {
     SortedSet<AggregateProjectionMetadata> metadataBest = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     AggregateProjectionMetadata good = new AggregateProjectionMetadata(
@@ -144,17 +150,59 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     metadataBest.add(betterLessGroupingColumns);
     metadataBest.add(evenBetterMoreAggs);
     metadataBest.add(best);
-    Assert.assertEquals(best, metadataBest.first());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(best, metadataBest.first());
+    Assertions.assertArrayEquals(
         new AggregateProjectionMetadata[]{best, evenBetterMoreAggs, betterLessGroupingColumns, good},
         metadataBest.toArray()
     );
   }
 
   @Test
-  public void testInvalidGrouping()
+  void testInvalidName()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                null,
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
+        t.getMessage()
+    );
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidGrouping()
+  {
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
@@ -168,9 +216,12 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             0
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
@@ -184,21 +235,102 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
             0
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testEqualsAndHashcode()
+  void testInvalidOrdering()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "no order",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                null
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema[no order] ordering must not be null",
+        t.getMessage()
+    );
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
+            ),
+            0
+        )
+    );
+    Assertions.assertEquals(
+        "projection schema name cannot be null or empty",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.class).usingGetClass().verify();
   }
 
   @Test
-  public void testEqualsAndHashcodeSchema()
+  void testEqualsAndHashcodeSchema()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
                   .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testSchemaMatchSimple()
+  {
+    // arrange
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "some_projection",
+            null,
+            VirtualColumns.EMPTY,
+            Arrays.asList("a", "b"),
+            new AggregatorFactory[]{new LongSumAggregatorFactory("a_projection", "a")},
+            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("b"))
+        ),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPreferredOrdering(ImmutableList.of())
+                                                     .setAggregators(ImmutableList.of(new LongSumAggregatorFactory(
+                                                         "a",
+                                                         "a"
+                                                     )))
+                                                     .build();
+    // act & assert
+    Projections.ProjectionMatch projectionMatch = spec.getSchema()
+                                                      .matches(cursorBuildSpec, (projectionName, columnName) -> true);
+    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
+                       .setPhysicalColumns(ImmutableSet.of("a_projection"))
+                       .setPreferredOrdering(ImmutableList.of())
+                       .build(),
+        ImmutableMap.of("a", "a_projection")
+    );
+    Assertions.assertEquals(expected, projectionMatch);
   }
 }

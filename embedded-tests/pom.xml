@@ -27,6 +27,10 @@
   <name>druid-embedded-tests</name>
   <description>Unit tests that run an embedded Druid cluster</description>
 
+  <properties>
+    <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+  </properties>
+
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
@@ -146,6 +150,12 @@
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-aws-common</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-catalog</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
