@@ -233,6 +233,7 @@ public class CompactionStatus
     }
   }
 
+  @Nullable
   private static List<DimensionSchema> getNonPartitioningDimensions(
       @Nullable final List<DimensionSchema> dimensionSchemas,
       @Nullable final PartitionsSpec partitionsSpec,
@@ -240,9 +241,12 @@ public class CompactionStatus
   )
   {
     if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-      return dimensionSchemas.stream()
-                             .map(dim -> dim.getEffectiveSchema(indexSpec))
-                             .collect(Collectors.toList());
+      if (dimensionSchemas != null) {
+        return dimensionSchemas.stream()
+                               .map(dim -> dim.getEffectiveSchema(indexSpec))
+                               .collect(Collectors.toList());
+      }
+      return null;
     }
 
     final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
