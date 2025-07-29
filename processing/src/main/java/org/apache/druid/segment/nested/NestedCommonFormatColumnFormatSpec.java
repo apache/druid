@@ -46,7 +46,7 @@ public class NestedCommonFormatColumnFormatSpec
     return Objects.requireNonNullElseGet(
         columnFormatSpec,
         () -> NestedCommonFormatColumnFormatSpec.builder()
-                                                .setObjectKeysEncoding(StringEncodingStrategy.UTF8_STRATEGY)
+                                                .setObjectFieldsEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                                                 .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
                                                 .build()
     ).getEffectiveSpec(indexSpec);
@@ -54,7 +54,7 @@ public class NestedCommonFormatColumnFormatSpec
 
   @Nullable
   @JsonProperty
-  private final StringEncodingStrategy objectKeysEncoding;
+  private final StringEncodingStrategy objectFieldsEncoding;
   @Nullable
   @JsonProperty
   private final ObjectStorageEncoding objectStorageEncoding;
@@ -82,7 +82,7 @@ public class NestedCommonFormatColumnFormatSpec
 
   @JsonCreator
   public NestedCommonFormatColumnFormatSpec(
-      @JsonProperty("objectKeysEncoding") @Nullable StringEncodingStrategy objectKeysEncoding,
+      @JsonProperty("objectFieldsEncoding") @Nullable StringEncodingStrategy objectFieldsEncoding,
       @JsonProperty("objectStorageEncoding") @Nullable ObjectStorageEncoding objectStorageEncoding,
       @JsonProperty("objectStorageCompression") @Nullable CompressionStrategy objectStorageCompression,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
@@ -93,7 +93,7 @@ public class NestedCommonFormatColumnFormatSpec
       @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
   )
   {
-    this.objectKeysEncoding = objectKeysEncoding;
+    this.objectFieldsEncoding = objectFieldsEncoding;
     this.objectStorageEncoding = objectStorageEncoding;
     this.objectStorageCompression = objectStorageCompression;
     this.stringDictionaryEncoding = stringDictionaryEncoding;
@@ -114,7 +114,7 @@ public class NestedCommonFormatColumnFormatSpec
       );
     }
     return new NestedCommonFormatColumnFormatSpec(
-        objectKeysEncoding != null ? objectKeysEncoding : StringEncodingStrategy.DEFAULT,
+        objectFieldsEncoding != null ? objectFieldsEncoding : StringEncodingStrategy.DEFAULT,
         objectStorageEncoding != null ? objectStorageEncoding : ObjectStorageEncoding.SMILE,
         objectStorageCompression != null
         ? objectStorageCompression
@@ -132,9 +132,9 @@ public class NestedCommonFormatColumnFormatSpec
 
   @Nullable
   @JsonProperty
-  public StringEncodingStrategy getObjectKeysEncoding()
+  public StringEncodingStrategy getObjectFieldsEncoding()
   {
-    return objectKeysEncoding;
+    return objectFieldsEncoding;
   }
 
   @Nullable
@@ -200,7 +200,7 @@ public class NestedCommonFormatColumnFormatSpec
       return false;
     }
     NestedCommonFormatColumnFormatSpec that = (NestedCommonFormatColumnFormatSpec) o;
-    return Objects.equals(objectKeysEncoding, that.objectKeysEncoding)
+    return Objects.equals(objectFieldsEncoding, that.objectFieldsEncoding)
            && objectStorageEncoding == that.objectStorageEncoding
            && objectStorageCompression == that.objectStorageCompression
            && Objects.equals(stringDictionaryEncoding, that.stringDictionaryEncoding)
@@ -215,7 +215,7 @@ public class NestedCommonFormatColumnFormatSpec
   public int hashCode()
   {
     return Objects.hash(
-        objectKeysEncoding,
+        objectFieldsEncoding,
         objectStorageEncoding,
         objectStorageCompression,
         stringDictionaryEncoding,
@@ -231,7 +231,7 @@ public class NestedCommonFormatColumnFormatSpec
   public String toString()
   {
     return "NestedCommonFormatColumnFormatSpec{" +
-           "objectKeysEncoding=" + objectKeysEncoding +
+           "objectKeysEncoding=" + objectFieldsEncoding +
            ", objectStorageEncoding=" + objectStorageEncoding +
            ", objectStorageCompression=" + objectStorageCompression +
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
@@ -264,22 +264,10 @@ public class NestedCommonFormatColumnFormatSpec
     @Nullable
     private BitmapSerdeFactory bitmapEncoding;
 
-    @Nullable
-    public StringEncodingStrategy getObjectKeysEncoding()
-    {
-      return objectKeysEncoding;
-    }
-
-    public Builder setObjectKeysEncoding(@Nullable StringEncodingStrategy objectKeysEncoding)
+    public Builder setObjectFieldsEncoding(@Nullable StringEncodingStrategy objectKeysEncoding)
     {
       this.objectKeysEncoding = objectKeysEncoding;
       return this;
-    }
-
-    @Nullable
-    public ObjectStorageEncoding getObjectStorageEncoding()
-    {
-      return objectStorageEncoding;
     }
 
     public Builder setObjectStorageEncoding(@Nullable ObjectStorageEncoding objectStorageEncoding)
@@ -288,34 +276,16 @@ public class NestedCommonFormatColumnFormatSpec
       return this;
     }
 
-    @Nullable
-    public CompressionStrategy getObjectStorageCompression()
-    {
-      return objectStorageCompression;
-    }
-
     public Builder setObjectStorageCompression(@Nullable CompressionStrategy objectStorageCompression)
     {
       this.objectStorageCompression = objectStorageCompression;
       return this;
     }
 
-    @Nullable
-    public StringEncodingStrategy getStringDictionaryEncoding()
-    {
-      return stringDictionaryEncoding;
-    }
-
     public Builder setStringDictionaryEncoding(@Nullable StringEncodingStrategy stringDictionaryEncoding)
     {
       this.stringDictionaryEncoding = stringDictionaryEncoding;
       return this;
-    }
-
-    @Nullable
-    public CompressionStrategy getDictionaryEncodedColumnCompression()
-    {
-      return dictionaryEncodedColumnCompression;
     }
 
     public Builder setDictionaryEncodedColumnCompression(
@@ -326,22 +296,10 @@ public class NestedCommonFormatColumnFormatSpec
       return this;
     }
 
-    @Nullable
-    public CompressionFactory.LongEncodingStrategy getLongColumnEncoding()
-    {
-      return longColumnEncoding;
-    }
-
     public Builder setLongColumnEncoding(@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding)
     {
       this.longColumnEncoding = longColumnEncoding;
       return this;
-    }
-
-    @Nullable
-    public CompressionStrategy getLongColumnCompression()
-    {
-      return longColumnCompression;
     }
 
     public Builder setLongColumnCompression(@Nullable CompressionStrategy longColumnCompression)
@@ -350,22 +308,10 @@ public class NestedCommonFormatColumnFormatSpec
       return this;
     }
 
-    @Nullable
-    public CompressionStrategy getDoubleColumnCompression()
-    {
-      return doubleColumnCompression;
-    }
-
     public Builder setDoubleColumnCompression(@Nullable CompressionStrategy doubleColumnCompression)
     {
       this.doubleColumnCompression = doubleColumnCompression;
       return this;
-    }
-
-    @Nullable
-    public BitmapSerdeFactory getBitmapEncoding()
-    {
-      return bitmapEncoding;
     }
 
     public Builder setBitmapEncoding(@Nullable BitmapSerdeFactory bitmapEncoding)

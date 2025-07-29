@@ -55,6 +55,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -150,7 +151,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     NestedCommonFormatColumnFormatSpec frontCodedKeysAndDicts =
         NestedCommonFormatColumnFormatSpec.builder()
-                                          .setObjectKeysEncoding(
+                                          .setObjectFieldsEncoding(
                                               new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                           )
                                           .setStringDictionaryEncoding(
@@ -165,6 +166,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NestedCommonFormatColumnFormatSpec lzf =
         NestedCommonFormatColumnFormatSpec.builder()
                                           .setDictionaryEncodedColumnCompression(CompressionStrategy.LZF)
+                                          .setLongColumnEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
                                           .setLongColumnCompression(CompressionStrategy.LZF)
                                           .setDoubleColumnCompression(CompressionStrategy.LZF)
                                           .build();

@@ -39,8 +39,6 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
-import org.apache.druid.segment.data.GenericIndexed;
-import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -197,7 +195,11 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   @Override
   public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
-    fieldsWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, name, GenericIndexed.STRING_STRATEGY);
+    fieldsWriter = StringEncodingStrategies.getStringDictionaryWriter(
+        columnFormatSpec.getObjectFieldsEncoding(),
+        segmentWriteOutMedium,
+        name
+    );
     fieldsWriter.open();
 
     fieldsInfoWriter = new FieldTypeInfo.Writer(segmentWriteOutMedium);
