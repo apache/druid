@@ -64,11 +64,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Simulation test to emit cluster metrics using a {@link KafkaEmitter} and then
+ * Embedded test to emit cluster metrics using a {@link KafkaEmitter} and then
  * ingest them back into the cluster with a {@code KafkaSupervisor}.
  */
 @SuppressWarnings("resource")
-public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
+public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
 
@@ -306,6 +306,85 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
     cluster.callApi().onLeaderCoordinator(
         c -> c.updateCoordinatorDynamicConfig(originalCoordinatorDynamicConfig)
+    );
+
+    // Suspend the supervisors
+    cluster.callApi().onLeaderOverlord(
+        o -> o.postSupervisor(compactionSupervisorSpec.createSuspendedSpec())
+    );
+    cluster.callApi().onLeaderOverlord(
+        o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
+    );
+  }
+
+  @Test
+  @Timeout(120)
+  public void test_ingestClusterMetrics_compactionSkipsLockedIntervals()
+  {
+    final int maxRowsPerSegment = 500;
+    final int compactedMaxRowsPerSegment = 5000;
+
+    final int taskCount = 2;
+    final int taskDurationMillis = 500;
+    final int taskCompletionTimeoutMillis = 5_000;
+
+    // Submit and start a supervisor
+    final String supervisorId = dataSource + "_supe";
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
+        supervisorId,
+        taskCount,
+        taskDurationMillis,
+        taskCompletionTimeoutMillis,
+        maxRowsPerSegment
+    );
+    cluster.callApi().onLeaderOverlord(
+        o -> o.postSupervisor(kafkaSupervisorSpec)
+    );
+
+    // Wait for some segments to be published
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/txn/success")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    // Enable compaction supervisors on the Overlord
+    final ClusterCompactionConfig originalCompactionConfig = cluster.callApi().onLeaderOverlord(
+        OverlordClient::getClusterCompactionConfig
+    );
+
+    final ClusterCompactionConfig updatedCompactionConfig
+        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+    // Submit a compaction supervisor for this datasource
+    final CompactionSupervisorSpec compactionSupervisorSpec = new CompactionSupervisorSpec(
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withMaxRowsPerSegment(compactedMaxRowsPerSegment)
+            .withTaskContext(Map.of("useConcurrentLocks", false))
+            .build(),
+        false,
+        null
+    );
+    cluster.callApi().onLeaderOverlord(
+        o -> o.postSupervisor(compactionSupervisorSpec)
+    );
+
+    // Wait until some skipped metrics have been emitted
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("interval/skipCompact/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    // Revert the cluster compaction config
+    cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(originalCompactionConfig)
     );
 
     // Suspend the supervisors

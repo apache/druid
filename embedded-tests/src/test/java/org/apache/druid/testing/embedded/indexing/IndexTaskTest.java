@@ -19,8 +19,8 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -48,9 +48,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Simulation tests for batch {@link IndexTask} using inline datasources.
+ * Embedded tests for batch {@link IndexTask} using inline datasources.
  */
-public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
+public class IndexTaskTest extends EmbeddedClusterTestBase
 {
   protected final EmbeddedBroker broker = new EmbeddedBroker();
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "25");
@@ -63,9 +63,9 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)
-                               .addServer(overlord)
                                .addServer(historical)
                                .addServer(broker)
                                .addServer(new EmbeddedRouter());
@@ -75,10 +75,10 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
   @Timeout(20)
   public void test_runIndexTask_forInlineDatasource()
   {
-    final String taskId = IdUtils.getRandomId();
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
     final Object task = createIndexTaskForInlineData(
         taskId,
-        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
+        Resources.InlineData.CSV_10_DAYS
     );
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
@@ -101,16 +101,14 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
       start = start.plusDays(1);
     }
 
-    // Wait for all segments to be loaded and queryable
-    coordinator.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/loadQueue/success")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(10)
-    );
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    Assertions.assertEquals(Resources.CSV_DATA_10_DAYS, cluster.runSql("SELECT * FROM %s", dataSource));
+    Assertions.assertEquals(
+        Resources.InlineData.CSV_10_DAYS,
+        cluster.runSql("SELECT * FROM %s", dataSource)
+    );
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
@@ -146,10 +144,14 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
 
   private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
-    return EmbeddedClusterApis.createTaskFromPayload(
-        taskId,
-        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
-    );
+    return TaskBuilder.ofTypeIndex()
+                      .dataSource(dataSource)
+                      .isoTimestampColumn("time")
+                      .csvInputFormatWithColumns("time", "item", "value")
+                      .inlineInputSourceWithData(inlineDataCsv)
+                      .segmentGranularity("DAY")
+                      .dimensions()
+                      .withId(taskId);
   }
 
   /**
@@ -161,7 +163,7 @@ public class EmbeddedIndexTaskTest extends EmbeddedClusterTestBase
     final DateTime jan1 = DateTimes.of("2025-01-01");
 
     final List<String> taskIds = IntStream.range(0, count).mapToObj(
-        i -> dataSource + "_" + IdUtils.getRandomId()
+        i -> EmbeddedClusterApis.newTaskId(dataSource)
     ).collect(Collectors.toList());
 
     int index = 0;

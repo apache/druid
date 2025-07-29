@@ -36,7 +36,7 @@ import java.util.Map;
 /**
  * Embedded test to verify JDBC lookups.
  */
-public class EmbeddedJdbcLookupTest extends EmbeddedClusterTestBase
+public class JdbcLookupTest extends EmbeddedClusterTestBase
 {
   private static final String JDBC_LOOKUP_TABLE = "embedded_lookups";
   private static final String BULK_UPDATE_LOOKUP_PAYLOAD
