@@ -1,0 +1,263 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A50
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT repeat(string_agg(DISTINCT tab0f0, '|', 100000), 2) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A51
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT lpad(string_agg(DISTINCT tab0f0, '|', 100000), 4) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A52
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT lpad(string_agg(DISTINCT tab0f0, '|', 100000), 4, '3') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A53
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT lpad(string_agg(DISTINCT tab0f0, '|', 100000), 500) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A54
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT lpad(string_agg(DISTINCT tab0f0, '|', 100000), 500, '3') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A55
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT rpad(string_agg(DISTINCT tab0f0, '|', 100000), 4) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A56
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT tab0f0, '|', 100000), 4, '3') AS col
+FROM test_agg_funcs
+WHERE tab0f0>111
+  AND tab0f0<222;
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A57
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT rpad(string_agg(DISTINCT tab0f0, '|', 100000), 500) AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A58
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT rpad(string_agg(DISTINCT tab0f0, '|', 100000), 500, '3') AS col
+   FROM test_agg_funcs
+   WHERE tab0f0>111
+     AND tab0f0<222)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A59
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0f0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0f0 IS NOT NULL)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A60
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT length(string_agg(DISTINCT t0.tab0f0, '|', 100000)) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0f0 IS NOT NULL)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A61
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT string_agg(DISTINCT t0.tab0f0, '|', 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0f0)
+WHERE col != 'ABCD'
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test003 TEST_ID: A62
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT length(string_agg(DISTINCT t0.tab0f0, '|', 100000)) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0f0)
+WHERE col != 99999
+  OR col IS NULL;
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+

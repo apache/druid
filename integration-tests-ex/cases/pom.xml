@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>33.0.0-SNAPSHOT</version>
+        <version>35.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -82,10 +82,6 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-framework</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -264,6 +260,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions.contrib</groupId>
+            <artifactId>druid-exact-count-bitmap</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -287,6 +289,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>pl.pragmatists</groupId>
             <artifactId>JUnitParams</artifactId>
             <scope>test</scope>
@@ -294,11 +301,6 @@
         <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>jsr311-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-client</artifactId>
-            <version>5.5.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -559,6 +561,15 @@
             </activation>
             <properties>
                 <it.category>Security</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-DruidExactCountBitmap</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>DruidExactCountBitmap</it.category>
             </properties>
         </profile>
     </profiles>

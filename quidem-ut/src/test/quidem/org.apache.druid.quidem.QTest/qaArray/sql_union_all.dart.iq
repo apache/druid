@@ -1,0 +1,385 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A1_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_bool c
+   FROM test_array
+   UNION ALL SELECT a_bool c
+   FROM test_array);
++--------------+
+| c            |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A4_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_int c
+   FROM test_array
+   UNION ALL SELECT a_int c
+   FROM test_array);
++--------------+
+| c            |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A5_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[1]' RETURNING bigint array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A6_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][1]' RETURNING bigint array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A7_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_float c
+   FROM test_array
+   UNION ALL SELECT a_float c
+   FROM test_array);
++------------------+
+| c                |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A8_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[2]' RETURNING decimal array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A9_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][2]' RETURNING decimal array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A10_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_str c
+   FROM test_array
+   UNION ALL SELECT a_str c
+   FROM test_array);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A11_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A12_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A13_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_null c
+   FROM test_array
+   UNION ALL SELECT a_null c
+   FROM test_array);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A14_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A15_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A16_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_empty c
+   FROM test_array
+   UNION ALL SELECT a_empty c
+   FROM test_array);
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A17_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A18_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A19_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_mixed c
+   FROM test_array
+   UNION ALL SELECT a_mixed c
+   FROM test_array);
++--------------------------+
+| c                        |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A20_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[6]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A21_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][6]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A22_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_nested c
+   FROM test_array
+   UNION ALL SELECT a_nested c
+   FROM test_array);
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| c                                                                                                                                                                                                                                                                                                                             |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A23_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_union_all TEST_ID: A24_B1
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][7]' RETURNING varchar array) c
+   FROM test_array
+   UNION ALL SELECT json_value(a_nested, '$[7][7]' RETURNING varchar array) c
+   FROM test_array);
+SQL requires union
+!error
+

@@ -33,7 +33,7 @@ When you disable rollup, Druid loads each row as-is without doing any form of pr
 Use roll-up when creating a table datasource if both:
 
 - You want optimal performance or you have strict space constraints.
-- You don't need raw values from [high-cardinality dimensions](schema-design.md#sketches).
+- You don't need raw values from [high-cardinality dimensions](schema-design.md#sketches-for-high-cardinality-columns).
 
 Conversely, disable roll-up if either:
 
@@ -50,12 +50,12 @@ To measure the rollup ratio of a datasource, compare the number of rows in Druid
 SELECT SUM("num_rows") / (COUNT(*) * 1.0) FROM datasource
 ```
 
-The higher the result, the greater the benefit you gain from rollup. See [Counting the number of ingested events](schema-design.md#counting) for more details about how counting works with rollup is enabled.
+The higher the result, the greater the benefit you gain from rollup. See [Counting the number of ingested events](schema-design.md#counting-the-number-of-ingested-events) for more details about how counting works with rollup is enabled.
 
 Tips for maximizing rollup:
 
 - Design your schema with fewer dimensions and lower cardinality dimensions to yield better rollup ratios.
-- Use [sketches](schema-design.md#sketches) to avoid storing high cardinality dimensions, which decrease rollup ratios.
+- Use [sketches](schema-design.md#sketches-for-high-cardinality-columns) to avoid storing high cardinality dimensions, which decrease rollup ratios.
 - Adjust your `queryGranularity` at ingestion time to increase the chances that multiple rows in Druid having matching timestamps. For example, use five minute query granularity (`PT5M`) instead of one minute (`PT1M`).
 - You can optionally load the same data into more than one Druid datasource. For example:
   - Create a "full" datasource that has rollup disabled, or enabled, but with a minimal rollup ratio.

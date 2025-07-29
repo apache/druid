@@ -29,7 +29,9 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -77,6 +79,7 @@ public class ResultsContextSerdeTest
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         AuthConfig.newBuilder().build(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
     final NativeSqlEngine engine = CalciteTests.createMockSqlEngine(
@@ -84,9 +87,11 @@ public class ResultsContextSerdeTest
         EasyMock.createMock(QueryRunnerFactoryConglomerate.class)
     );
 
+    final String sql = "SELECT 1";
     PlannerContext plannerContext = PlannerContext.create(
         toolbox,
-        "DUMMY",
+        sql,
+        DruidSqlParser.parse(sql, false).getMainStatement(),
         engine,
         Collections.emptyMap(),
         null

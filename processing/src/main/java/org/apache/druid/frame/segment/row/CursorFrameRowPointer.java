@@ -22,7 +22,6 @@ package org.apache.druid.frame.segment.row;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -42,7 +41,7 @@ public class CursorFrameRowPointer implements ReadableFrameRowPointer
 
   public CursorFrameRowPointer(final Frame frame, final ReadableOffset offset)
   {
-    this.frame = FrameType.ROW_BASED.ensureType(frame);
+    this.frame = frame.ensureRowBased();
     this.offset = Preconditions.checkNotNull(offset, "offset");
     this.rowPositions = frame.region(RowBasedFrameWriter.ROW_OFFSET_REGION);
   }

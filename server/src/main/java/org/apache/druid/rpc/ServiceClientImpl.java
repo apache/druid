@@ -487,7 +487,7 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   @VisibleForTesting
-  static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
+  public static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
   {
     return Math.max(
         retryPolicy.minWaitMillis(),

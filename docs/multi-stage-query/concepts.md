@@ -189,8 +189,8 @@ available in the **Segments** view under the **Partitioning** column.
 For more information about syntax, see [`CLUSTERED BY`](./reference.md#clustered-by).
 
 For more information about the mechanics of clustering, refer to
-[Secondary partitioning](../ingestion/partitioning#secondary-partitioning) and
-[Sorting](../ingestion/partitioning#sorting).
+[Secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) and
+[Sorting](../ingestion/partitioning.md#sorting).
 
 ### Rollup
 
@@ -249,10 +249,10 @@ happens:
 The [`maxNumTasks`](./reference.md#context-parameters) query parameter determines the maximum number of tasks your
 query will use, including the one `query_controller` task. Generally, queries perform better with more workers. The
 lowest possible value of `maxNumTasks` is two (one worker and one controller). Do not set this higher than the number of
-free slots available in your cluster; doing so will result in a [TaskStartTimeout](reference.md#error_TaskStartTimeout)
+free slots available in your cluster; doing so will result in a [TaskStartTimeout](./reference.md#error-codes)
 error.
 
-When [reading external data](#extern), EXTERN can read multiple files in parallel across
+When [reading external data](#read-external-data-with-extern), EXTERN can read multiple files in parallel across
 different worker tasks. However, EXTERN does not split individual files across multiple worker tasks. If you have a
 small number of very large input files, you can increase query parallelism by splitting up your input files.
 

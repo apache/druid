@@ -28,9 +28,7 @@ import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -42,7 +40,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -51,7 +48,6 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
@@ -61,7 +57,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -90,14 +85,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
 
   /**
-   * Constant factor provided to {@link AggregatorFactory#guessAggregatorHeapFootprint(long)} for footprint estimates.
-   * This figure is large enough to catch most common rollup ratios, but not so large that it will cause persists to
-   * happen too often. If an actual workload involves a much higher rollup ratio, then this may lead to excessive
-   * heap usage. Users would have to work around that by lowering maxRowsInMemory or maxBytesInMemory.
-   */
-  private static final long ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION = 100;
-
-  /**
    * overhead per {@link ConcurrentSkipListMap.Node} object in facts table
    */
   static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
@@ -105,36 +92,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
-  private final long maxBytesPerRowForAggregators;
   protected final int maxRowCount;
   protected final long maxBytesInMemory;
-
-  /**
-   * Flag denoting if max possible values should be used to estimate on-heap mem
-   * usage.
-   * <p>
-   * There is one instance of Aggregator per metric per row key.
-   * <p>
-   * <b>Old Method:</b> {@code useMaxMemoryEstimates = true} (default)
-   * <ul>
-   *   <li>Aggregator: For a given metric, compute the max memory an aggregator
-   *   can use and multiply that by number of aggregators (same as number of
-   *   aggregated rows or number of unique row keys)</li>
-   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
-   *   size of original dimension values</li>
-   * </ul>
-   *
-   * <b>New Method:</b> {@code useMaxMemoryEstimates = false}
-   * <ul>
-   *   <li>Aggregator: Get the initialize of an Aggregator instance, and add the
-   *   incremental size required in each aggregation step.</li>
-   *   <li>DimensionIndexer: For each row, encode dimension values and estimate
-   *   size of dimension values only if they are newly added to the dictionary</li>
-   * </ul>
-   * <p>
-   * Thus the new method eliminates over-estimations.
-   */
-  private final boolean useMaxMemoryEstimates;
 
   /**
    * Aggregator name -> column selector factory for that aggregator.
@@ -159,11 +118,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       long maxBytesInMemory,
       // preserveExistingMetrics should only be set true for DruidInputSource since that is the only case where we can
       // have existing metrics. This is currently only use by auto compaction and should not be use for anything else.
-      boolean preserveExistingMetrics,
-      boolean useMaxMemoryEstimates
+      boolean preserveExistingMetrics
   )
   {
-    super(incrementalIndexSchema, preserveExistingMetrics, useMaxMemoryEstimates);
+    super(incrementalIndexSchema, preserveExistingMetrics);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     if (incrementalIndexSchema.isRollup()) {
@@ -173,119 +131,36 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     } else {
       this.facts = new PlainNonTimeOrderedFactsHolder(dimsComparator());
     }
-    this.maxBytesPerRowForAggregators =
-        useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
     this.aggregateProjections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     this.projections = new HashMap<>();
-    initializeProjections(incrementalIndexSchema, useMaxMemoryEstimates);
+    initializeProjections(incrementalIndexSchema);
   }
 
-  private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema, boolean useMaxMemoryEstimates)
+  private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema)
   {
     for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
       // initialize them all with 0 rows
       AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
       aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
-      final List<DimensionDesc> descs = new ArrayList<>();
-      // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
-      // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
-      // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
-      // always have its time-like column in the grouping columns list, so its position in this array specifies -1
-      final int[] parentDimIndex = new int[projectionSpec.getGroupingColumns().size()];
-      Arrays.fill(parentDimIndex, -1);
-      int i = 0;
-      final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
-      for (DimensionSchema dimension : projectionSpec.getGroupingColumns()) {
-        if (dimension.getName().equals(schema.getTimeColumnName())) {
-          continue;
-        }
-        final DimensionDesc parent = getDimension(dimension.getName());
-        if (parent == null) {
-          // this dimension only exists in the child, it needs its own handler
-          final DimensionDesc childOnly = new DimensionDesc(
-              i++,
-              dimension.getName(),
-              dimension.getDimensionHandler(),
-              useMaxMemoryEstimates
-          );
-          descs.add(childOnly);
-          dimensionsMap.put(dimension.getName(), childOnly);
-        } else {
-          if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
-            // special handle auto column schema, who reports type as json in schema, but indexer reports whatever
-            // type it has seen, which is string at this stage
-            boolean allowAuto = ColumnType.NESTED_DATA.equals(dimension.getColumnType()) &&
-                                parent.getIndexer() instanceof AutoTypeColumnIndexer;
-            InvalidInput.conditionalException(
-                allowAuto,
-                "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
-                projectionSpec.getName(),
-                dimension.getName(),
-                dimension.getColumnType(),
-                parent.getCapabilities().toColumnType()
-            );
-          }
-          // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
-          final DimensionDesc child = new DimensionDesc(
-              i++,
-              parent.getName(),
-              parent.getHandler(),
-              parent.getIndexer()
-          );
-          descs.add(child);
-          dimensionsMap.put(dimension.getName(), child);
-          parentDimIndex[child.getIndex()] = parent.getIndex();
-        }
+      if (projections.containsKey(projectionSpec.getName())) {
+        throw DruidException.defensive("duplicate projection[%s]", projectionSpec.getName());
       }
+
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
-          projectionSpec.toMetadataSchema(),
-          descs,
-          dimensionsMap,
-          parentDimIndex,
-          incrementalIndexSchema.getMinTimestamp(),
-          this.useMaxMemoryEstimates,
-          this.maxBytesPerRowForAggregators
+          projectionSpec,
+          this::getDimension,
+          metric -> {
+            MetricDesc desc = getMetric(metric);
+            if (desc != null) {
+              return getMetricAggs()[desc.getIndex()];
+            }
+            return null;
+          },
+          incrementalIndexSchema.getMinTimestamp()
       );
       projections.put(projectionSpec.getName(), projection);
     }
-  }
-
-  /**
-   * Old method of memory estimation. Used only when {@link #useMaxMemoryEstimates} is true.
-   *
-   * Gives estimated max size per aggregator. It is assumed that every aggregator will have enough overhead for its own
-   * object header and for a pointer to a selector. We are adding a overhead-factor for each object as additional 16
-   * bytes.
-   * These 16 bytes or 128 bits is the object metadata for 64-bit JVM process and consists of:
-   * <ul>
-   * <li>Class pointer which describes the object type: 64 bits
-   * <li>Flags which describe state of the object including hashcode: 64 bits
-   * <ul/>
-   * total size estimation consists of:
-   * <ul>
-   * <li> metrics length : Integer.BYTES * len
-   * <li> maxAggregatorIntermediateSize : getMaxIntermediateSize per aggregator + overhead-factor(16 bytes)
-   * </ul>
-   *
-   * @param incrementalIndexSchema
-   *
-   * @return long max aggregator size in bytes
-   */
-  private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
-  {
-    final long rowsPerAggregator =
-        incrementalIndexSchema.isRollup() ? ROLLUP_RATIO_FOR_AGGREGATOR_FOOTPRINT_ESTIMATION : 1;
-
-    long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
-
-    for (final AggregatorFactory aggregator : incrementalIndexSchema.getMetrics()) {
-      maxAggregatorIntermediateSize +=
-          (long) aggregator.guessAggregatorHeapFootprint(rowsPerAggregator) + 2L * Long.BYTES;
-    }
-
-    return maxAggregatorIntermediateSize;
   }
 
   @Override
@@ -352,9 +227,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected AddToFactsResult addToFacts(
       IncrementalIndexRow key,
-      InputRowHolder inputRowHolder,
-      boolean skipMaxRowsInMemoryCheck
-  ) throws IndexSizeExceededException
+      InputRowHolder inputRowHolder
+  )
   {
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
@@ -368,12 +242,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
-    final AggregatorFactory[] metrics = getMetrics();
+    final AggregatorFactory[] metrics = getMetricAggs();
     final AtomicInteger numEntries = getNumEntries();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = aggregators.get(priorIndex);
       long aggSizeDelta = doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages);
-      totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggSizeDelta);
+      totalSizeInBytes.addAndGet(aggSizeDelta);
     } else {
       if (preserveExistingMetrics) {
         aggs = new Aggregator[metrics.length * 2];
@@ -386,16 +260,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final int rowIndex = indexIncrement.getAndIncrement();
       aggregators.put(rowIndex, aggs);
 
-      // Last ditch sanity checks
-      if ((numEntries.get() >= maxRowCount || totalSizeInBytes.get() >= maxBytesInMemory)
-          && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
-          && !skipMaxRowsInMemoryCheck) {
-        throw new IndexSizeExceededException(
-            "Maximum number of rows [%d] or max size in bytes [%d] reached",
-            maxRowCount,
-            maxBytesInMemory
-        );
-      }
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
@@ -404,8 +268,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       }
 
       // For a new key, row size = key size + aggregator size + overhead
-      final long estimatedSizeOfAggregators =
-          useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForRow;
+      final long estimatedSizeOfAggregators = aggSizeForRow;
       final long rowSize = key.estimateBytesInMemory()
                            + estimatedSizeOfAggregators
                            + ROUGH_OVERHEAD_PER_MAP_ENTRY;
@@ -425,7 +288,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    * Creates aggregators for the given aggregator factories.
    *
    * @return Total initial size in bytes required by all the aggregators.
-   * This value is non-zero only when {@link #useMaxMemoryEstimates} is false.
    */
   private long factorizeAggs(
       AggregatorFactory[] metrics,
@@ -437,25 +299,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
       // Creates aggregators to aggregate from input into output fields
-      if (useMaxMemoryEstimates) {
-        aggs[i] = agg.factorize(selectors.get(agg.getName()));
-      } else {
-        AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(selectors.get(agg.getName()));
-        aggs[i] = aggregatorAndSize.getAggregator();
-        totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
-        totalInitialSizeBytes += aggReferenceSize;
-      }
+      AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(selectors.get(agg.getName()));
+      aggs[i] = aggregatorAndSize.getAggregator();
+      totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+      totalInitialSizeBytes += aggReferenceSize;
       // Creates aggregators to combine already aggregated field
       if (preserveExistingMetrics) {
         AggregatorFactory combiningAgg = agg.getCombiningFactory();
-        if (useMaxMemoryEstimates) {
-          aggs[i + metrics.length] = combiningAgg.factorize(combiningAggSelectors.get(combiningAgg.getName()));
-        } else {
-          AggregatorAndSize aggregatorAndSize = combiningAgg.factorizeWithSize(combiningAggSelectors.get(combiningAgg.getName()));
-          aggs[i + metrics.length] = aggregatorAndSize.getAggregator();
-          totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
-          totalInitialSizeBytes += aggReferenceSize;
-        }
+        AggregatorAndSize combiningAggAndSize = combiningAgg.factorizeWithSize(combiningAggSelectors.get(combiningAgg.getName()));
+        aggs[i + metrics.length] = combiningAggAndSize.getAggregator();
+        totalInitialSizeBytes += combiningAggAndSize.getInitialSizeBytes();
+        totalInitialSizeBytes += aggReferenceSize;
       }
     }
     return totalInitialSizeBytes;
@@ -464,9 +318,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   /**
    * Performs aggregation for all of the aggregators.
    *
-   * @return Total incremental memory in bytes required by this step of the
-   * aggregation. The returned value is non-zero only if
-   * {@link #useMaxMemoryEstimates} is false.
+   * @return Total incremental memory in bytes required by this step of the aggregation.
    */
   private long doAggregate(
       AggregatorFactory[] metrics,
@@ -475,7 +327,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       List<String> parseExceptionsHolder
   )
   {
-    return doAggregate(metrics, aggs, inputRowHolder, parseExceptionsHolder, useMaxMemoryEstimates, preserveExistingMetrics);
+    return doAggregate(metrics, aggs, inputRowHolder, parseExceptionsHolder, preserveExistingMetrics);
   }
 
   static long doAggregate(
@@ -483,7 +335,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       Aggregator[] aggs,
       InputRowHolder inputRowHolder,
       List<String> parseExceptionsHolder,
-      boolean useMaxMemoryEstimates,
       boolean preserveExistingMetrics
   )
   {
@@ -498,11 +349,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         agg = aggs[i];
       }
       try {
-        if (useMaxMemoryEstimates) {
-          agg.aggregate();
-        } else {
-          totalIncrementalBytes += agg.aggregateWithSize();
-        }
+        totalIncrementalBytes += agg.aggregateWithSize();
       }
       catch (ParseException e) {
         // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
@@ -810,8 +657,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
           maxRowCount,
           maxBytesInMemory,
-          preserveExistingMetrics,
-          useMaxMemoryEstimates
+          preserveExistingMetrics
       );
     }
   }

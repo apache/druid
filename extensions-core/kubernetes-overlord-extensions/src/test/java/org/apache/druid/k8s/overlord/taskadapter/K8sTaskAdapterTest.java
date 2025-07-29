@@ -140,6 +140,7 @@ class K8sTaskAdapterTest
 
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
+        .withOverlordNamespace("test_different")
         .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
         .withLabels(ImmutableMap.of("label_key", "label_value"))
         .build();
@@ -151,16 +152,21 @@ class K8sTaskAdapterTest
         node,
         jsonMapper,
         taskLogs
-
     );
+
     Task task = K8sTestUtils.getTask();
     Job jobFromSpec = adapter.fromTask(task);
 
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
+    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
+
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
+
+    // SingleContainerTaskAdapter will not store OVERLORD_NAMESPACE_KEY.
+    assertFalse(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
     assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
   }
 
@@ -318,7 +324,7 @@ class K8sTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
+    assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
   }
 
   @Test
@@ -527,7 +533,7 @@ class K8sTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
@@ -572,7 +578,57 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  void testCPUResourceIsEspected() throws IOException
+  void testProbesRemoved() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    Pod pod = K8sTestUtils.fileToResource("probesPodSpec.yaml", Pod.class);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                  .withNamespace("test")
+                                                                  .build();
+
+    SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+    NoopTask task = K8sTestUtils.createTask("id", 1);
+    Job actual = adapter.createJobFromPodSpec(
+        pod.getSpec(),
+        task,
+        new PeonCommandContext(
+            Collections.singletonList("foo && bar"),
+            new ArrayList<>(),
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
+        )
+    );
+    Job expected = K8sTestUtils.fileToResource("expectedProbesRemovedOutput.yaml", Job.class);
+    // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
+    // this would never happen in real life, but for the jdk 17 tests this is a problem
+    // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
+    actual.getSpec()
+          .getTemplate()
+          .getSpec()
+          .getContainers()
+          .get(0)
+          .getEnv()
+          .removeIf(x -> x.getName().equals("TASK_JSON"));
+    expected.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getEnv()
+            .removeIf(x -> x.getName().equals("TASK_JSON"));
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  void testCPUResourceIsRespected() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
@@ -580,7 +636,7 @@ class K8sTaskAdapterTest
     List<String> javaOpts = new ArrayList<>();
     javaOpts.add("-Xms1G -Xmx2G -XX:MaxDirectMemorySize=3G");
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("test")
+                                                                  .withNamespace("namespace")
                                                                   .withJavaOptsArray(javaOpts)
                                                                   .withCpuCore(2000)
                                                                   .build();
@@ -672,5 +728,4 @@ class K8sTaskAdapterTest
     );
     assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
-
 }

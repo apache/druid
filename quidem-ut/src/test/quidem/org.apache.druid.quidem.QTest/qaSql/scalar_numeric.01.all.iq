@@ -1,0 +1,2137 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A1_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (session_length IS NULL
+       OR (session_length = session_length
+           AND session_length IS NOT DISTINCT
+           FROM session_length
+           AND session_length <> session_length-1
+           AND (session_length IS DISTINCT
+                FROM session_length-1)
+           AND session_length > session_length-1
+           AND session_length >= session_length-1
+           AND session_length < session_length+1
+           AND session_length <= session_length+1
+           AND (session_length <> session_length-1) IS TRUE
+           AND (session_length = session_length-1) IS NOT TRUE
+           AND (session_length = session_length-1) IS FALSE
+           AND (session_length <> session_length-1) IS NOT FALSE
+           AND session_length BETWEEN session_length-1 AND session_length+1
+           AND session_length NOT BETWEEN session_length AND session_length-1
+           AND session_length like '%'
+           AND session_length not like '__DOES_NOT_EXIST__%'
+           AND session_length IN (session_length-1,
+                                                session_length,
+                                                session_length+1)
+           AND session_length NOT IN (session_length-1,
+                                                    session_length+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A1_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (session_length IS NULL
+       OR session_length IN
+         (SELECT session_length
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (session_length IS NULL
+                 OR (session_length = session_length
+                     AND session_length IS NOT DISTINCT
+                     FROM session_length
+                     AND session_length <> session_length-1
+                     AND (session_length IS DISTINCT
+                          FROM session_length-1)
+                     AND session_length > session_length-1
+                     AND session_length >= session_length-1
+                     AND session_length < session_length+1
+                     AND session_length <= session_length+1
+                     AND (session_length <> session_length-1) IS TRUE
+                     AND (session_length = session_length-1) IS NOT TRUE
+                     AND (session_length = session_length-1) IS FALSE
+                     AND (session_length <> session_length-1) IS NOT FALSE
+                     AND session_length BETWEEN session_length-1 AND session_length+1
+                     AND session_length NOT BETWEEN session_length AND session_length-1
+                     AND session_length like '%'
+                     AND session_length not like '__DOES_NOT_EXIST__%'
+                     AND session_length IN (session_length-1,
+                                                          session_length,
+                                                          session_length+1)
+                     AND session_length NOT IN (session_length-1,
+                                                              session_length+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A1_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          session_length,
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (session_length IS NULL
+          OR (session_length = session_length
+              AND session_length IS NOT DISTINCT
+              FROM session_length
+              AND session_length <> session_length-1
+              AND (session_length IS DISTINCT
+                   FROM session_length-1)
+              AND session_length > session_length-1
+              AND session_length >= session_length-1
+              AND session_length < session_length+1
+              AND session_length <= session_length+1
+              AND (session_length <> session_length-1) IS TRUE
+              AND (session_length = session_length-1) IS NOT TRUE
+              AND (session_length = session_length-1) IS FALSE
+              AND (session_length <> session_length-1) IS NOT FALSE
+              AND session_length BETWEEN session_length-1 AND session_length+1
+              AND session_length NOT BETWEEN session_length AND session_length-1
+              AND session_length like '%'
+              AND session_length not like '__DOES_NOT_EXIST__%'
+              AND session_length IN (session_length-1,
+                                                   session_length,
+                                                   session_length+1)
+              AND session_length NOT IN (session_length-1,
+                                                       session_length+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A2_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (pi IS NULL
+       OR (pi = pi+0
+           AND pi IS NOT DISTINCT
+           FROM pi+0
+           AND pi <> pi-1
+           AND (pi IS DISTINCT
+                FROM pi-1)
+           AND pi > pi-1
+           AND pi >= pi-1
+           AND pi < pi+1
+           AND pi <= pi+1
+           AND (pi <> pi-1) IS TRUE
+           AND (pi = pi-1) IS NOT TRUE
+           AND (pi = pi-1) IS FALSE
+           AND (pi <> pi-1) IS NOT FALSE
+           AND pi BETWEEN pi-1 AND pi+1
+           AND pi NOT BETWEEN pi AND pi-1
+           AND pi like '%'
+           AND pi not like '__DOES_NOT_EXIST__%'
+           AND pi IN (pi-1,
+                        pi+0,
+                        pi+1)
+           AND pi NOT IN (pi-1,
+                            pi+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A2_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (pi IS NULL
+       OR pi IN
+         (SELECT pi
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (pi IS NULL
+                 OR (pi = pi+0
+                     AND pi IS NOT DISTINCT
+                     FROM pi+0
+                     AND pi <> pi-1
+                     AND (pi IS DISTINCT
+                          FROM pi-1)
+                     AND pi > pi-1
+                     AND pi >= pi-1
+                     AND pi < pi+1
+                     AND pi <= pi+1
+                     AND (pi <> pi-1) IS TRUE
+                     AND (pi = pi-1) IS NOT TRUE
+                     AND (pi = pi-1) IS FALSE
+                     AND (pi <> pi-1) IS NOT FALSE
+                     AND pi BETWEEN pi-1 AND pi+1
+                     AND pi NOT BETWEEN pi AND pi-1
+                     AND pi like '%'
+                     AND pi not like '__DOES_NOT_EXIST__%'
+                     AND pi IN (pi-1,
+                                  pi+0,
+                                  pi+1)
+                     AND pi NOT IN (pi-1,
+                                      pi+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A2_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          pi,
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (pi IS NULL
+          OR (pi = pi+0
+              AND pi IS NOT DISTINCT
+              FROM pi+0
+              AND pi <> pi-1
+              AND (pi IS DISTINCT
+                   FROM pi-1)
+              AND pi > pi-1
+              AND pi >= pi-1
+              AND pi < pi+1
+              AND pi <= pi+1
+              AND (pi <> pi-1) IS TRUE
+              AND (pi = pi-1) IS NOT TRUE
+              AND (pi = pi-1) IS FALSE
+              AND (pi <> pi-1) IS NOT FALSE
+              AND pi BETWEEN pi-1 AND pi+1
+              AND pi NOT BETWEEN pi AND pi-1
+              AND pi like '%'
+              AND pi not like '__DOES_NOT_EXIST__%'
+              AND pi IN (pi-1,
+                           pi+0,
+                           pi+1)
+              AND pi NOT IN (pi-1,
+                               pi+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A3_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (abs(session_length) IS NULL
+       OR (abs(session_length) = abs(session_length)+0
+           AND abs(session_length) IS NOT DISTINCT
+           FROM abs(session_length)+0
+           AND abs(session_length) <> abs(session_length)-1
+           AND (abs(session_length) IS DISTINCT
+                FROM abs(session_length)-1)
+           AND abs(session_length) > abs(session_length)-1
+           AND abs(session_length) >= abs(session_length)-1
+           AND abs(session_length) < abs(session_length)+1
+           AND abs(session_length) <= abs(session_length)+1
+           AND (abs(session_length) <> abs(session_length)-1) IS TRUE
+           AND (abs(session_length) = abs(session_length)-1) IS NOT TRUE
+           AND (abs(session_length) = abs(session_length)-1) IS FALSE
+           AND (abs(session_length) <> abs(session_length)-1) IS NOT FALSE
+           AND abs(session_length) BETWEEN abs(session_length)-1 AND abs(session_length)+1
+           AND abs(session_length) NOT BETWEEN abs(session_length) AND abs(session_length)-1
+           AND abs(session_length) like '%'
+           AND abs(session_length) not like '__DOES_NOT_EXIST__%'
+           AND abs(session_length) IN (abs(session_length)-1,
+                                                          abs(session_length)+0,
+                                                          abs(session_length)+1)
+           AND abs(session_length) NOT IN (abs(session_length)-1,
+                                                              abs(session_length)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A3_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (abs(session_length) IS NULL
+       OR abs(session_length) IN
+         (SELECT abs(session_length)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (abs(session_length) IS NULL
+                 OR (abs(session_length) = abs(session_length)+0
+                     AND abs(session_length) IS NOT DISTINCT
+                     FROM abs(session_length)+0
+                     AND abs(session_length) <> abs(session_length)-1
+                     AND (abs(session_length) IS DISTINCT
+                          FROM abs(session_length)-1)
+                     AND abs(session_length) > abs(session_length)-1
+                     AND abs(session_length) >= abs(session_length)-1
+                     AND abs(session_length) < abs(session_length)+1
+                     AND abs(session_length) <= abs(session_length)+1
+                     AND (abs(session_length) <> abs(session_length)-1) IS TRUE
+                     AND (abs(session_length) = abs(session_length)-1) IS NOT TRUE
+                     AND (abs(session_length) = abs(session_length)-1) IS FALSE
+                     AND (abs(session_length) <> abs(session_length)-1) IS NOT FALSE
+                     AND abs(session_length) BETWEEN abs(session_length)-1 AND abs(session_length)+1
+                     AND abs(session_length) NOT BETWEEN abs(session_length) AND abs(session_length)-1
+                     AND abs(session_length) like '%'
+                     AND abs(session_length) not like '__DOES_NOT_EXIST__%'
+                     AND abs(session_length) IN (abs(session_length)-1,
+                                                                    abs(session_length)+0,
+                                                                    abs(session_length)+1)
+                     AND abs(session_length) NOT IN (abs(session_length)-1,
+                                                                        abs(session_length)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A3_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          abs(session_length),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (abs(session_length) IS NULL
+          OR (abs(session_length) = abs(session_length)+0
+              AND abs(session_length) IS NOT DISTINCT
+              FROM abs(session_length)+0
+              AND abs(session_length) <> abs(session_length)-1
+              AND (abs(session_length) IS DISTINCT
+                   FROM abs(session_length)-1)
+              AND abs(session_length) > abs(session_length)-1
+              AND abs(session_length) >= abs(session_length)-1
+              AND abs(session_length) < abs(session_length)+1
+              AND abs(session_length) <= abs(session_length)+1
+              AND (abs(session_length) <> abs(session_length)-1) IS TRUE
+              AND (abs(session_length) = abs(session_length)-1) IS NOT TRUE
+              AND (abs(session_length) = abs(session_length)-1) IS FALSE
+              AND (abs(session_length) <> abs(session_length)-1) IS NOT FALSE
+              AND abs(session_length) BETWEEN abs(session_length)-1 AND abs(session_length)+1
+              AND abs(session_length) NOT BETWEEN abs(session_length) AND abs(session_length)-1
+              AND abs(session_length) like '%'
+              AND abs(session_length) not like '__DOES_NOT_EXIST__%'
+              AND abs(session_length) IN (abs(session_length)-1,
+                                                             abs(session_length)+0,
+                                                             abs(session_length)+1)
+              AND abs(session_length) NOT IN (abs(session_length)-1,
+                                                                 abs(session_length)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A4_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ceil(session_length) IS NULL
+       OR (ceil(session_length) = ceil(session_length)+0
+           AND ceil(session_length) IS NOT DISTINCT
+           FROM ceil(session_length)+0
+           AND ceil(session_length) <> ceil(session_length)-1
+           AND (ceil(session_length) IS DISTINCT
+                FROM ceil(session_length)-1)
+           AND ceil(session_length) > ceil(session_length)-1
+           AND ceil(session_length) >= ceil(session_length)-1
+           AND ceil(session_length) < ceil(session_length)+1
+           AND ceil(session_length) <= ceil(session_length)+1
+           AND (ceil(session_length) <> ceil(session_length)-1) IS TRUE
+           AND (ceil(session_length) = ceil(session_length)-1) IS NOT TRUE
+           AND (ceil(session_length) = ceil(session_length)-1) IS FALSE
+           AND (ceil(session_length) <> ceil(session_length)-1) IS NOT FALSE
+           AND ceil(session_length) BETWEEN ceil(session_length)-1 AND ceil(session_length)+1
+           AND ceil(session_length) NOT BETWEEN ceil(session_length) AND ceil(session_length)-1
+           AND ceil(session_length) like '%'
+           AND ceil(session_length) not like '__DOES_NOT_EXIST__%'
+           AND ceil(session_length) IN (ceil(session_length)-1,
+                                                            ceil(session_length)+0,
+                                                            ceil(session_length)+1)
+           AND ceil(session_length) NOT IN (ceil(session_length)-1,
+                                                                ceil(session_length)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A4_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ceil(session_length) IS NULL
+       OR ceil(session_length) IN
+         (SELECT ceil(session_length)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (ceil(session_length) IS NULL
+                 OR (ceil(session_length) = ceil(session_length)+0
+                     AND ceil(session_length) IS NOT DISTINCT
+                     FROM ceil(session_length)+0
+                     AND ceil(session_length) <> ceil(session_length)-1
+                     AND (ceil(session_length) IS DISTINCT
+                          FROM ceil(session_length)-1)
+                     AND ceil(session_length) > ceil(session_length)-1
+                     AND ceil(session_length) >= ceil(session_length)-1
+                     AND ceil(session_length) < ceil(session_length)+1
+                     AND ceil(session_length) <= ceil(session_length)+1
+                     AND (ceil(session_length) <> ceil(session_length)-1) IS TRUE
+                     AND (ceil(session_length) = ceil(session_length)-1) IS NOT TRUE
+                     AND (ceil(session_length) = ceil(session_length)-1) IS FALSE
+                     AND (ceil(session_length) <> ceil(session_length)-1) IS NOT FALSE
+                     AND ceil(session_length) BETWEEN ceil(session_length)-1 AND ceil(session_length)+1
+                     AND ceil(session_length) NOT BETWEEN ceil(session_length) AND ceil(session_length)-1
+                     AND ceil(session_length) like '%'
+                     AND ceil(session_length) not like '__DOES_NOT_EXIST__%'
+                     AND ceil(session_length) IN (ceil(session_length)-1,
+                                                                      ceil(session_length)+0,
+                                                                      ceil(session_length)+1)
+                     AND ceil(session_length) NOT IN (ceil(session_length)-1,
+                                                                          ceil(session_length)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A4_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          ceil(session_length),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (ceil(session_length) IS NULL
+          OR (ceil(session_length) = ceil(session_length)+0
+              AND ceil(session_length) IS NOT DISTINCT
+              FROM ceil(session_length)+0
+              AND ceil(session_length) <> ceil(session_length)-1
+              AND (ceil(session_length) IS DISTINCT
+                   FROM ceil(session_length)-1)
+              AND ceil(session_length) > ceil(session_length)-1
+              AND ceil(session_length) >= ceil(session_length)-1
+              AND ceil(session_length) < ceil(session_length)+1
+              AND ceil(session_length) <= ceil(session_length)+1
+              AND (ceil(session_length) <> ceil(session_length)-1) IS TRUE
+              AND (ceil(session_length) = ceil(session_length)-1) IS NOT TRUE
+              AND (ceil(session_length) = ceil(session_length)-1) IS FALSE
+              AND (ceil(session_length) <> ceil(session_length)-1) IS NOT FALSE
+              AND ceil(session_length) BETWEEN ceil(session_length)-1 AND ceil(session_length)+1
+              AND ceil(session_length) NOT BETWEEN ceil(session_length) AND ceil(session_length)-1
+              AND ceil(session_length) like '%'
+              AND ceil(session_length) not like '__DOES_NOT_EXIST__%'
+              AND ceil(session_length) IN (ceil(session_length)-1,
+                                                               ceil(session_length)+0,
+                                                               ceil(session_length)+1)
+              AND ceil(session_length) NOT IN (ceil(session_length)-1,
+                                                                   ceil(session_length)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A5_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(exp(least(session_length, 10))) IS NULL
+       OR (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))+0
+           AND floor(exp(least(session_length, 10))) IS NOT DISTINCT
+           FROM floor(exp(least(session_length, 10)))+0
+           AND floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1
+           AND (floor(exp(least(session_length, 10))) IS DISTINCT
+                FROM floor(exp(least(session_length, 10)))-1)
+           AND floor(exp(least(session_length, 10))) > floor(exp(least(session_length, 10)))-1
+           AND floor(exp(least(session_length, 10))) >= floor(exp(least(session_length, 10)))-1
+           AND floor(exp(least(session_length, 10))) < floor(exp(least(session_length, 10)))+1
+           AND floor(exp(least(session_length, 10))) <= floor(exp(least(session_length, 10)))+1
+           AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS TRUE
+           AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS NOT TRUE
+           AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS FALSE
+           AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS NOT FALSE
+           AND floor(exp(least(session_length, 10))) BETWEEN floor(exp(least(session_length, 10)))-1 AND floor(exp(least(session_length, 10)))+1
+           AND floor(exp(least(session_length, 10))) NOT BETWEEN floor(exp(least(session_length, 10))) AND floor(exp(least(session_length, 10)))-1
+           AND floor(exp(least(session_length, 10))) like '%'
+           AND floor(exp(least(session_length, 10))) not like '__DOES_NOT_EXIST__%'
+           AND floor(exp(least(session_length, 10))) IN (floor(exp(least(session_length, 10)))-1,
+                                                                                              floor(exp(least(session_length, 10)))+0,
+                                                                                              floor(exp(least(session_length, 10)))+1)
+           AND floor(exp(least(session_length, 10))) NOT IN (floor(exp(least(session_length, 10)))-1,
+                                                                                                  floor(exp(least(session_length, 10)))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A5_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(exp(least(session_length, 10))) IS NULL
+       OR floor(exp(least(session_length, 10))) IN
+         (SELECT floor(exp(least(session_length, 10)))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(exp(least(session_length, 10))) IS NULL
+                 OR (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))+0
+                     AND floor(exp(least(session_length, 10))) IS NOT DISTINCT
+                     FROM floor(exp(least(session_length, 10)))+0
+                     AND floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1
+                     AND (floor(exp(least(session_length, 10))) IS DISTINCT
+                          FROM floor(exp(least(session_length, 10)))-1)
+                     AND floor(exp(least(session_length, 10))) > floor(exp(least(session_length, 10)))-1
+                     AND floor(exp(least(session_length, 10))) >= floor(exp(least(session_length, 10)))-1
+                     AND floor(exp(least(session_length, 10))) < floor(exp(least(session_length, 10)))+1
+                     AND floor(exp(least(session_length, 10))) <= floor(exp(least(session_length, 10)))+1
+                     AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS TRUE
+                     AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS NOT TRUE
+                     AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS FALSE
+                     AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS NOT FALSE
+                     AND floor(exp(least(session_length, 10))) BETWEEN floor(exp(least(session_length, 10)))-1 AND floor(exp(least(session_length, 10)))+1
+                     AND floor(exp(least(session_length, 10))) NOT BETWEEN floor(exp(least(session_length, 10))) AND floor(exp(least(session_length, 10)))-1
+                     AND floor(exp(least(session_length, 10))) like '%'
+                     AND floor(exp(least(session_length, 10))) not like '__DOES_NOT_EXIST__%'
+                     AND floor(exp(least(session_length, 10))) IN (floor(exp(least(session_length, 10)))-1,
+                                                                                                        floor(exp(least(session_length, 10)))+0,
+                                                                                                        floor(exp(least(session_length, 10)))+1)
+                     AND floor(exp(least(session_length, 10))) NOT IN (floor(exp(least(session_length, 10)))-1,
+                                                                                                            floor(exp(least(session_length, 10)))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A5_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(exp(least(session_length, 10))),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(exp(least(session_length, 10))) IS NULL
+          OR (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))+0
+              AND floor(exp(least(session_length, 10))) IS NOT DISTINCT
+              FROM floor(exp(least(session_length, 10)))+0
+              AND floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1
+              AND (floor(exp(least(session_length, 10))) IS DISTINCT
+                   FROM floor(exp(least(session_length, 10)))-1)
+              AND floor(exp(least(session_length, 10))) > floor(exp(least(session_length, 10)))-1
+              AND floor(exp(least(session_length, 10))) >= floor(exp(least(session_length, 10)))-1
+              AND floor(exp(least(session_length, 10))) < floor(exp(least(session_length, 10)))+1
+              AND floor(exp(least(session_length, 10))) <= floor(exp(least(session_length, 10)))+1
+              AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS TRUE
+              AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS NOT TRUE
+              AND (floor(exp(least(session_length, 10))) = floor(exp(least(session_length, 10)))-1) IS FALSE
+              AND (floor(exp(least(session_length, 10))) <> floor(exp(least(session_length, 10)))-1) IS NOT FALSE
+              AND floor(exp(least(session_length, 10))) BETWEEN floor(exp(least(session_length, 10)))-1 AND floor(exp(least(session_length, 10)))+1
+              AND floor(exp(least(session_length, 10))) NOT BETWEEN floor(exp(least(session_length, 10))) AND floor(exp(least(session_length, 10)))-1
+              AND floor(exp(least(session_length, 10))) like '%'
+              AND floor(exp(least(session_length, 10))) not like '__DOES_NOT_EXIST__%'
+              AND floor(exp(least(session_length, 10))) IN (floor(exp(least(session_length, 10)))-1,
+                                                                                                 floor(exp(least(session_length, 10)))+0,
+                                                                                                 floor(exp(least(session_length, 10)))+1)
+              AND floor(exp(least(session_length, 10))) NOT IN (floor(exp(least(session_length, 10)))-1,
+                                                                                                     floor(exp(least(session_length, 10)))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A6_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(session_length) IS NULL
+       OR (floor(session_length) = floor(session_length)+0
+           AND floor(session_length) IS NOT DISTINCT
+           FROM floor(session_length)+0
+           AND floor(session_length) <> floor(session_length)-1
+           AND (floor(session_length) IS DISTINCT
+                FROM floor(session_length)-1)
+           AND floor(session_length) > floor(session_length)-1
+           AND floor(session_length) >= floor(session_length)-1
+           AND floor(session_length) < floor(session_length)+1
+           AND floor(session_length) <= floor(session_length)+1
+           AND (floor(session_length) <> floor(session_length)-1) IS TRUE
+           AND (floor(session_length) = floor(session_length)-1) IS NOT TRUE
+           AND (floor(session_length) = floor(session_length)-1) IS FALSE
+           AND (floor(session_length) <> floor(session_length)-1) IS NOT FALSE
+           AND floor(session_length) BETWEEN floor(session_length)-1 AND floor(session_length)+1
+           AND floor(session_length) NOT BETWEEN floor(session_length) AND floor(session_length)-1
+           AND floor(session_length) like '%'
+           AND floor(session_length) not like '__DOES_NOT_EXIST__%'
+           AND floor(session_length) IN (floor(session_length)-1,
+                                                              floor(session_length)+0,
+                                                              floor(session_length)+1)
+           AND floor(session_length) NOT IN (floor(session_length)-1,
+                                                                  floor(session_length)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A6_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(session_length) IS NULL
+       OR floor(session_length) IN
+         (SELECT floor(session_length)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(session_length) IS NULL
+                 OR (floor(session_length) = floor(session_length)+0
+                     AND floor(session_length) IS NOT DISTINCT
+                     FROM floor(session_length)+0
+                     AND floor(session_length) <> floor(session_length)-1
+                     AND (floor(session_length) IS DISTINCT
+                          FROM floor(session_length)-1)
+                     AND floor(session_length) > floor(session_length)-1
+                     AND floor(session_length) >= floor(session_length)-1
+                     AND floor(session_length) < floor(session_length)+1
+                     AND floor(session_length) <= floor(session_length)+1
+                     AND (floor(session_length) <> floor(session_length)-1) IS TRUE
+                     AND (floor(session_length) = floor(session_length)-1) IS NOT TRUE
+                     AND (floor(session_length) = floor(session_length)-1) IS FALSE
+                     AND (floor(session_length) <> floor(session_length)-1) IS NOT FALSE
+                     AND floor(session_length) BETWEEN floor(session_length)-1 AND floor(session_length)+1
+                     AND floor(session_length) NOT BETWEEN floor(session_length) AND floor(session_length)-1
+                     AND floor(session_length) like '%'
+                     AND floor(session_length) not like '__DOES_NOT_EXIST__%'
+                     AND floor(session_length) IN (floor(session_length)-1,
+                                                                        floor(session_length)+0,
+                                                                        floor(session_length)+1)
+                     AND floor(session_length) NOT IN (floor(session_length)-1,
+                                                                            floor(session_length)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A6_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(session_length),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(session_length) IS NULL
+          OR (floor(session_length) = floor(session_length)+0
+              AND floor(session_length) IS NOT DISTINCT
+              FROM floor(session_length)+0
+              AND floor(session_length) <> floor(session_length)-1
+              AND (floor(session_length) IS DISTINCT
+                   FROM floor(session_length)-1)
+              AND floor(session_length) > floor(session_length)-1
+              AND floor(session_length) >= floor(session_length)-1
+              AND floor(session_length) < floor(session_length)+1
+              AND floor(session_length) <= floor(session_length)+1
+              AND (floor(session_length) <> floor(session_length)-1) IS TRUE
+              AND (floor(session_length) = floor(session_length)-1) IS NOT TRUE
+              AND (floor(session_length) = floor(session_length)-1) IS FALSE
+              AND (floor(session_length) <> floor(session_length)-1) IS NOT FALSE
+              AND floor(session_length) BETWEEN floor(session_length)-1 AND floor(session_length)+1
+              AND floor(session_length) NOT BETWEEN floor(session_length) AND floor(session_length)-1
+              AND floor(session_length) like '%'
+              AND floor(session_length) not like '__DOES_NOT_EXIST__%'
+              AND floor(session_length) IN (floor(session_length)-1,
+                                                                 floor(session_length)+0,
+                                                                 floor(session_length)+1)
+              AND floor(session_length) NOT IN (floor(session_length)-1,
+                                                                     floor(session_length)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A7_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(ln(greatest(least(session_length, 100), 1))) IS NULL
+       OR (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))+0
+           AND floor(ln(greatest(least(session_length, 100), 1))) IS NOT DISTINCT
+           FROM floor(ln(greatest(least(session_length, 100), 1)))+0
+           AND floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1
+           AND (floor(ln(greatest(least(session_length, 100), 1))) IS DISTINCT
+                FROM floor(ln(greatest(least(session_length, 100), 1)))-1)
+           AND floor(ln(greatest(least(session_length, 100), 1))) > floor(ln(greatest(least(session_length, 100), 1)))-1
+           AND floor(ln(greatest(least(session_length, 100), 1))) >= floor(ln(greatest(least(session_length, 100), 1)))-1
+           AND floor(ln(greatest(least(session_length, 100), 1))) < floor(ln(greatest(least(session_length, 100), 1)))+1
+           AND floor(ln(greatest(least(session_length, 100), 1))) <= floor(ln(greatest(least(session_length, 100), 1)))+1
+           AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS TRUE
+           AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT TRUE
+           AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS FALSE
+           AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT FALSE
+           AND floor(ln(greatest(least(session_length, 100), 1))) BETWEEN floor(ln(greatest(least(session_length, 100), 1)))-1 AND floor(ln(greatest(least(session_length, 100), 1)))+1
+           AND floor(ln(greatest(least(session_length, 100), 1))) NOT BETWEEN floor(ln(greatest(least(session_length, 100), 1))) AND floor(ln(greatest(least(session_length, 100), 1)))-1
+           AND floor(ln(greatest(least(session_length, 100), 1))) like '%'
+           AND floor(ln(greatest(least(session_length, 100), 1))) not like '__DOES_NOT_EXIST__%'
+           AND floor(ln(greatest(least(session_length, 100), 1))) IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                        floor(ln(greatest(least(session_length, 100), 1)))+0,
+                                                                                                                        floor(ln(greatest(least(session_length, 100), 1)))+1)
+           AND floor(ln(greatest(least(session_length, 100), 1))) NOT IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                            floor(ln(greatest(least(session_length, 100), 1)))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A7_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(ln(greatest(least(session_length, 100), 1))) IS NULL
+       OR floor(ln(greatest(least(session_length, 100), 1))) IN
+         (SELECT floor(ln(greatest(least(session_length, 100), 1)))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(ln(greatest(least(session_length, 100), 1))) IS NULL
+                 OR (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))+0
+                     AND floor(ln(greatest(least(session_length, 100), 1))) IS NOT DISTINCT
+                     FROM floor(ln(greatest(least(session_length, 100), 1)))+0
+                     AND floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1
+                     AND (floor(ln(greatest(least(session_length, 100), 1))) IS DISTINCT
+                          FROM floor(ln(greatest(least(session_length, 100), 1)))-1)
+                     AND floor(ln(greatest(least(session_length, 100), 1))) > floor(ln(greatest(least(session_length, 100), 1)))-1
+                     AND floor(ln(greatest(least(session_length, 100), 1))) >= floor(ln(greatest(least(session_length, 100), 1)))-1
+                     AND floor(ln(greatest(least(session_length, 100), 1))) < floor(ln(greatest(least(session_length, 100), 1)))+1
+                     AND floor(ln(greatest(least(session_length, 100), 1))) <= floor(ln(greatest(least(session_length, 100), 1)))+1
+                     AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS TRUE
+                     AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT TRUE
+                     AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS FALSE
+                     AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT FALSE
+                     AND floor(ln(greatest(least(session_length, 100), 1))) BETWEEN floor(ln(greatest(least(session_length, 100), 1)))-1 AND floor(ln(greatest(least(session_length, 100), 1)))+1
+                     AND floor(ln(greatest(least(session_length, 100), 1))) NOT BETWEEN floor(ln(greatest(least(session_length, 100), 1))) AND floor(ln(greatest(least(session_length, 100), 1)))-1
+                     AND floor(ln(greatest(least(session_length, 100), 1))) like '%'
+                     AND floor(ln(greatest(least(session_length, 100), 1))) not like '__DOES_NOT_EXIST__%'
+                     AND floor(ln(greatest(least(session_length, 100), 1))) IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                                  floor(ln(greatest(least(session_length, 100), 1)))+0,
+                                                                                                                                  floor(ln(greatest(least(session_length, 100), 1)))+1)
+                     AND floor(ln(greatest(least(session_length, 100), 1))) NOT IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                                      floor(ln(greatest(least(session_length, 100), 1)))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A7_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(ln(greatest(least(session_length, 100), 1))),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(ln(greatest(least(session_length, 100), 1))) IS NULL
+          OR (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))+0
+              AND floor(ln(greatest(least(session_length, 100), 1))) IS NOT DISTINCT
+              FROM floor(ln(greatest(least(session_length, 100), 1)))+0
+              AND floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1
+              AND (floor(ln(greatest(least(session_length, 100), 1))) IS DISTINCT
+                   FROM floor(ln(greatest(least(session_length, 100), 1)))-1)
+              AND floor(ln(greatest(least(session_length, 100), 1))) > floor(ln(greatest(least(session_length, 100), 1)))-1
+              AND floor(ln(greatest(least(session_length, 100), 1))) >= floor(ln(greatest(least(session_length, 100), 1)))-1
+              AND floor(ln(greatest(least(session_length, 100), 1))) < floor(ln(greatest(least(session_length, 100), 1)))+1
+              AND floor(ln(greatest(least(session_length, 100), 1))) <= floor(ln(greatest(least(session_length, 100), 1)))+1
+              AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS TRUE
+              AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT TRUE
+              AND (floor(ln(greatest(least(session_length, 100), 1))) = floor(ln(greatest(least(session_length, 100), 1)))-1) IS FALSE
+              AND (floor(ln(greatest(least(session_length, 100), 1))) <> floor(ln(greatest(least(session_length, 100), 1)))-1) IS NOT FALSE
+              AND floor(ln(greatest(least(session_length, 100), 1))) BETWEEN floor(ln(greatest(least(session_length, 100), 1)))-1 AND floor(ln(greatest(least(session_length, 100), 1)))+1
+              AND floor(ln(greatest(least(session_length, 100), 1))) NOT BETWEEN floor(ln(greatest(least(session_length, 100), 1))) AND floor(ln(greatest(least(session_length, 100), 1)))-1
+              AND floor(ln(greatest(least(session_length, 100), 1))) like '%'
+              AND floor(ln(greatest(least(session_length, 100), 1))) not like '__DOES_NOT_EXIST__%'
+              AND floor(ln(greatest(least(session_length, 100), 1))) IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                           floor(ln(greatest(least(session_length, 100), 1)))+0,
+                                                                                                                           floor(ln(greatest(least(session_length, 100), 1)))+1)
+              AND floor(ln(greatest(least(session_length, 100), 1))) NOT IN (floor(ln(greatest(least(session_length, 100), 1)))-1,
+                                                                                                                               floor(ln(greatest(least(session_length, 100), 1)))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A8_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(log10(greatest(session_length, 1))) IS NULL
+       OR (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))+0
+           AND floor(log10(greatest(session_length, 1))) IS NOT DISTINCT
+           FROM floor(log10(greatest(session_length, 1)))+0
+           AND floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1
+           AND (floor(log10(greatest(session_length, 1))) IS DISTINCT
+                FROM floor(log10(greatest(session_length, 1)))-1)
+           AND floor(log10(greatest(session_length, 1))) > floor(log10(greatest(session_length, 1)))-1
+           AND floor(log10(greatest(session_length, 1))) >= floor(log10(greatest(session_length, 1)))-1
+           AND floor(log10(greatest(session_length, 1))) < floor(log10(greatest(session_length, 1)))+1
+           AND floor(log10(greatest(session_length, 1))) <= floor(log10(greatest(session_length, 1)))+1
+           AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS TRUE
+           AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS NOT TRUE
+           AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS FALSE
+           AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS NOT FALSE
+           AND floor(log10(greatest(session_length, 1))) BETWEEN floor(log10(greatest(session_length, 1)))-1 AND floor(log10(greatest(session_length, 1)))+1
+           AND floor(log10(greatest(session_length, 1))) NOT BETWEEN floor(log10(greatest(session_length, 1))) AND floor(log10(greatest(session_length, 1)))-1
+           AND floor(log10(greatest(session_length, 1))) like '%'
+           AND floor(log10(greatest(session_length, 1))) not like '__DOES_NOT_EXIST__%'
+           AND floor(log10(greatest(session_length, 1))) IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                      floor(log10(greatest(session_length, 1)))+0,
+                                                                                                      floor(log10(greatest(session_length, 1)))+1)
+           AND floor(log10(greatest(session_length, 1))) NOT IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                          floor(log10(greatest(session_length, 1)))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A8_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(log10(greatest(session_length, 1))) IS NULL
+       OR floor(log10(greatest(session_length, 1))) IN
+         (SELECT floor(log10(greatest(session_length, 1)))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(log10(greatest(session_length, 1))) IS NULL
+                 OR (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))+0
+                     AND floor(log10(greatest(session_length, 1))) IS NOT DISTINCT
+                     FROM floor(log10(greatest(session_length, 1)))+0
+                     AND floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1
+                     AND (floor(log10(greatest(session_length, 1))) IS DISTINCT
+                          FROM floor(log10(greatest(session_length, 1)))-1)
+                     AND floor(log10(greatest(session_length, 1))) > floor(log10(greatest(session_length, 1)))-1
+                     AND floor(log10(greatest(session_length, 1))) >= floor(log10(greatest(session_length, 1)))-1
+                     AND floor(log10(greatest(session_length, 1))) < floor(log10(greatest(session_length, 1)))+1
+                     AND floor(log10(greatest(session_length, 1))) <= floor(log10(greatest(session_length, 1)))+1
+                     AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS TRUE
+                     AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS NOT TRUE
+                     AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS FALSE
+                     AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS NOT FALSE
+                     AND floor(log10(greatest(session_length, 1))) BETWEEN floor(log10(greatest(session_length, 1)))-1 AND floor(log10(greatest(session_length, 1)))+1
+                     AND floor(log10(greatest(session_length, 1))) NOT BETWEEN floor(log10(greatest(session_length, 1))) AND floor(log10(greatest(session_length, 1)))-1
+                     AND floor(log10(greatest(session_length, 1))) like '%'
+                     AND floor(log10(greatest(session_length, 1))) not like '__DOES_NOT_EXIST__%'
+                     AND floor(log10(greatest(session_length, 1))) IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                                floor(log10(greatest(session_length, 1)))+0,
+                                                                                                                floor(log10(greatest(session_length, 1)))+1)
+                     AND floor(log10(greatest(session_length, 1))) NOT IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                                    floor(log10(greatest(session_length, 1)))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A8_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(log10(greatest(session_length, 1))),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(log10(greatest(session_length, 1))) IS NULL
+          OR (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))+0
+              AND floor(log10(greatest(session_length, 1))) IS NOT DISTINCT
+              FROM floor(log10(greatest(session_length, 1)))+0
+              AND floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1
+              AND (floor(log10(greatest(session_length, 1))) IS DISTINCT
+                   FROM floor(log10(greatest(session_length, 1)))-1)
+              AND floor(log10(greatest(session_length, 1))) > floor(log10(greatest(session_length, 1)))-1
+              AND floor(log10(greatest(session_length, 1))) >= floor(log10(greatest(session_length, 1)))-1
+              AND floor(log10(greatest(session_length, 1))) < floor(log10(greatest(session_length, 1)))+1
+              AND floor(log10(greatest(session_length, 1))) <= floor(log10(greatest(session_length, 1)))+1
+              AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS TRUE
+              AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS NOT TRUE
+              AND (floor(log10(greatest(session_length, 1))) = floor(log10(greatest(session_length, 1)))-1) IS FALSE
+              AND (floor(log10(greatest(session_length, 1))) <> floor(log10(greatest(session_length, 1)))-1) IS NOT FALSE
+              AND floor(log10(greatest(session_length, 1))) BETWEEN floor(log10(greatest(session_length, 1)))-1 AND floor(log10(greatest(session_length, 1)))+1
+              AND floor(log10(greatest(session_length, 1))) NOT BETWEEN floor(log10(greatest(session_length, 1))) AND floor(log10(greatest(session_length, 1)))-1
+              AND floor(log10(greatest(session_length, 1))) like '%'
+              AND floor(log10(greatest(session_length, 1))) not like '__DOES_NOT_EXIST__%'
+              AND floor(log10(greatest(session_length, 1))) IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                         floor(log10(greatest(session_length, 1)))+0,
+                                                                                                         floor(log10(greatest(session_length, 1)))+1)
+              AND floor(log10(greatest(session_length, 1))) NOT IN (floor(log10(greatest(session_length, 1)))-1,
+                                                                                                             floor(log10(greatest(session_length, 1)))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A9_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (power(session_length, 1) IS NULL
+       OR (power(session_length, 1) = power(session_length, 1)+0
+           AND power(session_length, 1) IS NOT DISTINCT
+           FROM power(session_length, 1)+0
+           AND power(session_length, 1) <> power(session_length, 1)-1
+           AND (power(session_length, 1) IS DISTINCT
+                FROM power(session_length, 1)-1)
+           AND power(session_length, 1) > power(session_length, 1)-1
+           AND power(session_length, 1) >= power(session_length, 1)-1
+           AND power(session_length, 1) < power(session_length, 1)+1
+           AND power(session_length, 1) <= power(session_length, 1)+1
+           AND (power(session_length, 1) <> power(session_length, 1)-1) IS TRUE
+           AND (power(session_length, 1) = power(session_length, 1)-1) IS NOT TRUE
+           AND (power(session_length, 1) = power(session_length, 1)-1) IS FALSE
+           AND (power(session_length, 1) <> power(session_length, 1)-1) IS NOT FALSE
+           AND power(session_length, 1) BETWEEN power(session_length, 1)-1 AND power(session_length, 1)+1
+           AND power(session_length, 1) NOT BETWEEN power(session_length, 1) AND power(session_length, 1)-1
+           AND power(session_length, 1) like '%'
+           AND power(session_length, 1) not like '__DOES_NOT_EXIST__%'
+           AND power(session_length, 1) IN (power(session_length, 1)-1,
+                                                                    power(session_length, 1)+0,
+                                                                    power(session_length, 1)+1)
+           AND power(session_length, 1) NOT IN (power(session_length, 1)-1,
+                                                                        power(session_length, 1)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A9_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (power(session_length, 1) IS NULL
+       OR power(session_length, 1) IN
+         (SELECT power(session_length, 1)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (power(session_length, 1) IS NULL
+                 OR (power(session_length, 1) = power(session_length, 1)+0
+                     AND power(session_length, 1) IS NOT DISTINCT
+                     FROM power(session_length, 1)+0
+                     AND power(session_length, 1) <> power(session_length, 1)-1
+                     AND (power(session_length, 1) IS DISTINCT
+                          FROM power(session_length, 1)-1)
+                     AND power(session_length, 1) > power(session_length, 1)-1
+                     AND power(session_length, 1) >= power(session_length, 1)-1
+                     AND power(session_length, 1) < power(session_length, 1)+1
+                     AND power(session_length, 1) <= power(session_length, 1)+1
+                     AND (power(session_length, 1) <> power(session_length, 1)-1) IS TRUE
+                     AND (power(session_length, 1) = power(session_length, 1)-1) IS NOT TRUE
+                     AND (power(session_length, 1) = power(session_length, 1)-1) IS FALSE
+                     AND (power(session_length, 1) <> power(session_length, 1)-1) IS NOT FALSE
+                     AND power(session_length, 1) BETWEEN power(session_length, 1)-1 AND power(session_length, 1)+1
+                     AND power(session_length, 1) NOT BETWEEN power(session_length, 1) AND power(session_length, 1)-1
+                     AND power(session_length, 1) like '%'
+                     AND power(session_length, 1) not like '__DOES_NOT_EXIST__%'
+                     AND power(session_length, 1) IN (power(session_length, 1)-1,
+                                                                              power(session_length, 1)+0,
+                                                                              power(session_length, 1)+1)
+                     AND power(session_length, 1) NOT IN (power(session_length, 1)-1,
+                                                                                  power(session_length, 1)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A9_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          power(session_length, 1),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (power(session_length, 1) IS NULL
+          OR (power(session_length, 1) = power(session_length, 1)+0
+              AND power(session_length, 1) IS NOT DISTINCT
+              FROM power(session_length, 1)+0
+              AND power(session_length, 1) <> power(session_length, 1)-1
+              AND (power(session_length, 1) IS DISTINCT
+                   FROM power(session_length, 1)-1)
+              AND power(session_length, 1) > power(session_length, 1)-1
+              AND power(session_length, 1) >= power(session_length, 1)-1
+              AND power(session_length, 1) < power(session_length, 1)+1
+              AND power(session_length, 1) <= power(session_length, 1)+1
+              AND (power(session_length, 1) <> power(session_length, 1)-1) IS TRUE
+              AND (power(session_length, 1) = power(session_length, 1)-1) IS NOT TRUE
+              AND (power(session_length, 1) = power(session_length, 1)-1) IS FALSE
+              AND (power(session_length, 1) <> power(session_length, 1)-1) IS NOT FALSE
+              AND power(session_length, 1) BETWEEN power(session_length, 1)-1 AND power(session_length, 1)+1
+              AND power(session_length, 1) NOT BETWEEN power(session_length, 1) AND power(session_length, 1)-1
+              AND power(session_length, 1) like '%'
+              AND power(session_length, 1) not like '__DOES_NOT_EXIST__%'
+              AND power(session_length, 1) IN (power(session_length, 1)-1,
+                                                                       power(session_length, 1)+0,
+                                                                       power(session_length, 1)+1)
+              AND power(session_length, 1) NOT IN (power(session_length, 1)-1,
+                                                                           power(session_length, 1)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A10_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(sqrt(session_length)) IS NULL
+       OR (floor(sqrt(session_length)) = floor(sqrt(session_length))+0
+           AND floor(sqrt(session_length)) IS NOT DISTINCT
+           FROM floor(sqrt(session_length))+0
+           AND floor(sqrt(session_length)) <> floor(sqrt(session_length))-1
+           AND (floor(sqrt(session_length)) IS DISTINCT
+                FROM floor(sqrt(session_length))-1)
+           AND floor(sqrt(session_length)) > floor(sqrt(session_length))-1
+           AND floor(sqrt(session_length)) >= floor(sqrt(session_length))-1
+           AND floor(sqrt(session_length)) < floor(sqrt(session_length))+1
+           AND floor(sqrt(session_length)) <= floor(sqrt(session_length))+1
+           AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS TRUE
+           AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS NOT TRUE
+           AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS FALSE
+           AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS NOT FALSE
+           AND floor(sqrt(session_length)) BETWEEN floor(sqrt(session_length))-1 AND floor(sqrt(session_length))+1
+           AND floor(sqrt(session_length)) NOT BETWEEN floor(sqrt(session_length)) AND floor(sqrt(session_length))-1
+           AND floor(sqrt(session_length)) like '%'
+           AND floor(sqrt(session_length)) not like '__DOES_NOT_EXIST__%'
+           AND floor(sqrt(session_length)) IN (floor(sqrt(session_length))-1,
+                                                                          floor(sqrt(session_length))+0,
+                                                                          floor(sqrt(session_length))+1)
+           AND floor(sqrt(session_length)) NOT IN (floor(sqrt(session_length))-1,
+                                                                              floor(sqrt(session_length))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A10_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(sqrt(session_length)) IS NULL
+       OR floor(sqrt(session_length)) IN
+         (SELECT floor(sqrt(session_length))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(sqrt(session_length)) IS NULL
+                 OR (floor(sqrt(session_length)) = floor(sqrt(session_length))+0
+                     AND floor(sqrt(session_length)) IS NOT DISTINCT
+                     FROM floor(sqrt(session_length))+0
+                     AND floor(sqrt(session_length)) <> floor(sqrt(session_length))-1
+                     AND (floor(sqrt(session_length)) IS DISTINCT
+                          FROM floor(sqrt(session_length))-1)
+                     AND floor(sqrt(session_length)) > floor(sqrt(session_length))-1
+                     AND floor(sqrt(session_length)) >= floor(sqrt(session_length))-1
+                     AND floor(sqrt(session_length)) < floor(sqrt(session_length))+1
+                     AND floor(sqrt(session_length)) <= floor(sqrt(session_length))+1
+                     AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS TRUE
+                     AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS NOT TRUE
+                     AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS FALSE
+                     AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS NOT FALSE
+                     AND floor(sqrt(session_length)) BETWEEN floor(sqrt(session_length))-1 AND floor(sqrt(session_length))+1
+                     AND floor(sqrt(session_length)) NOT BETWEEN floor(sqrt(session_length)) AND floor(sqrt(session_length))-1
+                     AND floor(sqrt(session_length)) like '%'
+                     AND floor(sqrt(session_length)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(sqrt(session_length)) IN (floor(sqrt(session_length))-1,
+                                                                                    floor(sqrt(session_length))+0,
+                                                                                    floor(sqrt(session_length))+1)
+                     AND floor(sqrt(session_length)) NOT IN (floor(sqrt(session_length))-1,
+                                                                                        floor(sqrt(session_length))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A10_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(sqrt(session_length)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(sqrt(session_length)) IS NULL
+          OR (floor(sqrt(session_length)) = floor(sqrt(session_length))+0
+              AND floor(sqrt(session_length)) IS NOT DISTINCT
+              FROM floor(sqrt(session_length))+0
+              AND floor(sqrt(session_length)) <> floor(sqrt(session_length))-1
+              AND (floor(sqrt(session_length)) IS DISTINCT
+                   FROM floor(sqrt(session_length))-1)
+              AND floor(sqrt(session_length)) > floor(sqrt(session_length))-1
+              AND floor(sqrt(session_length)) >= floor(sqrt(session_length))-1
+              AND floor(sqrt(session_length)) < floor(sqrt(session_length))+1
+              AND floor(sqrt(session_length)) <= floor(sqrt(session_length))+1
+              AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS TRUE
+              AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS NOT TRUE
+              AND (floor(sqrt(session_length)) = floor(sqrt(session_length))-1) IS FALSE
+              AND (floor(sqrt(session_length)) <> floor(sqrt(session_length))-1) IS NOT FALSE
+              AND floor(sqrt(session_length)) BETWEEN floor(sqrt(session_length))-1 AND floor(sqrt(session_length))+1
+              AND floor(sqrt(session_length)) NOT BETWEEN floor(sqrt(session_length)) AND floor(sqrt(session_length))-1
+              AND floor(sqrt(session_length)) like '%'
+              AND floor(sqrt(session_length)) not like '__DOES_NOT_EXIST__%'
+              AND floor(sqrt(session_length)) IN (floor(sqrt(session_length))-1,
+                                                                             floor(sqrt(session_length))+0,
+                                                                             floor(sqrt(session_length))+1)
+              AND floor(sqrt(session_length)) NOT IN (floor(sqrt(session_length))-1,
+                                                                                 floor(sqrt(session_length))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A11_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(truncate(session_length, -1)) IS NULL
+       OR (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))+0
+           AND floor(truncate(session_length, -1)) IS NOT DISTINCT
+           FROM floor(truncate(session_length, -1))+0
+           AND floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1
+           AND (floor(truncate(session_length, -1)) IS DISTINCT
+                FROM floor(truncate(session_length, -1))-1)
+           AND floor(truncate(session_length, -1)) > floor(truncate(session_length, -1))-1
+           AND floor(truncate(session_length, -1)) >= floor(truncate(session_length, -1))-1
+           AND floor(truncate(session_length, -1)) < floor(truncate(session_length, -1))+1
+           AND floor(truncate(session_length, -1)) <= floor(truncate(session_length, -1))+1
+           AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS TRUE
+           AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS NOT TRUE
+           AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS FALSE
+           AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS NOT FALSE
+           AND floor(truncate(session_length, -1)) BETWEEN floor(truncate(session_length, -1))-1 AND floor(truncate(session_length, -1))+1
+           AND floor(truncate(session_length, -1)) NOT BETWEEN floor(truncate(session_length, -1)) AND floor(truncate(session_length, -1))-1
+           AND floor(truncate(session_length, -1)) like '%'
+           AND floor(truncate(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+           AND floor(truncate(session_length, -1)) IN (floor(truncate(session_length, -1))-1,
+                                                                                          floor(truncate(session_length, -1))+0,
+                                                                                          floor(truncate(session_length, -1))+1)
+           AND floor(truncate(session_length, -1)) NOT IN (floor(truncate(session_length, -1))-1,
+                                                                                              floor(truncate(session_length, -1))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A11_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(truncate(session_length, -1)) IS NULL
+       OR floor(truncate(session_length, -1)) IN
+         (SELECT floor(truncate(session_length, -1))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(truncate(session_length, -1)) IS NULL
+                 OR (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))+0
+                     AND floor(truncate(session_length, -1)) IS NOT DISTINCT
+                     FROM floor(truncate(session_length, -1))+0
+                     AND floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1
+                     AND (floor(truncate(session_length, -1)) IS DISTINCT
+                          FROM floor(truncate(session_length, -1))-1)
+                     AND floor(truncate(session_length, -1)) > floor(truncate(session_length, -1))-1
+                     AND floor(truncate(session_length, -1)) >= floor(truncate(session_length, -1))-1
+                     AND floor(truncate(session_length, -1)) < floor(truncate(session_length, -1))+1
+                     AND floor(truncate(session_length, -1)) <= floor(truncate(session_length, -1))+1
+                     AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS TRUE
+                     AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS NOT TRUE
+                     AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS FALSE
+                     AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS NOT FALSE
+                     AND floor(truncate(session_length, -1)) BETWEEN floor(truncate(session_length, -1))-1 AND floor(truncate(session_length, -1))+1
+                     AND floor(truncate(session_length, -1)) NOT BETWEEN floor(truncate(session_length, -1)) AND floor(truncate(session_length, -1))-1
+                     AND floor(truncate(session_length, -1)) like '%'
+                     AND floor(truncate(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(truncate(session_length, -1)) IN (floor(truncate(session_length, -1))-1,
+                                                                                                    floor(truncate(session_length, -1))+0,
+                                                                                                    floor(truncate(session_length, -1))+1)
+                     AND floor(truncate(session_length, -1)) NOT IN (floor(truncate(session_length, -1))-1,
+                                                                                                        floor(truncate(session_length, -1))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A11_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(truncate(session_length, -1)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(truncate(session_length, -1)) IS NULL
+          OR (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))+0
+              AND floor(truncate(session_length, -1)) IS NOT DISTINCT
+              FROM floor(truncate(session_length, -1))+0
+              AND floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1
+              AND (floor(truncate(session_length, -1)) IS DISTINCT
+                   FROM floor(truncate(session_length, -1))-1)
+              AND floor(truncate(session_length, -1)) > floor(truncate(session_length, -1))-1
+              AND floor(truncate(session_length, -1)) >= floor(truncate(session_length, -1))-1
+              AND floor(truncate(session_length, -1)) < floor(truncate(session_length, -1))+1
+              AND floor(truncate(session_length, -1)) <= floor(truncate(session_length, -1))+1
+              AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS TRUE
+              AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS NOT TRUE
+              AND (floor(truncate(session_length, -1)) = floor(truncate(session_length, -1))-1) IS FALSE
+              AND (floor(truncate(session_length, -1)) <> floor(truncate(session_length, -1))-1) IS NOT FALSE
+              AND floor(truncate(session_length, -1)) BETWEEN floor(truncate(session_length, -1))-1 AND floor(truncate(session_length, -1))+1
+              AND floor(truncate(session_length, -1)) NOT BETWEEN floor(truncate(session_length, -1)) AND floor(truncate(session_length, -1))-1
+              AND floor(truncate(session_length, -1)) like '%'
+              AND floor(truncate(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+              AND floor(truncate(session_length, -1)) IN (floor(truncate(session_length, -1))-1,
+                                                                                             floor(truncate(session_length, -1))+0,
+                                                                                             floor(truncate(session_length, -1))+1)
+              AND floor(truncate(session_length, -1)) NOT IN (floor(truncate(session_length, -1))-1,
+                                                                                                 floor(truncate(session_length, -1))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A12_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(trunc(session_length, -1)) IS NULL
+       OR (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))+0
+           AND floor(trunc(session_length, -1)) IS NOT DISTINCT
+           FROM floor(trunc(session_length, -1))+0
+           AND floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1
+           AND (floor(trunc(session_length, -1)) IS DISTINCT
+                FROM floor(trunc(session_length, -1))-1)
+           AND floor(trunc(session_length, -1)) > floor(trunc(session_length, -1))-1
+           AND floor(trunc(session_length, -1)) >= floor(trunc(session_length, -1))-1
+           AND floor(trunc(session_length, -1)) < floor(trunc(session_length, -1))+1
+           AND floor(trunc(session_length, -1)) <= floor(trunc(session_length, -1))+1
+           AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS TRUE
+           AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS NOT TRUE
+           AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS FALSE
+           AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS NOT FALSE
+           AND floor(trunc(session_length, -1)) BETWEEN floor(trunc(session_length, -1))-1 AND floor(trunc(session_length, -1))+1
+           AND floor(trunc(session_length, -1)) NOT BETWEEN floor(trunc(session_length, -1)) AND floor(trunc(session_length, -1))-1
+           AND floor(trunc(session_length, -1)) like '%'
+           AND floor(trunc(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+           AND floor(trunc(session_length, -1)) IN (floor(trunc(session_length, -1))-1,
+                                                                                    floor(trunc(session_length, -1))+0,
+                                                                                    floor(trunc(session_length, -1))+1)
+           AND floor(trunc(session_length, -1)) NOT IN (floor(trunc(session_length, -1))-1,
+                                                                                        floor(trunc(session_length, -1))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A12_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(trunc(session_length, -1)) IS NULL
+       OR floor(trunc(session_length, -1)) IN
+         (SELECT floor(trunc(session_length, -1))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(trunc(session_length, -1)) IS NULL
+                 OR (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))+0
+                     AND floor(trunc(session_length, -1)) IS NOT DISTINCT
+                     FROM floor(trunc(session_length, -1))+0
+                     AND floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1
+                     AND (floor(trunc(session_length, -1)) IS DISTINCT
+                          FROM floor(trunc(session_length, -1))-1)
+                     AND floor(trunc(session_length, -1)) > floor(trunc(session_length, -1))-1
+                     AND floor(trunc(session_length, -1)) >= floor(trunc(session_length, -1))-1
+                     AND floor(trunc(session_length, -1)) < floor(trunc(session_length, -1))+1
+                     AND floor(trunc(session_length, -1)) <= floor(trunc(session_length, -1))+1
+                     AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS TRUE
+                     AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS NOT TRUE
+                     AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS FALSE
+                     AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS NOT FALSE
+                     AND floor(trunc(session_length, -1)) BETWEEN floor(trunc(session_length, -1))-1 AND floor(trunc(session_length, -1))+1
+                     AND floor(trunc(session_length, -1)) NOT BETWEEN floor(trunc(session_length, -1)) AND floor(trunc(session_length, -1))-1
+                     AND floor(trunc(session_length, -1)) like '%'
+                     AND floor(trunc(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(trunc(session_length, -1)) IN (floor(trunc(session_length, -1))-1,
+                                                                                              floor(trunc(session_length, -1))+0,
+                                                                                              floor(trunc(session_length, -1))+1)
+                     AND floor(trunc(session_length, -1)) NOT IN (floor(trunc(session_length, -1))-1,
+                                                                                                  floor(trunc(session_length, -1))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A12_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(trunc(session_length, -1)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(trunc(session_length, -1)) IS NULL
+          OR (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))+0
+              AND floor(trunc(session_length, -1)) IS NOT DISTINCT
+              FROM floor(trunc(session_length, -1))+0
+              AND floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1
+              AND (floor(trunc(session_length, -1)) IS DISTINCT
+                   FROM floor(trunc(session_length, -1))-1)
+              AND floor(trunc(session_length, -1)) > floor(trunc(session_length, -1))-1
+              AND floor(trunc(session_length, -1)) >= floor(trunc(session_length, -1))-1
+              AND floor(trunc(session_length, -1)) < floor(trunc(session_length, -1))+1
+              AND floor(trunc(session_length, -1)) <= floor(trunc(session_length, -1))+1
+              AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS TRUE
+              AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS NOT TRUE
+              AND (floor(trunc(session_length, -1)) = floor(trunc(session_length, -1))-1) IS FALSE
+              AND (floor(trunc(session_length, -1)) <> floor(trunc(session_length, -1))-1) IS NOT FALSE
+              AND floor(trunc(session_length, -1)) BETWEEN floor(trunc(session_length, -1))-1 AND floor(trunc(session_length, -1))+1
+              AND floor(trunc(session_length, -1)) NOT BETWEEN floor(trunc(session_length, -1)) AND floor(trunc(session_length, -1))-1
+              AND floor(trunc(session_length, -1)) like '%'
+              AND floor(trunc(session_length, -1)) not like '__DOES_NOT_EXIST__%'
+              AND floor(trunc(session_length, -1)) IN (floor(trunc(session_length, -1))-1,
+                                                                                       floor(trunc(session_length, -1))+0,
+                                                                                       floor(trunc(session_length, -1))+1)
+              AND floor(trunc(session_length, -1)) NOT IN (floor(trunc(session_length, -1))-1,
+                                                                                           floor(trunc(session_length, -1))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A13_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (round(session_length, 2) IS NULL
+       OR (round(session_length, 2) = round(session_length, 2)+0
+           AND round(session_length, 2) IS NOT DISTINCT
+           FROM round(session_length, 2)+0
+           AND round(session_length, 2) <> round(session_length, 2)-1
+           AND (round(session_length, 2) IS DISTINCT
+                FROM round(session_length, 2)-1)
+           AND round(session_length, 2) > round(session_length, 2)-1
+           AND round(session_length, 2) >= round(session_length, 2)-1
+           AND round(session_length, 2) < round(session_length, 2)+1
+           AND round(session_length, 2) <= round(session_length, 2)+1
+           AND (round(session_length, 2) <> round(session_length, 2)-1) IS TRUE
+           AND (round(session_length, 2) = round(session_length, 2)-1) IS NOT TRUE
+           AND (round(session_length, 2) = round(session_length, 2)-1) IS FALSE
+           AND (round(session_length, 2) <> round(session_length, 2)-1) IS NOT FALSE
+           AND round(session_length, 2) BETWEEN round(session_length, 2)-1 AND round(session_length, 2)+1
+           AND round(session_length, 2) NOT BETWEEN round(session_length, 2) AND round(session_length, 2)-1
+           AND round(session_length, 2) like '%'
+           AND round(session_length, 2) not like '__DOES_NOT_EXIST__%'
+           AND round(session_length, 2) IN (round(session_length, 2)-1,
+                                                                    round(session_length, 2)+0,
+                                                                    round(session_length, 2)+1)
+           AND round(session_length, 2) NOT IN (round(session_length, 2)-1,
+                                                                        round(session_length, 2)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A13_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (round(session_length, 2) IS NULL
+       OR round(session_length, 2) IN
+         (SELECT round(session_length, 2)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (round(session_length, 2) IS NULL
+                 OR (round(session_length, 2) = round(session_length, 2)+0
+                     AND round(session_length, 2) IS NOT DISTINCT
+                     FROM round(session_length, 2)+0
+                     AND round(session_length, 2) <> round(session_length, 2)-1
+                     AND (round(session_length, 2) IS DISTINCT
+                          FROM round(session_length, 2)-1)
+                     AND round(session_length, 2) > round(session_length, 2)-1
+                     AND round(session_length, 2) >= round(session_length, 2)-1
+                     AND round(session_length, 2) < round(session_length, 2)+1
+                     AND round(session_length, 2) <= round(session_length, 2)+1
+                     AND (round(session_length, 2) <> round(session_length, 2)-1) IS TRUE
+                     AND (round(session_length, 2) = round(session_length, 2)-1) IS NOT TRUE
+                     AND (round(session_length, 2) = round(session_length, 2)-1) IS FALSE
+                     AND (round(session_length, 2) <> round(session_length, 2)-1) IS NOT FALSE
+                     AND round(session_length, 2) BETWEEN round(session_length, 2)-1 AND round(session_length, 2)+1
+                     AND round(session_length, 2) NOT BETWEEN round(session_length, 2) AND round(session_length, 2)-1
+                     AND round(session_length, 2) like '%'
+                     AND round(session_length, 2) not like '__DOES_NOT_EXIST__%'
+                     AND round(session_length, 2) IN (round(session_length, 2)-1,
+                                                                              round(session_length, 2)+0,
+                                                                              round(session_length, 2)+1)
+                     AND round(session_length, 2) NOT IN (round(session_length, 2)-1,
+                                                                                  round(session_length, 2)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A13_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          round(session_length, 2),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (round(session_length, 2) IS NULL
+          OR (round(session_length, 2) = round(session_length, 2)+0
+              AND round(session_length, 2) IS NOT DISTINCT
+              FROM round(session_length, 2)+0
+              AND round(session_length, 2) <> round(session_length, 2)-1
+              AND (round(session_length, 2) IS DISTINCT
+                   FROM round(session_length, 2)-1)
+              AND round(session_length, 2) > round(session_length, 2)-1
+              AND round(session_length, 2) >= round(session_length, 2)-1
+              AND round(session_length, 2) < round(session_length, 2)+1
+              AND round(session_length, 2) <= round(session_length, 2)+1
+              AND (round(session_length, 2) <> round(session_length, 2)-1) IS TRUE
+              AND (round(session_length, 2) = round(session_length, 2)-1) IS NOT TRUE
+              AND (round(session_length, 2) = round(session_length, 2)-1) IS FALSE
+              AND (round(session_length, 2) <> round(session_length, 2)-1) IS NOT FALSE
+              AND round(session_length, 2) BETWEEN round(session_length, 2)-1 AND round(session_length, 2)+1
+              AND round(session_length, 2) NOT BETWEEN round(session_length, 2) AND round(session_length, 2)-1
+              AND round(session_length, 2) like '%'
+              AND round(session_length, 2) not like '__DOES_NOT_EXIST__%'
+              AND round(session_length, 2) IN (round(session_length, 2)-1,
+                                                                       round(session_length, 2)+0,
+                                                                       round(session_length, 2)+1)
+              AND round(session_length, 2) NOT IN (round(session_length, 2)-1,
+                                                                           round(session_length, 2)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A14_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (mod(session_length, 2) IS NULL
+       OR (mod(session_length, 2) = mod(session_length, 2)+0
+           AND mod(session_length, 2) IS NOT DISTINCT
+           FROM mod(session_length, 2)+0
+           AND mod(session_length, 2) <> mod(session_length, 2)-1
+           AND (mod(session_length, 2) IS DISTINCT
+                FROM mod(session_length, 2)-1)
+           AND mod(session_length, 2) > mod(session_length, 2)-1
+           AND mod(session_length, 2) >= mod(session_length, 2)-1
+           AND mod(session_length, 2) < mod(session_length, 2)+1
+           AND mod(session_length, 2) <= mod(session_length, 2)+1
+           AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS TRUE
+           AND (mod(session_length, 2) = mod(session_length, 2)-1) IS NOT TRUE
+           AND (mod(session_length, 2) = mod(session_length, 2)-1) IS FALSE
+           AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS NOT FALSE
+           AND mod(session_length, 2) BETWEEN mod(session_length, 2)-1 AND mod(session_length, 2)+1
+           AND mod(session_length, 2) NOT BETWEEN mod(session_length, 2) AND mod(session_length, 2)-1
+           AND mod(session_length, 2) like '%'
+           AND mod(session_length, 2) not like '__DOES_NOT_EXIST__%'
+           AND mod(session_length, 2) IN (mod(session_length, 2)-1,
+                                                                mod(session_length, 2)+0,
+                                                                mod(session_length, 2)+1)
+           AND mod(session_length, 2) NOT IN (mod(session_length, 2)-1,
+                                                                    mod(session_length, 2)+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A14_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (mod(session_length, 2) IS NULL
+       OR mod(session_length, 2) IN
+         (SELECT mod(session_length, 2)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (mod(session_length, 2) IS NULL
+                 OR (mod(session_length, 2) = mod(session_length, 2)+0
+                     AND mod(session_length, 2) IS NOT DISTINCT
+                     FROM mod(session_length, 2)+0
+                     AND mod(session_length, 2) <> mod(session_length, 2)-1
+                     AND (mod(session_length, 2) IS DISTINCT
+                          FROM mod(session_length, 2)-1)
+                     AND mod(session_length, 2) > mod(session_length, 2)-1
+                     AND mod(session_length, 2) >= mod(session_length, 2)-1
+                     AND mod(session_length, 2) < mod(session_length, 2)+1
+                     AND mod(session_length, 2) <= mod(session_length, 2)+1
+                     AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS TRUE
+                     AND (mod(session_length, 2) = mod(session_length, 2)-1) IS NOT TRUE
+                     AND (mod(session_length, 2) = mod(session_length, 2)-1) IS FALSE
+                     AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS NOT FALSE
+                     AND mod(session_length, 2) BETWEEN mod(session_length, 2)-1 AND mod(session_length, 2)+1
+                     AND mod(session_length, 2) NOT BETWEEN mod(session_length, 2) AND mod(session_length, 2)-1
+                     AND mod(session_length, 2) like '%'
+                     AND mod(session_length, 2) not like '__DOES_NOT_EXIST__%'
+                     AND mod(session_length, 2) IN (mod(session_length, 2)-1,
+                                                                          mod(session_length, 2)+0,
+                                                                          mod(session_length, 2)+1)
+                     AND mod(session_length, 2) NOT IN (mod(session_length, 2)-1,
+                                                                              mod(session_length, 2)+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A14_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          mod(session_length, 2),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (mod(session_length, 2) IS NULL
+          OR (mod(session_length, 2) = mod(session_length, 2)+0
+              AND mod(session_length, 2) IS NOT DISTINCT
+              FROM mod(session_length, 2)+0
+              AND mod(session_length, 2) <> mod(session_length, 2)-1
+              AND (mod(session_length, 2) IS DISTINCT
+                   FROM mod(session_length, 2)-1)
+              AND mod(session_length, 2) > mod(session_length, 2)-1
+              AND mod(session_length, 2) >= mod(session_length, 2)-1
+              AND mod(session_length, 2) < mod(session_length, 2)+1
+              AND mod(session_length, 2) <= mod(session_length, 2)+1
+              AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS TRUE
+              AND (mod(session_length, 2) = mod(session_length, 2)-1) IS NOT TRUE
+              AND (mod(session_length, 2) = mod(session_length, 2)-1) IS FALSE
+              AND (mod(session_length, 2) <> mod(session_length, 2)-1) IS NOT FALSE
+              AND mod(session_length, 2) BETWEEN mod(session_length, 2)-1 AND mod(session_length, 2)+1
+              AND mod(session_length, 2) NOT BETWEEN mod(session_length, 2) AND mod(session_length, 2)-1
+              AND mod(session_length, 2) like '%'
+              AND mod(session_length, 2) not like '__DOES_NOT_EXIST__%'
+              AND mod(session_length, 2) IN (mod(session_length, 2)-1,
+                                                                   mod(session_length, 2)+0,
+                                                                   mod(session_length, 2)+1)
+              AND mod(session_length, 2) NOT IN (mod(session_length, 2)-1,
+                                                                       mod(session_length, 2)+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A15_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(sin(session_length)) IS NULL
+       OR (floor(sin(session_length)) = floor(sin(session_length))+0
+           AND floor(sin(session_length)) IS NOT DISTINCT
+           FROM floor(sin(session_length))+0
+           AND floor(sin(session_length)) <> floor(sin(session_length))-1
+           AND (floor(sin(session_length)) IS DISTINCT
+                FROM floor(sin(session_length))-1)
+           AND floor(sin(session_length)) > floor(sin(session_length))-1
+           AND floor(sin(session_length)) >= floor(sin(session_length))-1
+           AND floor(sin(session_length)) < floor(sin(session_length))+1
+           AND floor(sin(session_length)) <= floor(sin(session_length))+1
+           AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS TRUE
+           AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS NOT TRUE
+           AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS FALSE
+           AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS NOT FALSE
+           AND floor(sin(session_length)) BETWEEN floor(sin(session_length))-1 AND floor(sin(session_length))+1
+           AND floor(sin(session_length)) NOT BETWEEN floor(sin(session_length)) AND floor(sin(session_length))-1
+           AND floor(sin(session_length)) like '%'
+           AND floor(sin(session_length)) not like '__DOES_NOT_EXIST__%'
+           AND floor(sin(session_length)) IN (floor(sin(session_length))-1,
+                                                                        floor(sin(session_length))+0,
+                                                                        floor(sin(session_length))+1)
+           AND floor(sin(session_length)) NOT IN (floor(sin(session_length))-1,
+                                                                            floor(sin(session_length))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A15_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(sin(session_length)) IS NULL
+       OR floor(sin(session_length)) IN
+         (SELECT floor(sin(session_length))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(sin(session_length)) IS NULL
+                 OR (floor(sin(session_length)) = floor(sin(session_length))+0
+                     AND floor(sin(session_length)) IS NOT DISTINCT
+                     FROM floor(sin(session_length))+0
+                     AND floor(sin(session_length)) <> floor(sin(session_length))-1
+                     AND (floor(sin(session_length)) IS DISTINCT
+                          FROM floor(sin(session_length))-1)
+                     AND floor(sin(session_length)) > floor(sin(session_length))-1
+                     AND floor(sin(session_length)) >= floor(sin(session_length))-1
+                     AND floor(sin(session_length)) < floor(sin(session_length))+1
+                     AND floor(sin(session_length)) <= floor(sin(session_length))+1
+                     AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS TRUE
+                     AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS NOT TRUE
+                     AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS FALSE
+                     AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS NOT FALSE
+                     AND floor(sin(session_length)) BETWEEN floor(sin(session_length))-1 AND floor(sin(session_length))+1
+                     AND floor(sin(session_length)) NOT BETWEEN floor(sin(session_length)) AND floor(sin(session_length))-1
+                     AND floor(sin(session_length)) like '%'
+                     AND floor(sin(session_length)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(sin(session_length)) IN (floor(sin(session_length))-1,
+                                                                                  floor(sin(session_length))+0,
+                                                                                  floor(sin(session_length))+1)
+                     AND floor(sin(session_length)) NOT IN (floor(sin(session_length))-1,
+                                                                                      floor(sin(session_length))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A15_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(sin(session_length)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(sin(session_length)) IS NULL
+          OR (floor(sin(session_length)) = floor(sin(session_length))+0
+              AND floor(sin(session_length)) IS NOT DISTINCT
+              FROM floor(sin(session_length))+0
+              AND floor(sin(session_length)) <> floor(sin(session_length))-1
+              AND (floor(sin(session_length)) IS DISTINCT
+                   FROM floor(sin(session_length))-1)
+              AND floor(sin(session_length)) > floor(sin(session_length))-1
+              AND floor(sin(session_length)) >= floor(sin(session_length))-1
+              AND floor(sin(session_length)) < floor(sin(session_length))+1
+              AND floor(sin(session_length)) <= floor(sin(session_length))+1
+              AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS TRUE
+              AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS NOT TRUE
+              AND (floor(sin(session_length)) = floor(sin(session_length))-1) IS FALSE
+              AND (floor(sin(session_length)) <> floor(sin(session_length))-1) IS NOT FALSE
+              AND floor(sin(session_length)) BETWEEN floor(sin(session_length))-1 AND floor(sin(session_length))+1
+              AND floor(sin(session_length)) NOT BETWEEN floor(sin(session_length)) AND floor(sin(session_length))-1
+              AND floor(sin(session_length)) like '%'
+              AND floor(sin(session_length)) not like '__DOES_NOT_EXIST__%'
+              AND floor(sin(session_length)) IN (floor(sin(session_length))-1,
+                                                                           floor(sin(session_length))+0,
+                                                                           floor(sin(session_length))+1)
+              AND floor(sin(session_length)) NOT IN (floor(sin(session_length))-1,
+                                                                               floor(sin(session_length))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A16_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(cos(session_length)) IS NULL
+       OR (floor(cos(session_length)) = floor(cos(session_length))+0
+           AND floor(cos(session_length)) IS NOT DISTINCT
+           FROM floor(cos(session_length))+0
+           AND floor(cos(session_length)) <> floor(cos(session_length))-1
+           AND (floor(cos(session_length)) IS DISTINCT
+                FROM floor(cos(session_length))-1)
+           AND floor(cos(session_length)) > floor(cos(session_length))-1
+           AND floor(cos(session_length)) >= floor(cos(session_length))-1
+           AND floor(cos(session_length)) < floor(cos(session_length))+1
+           AND floor(cos(session_length)) <= floor(cos(session_length))+1
+           AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS TRUE
+           AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS NOT TRUE
+           AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS FALSE
+           AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS NOT FALSE
+           AND floor(cos(session_length)) BETWEEN floor(cos(session_length))-1 AND floor(cos(session_length))+1
+           AND floor(cos(session_length)) NOT BETWEEN floor(cos(session_length)) AND floor(cos(session_length))-1
+           AND floor(cos(session_length)) like '%'
+           AND floor(cos(session_length)) not like '__DOES_NOT_EXIST__%'
+           AND floor(cos(session_length)) IN (floor(cos(session_length))-1,
+                                                                        floor(cos(session_length))+0,
+                                                                        floor(cos(session_length))+1)
+           AND floor(cos(session_length)) NOT IN (floor(cos(session_length))-1,
+                                                                            floor(cos(session_length))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A16_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(cos(session_length)) IS NULL
+       OR floor(cos(session_length)) IN
+         (SELECT floor(cos(session_length))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(cos(session_length)) IS NULL
+                 OR (floor(cos(session_length)) = floor(cos(session_length))+0
+                     AND floor(cos(session_length)) IS NOT DISTINCT
+                     FROM floor(cos(session_length))+0
+                     AND floor(cos(session_length)) <> floor(cos(session_length))-1
+                     AND (floor(cos(session_length)) IS DISTINCT
+                          FROM floor(cos(session_length))-1)
+                     AND floor(cos(session_length)) > floor(cos(session_length))-1
+                     AND floor(cos(session_length)) >= floor(cos(session_length))-1
+                     AND floor(cos(session_length)) < floor(cos(session_length))+1
+                     AND floor(cos(session_length)) <= floor(cos(session_length))+1
+                     AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS TRUE
+                     AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS NOT TRUE
+                     AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS FALSE
+                     AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS NOT FALSE
+                     AND floor(cos(session_length)) BETWEEN floor(cos(session_length))-1 AND floor(cos(session_length))+1
+                     AND floor(cos(session_length)) NOT BETWEEN floor(cos(session_length)) AND floor(cos(session_length))-1
+                     AND floor(cos(session_length)) like '%'
+                     AND floor(cos(session_length)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(cos(session_length)) IN (floor(cos(session_length))-1,
+                                                                                  floor(cos(session_length))+0,
+                                                                                  floor(cos(session_length))+1)
+                     AND floor(cos(session_length)) NOT IN (floor(cos(session_length))-1,
+                                                                                      floor(cos(session_length))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A16_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(cos(session_length)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(cos(session_length)) IS NULL
+          OR (floor(cos(session_length)) = floor(cos(session_length))+0
+              AND floor(cos(session_length)) IS NOT DISTINCT
+              FROM floor(cos(session_length))+0
+              AND floor(cos(session_length)) <> floor(cos(session_length))-1
+              AND (floor(cos(session_length)) IS DISTINCT
+                   FROM floor(cos(session_length))-1)
+              AND floor(cos(session_length)) > floor(cos(session_length))-1
+              AND floor(cos(session_length)) >= floor(cos(session_length))-1
+              AND floor(cos(session_length)) < floor(cos(session_length))+1
+              AND floor(cos(session_length)) <= floor(cos(session_length))+1
+              AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS TRUE
+              AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS NOT TRUE
+              AND (floor(cos(session_length)) = floor(cos(session_length))-1) IS FALSE
+              AND (floor(cos(session_length)) <> floor(cos(session_length))-1) IS NOT FALSE
+              AND floor(cos(session_length)) BETWEEN floor(cos(session_length))-1 AND floor(cos(session_length))+1
+              AND floor(cos(session_length)) NOT BETWEEN floor(cos(session_length)) AND floor(cos(session_length))-1
+              AND floor(cos(session_length)) like '%'
+              AND floor(cos(session_length)) not like '__DOES_NOT_EXIST__%'
+              AND floor(cos(session_length)) IN (floor(cos(session_length))-1,
+                                                                           floor(cos(session_length))+0,
+                                                                           floor(cos(session_length))+1)
+              AND floor(cos(session_length)) NOT IN (floor(cos(session_length))-1,
+                                                                               floor(cos(session_length))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A17_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(tan(session_length)) IS NULL
+       OR (floor(tan(session_length)) = floor(tan(session_length))+0
+           AND floor(tan(session_length)) IS NOT DISTINCT
+           FROM floor(tan(session_length))+0
+           AND floor(tan(session_length)) <> floor(tan(session_length))-1
+           AND (floor(tan(session_length)) IS DISTINCT
+                FROM floor(tan(session_length))-1)
+           AND floor(tan(session_length)) > floor(tan(session_length))-1
+           AND floor(tan(session_length)) >= floor(tan(session_length))-1
+           AND floor(tan(session_length)) < floor(tan(session_length))+1
+           AND floor(tan(session_length)) <= floor(tan(session_length))+1
+           AND (floor(tan(session_length)) <> floor(tan(session_length))-1) IS TRUE
+           AND (floor(tan(session_length)) = floor(tan(session_length))-1) IS NOT TRUE
+           AND (floor(tan(session_length)) = floor(tan(session_length))-1) IS FALSE
+           AND (floor(tan(session_length)) <> floor(tan(session_length))-1) IS NOT FALSE
+           AND floor(tan(session_length)) BETWEEN floor(tan(session_length))-1 AND floor(tan(session_length))+1
+           AND floor(tan(session_length)) NOT BETWEEN floor(tan(session_length)) AND floor(tan(session_length))-1
+           AND floor(tan(session_length)) like '%'
+           AND floor(tan(session_length)) not like '__DOES_NOT_EXIST__%'
+           AND floor(tan(session_length)) IN (floor(tan(session_length))-1,
+                                                                        floor(tan(session_length))+0,
+                                                                        floor(tan(session_length))+1)
+           AND floor(tan(session_length)) NOT IN (floor(tan(session_length))-1,
+                                                                            floor(tan(session_length))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+

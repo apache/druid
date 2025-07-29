@@ -33,6 +33,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -201,6 +203,7 @@ public class ImmutableWorkerInfoTest
         ),
         3,
         0,
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:01Z"),
@@ -211,6 +214,7 @@ public class ImmutableWorkerInfoTest
         ),
         2,
         0,
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z"),
@@ -225,6 +229,7 @@ public class ImmutableWorkerInfoTest
         new Worker("http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY),
         6,
         0,
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z")

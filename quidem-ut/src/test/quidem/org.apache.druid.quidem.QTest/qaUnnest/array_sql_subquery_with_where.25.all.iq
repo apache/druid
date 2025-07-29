@@ -1,0 +1,31 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B48_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(0),(997)) AS t(col));
++------+
+| c    |
++------+
+| 0.1  |
+| 1    |
+| S1   |
+| true |
+|      |
++------+
+(5 rows)
+
+!ok
+

@@ -1,0 +1,1224 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W16_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W16_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip, time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W16_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           time_floor(__time, 'PT12H') DESC, timezone RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W17_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W17_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W17_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W17_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W18_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W18_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip DESC,
+                                                        length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W18_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W18_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip DESC,
+                                                           length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W19_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W19_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip ASC,
+                                                        server_ip,
+                                                        length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                               timezone,
+                                                                               time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W19_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY server_ip ASC, server_ip, length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W19_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip ASC,
+                                                           server_ip,
+                                                           length(server_ip) ASC, cast(length(server_ip) AS DOUBLE)+0.123 ASC,
+                                                                                  timezone,
+                                                                                  time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W20_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W20_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY server_ip DESC,
+                                                        server_ip,
+                                                        length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                timezone,
+                                                                                time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W20_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY server_ip DESC, server_ip, length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W20_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY server_ip DESC,
+                                                           server_ip,
+                                                           length(server_ip) DESC, cast(length(server_ip) AS DOUBLE)+0.123 DESC,
+                                                                                   timezone,
+                                                                                   time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W21_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W21_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W21_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W21_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W22_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W22_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W22_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) "sum_val",
+       count(timezone) OVER (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A2_sum_count_W22_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (RANGE BETWEEN -1 PRECEDING AND 1 FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip ASC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip ASC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (
+                                               ORDER BY client_ip,
+                                                        server_ip DESC,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (
+                                   ORDER BY client_ip, server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (
+                             ORDER BY client_ip, server_ip DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (
+                                                  ORDER BY client_ip,
+                                                           server_ip DESC,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W5_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W5_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        length(server_ip) ASC, timezone,
+                                                                               time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W5_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, length(server_ip) ASC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W5_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           length(server_ip) ASC, timezone,
+                                                                                  time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W6_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W6_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER w "sum_val",
+       count(timezone) OVER w cnt_val
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        length(server_ip) DESC, timezone,
+                                                                                time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A3_sum_count_W6_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       sum(length(timezone)) OVER (PARTITION BY client_ip
+                                   ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) "sum_val",
+       count(timezone) OVER (PARTITION BY client_ip
+                             ORDER BY server_ip, length(server_ip) DESC, timezone, time_floor(__time, 'PT12H') RANGE BETWEEN -1 PRECEDING AND UNBOUNDED FOLLOWING) cnt_val
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+QueryInterruptedException
+!error
+

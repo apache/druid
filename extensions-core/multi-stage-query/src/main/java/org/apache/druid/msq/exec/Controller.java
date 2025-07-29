@@ -22,16 +22,19 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.dart.controller.http.DartSqlResource;
-import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interface for the controller of a multi-stage query. Each Controller is specific to a particular query.
@@ -44,7 +47,7 @@ public interface Controller
    * Unique task/query ID for the batch query run by this controller.
    *
    * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
-   * For Dart, this is {@link DartSqlEngine#CTX_DART_QUERY_ID}, set by {@link DartSqlResource}.
+   * For Dart, this is {@link QueryContexts#CTX_DART_QUERY_ID}, set by {@link SqlEngine#initContextMap(Map)}.
    */
   String queryId();
 
@@ -57,7 +60,7 @@ public interface Controller
    * Terminate the controller upon a cancellation request. Causes a concurrently-running {@link #run} method in
    * a separate thread to cancel all outstanding work and exit.
    */
-  void stop();
+  void stop(CancellationReason reason);
 
   // Worker-to-controller messages
 
@@ -132,4 +135,7 @@ public interface Controller
   @Nullable
   TaskReport.ReportMap liveReports();
 
+  ControllerContext getControllerContext();
+
+  QueryContext getQueryContext();
 }

@@ -43,6 +43,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -61,7 +62,8 @@ public class TaskMonitorTest
   private final TaskMonitor<TestTask, SimpleSubTaskReport> monitor = new TaskMonitor<>(
       new TestOverlordClient(),
       3,
-      SPLIT_NUM
+      SPLIT_NUM,
+      0
   );
 
   @Before
@@ -186,6 +188,26 @@ public class TaskMonitorTest
     }
   }
 
+  @Test
+  public void testTimeout() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    TaskMonitor<TestTask, SimpleSubTaskReport> timeoutMonitor = new TaskMonitor<>(
+            new TestOverlordClient(),
+            0,
+            1,
+            10L
+    );
+    timeoutMonitor.start(50);
+    ListenableFuture<SubTaskCompleteEvent<TestTask>> future = timeoutMonitor.submit(
+            new TestTaskSpec("timeoutSpec", "groupId", "supervisorId", null, new IntegerInputSplit(0), 100L, 0, false)
+    );
+    SubTaskCompleteEvent<TestTask> result = future.get(1, TimeUnit.SECONDS);
+    Assert.assertNotNull(result.getLastStatus());
+    Assert.assertEquals(TaskState.FAILED, result.getLastStatus().getStatusCode());
+    Assert.assertEquals(TaskState.FAILED, result.getLastState());
+    timeoutMonitor.stop();
+  }
+
   private class TestTaskSpec extends SubTaskSpec<TestTask>
   {
     private final long runTime;
@@ -264,6 +286,8 @@ public class TaskMonitorTest
 
   private class TestOverlordClient extends NoopOverlordClient
   {
+    private final Set<String> cancelled = ConcurrentHashMap.newKeySet();
+
     @Override
     public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
@@ -279,6 +303,9 @@ public class TaskMonitorTest
     @Override
     public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
+      final TaskState state = cancelled.contains(taskId)
+              ? TaskState.FAILED
+              : tasks.get(taskId);
       final TaskStatusResponse retVal = new TaskStatusResponse(
           taskId,
           new TaskStatusPlus(
@@ -287,7 +314,7 @@ public class TaskMonitorTest
               "testTask",
               DateTimes.EPOCH,
               DateTimes.EPOCH,
-              tasks.get(taskId),
+              state,
               RunnerTaskState.RUNNING,
               -1L,
               TaskLocation.unknown(),
@@ -297,6 +324,13 @@ public class TaskMonitorTest
       );
 
       return Futures.immediateFuture(retVal);
+    }
+
+    @Override
+    public ListenableFuture<Void> cancelTask(String taskId)
+    {
+      cancelled.add(taskId);
+      return Futures.immediateFuture(null);
     }
   }
 

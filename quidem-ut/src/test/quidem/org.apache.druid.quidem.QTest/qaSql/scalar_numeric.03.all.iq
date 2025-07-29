@@ -1,0 +1,393 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A34_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS NULL
+       OR ('1'||human_readable_decimal_byte_format(session_length, 1) = 1||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) IS NOT DISTINCT
+           FROM 1||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)
+           AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS DISTINCT
+                FROM '0'||human_readable_decimal_byte_format(session_length, 1))
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) > '0'||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) >= '0'||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) < 2||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) <= 2||human_readable_decimal_byte_format(session_length, 1)
+           AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS TRUE
+           AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT TRUE
+           AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS FALSE
+           AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT FALSE
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) BETWEEN '0'||human_readable_decimal_byte_format(session_length, 1) AND 2||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_byte_format(session_length, 1) AND '0'||human_readable_decimal_byte_format(session_length, 1)
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) like '%'
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                              1||human_readable_decimal_byte_format(session_length, 1),
+                                                                              2||human_readable_decimal_byte_format(session_length, 1))
+           AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                                  2||human_readable_decimal_byte_format(session_length, 1)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A34_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS NULL
+       OR '1'||human_readable_decimal_byte_format(session_length, 1) IN
+         (SELECT '1'||human_readable_decimal_byte_format(session_length, 1)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS NULL
+                 OR ('1'||human_readable_decimal_byte_format(session_length, 1) = 1||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) IS NOT DISTINCT
+                     FROM 1||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)
+                     AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS DISTINCT
+                          FROM '0'||human_readable_decimal_byte_format(session_length, 1))
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) > '0'||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) >= '0'||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) < 2||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) <= 2||human_readable_decimal_byte_format(session_length, 1)
+                     AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS TRUE
+                     AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT TRUE
+                     AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS FALSE
+                     AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT FALSE
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) BETWEEN '0'||human_readable_decimal_byte_format(session_length, 1) AND 2||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_byte_format(session_length, 1) AND '0'||human_readable_decimal_byte_format(session_length, 1)
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) like '%'
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                                        1||human_readable_decimal_byte_format(session_length, 1),
+                                                                                        2||human_readable_decimal_byte_format(session_length, 1))
+                     AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                                            2||human_readable_decimal_byte_format(session_length, 1))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A34_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||human_readable_decimal_byte_format(session_length, 1),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS NULL
+          OR ('1'||human_readable_decimal_byte_format(session_length, 1) = 1||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) IS NOT DISTINCT
+              FROM 1||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)
+              AND ('1'||human_readable_decimal_byte_format(session_length, 1) IS DISTINCT
+                   FROM '0'||human_readable_decimal_byte_format(session_length, 1))
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) > '0'||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) >= '0'||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) < 2||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) <= 2||human_readable_decimal_byte_format(session_length, 1)
+              AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS TRUE
+              AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT TRUE
+              AND ('1'||human_readable_decimal_byte_format(session_length, 1) = '0'||human_readable_decimal_byte_format(session_length, 1)) IS FALSE
+              AND ('1'||human_readable_decimal_byte_format(session_length, 1) <> '0'||human_readable_decimal_byte_format(session_length, 1)) IS NOT FALSE
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) BETWEEN '0'||human_readable_decimal_byte_format(session_length, 1) AND 2||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_byte_format(session_length, 1) AND '0'||human_readable_decimal_byte_format(session_length, 1)
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) like '%'
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                                 1||human_readable_decimal_byte_format(session_length, 1),
+                                                                                 2||human_readable_decimal_byte_format(session_length, 1))
+              AND '1'||human_readable_decimal_byte_format(session_length, 1) NOT IN ('0'||human_readable_decimal_byte_format(session_length, 1),
+                                                                                     2||human_readable_decimal_byte_format(session_length, 1))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A35_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||human_readable_decimal_format(session_length, 1) IS NULL
+       OR ('1'||human_readable_decimal_format(session_length, 1) = 1||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) IS NOT DISTINCT
+           FROM 1||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)
+           AND ('1'||human_readable_decimal_format(session_length, 1) IS DISTINCT
+                FROM '0'||human_readable_decimal_format(session_length, 1))
+           AND '1'||human_readable_decimal_format(session_length, 1) > '0'||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) >= '0'||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) < 2||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) <= 2||human_readable_decimal_format(session_length, 1)
+           AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS TRUE
+           AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS NOT TRUE
+           AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS FALSE
+           AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS NOT FALSE
+           AND '1'||human_readable_decimal_format(session_length, 1) BETWEEN '0'||human_readable_decimal_format(session_length, 1) AND 2||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_format(session_length, 1) AND '0'||human_readable_decimal_format(session_length, 1)
+           AND '1'||human_readable_decimal_format(session_length, 1) like '%'
+           AND '1'||human_readable_decimal_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+           AND '1'||human_readable_decimal_format(session_length, 1) IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                         1||human_readable_decimal_format(session_length, 1),
+                                                                         2||human_readable_decimal_format(session_length, 1))
+           AND '1'||human_readable_decimal_format(session_length, 1) NOT IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                             2||human_readable_decimal_format(session_length, 1)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A35_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||human_readable_decimal_format(session_length, 1) IS NULL
+       OR '1'||human_readable_decimal_format(session_length, 1) IN
+         (SELECT '1'||human_readable_decimal_format(session_length, 1)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||human_readable_decimal_format(session_length, 1) IS NULL
+                 OR ('1'||human_readable_decimal_format(session_length, 1) = 1||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) IS NOT DISTINCT
+                     FROM 1||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)
+                     AND ('1'||human_readable_decimal_format(session_length, 1) IS DISTINCT
+                          FROM '0'||human_readable_decimal_format(session_length, 1))
+                     AND '1'||human_readable_decimal_format(session_length, 1) > '0'||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) >= '0'||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) < 2||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) <= 2||human_readable_decimal_format(session_length, 1)
+                     AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS TRUE
+                     AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS NOT TRUE
+                     AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS FALSE
+                     AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS NOT FALSE
+                     AND '1'||human_readable_decimal_format(session_length, 1) BETWEEN '0'||human_readable_decimal_format(session_length, 1) AND 2||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_format(session_length, 1) AND '0'||human_readable_decimal_format(session_length, 1)
+                     AND '1'||human_readable_decimal_format(session_length, 1) like '%'
+                     AND '1'||human_readable_decimal_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||human_readable_decimal_format(session_length, 1) IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                                   1||human_readable_decimal_format(session_length, 1),
+                                                                                   2||human_readable_decimal_format(session_length, 1))
+                     AND '1'||human_readable_decimal_format(session_length, 1) NOT IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                                       2||human_readable_decimal_format(session_length, 1))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A35_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||human_readable_decimal_format(session_length, 1),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||human_readable_decimal_format(session_length, 1) IS NULL
+          OR ('1'||human_readable_decimal_format(session_length, 1) = 1||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) IS NOT DISTINCT
+              FROM 1||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)
+              AND ('1'||human_readable_decimal_format(session_length, 1) IS DISTINCT
+                   FROM '0'||human_readable_decimal_format(session_length, 1))
+              AND '1'||human_readable_decimal_format(session_length, 1) > '0'||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) >= '0'||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) < 2||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) <= 2||human_readable_decimal_format(session_length, 1)
+              AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS TRUE
+              AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS NOT TRUE
+              AND ('1'||human_readable_decimal_format(session_length, 1) = '0'||human_readable_decimal_format(session_length, 1)) IS FALSE
+              AND ('1'||human_readable_decimal_format(session_length, 1) <> '0'||human_readable_decimal_format(session_length, 1)) IS NOT FALSE
+              AND '1'||human_readable_decimal_format(session_length, 1) BETWEEN '0'||human_readable_decimal_format(session_length, 1) AND 2||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) NOT BETWEEN '1'||human_readable_decimal_format(session_length, 1) AND '0'||human_readable_decimal_format(session_length, 1)
+              AND '1'||human_readable_decimal_format(session_length, 1) like '%'
+              AND '1'||human_readable_decimal_format(session_length, 1) not like '__DOES_NOT_EXIST__%'
+              AND '1'||human_readable_decimal_format(session_length, 1) IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                            1||human_readable_decimal_format(session_length, 1),
+                                                                            2||human_readable_decimal_format(session_length, 1))
+              AND '1'||human_readable_decimal_format(session_length, 1) NOT IN ('0'||human_readable_decimal_format(session_length, 1),
+                                                                                2||human_readable_decimal_format(session_length, 1))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A36_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(safe_divide(session_length, session_length)) IS NULL
+       OR (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))+0
+           AND floor(safe_divide(session_length, session_length)) IS NOT DISTINCT
+           FROM floor(safe_divide(session_length, session_length))+0
+           AND floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1
+           AND (floor(safe_divide(session_length, session_length)) IS DISTINCT
+                FROM floor(safe_divide(session_length, session_length))-1)
+           AND floor(safe_divide(session_length, session_length)) > floor(safe_divide(session_length, session_length))-1
+           AND floor(safe_divide(session_length, session_length)) >= floor(safe_divide(session_length, session_length))-1
+           AND floor(safe_divide(session_length, session_length)) < floor(safe_divide(session_length, session_length))+1
+           AND floor(safe_divide(session_length, session_length)) <= floor(safe_divide(session_length, session_length))+1
+           AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS TRUE
+           AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS NOT TRUE
+           AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS FALSE
+           AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS NOT FALSE
+           AND floor(safe_divide(session_length, session_length)) BETWEEN floor(safe_divide(session_length, session_length))-1 AND floor(safe_divide(session_length, session_length))+1
+           AND floor(safe_divide(session_length, session_length)) NOT BETWEEN floor(safe_divide(session_length, session_length)) AND floor(safe_divide(session_length, session_length))-1
+           AND floor(safe_divide(session_length, session_length)) like '%'
+           AND floor(safe_divide(session_length, session_length)) not like '__DOES_NOT_EXIST__%'
+           AND floor(safe_divide(session_length, session_length)) IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                        floor(safe_divide(session_length, session_length))+0,
+                                                                                                                        floor(safe_divide(session_length, session_length))+1)
+           AND floor(safe_divide(session_length, session_length)) NOT IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                            floor(safe_divide(session_length, session_length))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A36_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(safe_divide(session_length, session_length)) IS NULL
+       OR floor(safe_divide(session_length, session_length)) IN
+         (SELECT floor(safe_divide(session_length, session_length))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(safe_divide(session_length, session_length)) IS NULL
+                 OR (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))+0
+                     AND floor(safe_divide(session_length, session_length)) IS NOT DISTINCT
+                     FROM floor(safe_divide(session_length, session_length))+0
+                     AND floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1
+                     AND (floor(safe_divide(session_length, session_length)) IS DISTINCT
+                          FROM floor(safe_divide(session_length, session_length))-1)
+                     AND floor(safe_divide(session_length, session_length)) > floor(safe_divide(session_length, session_length))-1
+                     AND floor(safe_divide(session_length, session_length)) >= floor(safe_divide(session_length, session_length))-1
+                     AND floor(safe_divide(session_length, session_length)) < floor(safe_divide(session_length, session_length))+1
+                     AND floor(safe_divide(session_length, session_length)) <= floor(safe_divide(session_length, session_length))+1
+                     AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS TRUE
+                     AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS NOT TRUE
+                     AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS FALSE
+                     AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS NOT FALSE
+                     AND floor(safe_divide(session_length, session_length)) BETWEEN floor(safe_divide(session_length, session_length))-1 AND floor(safe_divide(session_length, session_length))+1
+                     AND floor(safe_divide(session_length, session_length)) NOT BETWEEN floor(safe_divide(session_length, session_length)) AND floor(safe_divide(session_length, session_length))-1
+                     AND floor(safe_divide(session_length, session_length)) like '%'
+                     AND floor(safe_divide(session_length, session_length)) not like '__DOES_NOT_EXIST__%'
+                     AND floor(safe_divide(session_length, session_length)) IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                                  floor(safe_divide(session_length, session_length))+0,
+                                                                                                                                  floor(safe_divide(session_length, session_length))+1)
+                     AND floor(safe_divide(session_length, session_length)) NOT IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                                      floor(safe_divide(session_length, session_length))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_numeric TEST_ID: A36_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(safe_divide(session_length, session_length)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(safe_divide(session_length, session_length)) IS NULL
+          OR (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))+0
+              AND floor(safe_divide(session_length, session_length)) IS NOT DISTINCT
+              FROM floor(safe_divide(session_length, session_length))+0
+              AND floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1
+              AND (floor(safe_divide(session_length, session_length)) IS DISTINCT
+                   FROM floor(safe_divide(session_length, session_length))-1)
+              AND floor(safe_divide(session_length, session_length)) > floor(safe_divide(session_length, session_length))-1
+              AND floor(safe_divide(session_length, session_length)) >= floor(safe_divide(session_length, session_length))-1
+              AND floor(safe_divide(session_length, session_length)) < floor(safe_divide(session_length, session_length))+1
+              AND floor(safe_divide(session_length, session_length)) <= floor(safe_divide(session_length, session_length))+1
+              AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS TRUE
+              AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS NOT TRUE
+              AND (floor(safe_divide(session_length, session_length)) = floor(safe_divide(session_length, session_length))-1) IS FALSE
+              AND (floor(safe_divide(session_length, session_length)) <> floor(safe_divide(session_length, session_length))-1) IS NOT FALSE
+              AND floor(safe_divide(session_length, session_length)) BETWEEN floor(safe_divide(session_length, session_length))-1 AND floor(safe_divide(session_length, session_length))+1
+              AND floor(safe_divide(session_length, session_length)) NOT BETWEEN floor(safe_divide(session_length, session_length)) AND floor(safe_divide(session_length, session_length))-1
+              AND floor(safe_divide(session_length, session_length)) like '%'
+              AND floor(safe_divide(session_length, session_length)) not like '__DOES_NOT_EXIST__%'
+              AND floor(safe_divide(session_length, session_length)) IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                           floor(safe_divide(session_length, session_length))+0,
+                                                                                                                           floor(safe_divide(session_length, session_length))+1)
+              AND floor(safe_divide(session_length, session_length)) NOT IN (floor(safe_divide(session_length, session_length))-1,
+                                                                                                                               floor(safe_divide(session_length, session_length))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+

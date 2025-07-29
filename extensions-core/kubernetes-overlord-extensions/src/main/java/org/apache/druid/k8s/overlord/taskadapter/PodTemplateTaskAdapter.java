@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -48,6 +49,7 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +71,6 @@ import java.util.Map;
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
-
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
@@ -94,6 +95,12 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.mapper = mapper;
     this.taskLogs = taskLogs;
     this.podTemplateSelector = podTemplateSelector;
+  }
+
+  @Override
+  public String getAdapterType()
+  {
+    return TYPE;
   }
 
   /**
@@ -124,7 +131,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     return new JobBuilder()
         .withNewMetadata()
-        .withName(new K8sTaskId(task).getK8sJobName())
+        .withName(new K8sTaskId(taskRunnerConfig.getK8sTaskPodNamePrefix(), task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .addToAnnotations(DruidK8sConstants.TASK_JOB_TEMPLATE, podTemplateWithName.getName())
@@ -203,7 +210,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     if (taskId == null) {
       throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
-    return new K8sTaskId(taskId);
+    return new K8sTaskId(taskRunnerConfig.getK8sTaskPodNamePrefix(), taskId);
   }
 
   private Collection<EnvVar> getEnv(Task task) throws IOException
@@ -211,6 +218,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
+            .withValue(Paths.get(taskConfig.getBaseDir()).resolve(task.getId()).toString())
+            .build(),
+        new EnvVarBuilder()
+            .withName("druid_indexer_task_baseTaskDir")
             .withValue(taskConfig.getBaseDir())
             .build(),
         new EnvVarBuilder()
@@ -261,9 +272,13 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
+    Preconditions.checkNotNull(config.getNamespace(), "When using Custom Pod Templates, druid.indexer.runner.namespace cannot be null.");
+    String overlordNamespace = config.getOverlordNamespace().isEmpty() ? config.getNamespace() : config.getOverlordNamespace();
+
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
+        .put(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, overlordNamespace)
         .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getId()))
         .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesOverlordUtils.convertStringToK8sLabel(task.getType()))
         .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getGroupId()))

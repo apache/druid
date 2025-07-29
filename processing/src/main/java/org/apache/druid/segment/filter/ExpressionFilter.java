@@ -97,7 +97,7 @@ public class ExpressionFilter implements Filter
       // evaluate the expression, just in case it does actually match nulls
       final ExprEval<?> constantEval = theExpr.eval(InputBindings.nilBindings());
       final ConstantMatcherType constantMatcherType;
-      if (constantEval.valueOrDefault() == null) {
+      if (constantEval.value() == null) {
         constantMatcherType = ConstantMatcherType.ALL_UNKNOWN;
       } else {
         constantMatcherType = constantEval.asBoolean() ? ConstantMatcherType.ALL_TRUE : ConstantMatcherType.ALL_FALSE;
@@ -154,39 +154,31 @@ public class ExpressionFilter implements Filter
         }
 
         if (eval.type().isArray()) {
+          final Object[] result = eval.asArray();
+          if (result == null) {
+            // if value was null and includeUnknown was true we would have already returned before getting here so
+            // is safe to return false
+            return false;
+          }
           switch (eval.elementType().getType()) {
             case LONG:
-              final Object[] lResult = eval.asArray();
-              if (lResult == null) {
-                return false;
-              }
               if (includeUnknown) {
-                return Arrays.stream(lResult).anyMatch(o -> o == null || Evals.asBoolean((long) o));
+                return Arrays.stream(result).anyMatch(o -> o == null || Evals.asBoolean((long) o));
               }
 
-              return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
+              return Arrays.stream(result).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
             case STRING:
-              final Object[] sResult = eval.asArray();
-              if (sResult == null) {
-                return false;
-              }
-
               if (includeUnknown) {
-                return Arrays.stream(sResult).anyMatch(o -> o == null || Evals.asBoolean((String) o));
+                return Arrays.stream(result).anyMatch(o -> o == null || Evals.asBoolean((String) o));
               }
 
-              return Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o));
+              return Arrays.stream(result).anyMatch(o -> Evals.asBoolean((String) o));
             case DOUBLE:
-              final Object[] dResult = eval.asArray();
-              if (dResult == null) {
-                return false;
-              }
-
               if (includeUnknown) {
-                return Arrays.stream(dResult).anyMatch(o -> o == null || Evals.asBoolean((double) o));
+                return Arrays.stream(result).anyMatch(o -> o == null || Evals.asBoolean((double) o));
               }
 
-              return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
+              return Arrays.stream(result).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
           }
         }
         return eval.asBoolean();
@@ -208,7 +200,7 @@ public class ExpressionFilter implements Filter
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
       final ExprEval<?> eval = expr.get().eval(InputBindings.nilBindings());
-      if (eval.valueOrDefault() == null) {
+      if (eval.value() == null) {
         return new AllUnknownBitmapColumnIndex(selector);
       }
       if (eval.asBoolean()) {

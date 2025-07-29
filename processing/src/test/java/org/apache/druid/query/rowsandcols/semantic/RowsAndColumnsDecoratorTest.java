@@ -40,6 +40,7 @@ import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -47,7 +48,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -278,7 +278,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       decor.addFilter(filter);
 
       final ArrayListSegment<Object[]> seggy = new ArrayListSegment<>(
-          SegmentId.dummy("dummy"),
           new ArrayList<>(Arrays.asList(originalVals)),
           columnName -> {
             int index = siggy.indexOf(columnName);
@@ -291,7 +290,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       if (interval != null) {
         builder.setInterval(interval);
       }
-      try (final CursorHolder cursorHolder = seggy.asCursorFactory().makeCursorHolder(builder.build())) {
+      try (final CursorHolder cursorHolder = seggy.as(CursorFactory.class).makeCursorHolder(builder.build())) {
         final Cursor cursor = cursorHolder.asCursor();
 
         vals = new ArrayList<>();

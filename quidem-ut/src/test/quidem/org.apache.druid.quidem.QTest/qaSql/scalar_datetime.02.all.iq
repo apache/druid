@@ -1,0 +1,224 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_datetime TEST_ID: A17_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampadd(DAY, 1, __time) IS NULL
+       OR timestampadd(DAY, 1, __time) IN
+         (SELECT timestampadd(DAY, 1, __time)
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (timestampadd(DAY, 1, __time) IS NULL
+                 OR (timestampadd(DAY, 1, __time) = timestampadd(DAY, 1, __time)
+                     AND timestampadd(DAY, 1, __time) IS NOT DISTINCT
+                     FROM timestampadd(DAY, 1, __time)
+                     AND timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)
+                     AND (timestampadd(DAY, 1, __time) IS DISTINCT
+                          FROM timestampadd(DAY, -1, __time))
+                     AND timestampadd(DAY, 1, __time) > timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) >= timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) < timestampadd(DAY, 2, __time)
+                     AND timestampadd(DAY, 1, __time) <= timestampadd(DAY, 2, __time)
+                     AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS TRUE
+                     AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS NOT TRUE
+                     AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS FALSE
+                     AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS NOT FALSE
+                     AND timestampadd(DAY, 1, __time) BETWEEN timestampadd(DAY, -1, __time) AND timestampadd(DAY, 2, __time)
+                     AND timestampadd(DAY, 1, __time) NOT BETWEEN timestampadd(DAY, 1, __time) AND timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) like '%'
+                     AND timestampadd(DAY, 1, __time) not like '__DOES_NOT_EXIST__%'
+                     AND timestampadd(DAY, 1, __time) IN (timestampadd(DAY, -1, __time),
+                                                          timestampadd(DAY, 1, __time),
+                                                          timestampadd(DAY, 2, __time))
+                     AND timestampadd(DAY, 1, __time) NOT IN (timestampadd(DAY, -1, __time),
+                                                              timestampadd(DAY, 2, __time))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_datetime TEST_ID: A17_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          timestampadd(DAY, 1, __time),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (timestampadd(DAY, 1, __time) IS NULL
+          OR (timestampadd(DAY, 1, __time) = timestampadd(DAY, 1, __time)
+              AND timestampadd(DAY, 1, __time) IS NOT DISTINCT
+              FROM timestampadd(DAY, 1, __time)
+              AND timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)
+              AND (timestampadd(DAY, 1, __time) IS DISTINCT
+                   FROM timestampadd(DAY, -1, __time))
+              AND timestampadd(DAY, 1, __time) > timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) >= timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) < timestampadd(DAY, 2, __time)
+              AND timestampadd(DAY, 1, __time) <= timestampadd(DAY, 2, __time)
+              AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS TRUE
+              AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS NOT TRUE
+              AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS FALSE
+              AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS NOT FALSE
+              AND timestampadd(DAY, 1, __time) BETWEEN timestampadd(DAY, -1, __time) AND timestampadd(DAY, 2, __time)
+              AND timestampadd(DAY, 1, __time) NOT BETWEEN timestampadd(DAY, 1, __time) AND timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) like '%'
+              AND timestampadd(DAY, 1, __time) not like '__DOES_NOT_EXIST__%'
+              AND timestampadd(DAY, 1, __time) IN (timestampadd(DAY, -1, __time),
+                                                   timestampadd(DAY, 1, __time),
+                                                   timestampadd(DAY, 2, __time))
+              AND timestampadd(DAY, 1, __time) NOT IN (timestampadd(DAY, -1, __time),
+                                                       timestampadd(DAY, 2, __time))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_datetime TEST_ID: A18_q_simple
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+       OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+           FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                            timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                            timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_datetime TEST_ID: A18_q_subq
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+       OR timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN
+         (SELECT timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+          FROM test_sql
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+                 OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+                     FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                          FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                      timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                                      timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                          timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: scalar_datetime TEST_ID: A18_q_grpby
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                          count(*)
+   FROM test_sql
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+          OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+              FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                   FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                               timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                               timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                   timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+

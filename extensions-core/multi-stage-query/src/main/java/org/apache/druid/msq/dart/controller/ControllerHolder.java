@@ -20,11 +20,11 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.QueryListener;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -56,29 +56,23 @@ public class ControllerHolder
   }
 
   private final Controller controller;
-  private final ControllerContext controllerContext;
   private final String sqlQueryId;
   private final String sql;
-  private final String controllerHost;
   private final AuthenticationResult authenticationResult;
   private final DateTime startTime;
   private final AtomicReference<State> state = new AtomicReference<>(State.ACCEPTED);
 
   public ControllerHolder(
       final Controller controller,
-      final ControllerContext controllerContext,
       final String sqlQueryId,
       final String sql,
-      final String controllerHost,
       final AuthenticationResult authenticationResult,
       final DateTime startTime
   )
   {
     this.controller = Preconditions.checkNotNull(controller, "controller");
-    this.controllerContext = controllerContext;
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
     this.sql = sql;
-    this.controllerHost = controllerHost;
     this.authenticationResult = authenticationResult;
     this.startTime = Preconditions.checkNotNull(startTime, "startTime");
   }
@@ -100,7 +94,12 @@ public class ControllerHolder
 
   public String getControllerHost()
   {
-    return controllerHost;
+    return getControllerContext().selfNode().getHostAndPortToUse();
+  }
+
+  private ControllerContext getControllerContext()
+  {
+    return controller.getControllerContext();
   }
 
   public AuthenticationResult getAuthenticationResult()
@@ -126,11 +125,13 @@ public class ControllerHolder
   {
     final String workerIdString = workerId.toString();
 
+    ControllerContext controllerContext = getControllerContext();
     if (controllerContext instanceof DartControllerContext) {
+      DartControllerContext dartControllerContext = (DartControllerContext) controllerContext;
       // For DartControllerContext, newWorkerClient() returns the same instance every time.
       // This will always be DartControllerContext in production; the instanceof check is here because certain
       // tests use a different context class.
-      ((DartWorkerClient) controllerContext.newWorkerClient()).closeClient(workerId.getHostAndPort());
+      dartControllerContext.newWorkerClient().closeClient(workerId.getHostAndPort());
     }
 
     if (controller.hasWorker(workerIdString)) {
@@ -146,13 +147,13 @@ public class ControllerHolder
   }
 
   /**
-   * Places this holder into {@link State#CANCELED}. Calls {@link Controller#stop()} if it was previously in
-   * state {@link State#RUNNING}.
+   * Places this holder into {@link State#CANCELED}. Calls {@link Controller#stop(CancellationReason)} if it was
+   * previously in state {@link State#RUNNING}.
    */
-  public void cancel()
+  public void cancel(CancellationReason reason)
   {
     if (state.getAndSet(State.CANCELED) == State.RUNNING) {
-      controller.stop();
+      controller.stop(reason);
     }
   }
 

@@ -1,0 +1,993 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B8_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE (c='S1'
+       OR c='998')
+  AND NOT c='S2'
+  AND NOT c='999';
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B9_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B9_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IS NULL);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B9_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IS NULL), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B9_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B9_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B10_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IS NOT NULL;
++------+
+| c    |
++------+
+| 0.1  |
+| 0.1  |
+| 0.1  |
+| 1    |
+| 1    |
+| 1    |
+| S1   |
+| S1   |
+| S1   |
+| true |
+| true |
+| true |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B10_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IS NOT NULL);
++------+
+| c    |
++------+
+| 0.1  |
+| 0.1  |
+| 0.1  |
+| 1    |
+| 1    |
+| 1    |
+| S1   |
+| S1   |
+| S1   |
+| true |
+| true |
+| true |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B10_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IS NOT NULL), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B10_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IS NOT NULL;
++------+
+| c    |
++------+
+| 0.1  |
+| 0.1  |
+| 0.1  |
+| 1    |
+| 1    |
+| 1    |
+| S1   |
+| S1   |
+| S1   |
+| true |
+| true |
+| true |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B10_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IS NOT NULL;
++------+
+| c    |
++------+
+| 0.1  |
+| 0.1  |
+| 0.1  |
+| 1    |
+| 1    |
+| 1    |
+| S1   |
+| S1   |
+| S1   |
+| true |
+| true |
+| true |
++------+
+(12 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B11_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998') IS TRUE
+  AND c IN ('S2',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B11_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IN ('S1',
+               '998') IS TRUE
+     AND c IN ('S2',
+               '999') IS NOT TRUE);
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B11_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IN ('S1',
+               '998') IS TRUE
+     AND c IN ('S2',
+               '999') IS NOT TRUE), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B11_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IN ('S1',
+            '998') IS TRUE
+  AND c IN ('S2',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B11_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998') IS TRUE
+  AND c IN ('S2',
+            '999') IS NOT TRUE;
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B12_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998') IS FALSE
+  AND c IN ('S2',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B12_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IN ('S1',
+               '998') IS FALSE
+     AND c IN ('S2',
+               '999') IS NOT FALSE);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B12_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IN ('S1',
+               '998') IS FALSE
+     AND c IN ('S2',
+               '999') IS NOT FALSE), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B12_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IN ('S1',
+            '998') IS FALSE
+  AND c IN ('S2',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B12_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998') IS FALSE
+  AND c IN ('S2',
+            '999') IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B13_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE (c BETWEEN 'S1' AND 'S2')
+  AND (c NOT BETWEEN 'S3' AND 'S4');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B13_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE (c BETWEEN 'S1' AND 'S2')
+     AND (c NOT BETWEEN 'S3' AND 'S4'));
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B13_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (c BETWEEN 'S1' AND 'S2')
+     AND (c NOT BETWEEN 'S3' AND 'S4')), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B13_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE (c BETWEEN 'S1' AND 'S2')
+  AND (c NOT BETWEEN 'S3' AND 'S4');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B13_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE (c BETWEEN 'S1' AND 'S2')
+  AND (c NOT BETWEEN 'S3' AND 'S4');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B14_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE (cast(c AS varchar) like '%1%')
+  AND (cast(c AS varchar) not like '%2%');
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.1 |
+| 1   |
+| 1   |
+| 1   |
+| S1  |
+| S1  |
+| S1  |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B14_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE (cast(c AS varchar) like '%1%')
+     AND (cast(c AS varchar) not like '%2%'));
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.1 |
+| 1   |
+| 1   |
+| 1   |
+| S1  |
+| S1  |
+| S1  |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B14_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (cast(c AS varchar) like '%1%')
+     AND (cast(c AS varchar) not like '%2%')), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B14_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE (cast(c AS varchar) like '%1%')
+  AND (cast(c AS varchar) not like '%2%');
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.1 |
+| 1   |
+| 1   |
+| 1   |
+| S1  |
+| S1  |
+| S1  |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B14_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE (cast(c AS varchar) like '%1%')
+  AND (cast(c AS varchar) not like '%2%');
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.1 |
+| 1   |
+| 1   |
+| 1   |
+| S1  |
+| S1  |
+| S1  |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B15_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998')
+  AND c NOT IN ('S2',
+                '999');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B15_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IN ('S1',
+               '998')
+     AND c NOT IN ('S2',
+                   '999'));
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B15_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IN ('S1',
+               '998')
+     AND c NOT IN ('S2',
+                   '999')), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B15_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IN ('S1',
+            '998')
+  AND c NOT IN ('S2',
+                '999');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B15_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IN ('S1',
+            '998')
+  AND c NOT IN ('S2',
+                '999');
++----+
+| c  |
++----+
+| S1 |
+| S1 |
+| S1 |
++----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE c IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE c IN
+       (SELECT col
+        FROM (
+              VALUES('S1'),('998')) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES('S2'),('999')) AS t(col)));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IN
+       (SELECT col
+        FROM (
+              VALUES('S1'),('998')) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES('S2'),('999')) AS t(col))), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE c IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B16_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE c IN
+    (SELECT col
+     FROM (
+           VALUES('S1'),('998')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('S2'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE s_int=1
+  AND c='S1';
++----+
+| c  |
++----+
+| S1 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE s_int=1
+     AND c='S1');
++----+
+| c  |
++----+
+| S1 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int=1
+     AND c='S1'), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE s_int=1
+  AND c='S1';
++----+
+| c  |
++----+
+| S1 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B17_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_mixed) AS u(c)
+WHERE s_int=1
+  AND c='S1';
++----+
+| c  |
++----+
+| S1 |
++----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B18_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_mixed) AS u(c)
+WHERE s_int<>1
+  AND c<>'S1';
++------+
+| c    |
++------+
+| 0.1  |
+| 1    |
+| true |
++------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B18_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c)
+   WHERE s_int<>1
+     AND c<>'S1');
++------+
+| c    |
++------+
+| 0.1  |
+| 1    |
+| true |
++------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B18_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int<>1
+     AND c<>'S1'), unnest(a_mixed) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A5_B18_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_mixed) AS u(c))
+WHERE s_int<>1
+  AND c<>'S1';
++------+
+| c    |
++------+
+| 0.1  |
+| 1    |
+| true |
++------+
+(3 rows)
+
+!ok
+

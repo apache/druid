@@ -22,10 +22,12 @@ package org.apache.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -35,19 +37,28 @@ import java.util.Objects;
 public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrategy
 {
   private final AffinityConfig affinityConfig;
+  private final TaskLimits taskLimits;
 
   @JsonCreator
   public EqualDistributionWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+      @JsonProperty("affinityConfig") AffinityConfig affinityConfig,
+      @JsonProperty("taskLimits") @Nullable TaskLimits taskLimits
   )
   {
     this.affinityConfig = affinityConfig;
+    this.taskLimits = Configs.valueOrDefault(taskLimits, TaskLimits.EMPTY);
   }
 
   @JsonProperty
   public AffinityConfig getAffinityConfig()
   {
     return affinityConfig;
+  }
+
+  @JsonProperty
+  public TaskLimits getTaskLimits()
+  {
+    return taskLimits;
   }
 
   @Override
@@ -62,7 +73,8 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
         zkWorkers,
         config,
         affinityConfig,
-        EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers
+        EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers,
+        taskLimits
     );
   }
 
@@ -83,13 +95,14 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
       return false;
     }
     final EqualDistributionWorkerSelectStrategy that = (EqualDistributionWorkerSelectStrategy) o;
-    return Objects.equals(affinityConfig, that.affinityConfig);
+    return Objects.equals(affinityConfig, that.affinityConfig)
+           && Objects.equals(taskLimits, that.taskLimits);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(affinityConfig);
+    return Objects.hash(affinityConfig, taskLimits);
   }
 
   @Override
@@ -97,6 +110,7 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
   {
     return "EqualDistributionWorkerSelectStrategy{" +
            "affinityConfig=" + affinityConfig +
+           ", taskLimits=" + taskLimits +
            '}';
   }
 }

@@ -15,4 +15,10 @@
 
 from template import BaseTemplate, generate
 
-generate(__file__, BaseTemplate())
+class Template(BaseTemplate):
+
+    # No kafka dependency in this cluster
+    def define_kafka(self):
+        pass
+
+generate(__file__, Template())

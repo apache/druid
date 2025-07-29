@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "33.0.0",
+  "version": "35.0.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
@@ -21,6 +21,7 @@
     "coverage": "jest --coverage src",
     "update-snapshots": "jest -u --config jest.config.js",
     "autofix": "npm run eslint-fix && npm run sasslint-fix && npm run prettify",
+    "typecheck": "tsc --noEmit",
     "eslint": "eslint",
     "eslint-fix": "npm run eslint -- --fix",
     "eslint-changed-only": "git diff --diff-filter=ACMR --cached --name-only | grep -E \\.tsx\\?$ | xargs ./node_modules/.bin/eslint",
@@ -71,13 +72,14 @@
     "d3-shape": "^3.2.0",
     "d3-time-format": "^4.1.0",
     "date-fns": "^2.28.0",
-    "druid-query-toolkit": "^1.0.2",
+    "druid-query-toolkit": "^1.1.5",
     "echarts": "^5.5.1",
     "file-saver": "^2.0.5",
     "hjson": "^3.2.2",
     "json-bigint-native": "^1.2.0",
     "lodash.debounce": "^4.0.8",
     "lodash.escape": "^4.0.1",
+    "markdown-table-ts": "^1.0.3",
     "memoize-one": "^5.2.1",
     "numeral": "^2.0.6",
     "react": "^18.3.1",
@@ -93,7 +95,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@awesome-code-style/eslint-config": "^6.0.0",
+    "@awesome-code-style/eslint-config": "^6.0.2",
     "@awesome-code-style/prettier-config": "^4.0.0",
     "@awesome-code-style/stylelint-config": "^6.0.0",
     "@testing-library/dom": "^10.4.0",
@@ -125,7 +127,7 @@
     "browserslist": "^4.24.0",
     "codecov": "^3.8.2",
     "css-loader": "^5.2.1",
-    "eslint": "^9.12.0",
+    "eslint": "^9.31.0",
     "eslint-plugin-notice": "^1.0.0",
     "eslint-plugin-react": "^7.37.1",
     "eslint-plugin-react-hooks": "^5.0.0",
@@ -154,7 +156,7 @@
     "webpack": "^5.89.0",
     "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^5.2.2"
   },
   "overrides": {
     "@types/react": "$@types/react"

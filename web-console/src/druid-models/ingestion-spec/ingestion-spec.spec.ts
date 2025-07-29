@@ -369,6 +369,7 @@ describe('ingestion-spec', () => {
   it('upgrades / downgrades back compat supervisor spec', () => {
     const backCompatSupervisorSpec = {
       type: 'kafka',
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -486,6 +487,7 @@ describe('ingestion-spec', () => {
     };
 
     expect(cleanSpec(upgradeSpec(backCompatSupervisorSpec))).toEqual({
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -560,6 +562,7 @@ describe('ingestion-spec', () => {
         },
       } as any),
     ).toEqual({
+      id: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
       type: 'index_parallel',
       spec: {
         dataSchema: {},
@@ -864,7 +867,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         false,
         'fixed',
-        'arrays',
+        'array',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -947,7 +950,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -1025,7 +1028,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -1103,7 +1106,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
@@ -1172,7 +1175,7 @@ describe('spec utils', () => {
         JSON_SAMPLE,
         DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`

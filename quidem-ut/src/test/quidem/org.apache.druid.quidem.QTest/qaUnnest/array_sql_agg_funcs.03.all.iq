@@ -1,0 +1,1114 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C5_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C6_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING avg(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C7_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING avg(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING avg(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C8_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(c) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING avg(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING avg(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C9_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING avg(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING avg(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C10_D2
+#-------------------------------------------------------------------------
+SELECT cast(avg(s_int) AS int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING avg(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C1_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C2_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C3_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C4_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C5_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C6_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C7_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C8_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C9_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C10_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C1_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C2_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C3_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C4_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C5_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C6_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C7_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C8_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C9_D2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(s_int) AS col
+   FROM test_unnest,
+        unnest(a_int) AS u(c)
+   WHERE s_int IN (0,
+                   1,
+                   2)
+     OR s_int IS NULL
+   GROUP BY s_int
+   HAVING approx_count_distinct_builtin(s_int) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+

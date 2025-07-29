@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
@@ -114,6 +115,80 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSetStatementWithExplainSanity()
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query = "SET plannerStrategy = 'DECOUPLED';\n"
+            + " EXPLAIN PLAN FOR SELECT COUNT(*)\n"
+            + "FROM (\n"
+            + "  SELECT DISTINCT dim2\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+            + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
+            + "  )\n"
+            + ")";
+
+    final String explanation = "DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])\n" +
+            "  DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "    DruidJoin(condition=[=($1, $2)], joinType=[inner])\n" +
+            "      DruidProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)], druid=[logical])\n" +
+            "        DruidTableScan(table=[[druid, foo]], druid=[logical])\n" +
+            "      DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "        DruidProject(EXPR$0=[SUBSTRING($1, 1, 1)], druid=[logical])\n" +
+            "          DruidFilter(condition=[IS NOT NULL($1)])\n" +
+            "            DruidTableScan(table=[[druid, foo]], druid=[logical])\n";
+    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
+
+    testQuery(
+            query,
+            ImmutableList.of(),
+            ImmutableList.of(new Object[]{explanation, resources, attributes})
+    );
+  }
+
+  @Test
+  public void testMultiStatementSetsContextOverridesQueryContext()
+  {
+    // Skip vectorization since otherwise the "context" will change for each subtest.
+    skipVectorize();
+
+    final String query = "SET plannerStrategy = 'DECOUPLED';\n"
+            + " SET timeout = 90000;\n"
+            + " EXPLAIN PLAN FOR \n"
+            + "SELECT COUNT(*)\n"
+            + "FROM (\n"
+            + "  SELECT DISTINCT dim2\n"
+            + "  FROM druid.foo\n"
+            + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+            + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
+            + "  )\n"
+            + ")";
+
+    final String explanation = "DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])\n" +
+            "  DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "    DruidJoin(condition=[=($1, $2)], joinType=[inner])\n" +
+            "      DruidProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)], druid=[logical])\n" +
+            "        DruidTableScan(table=[[druid, foo]], druid=[logical])\n" +
+            "      DruidAggregate(group=[{0}], druid=[logical])\n" +
+            "        DruidProject(EXPR$0=[SUBSTRING($1, 1, 1)], druid=[logical])\n" +
+            "          DruidFilter(condition=[IS NOT NULL($1)])\n" +
+            "            DruidTableScan(table=[[druid, foo]], druid=[logical])\n";
+
+    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
+
+    testQuery(
+        query,
+        ImmutableMap.of("plannerStrategy", "COUPLED"),
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanation, resources, attributes})
+    );
+  }
+
+  @Test
   public void testExplainSelectStar()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
@@ -158,7 +233,9 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 
     final String explainSql = "EXPLAIN PLAN FOR SELECT"
                               + " MV_FILTER_ONLY(\"dim1\", ARRAY['true', 'false']),"
-                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false'])"
+                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false']),"
+                              + " MV_FILTER_REGEX(\"dim1\", '^true$'),"
+                              + " MV_FILTER_PREFIX(\"dim1\", 'tr')"
                               + " FROM druid.foo";
 
     // Test plan as default expressions
@@ -166,7 +243,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     defaultExprContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
     defaultExprContext.put(PlannerConfig.CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS, true);
 
-    final String expectedPlanWithDefaultExpressions = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"filter((x) -> array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"filter((x) -> !array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\"],\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"}]}]";
+    final String expectedPlanWithDefaultExpressions = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"filter((x) -> array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"filter((x) -> !array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v2\",\"expression\":\"filter((x) -> regexp_like(x, \\\"^true$\\\"), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v3\",\"expression\":\"filter((x) -> (x != null && substring(x, 0, 2) == \\\"tr\\\"), \\\"dim1\\\")\",\"outputType\":\"STRING\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\",\"v2\",\"v3\"],\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"},{\"name\":\"v2\",\"type\":\"STRING\"},{\"name\":\"v3\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"},{\"queryColumn\":\"v2\",\"outputColumn\":\"EXPR$2\"},{\"queryColumn\":\"v3\",\"outputColumn\":\"EXPR$3\"}]}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String expectedAttributes = "{\"statementType\":\"SELECT\"}";
     testQuery(
@@ -177,7 +254,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     );
 
     // Test plan as mv-filtered virtual columns
-    final String expectedPlanWithMvfiltered = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"mv-filtered\",\"name\":\"v0\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":true},{\"type\":\"mv-filtered\",\"name\":\"v1\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":false}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"}]}]";
+    final String expectedPlanWithMvfiltered = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"mv-filtered\",\"name\":\"v0\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":true},{\"type\":\"mv-filtered\",\"name\":\"v1\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":false},{\"type\":\"mv-regex-filtered\",\"name\":\"v2\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"pattern\":\"^true$\"},{\"type\":\"mv-prefix-filtered\",\"name\":\"v3\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"prefix\":\"tr\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\",\"v2\",\"v3\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"},{\"name\":\"v2\",\"type\":\"STRING\"},{\"name\":\"v3\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"},{\"queryColumn\":\"v2\",\"outputColumn\":\"EXPR$2\"},{\"queryColumn\":\"v3\",\"outputColumn\":\"EXPR$3\"}]}]";
     final Map<String, Object> mvFilteredContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     mvFilteredContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
 

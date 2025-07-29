@@ -18,6 +18,8 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+BrowserOnly
+docusaurus
 1M
 100MiB
 32-bit
@@ -196,6 +198,7 @@ Murmur3
 MVCC
 MV_TO_ARRAY
 NFS
+NodeCache
 OCF
 OIDC
 OLAP
@@ -207,6 +210,7 @@ OutputStream
 ParAccel
 ParseSpec
 ParseSpecs
+PathChildrenCache
 Protobuf
 protobuf
 pull-deps
@@ -395,6 +399,7 @@ kerberos
 keystore
 keytool
 keytab
+kubeconfig
 kubernetes
 kubexit
 k8s
@@ -424,6 +429,7 @@ microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
+multipart
 multitenancy
 multitenant
 MVDs
@@ -464,6 +470,7 @@ pre-aggregating
 pre-aggregation
 pre-computation
 pre-compute
+pre-computed
 pre-computing
 preconfigured
 pre-existing
@@ -682,6 +689,7 @@ druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
 error_msg
@@ -720,6 +728,7 @@ total_size
 useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
+useLexicographicTopN
 wikipedia
 your-table
 enableTimeBoundaryPlanning
@@ -2220,6 +2229,7 @@ maxStreamLength
 toString
 100TB
 compressedBigDecimal
+compressedBigDecimalSum
 limitSpec
 metricsSpec
 postAggregations
@@ -2280,6 +2290,8 @@ MV_CONCAT
 MV_CONTAINS
 MV_FILTER_NONE
 MV_FILTER_ONLY
+MV_FILTER_REGEX
+MV_FILTER_PREFIX
 MV_LENGTH
 MV_OFFSET
 MV_OFFSET_OF
@@ -2410,6 +2422,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2425,6 +2438,10 @@ quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
+
+- ../docs/development/extensions-contrib/druid-exact-count-bitmap.md
+Bitmap64ExactCountBuild
+Bitmap64ExactCountMerge
 
 - ../docs/development/extensions-core/catalog.md
 ColumnSpec

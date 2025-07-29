@@ -34,6 +34,7 @@ import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -223,6 +224,22 @@ public class ScheduledBatchSupervisorSpecTest
             "SELECT queries are not supported by the [scheduled_batch] supervisor. Only INSERT or REPLACE ingest queries are allowed."
         )
     );
+  }
+
+  @Test
+  public void test_getInputSourceResources_returnsEmpty()
+  {
+    final ScheduledBatchSupervisorSpec supervisorSpec = new ScheduledBatchSupervisorSpec(
+        query,
+        new UnixCronSchedulerConfig("* * * * *"),
+        true,
+        null,
+        null,
+        OBJECT_MAPPER,
+        scheduler,
+        brokerClient
+    );
+    Assert.assertTrue(supervisorSpec.getInputSourceResources().isEmpty());
   }
 
   private void testSerde(final ScheduledBatchSupervisorSpec spec)

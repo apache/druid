@@ -76,13 +76,18 @@ exports[`TasksView matches snapshot 1`] = `
           "Type",
           "Datasource",
           "Status",
+          "Error",
           "Created time",
           "Duration",
           "Location",
         ]
       }
       onChange={[Function]}
-      tableColumnsHidden={[]}
+      tableColumnsHidden={
+        [
+          "Error",
+        ]
+      }
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -174,12 +179,22 @@ exports[`TasksView matches snapshot 1`] = `
         },
         {
           "Cell": [Function],
+          "Filter": [Function],
           "Header": "Status",
           "accessor": [Function],
           "id": "status",
           "show": true,
           "sortMethod": [Function],
           "width": 110,
+        },
+        {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Error",
+          "accessor": [Function],
+          "id": "error",
+          "show": false,
+          "width": 300,
         },
         {
           "Aggregated": [Function],

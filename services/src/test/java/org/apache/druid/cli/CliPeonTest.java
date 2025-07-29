@@ -42,6 +42,8 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
@@ -103,7 +105,24 @@ public class CliPeonTest
   }
 
   @Test
-  public void testCliPeonHeartbeatDimensions() throws IOException
+  public void testCliPeonPolicyEnforcerInToolbox() throws IOException
+  {
+    CliPeon runnable = new CliPeon();
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+
+    Properties properties = new Properties();
+    properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
+    runnable.configure(properties);
+    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
+
+    Injector secondaryInjector = runnable.makeInjector();
+    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(null), secondaryInjector.getInstance(PolicyEnforcer.class));
+  }
+
+  @Test
+  public void testCliPeonHeartbeatDimensions()
   {
     // non-streaming task
     String taskId = "testTaskId";
@@ -121,6 +140,7 @@ public class CliPeonTest
     );
 
     // streaming task with empty ags
+    String supervisor = "testSupervisor";
     Assert.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
@@ -129,7 +149,7 @@ public class CliPeonTest
             DruidMetrics.TASK_TYPE, TestStreamingTask.TYPE,
             DruidMetrics.STATUS, TestStreamingTask.STATUS
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, ImmutableMap.of()), groupId))
     );
 
     // streaming task with non-empty ags
@@ -142,7 +162,7 @@ public class CliPeonTest
             DruidMetrics.STATUS, TestStreamingTask.STATUS,
             DruidMetrics.TAGS, tags
         ),
-        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
+        CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
     );
   }
 
@@ -211,6 +231,7 @@ public class CliPeonTest
 
     public TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         String datasource,
         @Nullable Map context,
         @Nullable String groupId
@@ -218,6 +239,7 @@ public class CliPeonTest
     {
       this(
           id,
+          supervisorId,
           null,
           DataSchema.builder()
               .withDataSource(datasource)
@@ -234,6 +256,7 @@ public class CliPeonTest
 
     private TestStreamingTask(
         String id,
+        @Nullable String supervisorId,
         @Nullable TaskResource taskResource,
         DataSchema dataSchema,
         SeekableStreamIndexTaskTuningConfig tuningConfig,
@@ -243,7 +266,7 @@ public class CliPeonTest
     )
     {
 
-      super(id, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
     }
 
     @Override

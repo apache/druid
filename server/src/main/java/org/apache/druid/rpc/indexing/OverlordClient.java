@@ -31,12 +31,13 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -179,6 +180,24 @@ public interface OverlordClient
   ListenableFuture<TaskPayloadResponse> taskPayload(String taskId);
 
   /**
+   * Submits a supervisor spec to the Overlord.
+   * <p>
+   * API: {@code /druid/indexer/v1/supervisor}
+   *
+   * @return Map containing a single entry "id"
+   */
+  ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor);
+
+  /**
+   * Shuts down a supervisor.
+   * <p>
+   * API: {@code /druid/indexer/v1/supervisor/<id>/terminate}
+   *
+   * @return Map containing a single entry "id"
+   */
+  ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId);
+
+  /**
    * Returns all current supervisor statuses.
    */
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
@@ -220,26 +239,25 @@ public interface OverlordClient
    * Checks if compaction supervisors are enabled on the Overlord.
    * When this returns true, the Coordinator does not run CompactSegments duty.
    * <p>
-   * API: {@code /druid/indexer/v1/compaction/isSupervisorEnabled}
+   * API: {@code GET /druid/indexer/v1/compaction/isSupervisorEnabled}
    */
   ListenableFuture<Boolean> isCompactionSupervisorEnabled();
 
   /**
-   * Gets the number of bytes yet to be compacted for the given datasource.
+   * Gets the current cluster-level compaction config.
    * <p>
-   * API: {@code /druid/indexer/v1/compaction/progress}
+   * API: {@code GET /druid/indexer/v1/compaction/config/cluster}
    */
-  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
+  ListenableFuture<ClusterCompactionConfig> getClusterCompactionConfig();
 
   /**
-   * Gets the latest compaction snapshots of one or all datasources.
+   * Gets the current cluster-level compaction config.
    * <p>
-   * API: {@code /druid/indexer/v1/compaction/status}
+   * API: {@code POST /druid/indexer/v1/compaction/config/cluster}
    *
-   * @param dataSource If passed as non-null, then the returned list contains only
-   *                   the snapshot for this datasource.
+   * @return {@link UpdateResponse} containing the success status of this operation.
    */
-  ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
+  ListenableFuture<UpdateResponse> updateClusterCompactionConfig(ClusterCompactionConfig config);
 
   /**
    * Marks all non-overshadowed segments of the datasource as used.

@@ -21,15 +21,21 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -40,6 +46,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +56,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * Projection of {@link OnheapIncrementalIndex} for {@link org.apache.druid.data.input.impl.AggregateProjectionSpec}
@@ -65,27 +75,32 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final ColumnSelectorFactory virtualSelectorFactory;
   private final Map<String, ColumnSelectorFactory> aggSelectors;
-  private final boolean useMaxMemoryEstimates;
-  private final long maxBytesPerRowForAggregators;
   private final long minTimestamp;
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
   public OnHeapAggregateProjection(
-      AggregateProjectionMetadata.Schema schema,
-      List<IncrementalIndex.DimensionDesc> dimensions,
-      Map<String, IncrementalIndex.DimensionDesc> dimensionsMap,
-      int[] parentDimensionIndex,
-      long minTimestamp,
-      boolean useMaxMemoryEstimates,
-      long maxBytesPerRowForAggregators
+      AggregateProjectionSpec projectionSpec,
+      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc,
+      Function<String, AggregatorFactory> getBaseTableAggregatorFactory,
+      long minTimestamp
   )
   {
-    this.projectionSchema = schema;
-    this.dimensions = dimensions;
-    this.parentDimensionIndex = parentDimensionIndex;
-    this.dimensionsMap = dimensionsMap;
+    this.projectionSchema = projectionSpec.toMetadataSchema();
     this.minTimestamp = minTimestamp;
+
+    // initialize dimensions, facts holder
+    this.dimensions = new ArrayList<>();
+    // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
+    // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
+    // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
+    // always have its time-like column in the grouping columns list, so its position in this array specifies -1
+    this.parentDimensionIndex = new int[projectionSpec.getGroupingColumns().size()];
+    Arrays.fill(parentDimensionIndex, -1);
+    this.dimensionsMap = new HashMap<>();
+    this.columnFormats = new LinkedHashMap<>();
+
+    initializeAndValidateDimensions(projectionSpec, getBaseTableDimensionDesc);
     final IncrementalIndex.IncrementalIndexRowComparator rowComparator = new IncrementalIndex.IncrementalIndexRowComparator(
         projectionSchema.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSchema.getTimeColumnPosition(),
         dimensions
@@ -95,42 +110,17 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         dimensions,
         projectionSchema.getTimeColumnPosition() == 0
     );
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.maxBytesPerRowForAggregators = maxBytesPerRowForAggregators;
 
+    // validate virtual columns refer to base table dimensions and initialize selector factory
+    validateVirtualColumns(projectionSpec, getBaseTableDimensionDesc);
     this.virtualSelectorFactory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
-        IncrementalIndex.makeColumnSelectorFactory(schema.getVirtualColumns(), inputRowHolder, null)
+        IncrementalIndex.makeColumnSelectorFactory(projectionSchema.getVirtualColumns(), inputRowHolder, null)
     );
+    // initialize aggregators
     this.aggSelectors = new LinkedHashMap<>();
     this.aggregatorsMap = new LinkedHashMap<>();
-    this.aggregatorFactories = new AggregatorFactory[schema.getAggregators().length];
-    this.columnFormats = new LinkedHashMap<>();
-    for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-      if (dimension.getName().equals(projectionSchema.getTimeColumnName())) {
-        columnFormats.put(
-            dimension.getName(),
-            new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
-        );
-      } else {
-        columnFormats.put(dimension.getName(), dimension.getIndexer().getFormat());
-      }
-    }
-    int i = 0;
-    for (AggregatorFactory agg : schema.getAggregators()) {
-      IncrementalIndex.MetricDesc metricDesc = new IncrementalIndex.MetricDesc(aggregatorsMap.size(), agg);
-      aggregatorsMap.put(metricDesc.getName(), metricDesc);
-      columnFormats.put(metricDesc.getName(), new CapabilitiesBasedFormat(metricDesc.getCapabilities()));
-      final ColumnSelectorFactory factory;
-      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
-        factory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
-            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, inputRowHolder, agg)
-        );
-      } else {
-        factory = virtualSelectorFactory;
-      }
-      aggSelectors.put(agg.getName(), factory);
-      aggregatorFactories[i++] = agg;
-    }
+    this.aggregatorFactories = new AggregatorFactory[projectionSchema.getAggregators().length];
+    initializeAndValidateAggregators(projectionSpec, getBaseTableDimensionDesc, getBaseTableAggregatorFactory);
   }
 
   /**
@@ -160,10 +150,24 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         projectionDims[i] = key.dims[parentDimensionIndex[i]];
       }
     }
+    final long timestamp;
+
+    if (projectionSchema.getTimeColumnName() != null) {
+      timestamp = projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis();
+      if (timestamp < minTimestamp) {
+        throw DruidException.defensive(
+            "Cannot add row[%s] to projection[%s] because projection effective timestamp[%s] is below the minTimestamp[%s]",
+            inputRow,
+            projectionSchema.getName(),
+            DateTimes.utc(timestamp),
+            DateTimes.utc(minTimestamp)
+        );
+      }
+    } else {
+      timestamp = minTimestamp;
+    }
     final IncrementalIndexRow subKey = new IncrementalIndexRow(
-        projectionSchema.getTimeColumnName() != null
-        ? projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
-        : minTimestamp,
+        timestamp,
         projectionDims,
         dimensions
     );
@@ -178,10 +182,9 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
           aggs,
           inputRowHolder,
           parseExceptionMessages,
-          useMaxMemoryEstimates,
           false
       );
-      totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggForProjectionSizeDelta);
+      totalSizeInBytes.addAndGet(aggForProjectionSizeDelta);
     } else {
       aggs = new Aggregator[aggregatorFactories.length];
       long aggSizeForProjectionRow = factorizeAggs(aggregatorFactories, aggs);
@@ -190,15 +193,13 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
           aggs,
           inputRowHolder,
           parseExceptionMessages,
-          useMaxMemoryEstimates,
           false
       );
-      final long estimatedSizeOfAggregators =
-          useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForProjectionRow;
+      final long estimatedSizeOfAggregators = aggSizeForProjectionRow;
       final long projectionRowSize = key.estimateBytesInMemory()
                                      + estimatedSizeOfAggregators
                                      + OnheapIncrementalIndex.ROUGH_OVERHEAD_PER_MAP_ENTRY;
-      totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : projectionRowSize);
+      totalSizeInBytes.addAndGet(projectionRowSize);
       numEntries.incrementAndGet();
     }
     final int rowIndex = rowCounter.getAndIncrement();
@@ -355,6 +356,169 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     return new AggregateProjectionMetadata(projectionSchema, numEntries.get());
   }
 
+  private void validateVirtualColumns(
+      AggregateProjectionSpec projectionSpec,
+      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc
+  )
+  {
+    for (VirtualColumn vc : projectionSchema.getVirtualColumns().getVirtualColumns()) {
+      for (String column : vc.requiredColumns()) {
+        if (column.equals(projectionSchema.getTimeColumnName()) || column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+          continue;
+        }
+        if (getBaseTableDimensionDesc.apply(column) == null) {
+          throw InvalidInput.exception(
+              "projection[%s] contains virtual column[%s] that references an input[%s] which is not a dimension in the base table",
+              projectionSpec.getName(),
+              vc.getOutputName(),
+              column
+          );
+        }
+      }
+    }
+  }
+
+  private void initializeAndValidateDimensions(
+      AggregateProjectionSpec projectionSpec,
+      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc
+  )
+  {
+    int i = 0;
+    for (DimensionSchema dimension : projectionSpec.getGroupingColumns()) {
+      if (dimension.getName().equals(projectionSchema.getTimeColumnName())) {
+        columnFormats.put(
+            dimension.getName(),
+            new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
+        );
+        continue;
+      }
+      final IncrementalIndex.DimensionDesc parent = getBaseTableDimensionDesc.apply(dimension.getName());
+      if (parent == null) {
+        // ensure that this dimension refers to a virtual column, otherwise it is invalid
+        if (!projectionSpec.getVirtualColumns().exists(dimension.getName())) {
+          throw InvalidInput.exception(
+              "projection[%s] contains dimension[%s] that is not present on the base table or a virtual column",
+              projectionSpec.getName(),
+              dimension.getName()
+          );
+        }
+        // this dimension only exists in the child, it needs its own handler
+        final IncrementalIndex.DimensionDesc childOnly = new IncrementalIndex.DimensionDesc(
+            i++,
+            dimension.getName(),
+            dimension.getDimensionHandler()
+        );
+
+        dimensions.add(childOnly);
+        dimensionsMap.put(dimension.getName(), childOnly);
+        columnFormats.put(dimension.getName(), childOnly.getIndexer().getFormat());
+      } else {
+        if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
+          // special handle auto column schema, who reports type as json in schema, but indexer reports whatever
+          // type it has seen, which is string at this stage
+          boolean allowAuto = ColumnType.NESTED_DATA.equals(dimension.getColumnType()) &&
+                              parent.getIndexer() instanceof AutoTypeColumnIndexer;
+          InvalidInput.conditionalException(
+              allowAuto,
+              "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
+              projectionSpec.getName(),
+              dimension.getName(),
+              dimension.getColumnType(),
+              parent.getCapabilities().toColumnType()
+          );
+        }
+        // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
+        final IncrementalIndex.DimensionDesc child = new IncrementalIndex.DimensionDesc(
+            i++,
+            parent.getName(),
+            parent.getHandler(),
+            parent.getIndexer()
+        );
+
+        dimensions.add(child);
+        dimensionsMap.put(dimension.getName(), child);
+        parentDimensionIndex[child.getIndex()] = parent.getIndex();
+        columnFormats.put(dimension.getName(), child.getIndexer().getFormat());
+      }
+    }
+  }
+
+  private void initializeAndValidateAggregators(
+      AggregateProjectionSpec projectionSpec,
+      Function<String, IncrementalIndex.DimensionDesc> getBaseTableDimensionDesc,
+      Function<String, AggregatorFactory> getBaseTableAggregatorFactory
+  )
+  {
+    int i = 0;
+    for (AggregatorFactory agg : projectionSchema.getAggregators()) {
+      AggregatorFactory aggToUse = agg;
+      AggregatorFactory baseTableAgg = getBaseTableAggregatorFactory.apply(agg.getName());
+      if (baseTableAgg != null) {
+        // if the aggregator references a base table aggregator, it must have the same name and be a combining aggregator
+        // of the base table agg
+        if (!agg.equals(baseTableAgg.getCombiningFactory())) {
+          throw InvalidInput.exception(
+              "projection[%s] contains aggregator[%s] that is not the 'combining' aggregator of base table aggregator[%s]",
+              projectionSpec.getName(),
+              agg.getName(),
+              agg.getName()
+          );
+        }
+        aggToUse = baseTableAgg;
+      } else {
+        // otherwise, the aggregator must reference base table dimensions
+        for (String column : agg.requiredFields()) {
+          if (column.equals(projectionSchema.getTimeColumnName()) || column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+            continue;
+          }
+          if (getBaseTableAggregatorFactory.apply(column) != null) {
+            throw InvalidInput.exception(
+                "projection[%s] contains aggregator[%s] that references aggregator[%s] in base table but this is not supported, projection aggregators which reference base table aggregates must be 'combining' aggregators with the same name as the base table column",
+                projectionSpec.getName(),
+                agg.getName(),
+                column
+            );
+          }
+          if (getBaseTableDimensionDesc.apply(column) == null) {
+            // aggregators with virtual column inputs are not supported yet. Supporting this requires some additional
+            // work so that there is a way to do something like rename aggregators input column names so the projection
+            // agg which references the projection virtual column can be changed to the query virtual column name
+            // (since the query agg references the query virtual column). Disallow but provide a helpful error for now
+            if (projectionSchema.getVirtualColumns().exists(column)) {
+              throw InvalidInput.exception(
+                  "projection[%s] contains aggregator[%s] that is has required field[%s] which is a virtual column, this is not yet supported",
+                  projectionSpec.getName(),
+                  agg.getName(),
+                  column
+              );
+            }
+            // not a virtual column, doesn't refer to a base table dimension either, bail instead of ingesting a bunch
+            // of nulls
+            throw InvalidInput.exception(
+                "projection[%s] contains aggregator[%s] that is missing required field[%s] in base table",
+                projectionSpec.getName(),
+                agg.getName(),
+                column
+            );
+          }
+        }
+      }
+      IncrementalIndex.MetricDesc metricDesc = new IncrementalIndex.MetricDesc(aggregatorsMap.size(), aggToUse);
+      aggregatorsMap.put(metricDesc.getName(), metricDesc);
+      columnFormats.put(metricDesc.getName(), new CapabilitiesBasedFormat(metricDesc.getCapabilities()));
+      final ColumnSelectorFactory factory;
+      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
+        factory = new OnheapIncrementalIndex.CachingColumnSelectorFactory(
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, inputRowHolder, aggToUse)
+        );
+      } else {
+        factory = virtualSelectorFactory;
+      }
+      aggSelectors.put(aggToUse.getName(), factory);
+      aggregatorFactories[i++] = aggToUse;
+    }
+  }
+
   private long factorizeAggs(AggregatorFactory[] aggregatorFactories, Aggregator[] aggs)
   {
     long totalInitialSizeBytes = 0L;
@@ -362,14 +526,10 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     for (int i = 0; i < aggregatorFactories.length; i++) {
       final AggregatorFactory agg = aggregatorFactories[i];
       // Creates aggregators to aggregate from input into output fields
-      if (useMaxMemoryEstimates) {
-        aggs[i] = agg.factorize(aggSelectors.get(agg.getName()));
-      } else {
-        AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
-        aggs[i] = aggregatorAndSize.getAggregator();
-        totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
-        totalInitialSizeBytes += aggReferenceSize;
-      }
+      AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
+      aggs[i] = aggregatorAndSize.getAggregator();
+      totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+      totalInitialSizeBytes += aggReferenceSize;
     }
     return totalInitialSizeBytes;
   }

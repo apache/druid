@@ -168,11 +168,20 @@ exports[`HeaderBar matches snapshot 1`] = `
             disabled={false}
             href="#explore"
             icon="map"
-            label="(experimental)"
+            labelElement={
+              <Blueprint5.Icon
+                autoLoad={true}
+                data-tooltip="Experimental"
+                icon="lab-test"
+                intent="warning"
+                tagName="span"
+              />
+            }
             multiline={false}
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
+            target="_blank"
             text="Explore"
           />
         </Blueprint5.Menu>

@@ -22,11 +22,11 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InternalQueryConfig;
@@ -41,8 +41,8 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
@@ -61,7 +61,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -77,7 +76,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -96,7 +94,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
+      new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private static final String DATASOURCE = "datasource";
   static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
@@ -108,7 +106,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   private TestSegmentMetadataQueryWalker walker;
   private SegmentSchemaCache segmentSchemaCache;
   private SegmentSchemaBackFillQueue backFillQueue;
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -136,11 +134,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new HashMap<>()
     );
 
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
-    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
-    config.setEnabled(true);
-    config.setBackFillEnabled(false);
-    config.setBackFillPeriod(1);
+    segmentSchemaCache = new SegmentSchemaCache();
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig(true, false, 1L, null);
 
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -198,8 +193,9 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         }
     );
 
-    sqlSegmentsMetadataManager = Mockito.mock(SqlSegmentsMetadataManager.class);
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments()).thenReturn(Collections.emptyList());
+    segmentsMetadataManager = Mockito.mock(SegmentsMetadataManager.class);
+    Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+           .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of()));
     SegmentsMetadataManagerConfig metadataManagerConfig = Mockito.mock(SegmentsMetadataManagerConfig.class);
     Mockito.when(metadataManagerConfig.getPollDuration()).thenReturn(Period.millis(1000));
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
@@ -242,7 +238,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -358,7 +354,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
-        sqlSegmentsMetadataManager,
+        segmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
     )
     {
@@ -497,21 +493,13 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
   }
 
-  private DataSegment newSegment(int partitionId)
+  private static DataSegment newSegment(int partitionId)
   {
-    return new DataSegment(
-        DATASOURCE,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of(),
-        ImmutableList.of(),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2012/2013"), "version1", partitionId))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .binaryVersion(1)
+                      .size(100L)
+                      .build();
   }
 
   private QueryableIndex newQueryableIndex(int partitionId)
@@ -537,7 +525,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
     private final List<NonnullPair<SegmentCallback, Executor>> segmentCallbacks = new ArrayList<>();
-    private final List<NonnullPair<ServerRemovedCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
+    private final List<NonnullPair<ServerCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
 
     private void init()
     {
@@ -575,7 +563,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    public void registerServerCallback(Executor exec, ServerCallback callback)
     {
       serverRemovedCallbacks.add(new NonnullPair<>(callback, exec));
     }

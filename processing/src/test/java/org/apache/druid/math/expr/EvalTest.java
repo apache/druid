@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.converters.Nullable;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
@@ -33,6 +32,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -444,91 +444,73 @@ public class EvalTest extends InitializedNullHandlingTest
   @Test
   public void testStringArrayToScalarStringBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.STRING)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [STRING]", t.getMessage());
+    ExprEval cast = ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.STRING, cast.type());
   }
 
   @Test
   public void testStringArrayToScalarLongBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.LONG)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [LONG]", t.getMessage());
+    ExprEval cast = ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.LONG, cast.type());
   }
 
   @Test
   public void testStringArrayToScalarDoubleBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.DOUBLE)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<STRING>] to [DOUBLE]", t.getMessage());
+    ExprEval cast = ExprEval.ofStringArray(new String[]{"foo", "bar"}).castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.DOUBLE, cast.type());
   }
 
   @Test
   public void testLongArrayToScalarStringBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.STRING)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [STRING]", t.getMessage());
+    ExprEval cast = ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.STRING, cast.type());
   }
 
   @Test
   public void testLongArrayToScalarLongBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.LONG)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [LONG]", t.getMessage());
+    ExprEval cast = ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.LONG, cast.type());
   }
 
   @Test
   public void testLongArrayToScalarDoubleBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.DOUBLE)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<LONG>] to [DOUBLE]", t.getMessage());
+    ExprEval cast = ExprEval.ofLongArray(new Long[]{1L, 2L}).castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.DOUBLE, cast.type());
   }
 
   @Test
   public void testDoubleArrayToScalarStringBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.STRING)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [STRING]", t.getMessage());
+    ExprEval cast = ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.STRING);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.STRING, cast.type());
   }
 
   @Test
   public void testDoubleArrayToScalarLongBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.LONG)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [LONG]", t.getMessage());
+    ExprEval cast = ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.LONG);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.LONG, cast.type());
   }
 
   @Test
   public void testDoubleArrayToScalarDoubleBadCast()
   {
-    Throwable t = Assert.assertThrows(
-        IAE.class,
-        () -> ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.DOUBLE)
-    );
-    Assert.assertEquals("Invalid type, cannot cast [ARRAY<DOUBLE>] to [DOUBLE]", t.getMessage());
+    ExprEval cast = ExprEval.ofDoubleArray(new Double[]{1.1, 2.2}).castTo(ExpressionType.DOUBLE);
+    Assert.assertNull(cast.value());
+    Assert.assertEquals(ExpressionType.DOUBLE, cast.type());
   }
 
   @Test
@@ -935,13 +917,13 @@ public class EvalTest extends InitializedNullHandlingTest
 
     assertEquals(1L, eval("null || 1", bindings).value());
     assertEquals(1L, eval("1 || null", bindings).value());
-    assertNull(eval("null || 0", bindings).valueOrDefault());
-    assertNull(eval("0 || null", bindings).valueOrDefault());
-    assertNull(eval("null || null", bindings).valueOrDefault());
+    assertNull(eval("null || 0", bindings).value());
+    assertNull(eval("0 || null", bindings).value());
+    assertNull(eval("null || null", bindings).value());
 
-    assertNull(eval("null && 1", bindings).valueOrDefault());
-    assertNull(eval("1 && null", bindings).valueOrDefault());
-    assertNull(eval("null && null", bindings).valueOrDefault());
+    assertNull(eval("null && 1", bindings).value());
+    assertNull(eval("1 && null", bindings).value());
+    assertNull(eval("null && null", bindings).value());
     // if either side is false, output is false in both modes
     assertEquals(0L, eval("null && 0", bindings).value());
     assertEquals(0L, eval("0 && null", bindings).value());
@@ -1046,14 +1028,14 @@ public class EvalTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testValueOrDefault()
+  public void testvalue()
   {
     ExprEval<?> longNull = ExprEval.ofLong(null);
     ExprEval<?> doubleNull = ExprEval.ofDouble(null);
     Assert.assertTrue(longNull.isNumericNull());
     Assert.assertTrue(doubleNull.isNumericNull());
-    Assert.assertNull(null, longNull.valueOrDefault());
-    Assert.assertNull(null, doubleNull.valueOrDefault());
+    Assert.assertNull(null, longNull.value());
+    Assert.assertNull(null, doubleNull.value());
   }
 
   @Test
@@ -1379,6 +1361,9 @@ public class EvalTest extends InitializedNullHandlingTest
     // longs
     assertBestEffortOf(1L, ExpressionType.LONG, 1L);
     assertBestEffortOf(1, ExpressionType.LONG, 1L);
+
+    // BigDecimal
+    assertBestEffortOf(new BigDecimal("0.034"), ExpressionType.DOUBLE, 0.034);
 
     // by default, booleans are handled as longs
     assertBestEffortOf(true, ExpressionType.LONG, 1L);

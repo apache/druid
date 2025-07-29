@@ -28,9 +28,9 @@ import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -40,26 +40,25 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
- * Manager for processors created by {@link BaseLeafFrameProcessorFactory}.
+ * Manager for processors created by {@link BaseLeafStageProcessor}.
  */
 public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, Long>
 {
   private static final Logger log = new Logger(BaseLeafFrameProcessorManager.class);
 
   /**
-   * Base inputs, from {@link BaseLeafFrameProcessorFactory#readBaseInputs}. Set to null by {@link #next()}
+   * Base inputs, from {@link BaseLeafStageProcessor#readBaseInputs}. Set to null by {@link #next()}
    * once exhausted.
    */
   @Nullable
   private Iterator<ReadableInput> baseInputIterator;
 
   /**
-   * Segment map function for this processor, from {@link BaseLeafFrameProcessorFactory#makeSegmentMapFnProcessor}.
+   * Segment map function for this processor, from {@link BaseLeafStageProcessor#makeSegmentMapFnProcessor}.
    */
-  private final Function<SegmentReference, SegmentReference> segmentMapFn;
+  private final SegmentMapFunction segmentMapFn;
 
   /**
    * Frame writer factories.
@@ -83,17 +82,17 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
   private final FrameContext frameContext;
 
   /**
-   * Parent, used for {@link BaseLeafFrameProcessorFactory#makeProcessor}.
+   * Parent, used for {@link BaseLeafStageProcessor#makeProcessor}.
    */
-  private final BaseLeafFrameProcessorFactory parentFactory;
+  private final BaseLeafStageProcessor parentFactory;
 
   BaseLeafFrameProcessorManager(
       Iterable<ReadableInput> baseInputs,
-      Function<SegmentReference, SegmentReference> segmentMapFn,
+      SegmentMapFunction segmentMapFn,
       Queue<FrameWriterFactory> frameWriterFactoryQueue,
       Queue<WritableFrameChannel> channelQueue,
       FrameContext frameContext,
-      BaseLeafFrameProcessorFactory parentFactory
+      BaseLeafStageProcessor parentFactory
   )
   {
     this.baseInputIterator = baseInputs.iterator();

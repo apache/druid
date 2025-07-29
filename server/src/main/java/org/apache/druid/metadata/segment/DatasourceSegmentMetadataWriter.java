@@ -26,6 +26,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
@@ -50,18 +51,52 @@ public interface DatasourceSegmentMetadataWriter
   int insertSegmentsWithMetadata(Set<DataSegmentPlus> segments);
 
   /**
-   * Marks the segments fully contained in the given interval as unused.
+   * Marks the segment as unused.
    *
-   * @param interval   Only segments fully contained within this interval are
-   *                   eligible to be marked as unused.
+   * @param updateTime The last updated timestamp of the segment will be set to
+   *                   this value if updated successfully.
+   * @return true if the segment was updated successfully, false otherwise
+   */
+  boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime);
+
+  /**
+   * Marks the given segments as unused.
+   *
    * @param updateTime Updated segments will have their last updated timestamp
    *                   set to this value.
    * @return Number of segments updated successfully
    */
-  int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime);
+  int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime);
 
   /**
-   * Deletes the segments for the given IDs from the metadata store.
+   * Marks all the segments in given datasource as unused.
+   *
+   * @param updateTime Updated segments will have their last updated timestamp
+   *                   set to this value.
+   * @return Number of segments successfully
+   */
+  int markAllSegmentsAsUnused(DateTime updateTime);
+
+  /**
+   * Marks segments that are fully contained in the given interval as unused.
+   *
+   * @param interval   Only segments fully contained within this interval are
+   *                   eligible to be marked as unused.
+   * @param versions   Optional set of segment versions eligible for update.
+   *                   If this set is passed as null, all segment versions are
+   *                   eligible for update. If passed as empty, no segment is updated.
+   * @param updateTime Updated segments will have their last updated timestamp
+   *                   set to this value.
+   * @return Number of segments updated successfully
+   */
+  int markSegmentsWithinIntervalAsUnused(
+      Interval interval,
+      @Nullable List<String> versions,
+      DateTime updateTime
+  );
+
+  /**
+   * Permanently deletes the segments for the given IDs from the metadata store.
    *
    * @return Number of segments deleted successfully
    */

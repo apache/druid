@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C3_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C4_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C5_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C6_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C7_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C8_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C9_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C10_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C11_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C12_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C13_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C14_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C15_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C16_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C17_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C18_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C19_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C20_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C21_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C22_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B31_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_XOR' to arguments of type 'BITWISE_XOR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C1_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C2_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C3_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C4_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C5_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C6_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C7_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C8_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C9_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C10_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C11_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C12_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C13_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C14_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C15_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C16_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C17_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C18_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C19_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C20_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C21_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C22_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C23_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B33_C24_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_BINARY_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_BINARY_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C1_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C2_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C3_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B34_C4_D1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT' to arguments of type 'HUMAN_READABLE_DECIMAL_BYTE_FORMAT(
+!error
+

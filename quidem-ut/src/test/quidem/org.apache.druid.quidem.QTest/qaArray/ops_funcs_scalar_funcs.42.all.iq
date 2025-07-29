@@ -1,0 +1,799 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C13_D1
+#-------------------------------------------------------------------------
+SELECT nullif(a_null, ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C14_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C15_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C16_D1
+#-------------------------------------------------------------------------
+SELECT nullif(a_empty, ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C17_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C18_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C19_D1
+#-------------------------------------------------------------------------
+SELECT nullif(a_mixed, ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+|                          |
+|                          |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C20_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+|                          |
+|                          |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C21_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+|                          |
+|                          |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C22_D1
+#-------------------------------------------------------------------------
+SELECT nullif(a_nested, ARRAY['FILLER']) AS col
+FROM test_array;
+Cannot apply '=' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C23_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B4_C24_D1
+#-------------------------------------------------------------------------
+SELECT nullif(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_bool, ARRAY[1, 0, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
+FROM test_array;
+Illegal
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
+FROM test_array;
+Illegal
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_int, ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[1]' RETURNING bigint array), ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][1]' RETURNING bigint array), ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_float, ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_str, ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C11_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C12_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C13_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_null, ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C14_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C15_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C17_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C18_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C19_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_mixed, ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C20_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C21_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY['true', '1', '0.1', 'S1', NULL]) AS col
+FROM test_array;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C22_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(a_nested, ARRAY['FILLER']) AS col
+FROM test_array;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C23_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B5_C24_D1
+#-------------------------------------------------------------------------
+SELECT coalesce(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY['FILLER']) AS col
+FROM test_array;
++----------+
+| col      |
++----------+
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
+| [FILLER] |
++----------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_bool, ARRAY[1, 0, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
+FROM test_array;
+Illegal
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
+FROM test_array;
+Illegal
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_int, ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[1]' RETURNING bigint array), ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][1]' RETURNING bigint array), ARRAY[1, 2, NULL]) AS col
+FROM test_array;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_float, ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[0.1, 0.2, NULL]) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_str, ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY['S1', 'S2', NULL]) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C13_D1
+#-------------------------------------------------------------------------
+SELECT nvl(a_null, ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C14_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A9_B6_C15_D1
+#-------------------------------------------------------------------------
+SELECT nvl(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[NULL, NULL, NULL]) AS col
+FROM test_array;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+

@@ -21,6 +21,7 @@ package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.msq.exec.ExtraInfoHolder;
 
 @JsonTypeName("nil")
 public class NilExtraInfoHolder extends ExtraInfoHolder<Object>

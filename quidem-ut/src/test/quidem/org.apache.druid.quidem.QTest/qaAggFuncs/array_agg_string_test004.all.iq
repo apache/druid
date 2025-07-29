@@ -1,0 +1,581 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT array['AAAAAAAAAA',
+             'BBBBBBBBBB'] AS col;
++--------------------------+
+| col                      |
++--------------------------+
+| [AAAAAAAAAA, BBBBBBBBBB] |
++--------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT array_agg('AAAAAAAAAA', 100000) AS col;
+is not supported
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_agg(tab0s0, 100000) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 161 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A04
+#-------------------------------------------------------------------------
+SELECT array_length(array_agg(tab0s0, 100000)) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A05
+#-------------------------------------------------------------------------
+SELECT array_offset(array_agg(tab0s0, 100000), 0) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++------------+
+| col        |
++------------+
+| AAAAAAAAAA |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A06
+#-------------------------------------------------------------------------
+SELECT array_offset(array_agg(tab0s0, 100000), 100) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A07
+#-------------------------------------------------------------------------
+SELECT array_ordinal(array_agg(tab0s0, 100000), 1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='BBBBBBBBBB';
++------------+
+| col        |
++------------+
+| BBBBBBBBBB |
++------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A08
+#-------------------------------------------------------------------------
+SELECT array_ordinal(array_agg(tab0s0, 100000), 100) AS col
+FROM test_agg_funcs
+WHERE tab0s0='BBBBBBBBBB';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A09
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0s0, 100000), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A10
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0s0, 100000), array['AAAAAAAAAA', 'BBBBBBBBBB']) AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A11
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0s0, 100000), 'CCCCCCCCCC') AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A12
+#-------------------------------------------------------------------------
+SELECT array_contains(array_agg(tab0s0, 100000), array['AAAAAAAAAA', 'CCCCCCCCCC']) AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A13
+#-------------------------------------------------------------------------
+SELECT array_overlap(array_agg(tab0s0, 100000), array['AAAAAAAAAA', 'CCCCCCCCCC']) AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A14
+#-------------------------------------------------------------------------
+SELECT array_overlap(array_agg(tab0s0, 100000), array['CCCCCCCCCC', 'DDDDDDDDDD']) AS col
+FROM test_agg_funcs;
++-------+
+| col   |
++-------+
+| false |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A15
+#-------------------------------------------------------------------------
+SELECT array_overlap(array_agg(tab0s0, 100000), array_agg(DISTINCT tab0s0, 100000)) AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A16
+#-------------------------------------------------------------------------
+SELECT array_offset_of(array_agg(tab0s0, 100000), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A17
+#-------------------------------------------------------------------------
+SELECT array_offset_of(array_agg(tab0s0, 100000), 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A18
+#-------------------------------------------------------------------------
+SELECT array_ordinal_of(array_agg(tab0s0, 100000), 'AAAAAAAAAA') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A19
+#-------------------------------------------------------------------------
+SELECT array_ordinal_of(array_agg(tab0s0, 100000), 'CCCCCCCCCC') AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A20
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(array_agg(tab0s0, 100000), '|')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+| 161 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A21
+#-------------------------------------------------------------------------
+SELECT contains_string(array_to_string(array_agg(tab0s0, 100000), '|'), 'AAAAAAAAAA')
+AND contains_string(array_to_string(array_agg(DISTINCT tab0s0, 100000), '|'), '|') AS col
+FROM test_agg_funcs;
++------+
+| col  |
++------+
+| true |
++------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A22
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_prepend('CCCCCCCCCC', array_agg(tab0s0, 100000)) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 172 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A23
+#-------------------------------------------------------------------------
+SELECT array_length(array_prepend('CCCCCCCCCC', array_agg(tab0s0, 100000))) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A24
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_append(array_agg(tab0s0, 100000), 'CCCCCCCCCC') AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 172 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A25
+#-------------------------------------------------------------------------
+SELECT array_length(array_append(array_agg(tab0s0, 100000), 'CCCCCCCCCC')) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A26
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_concat(array_agg(tab0s0, 100000), array['CCCCCCCCCC']) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 172 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A27
+#-------------------------------------------------------------------------
+SELECT array_length(array_concat(array_agg(tab0s0, 100000), array['CCCCCCCCCC'])) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  19 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A28
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_concat(array_agg(tab0s0, 100000), array_agg(tab0s0, 100000)) AS col
+   FROM test_agg_funcs);
++-----+
+| LEN |
++-----+
+| 323 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A29
+#-------------------------------------------------------------------------
+SELECT array_length(array_concat(array_agg(tab0s0, 100000), array_agg(tab0s0, 100000))) AS col
+FROM test_agg_funcs;
++-----+
+| col |
++-----+
+|  36 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A30
+#-------------------------------------------------------------------------
+SELECT array_slice(array_agg(tab0s0, 100000), 0, 1) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++--------------+
+| col          |
++--------------+
+| [AAAAAAAAAA] |
++--------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A31
+#-------------------------------------------------------------------------
+SELECT array_slice(array_agg(tab0s0, 100000), 100, 101) AS col
+FROM test_agg_funcs
+WHERE tab0s0='AAAAAAAAAA';
++-----+
+| col |
++-----+
+|     |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A32
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_agg(t0.tab0s0, 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0s0 IS NOT NULL);
++-------+
+| LEN   |
++-------+
+| 42767 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A33
+#-------------------------------------------------------------------------
+SELECT strlen(col) AS LEN
+FROM
+  (SELECT array_to_string(array_agg(t0.tab0s0, 100000), '') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.tab0s0 IS NOT NULL);
++-------+
+| LEN   |
++-------+
+| 38880 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A34
+#-------------------------------------------------------------------------
+SELECT length(array_to_string(array_agg(t0.tab0s0, 100000), '')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.tab0s0 IS NOT NULL;
++-------+
+| col   |
++-------+
+| 38880 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A35
+#-------------------------------------------------------------------------
+SELECT strlen(array_to_string(col, '|')) AS LEN
+FROM
+  (SELECT array_agg(t0.tab0s0, 100000) AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0s0);
++-------+
+| LEN   |
++-------+
+| 21383 |
+| 21383 |
+|  9719 |
++-------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A36
+#-------------------------------------------------------------------------
+SELECT strlen(col) AS LEN
+FROM
+  (SELECT array_to_string(array_agg(t0.tab0s0, 100000), '') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.tab0s0);
++-------+
+| LEN   |
++-------+
+| 19440 |
+| 19440 |
+|  7776 |
++-------+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test004 TEST_ID: A37
+#-------------------------------------------------------------------------
+SELECT length(array_to_string(array_agg(t0.tab0s0, 100000), '')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.tab0s0;
++-------+
+| col   |
++-------+
+| 19440 |
+| 19440 |
+|  7776 |
++-------+
+(3 rows)
+
+!ok
+

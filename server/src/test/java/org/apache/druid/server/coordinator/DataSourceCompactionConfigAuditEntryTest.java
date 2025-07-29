@@ -33,8 +33,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
-      new ClusterCompactionConfig(0.1, 9, true, null),
-      DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+      new ClusterCompactionConfig(0.1, 9, null, null, null),
+      InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
       auditInfo,
       DateTimes.nowUtc()
   );
@@ -43,8 +43,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithSameBaseConfigIsTrue()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        new ClusterCompactionConfig(0.1, 9, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -56,8 +56,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithDifferentClusterConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.2, 9, false, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        new ClusterCompactionConfig(0.2, 9, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -65,8 +65,8 @@ public class DataSourceCompactionConfigAuditEntryTest
     Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 10, true, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        new ClusterCompactionConfig(0.1, 10, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -78,8 +78,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithDifferentDatasourceConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
+        new ClusterCompactionConfig(0.1, 9, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -91,7 +91,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithNullDatasourceConfigIsFalse()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, null),
+        new ClusterCompactionConfig(0.1, 9, null, null, null),
         null,
         auditInfo,
         DateTimes.nowUtc()

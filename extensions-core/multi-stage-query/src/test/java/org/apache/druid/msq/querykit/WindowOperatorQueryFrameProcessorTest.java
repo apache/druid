@@ -22,6 +22,7 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.key.KeyColumn;
@@ -51,7 +52,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -114,7 +114,8 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new ArenaMemoryAllocatorFactory(1 << 20),
             outputSignature,
             Collections.emptyList(),
@@ -198,7 +199,8 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new ArenaMemoryAllocatorFactory(1 << 20),
             outputSignature,
             Collections.emptyList(),
@@ -306,7 +308,8 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new ArenaMemoryAllocatorFactory(1 << 20),
             outputSignature,
             Collections.emptyList(),
@@ -357,13 +360,12 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
   ) throws IOException
   {
     RowBasedSegment<Map<String, Object>> segment = new RowBasedSegment<>(
-        SegmentId.dummy("test"),
         Sequences.simple(rows),
         columnName -> m -> m.get(columnName),
         signature
     );
 
-    return makeChannelFromCursorFactory(segment.asCursorFactory(), keyColumns);
+    return makeChannelFromCursorFactory(segment.as(CursorFactory.class), keyColumns);
   }
 
   private ReadableInput makeChannelFromCursorFactory(

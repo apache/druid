@@ -62,285 +62,291 @@ exports[`ServicesView renders data 1`] = `
         ]
       }
       onChange={[Function]}
+      onClose={[Function]}
       tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>
-  <ReactTable
-    AggregatedComponent={[Function]}
-    ExpanderComponent={[Function]}
-    FilterComponent={[Function]}
-    LoadingComponent={[Function]}
-    NoDataComponent={[Function]}
-    PadRowComponent={[Function]}
-    PaginationComponent={[Function]}
-    PivotValueComponent={[Function]}
-    ResizerComponent={[Function]}
-    TableComponent={[Function]}
-    TbodyComponent={[Function]}
-    TdComponent={[Function]}
-    TfootComponent={[Function]}
-    ThComponent={[Function]}
-    TheadComponent={[Function]}
-    TrComponent={[Function]}
-    TrGroupComponent={[Function]}
-    aggregatedKey="_aggregated"
-    className=""
-    collapseOnDataChange={true}
-    collapseOnPageChange={true}
-    collapseOnSortingChange={true}
-    column={
-      {
-        "Aggregated": undefined,
-        "Cell": undefined,
-        "Expander": undefined,
-        "Filter": undefined,
-        "Footer": undefined,
-        "Header": undefined,
-        "Pivot": undefined,
-        "PivotValue": undefined,
-        "Placeholder": undefined,
-        "aggregate": undefined,
-        "className": "",
-        "filterAll": false,
-        "filterMethod": undefined,
-        "filterable": undefined,
-        "footerClassName": "",
-        "footerStyle": {},
-        "getFooterProps": [Function],
-        "getHeaderProps": [Function],
-        "getProps": [Function],
-        "headerClassName": "",
-        "headerStyle": {},
-        "minResizeWidth": 11,
-        "minWidth": 100,
-        "resizable": undefined,
-        "show": true,
-        "sortMethod": undefined,
-        "sortable": undefined,
-        "style": {},
+  <Context.Provider
+    value={{}}
+  >
+    <ReactTable
+      AggregatedComponent={[Function]}
+      ExpanderComponent={[Function]}
+      FilterComponent={[Function]}
+      LoadingComponent={[Function]}
+      NoDataComponent={[Function]}
+      PadRowComponent={[Function]}
+      PaginationComponent={[Function]}
+      PivotValueComponent={[Function]}
+      ResizerComponent={[Function]}
+      TableComponent={[Function]}
+      TbodyComponent={[Function]}
+      TdComponent={[Function]}
+      TfootComponent={[Function]}
+      ThComponent={[Function]}
+      TheadComponent={[Function]}
+      TrComponent={[Function]}
+      TrGroupComponent={[Function]}
+      aggregatedKey="_aggregated"
+      className=""
+      collapseOnDataChange={true}
+      collapseOnPageChange={true}
+      collapseOnSortingChange={true}
+      column={
+        {
+          "Aggregated": undefined,
+          "Cell": undefined,
+          "Expander": undefined,
+          "Filter": undefined,
+          "Footer": undefined,
+          "Header": undefined,
+          "Pivot": undefined,
+          "PivotValue": undefined,
+          "Placeholder": undefined,
+          "aggregate": undefined,
+          "className": "",
+          "filterAll": false,
+          "filterMethod": undefined,
+          "filterable": undefined,
+          "footerClassName": "",
+          "footerStyle": {},
+          "getFooterProps": [Function],
+          "getHeaderProps": [Function],
+          "getProps": [Function],
+          "headerClassName": "",
+          "headerStyle": {},
+          "minResizeWidth": 11,
+          "minWidth": 100,
+          "resizable": undefined,
+          "show": true,
+          "sortMethod": undefined,
+          "sortable": undefined,
+          "style": {},
+        }
       }
-    }
-    columns={
-      [
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Service",
-          "accessor": "service",
-          "show": true,
-          "width": 300,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Type",
-          "accessor": "service_type",
-          "show": true,
-          "width": 150,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Tier",
-          "accessor": [Function],
-          "id": "tier",
-          "show": true,
-          "width": 180,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Host",
-          "accessor": "host",
-          "show": true,
-          "width": 200,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Port",
-          "accessor": [Function],
-          "id": "port",
-          "show": true,
-          "width": 100,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Current size",
-          "accessor": "curr_size",
-          "className": "padded",
-          "filterable": false,
-          "id": "curr_size",
-          "show": true,
-          "width": 100,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Max size",
-          "accessor": "max_size",
-          "className": "padded",
-          "filterable": false,
-          "id": "max_size",
-          "show": true,
-          "width": 100,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Usage",
-          "accessor": [Function],
-          "className": "padded",
-          "filterable": false,
-          "id": "usage",
-          "show": true,
-          "width": 140,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Start time",
-          "accessor": "start_time",
-          "show": true,
-          "width": 200,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Detail",
-          "accessor": [Function],
-          "className": "padded",
-          "filterable": false,
-          "id": "queue",
-          "show": true,
-          "width": 400,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Actions",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "actions",
-          "show": true,
-          "sortable": false,
-          "width": 70,
-        },
-      ]
-    }
-    data={
-      [
+      columns={
         [
           {
-            "curr_size": 0,
-            "host": "localhost",
-            "is_leader": 0,
-            "max_size": 0,
-            "plaintext_port": 8082,
-            "service": "localhost:8082",
-            "service_type": "broker",
-            "start_time": 0,
-            "tier": null,
-            "tls_port": -1,
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Service",
+            "accessor": "service",
+            "show": true,
+            "width": 300,
           },
           {
-            "curr_size": 179744287,
-            "host": "localhost",
-            "is_leader": 0,
-            "max_size": 3000000000n,
-            "plaintext_port": 8083,
-            "segmentsToDrop": 0,
-            "segmentsToDropSize": 0,
-            "segmentsToLoad": 0,
-            "segmentsToLoadSize": 0,
-            "service": "localhost:8083",
-            "service_type": "historical",
-            "start_time": 0,
-            "tier": "_default_tier",
-            "tls_port": -1,
+            "Cell": [Function],
+            "Filter": [Function],
+            "Header": "Type",
+            "accessor": "service_type",
+            "show": true,
+            "width": 150,
           },
-        ],
-      ]
-    }
-    defaultExpanded={{}}
-    defaultFilterMethod={[Function]}
-    defaultFiltered={[]}
-    defaultPage={0}
-    defaultPageSize={50}
-    defaultResized={[]}
-    defaultSortDesc={false}
-    defaultSortMethod={[Function]}
-    defaultSorted={[]}
-    expanderDefaults={
-      {
-        "filterable": false,
-        "resizable": false,
-        "sortable": false,
-        "width": 35,
+          {
+            "Cell": [Function],
+            "Header": "Tier",
+            "accessor": [Function],
+            "id": "tier",
+            "show": true,
+            "width": 180,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Host",
+            "accessor": "host",
+            "show": true,
+            "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Port",
+            "accessor": [Function],
+            "id": "port",
+            "show": true,
+            "width": 100,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Current size",
+            "accessor": "curr_size",
+            "className": "padded",
+            "filterable": false,
+            "id": "curr_size",
+            "show": true,
+            "width": 100,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Max size",
+            "accessor": "max_size",
+            "className": "padded",
+            "filterable": false,
+            "id": "max_size",
+            "show": true,
+            "width": 100,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Usage",
+            "accessor": [Function],
+            "className": "padded",
+            "filterable": false,
+            "id": "usage",
+            "show": true,
+            "width": 140,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Start time",
+            "accessor": "start_time",
+            "show": true,
+            "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Detail",
+            "accessor": "service",
+            "className": "padded",
+            "filterable": false,
+            "id": "queue",
+            "show": true,
+            "width": 400,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Actions",
+            "accessor": "service",
+            "filterable": false,
+            "id": "actions",
+            "show": true,
+            "sortable": false,
+            "width": 70,
+          },
+        ]
       }
-    }
-    filterable={true}
-    filtered={[]}
-    freezeWhenExpanded={false}
-    getLoadingProps={[Function]}
-    getNoDataProps={[Function]}
-    getPaginationProps={[Function]}
-    getProps={[Function]}
-    getResizerProps={[Function]}
-    getTableProps={[Function]}
-    getTbodyProps={[Function]}
-    getTdProps={[Function]}
-    getTfootProps={[Function]}
-    getTfootTdProps={[Function]}
-    getTfootTrProps={[Function]}
-    getTheadFilterProps={[Function]}
-    getTheadFilterThProps={[Function]}
-    getTheadFilterTrProps={[Function]}
-    getTheadGroupProps={[Function]}
-    getTheadGroupThProps={[Function]}
-    getTheadGroupTrProps={[Function]}
-    getTheadProps={[Function]}
-    getTheadThProps={[Function]}
-    getTheadTrProps={[Function]}
-    getTrGroupProps={[Function]}
-    getTrProps={[Function]}
-    groupedByPivotKey="_groupedByPivot"
-    indexKey="_index"
-    loading={false}
-    loadingText="Loading..."
-    multiSort={true}
-    nestingLevelKey="_nestingLevel"
-    nextText="Next"
-    noDataText=""
-    ofText="of"
-    onFetchData={[Function]}
-    onFilteredChange={[Function]}
-    originalKey="_original"
-    pageJumpText="jump to page"
-    pageSizeOptions={
-      [
-        50,
-        100,
-        200,
-      ]
-    }
-    pageText="Page"
-    pivotBy={[]}
-    pivotDefaults={{}}
-    pivotIDKey="_pivotID"
-    pivotValKey="_pivotVal"
-    previousText="Previous"
-    resizable={true}
-    resolveData={[Function]}
-    rowsSelectorText="rows per page"
-    rowsText="rows"
-    showPageJump={true}
-    showPageSizeOptions={true}
-    showPagination={false}
-    showPaginationBottom={true}
-    showPaginationTop={false}
-    sortable={true}
-    style={{}}
-    subRowsKey="_subRows"
-  />
+      data={
+        [
+          [
+            {
+              "curr_size": 0,
+              "host": "localhost",
+              "is_leader": 0,
+              "max_size": 0,
+              "plaintext_port": 8082,
+              "service": "localhost:8082",
+              "service_type": "broker",
+              "start_time": 0,
+              "tier": null,
+              "tls_port": -1,
+            },
+            {
+              "curr_size": 179744287,
+              "host": "localhost",
+              "is_leader": 0,
+              "max_size": 3000000000n,
+              "plaintext_port": 8083,
+              "segmentsToDrop": 0,
+              "segmentsToDropSize": 0,
+              "segmentsToLoad": 0,
+              "segmentsToLoadSize": 0,
+              "service": "localhost:8083",
+              "service_type": "historical",
+              "start_time": 0,
+              "tier": "_default_tier",
+              "tls_port": -1,
+            },
+          ],
+        ]
+      }
+      defaultExpanded={{}}
+      defaultFilterMethod={[Function]}
+      defaultFiltered={[]}
+      defaultPage={0}
+      defaultPageSize={50}
+      defaultResized={[]}
+      defaultSortDesc={false}
+      defaultSortMethod={[Function]}
+      defaultSorted={[]}
+      expanderDefaults={
+        {
+          "filterable": false,
+          "resizable": false,
+          "sortable": false,
+          "width": 35,
+        }
+      }
+      filterable={true}
+      filtered={[]}
+      freezeWhenExpanded={false}
+      getLoadingProps={[Function]}
+      getNoDataProps={[Function]}
+      getPaginationProps={[Function]}
+      getProps={[Function]}
+      getResizerProps={[Function]}
+      getTableProps={[Function]}
+      getTbodyProps={[Function]}
+      getTdProps={[Function]}
+      getTfootProps={[Function]}
+      getTfootTdProps={[Function]}
+      getTfootTrProps={[Function]}
+      getTheadFilterProps={[Function]}
+      getTheadFilterThProps={[Function]}
+      getTheadFilterTrProps={[Function]}
+      getTheadGroupProps={[Function]}
+      getTheadGroupThProps={[Function]}
+      getTheadGroupTrProps={[Function]}
+      getTheadProps={[Function]}
+      getTheadThProps={[Function]}
+      getTheadTrProps={[Function]}
+      getTrGroupProps={[Function]}
+      getTrProps={[Function]}
+      groupedByPivotKey="_groupedByPivot"
+      indexKey="_index"
+      loading={false}
+      loadingText="Loading..."
+      multiSort={true}
+      nestingLevelKey="_nestingLevel"
+      nextText="Next"
+      noDataText=""
+      ofText="of"
+      onFetchData={[Function]}
+      onFilteredChange={[Function]}
+      originalKey="_original"
+      pageJumpText="jump to page"
+      pageSizeOptions={
+        [
+          50,
+          100,
+          200,
+        ]
+      }
+      pageText="Page"
+      pivotBy={[]}
+      pivotDefaults={{}}
+      pivotIDKey="_pivotID"
+      pivotValKey="_pivotVal"
+      previousText="Previous"
+      resizable={true}
+      resolveData={[Function]}
+      rowsSelectorText="rows per page"
+      rowsText="rows"
+      showPageJump={true}
+      showPageSizeOptions={true}
+      showPagination={false}
+      showPaginationBottom={true}
+      showPaginationTop={false}
+      sortable={true}
+      style={{}}
+      subRowsKey="_subRows"
+    />
+  </Context.Provider>
 </div>
 `;

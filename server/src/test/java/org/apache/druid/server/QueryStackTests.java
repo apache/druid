@@ -62,6 +62,8 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryToolChest;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -84,7 +86,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.query.union.UnionQueryLogic;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
@@ -105,7 +107,6 @@ import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -186,12 +187,13 @@ public class QueryStackTests
         injector.getInstance(Cache.class),
         injector.getInstance(CacheConfig.class),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
-        new SubqueryCountStatsProvider()
+        new SubqueryCountStatsProvider(),
+        new DefaultGenericQueryMetricsFactory()
     );
   }
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       Injector injector
@@ -213,6 +215,7 @@ public class QueryStackTests
         segmentWrangler,
         joinableFactoryWrapper,
         scheduler,
+        NoopPolicyEnforcer.instance(),
         emitter
     );
   }
@@ -428,7 +431,12 @@ public class QueryStackTests
         )
         .put(GroupByQuery.class, groupByQueryRunnerFactory)
         .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
-        .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())
+        .put(
+            WindowOperatorQuery.class,
+            new WindowOperatorQueryQueryRunnerFactory(
+                new WindowOperatorQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance())
+            )
+        )
         .build();
   }
 

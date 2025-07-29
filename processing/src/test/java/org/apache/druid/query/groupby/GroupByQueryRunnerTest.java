@@ -130,6 +130,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
@@ -3398,26 +3399,70 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithCardinality()
   {
-    GroupByQuery query = makeQueryBuilder()
+
+    GroupByQuery.Builder queryBuilder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
-        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .build();
-
-    List<ResultRow> expectedResults = Collections.singletonList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "rows",
-            26L,
-            "cardinality",
-            QueryRunnerTestHelper.UNIQUES_9
-        )
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
+    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
+        QueryContexts.USE_PROJECTION,
+        "daily_countAndQualityCardinalityAndMaxLongNullable"
+    )).build();
+    // act
+    Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
+    Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
+        factory,
+        runner,
+        queryWithProjection
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "cardinality");
+    List<ResultRow> expectedResults = Collections.singletonList(makeRow(
+        queryBuilder.build(),
+        "2011-04-01",
+        "rows",
+        26L,
+        "cardinality",
+        QueryRunnerTestHelper.UNIQUES_9
+    ));
+
+    TestHelper.assertExpectedObjects(expectedResults, resultsNoProjection, "cardinality");
+    TestHelper.assertExpectedObjects(expectedResults, resultsWithProjection, "cardinality");
+  }
+
+  @Test
+  public void testGroupByWithCardinalityNoData()
+  {
+
+    GroupByQuery.Builder queryBuilder = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setInterval("2011-01-21T00:00:00.000Z/P1D")
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.QUALITY_CARDINALITY)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN);
+    GroupByQuery queryNoProjection = queryBuilder.setContext(Map.of(QueryContexts.NO_PROJECTIONS, "true")).build();
+    GroupByQuery queryWithProjection = queryBuilder.setContext(Map.of(
+        QueryContexts.USE_PROJECTION,
+        "daily_countAndQualityCardinalityAndMaxLongNullable"
+    )).build();
+
+    Iterable<ResultRow> resultsNoProjection = GroupByQueryRunnerTestHelper.runQuery(factory, runner, queryNoProjection);
+    Iterable<ResultRow> resultsWithProjection = GroupByQueryRunnerTestHelper.runQuery(
+        factory,
+        runner,
+        queryWithProjection
+    );
+
+    List<ResultRow> expectedResults = Collections.singletonList(makeRow(
+        queryBuilder.build(),
+        "2011-04-01",
+        "rows",
+        0L,
+        "cardinality",
+        0.0d
+    ));
+    TestHelper.assertExpectedObjects(expectedResults, resultsNoProjection, "no data");
+    TestHelper.assertExpectedObjects(expectedResults, resultsWithProjection, "no data");
   }
 
   @Test
@@ -6562,6 +6607,39 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idx",
             1126L
         )
+    );
+
+    // Subqueries are handled by the ToolChest
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
+  }
+
+  @Test
+  public void testSubqueryWithOuterOffsetAndLimit()
+  {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
+    final GroupByQuery subquery = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQuery query = makeQueryBuilder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("alias", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(new DefaultLimitSpec(null, 1, 2))
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", "entertainment", "rows", 1L)
     );
 
     // Subqueries are handled by the ToolChest
@@ -13628,7 +13706,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

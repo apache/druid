@@ -25,7 +25,7 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.CoordinatorDiscoveryModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -46,6 +46,7 @@ import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
 import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
@@ -99,6 +100,7 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
     add(
         ExtensionsModule.SecondaryModule.class,
         new DruidAuthModule(),
+        new PolicyModule(),
         TLSCertificateCheckerModule.class,
         EmitterModule.class,
         HttpClientModule.global(),
@@ -119,7 +121,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
-        new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),
         new JavaScriptModule(),
@@ -131,7 +132,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
-        new StorageConnectorModule()
+        new StorageConnectorModule(),
+        new CatalogCoreModule()
     );
     return this;
   }

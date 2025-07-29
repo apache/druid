@@ -793,7 +793,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -856,7 +856,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -915,7 +915,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final ListenableFuture<TaskStatus> future = runTask(task);
-    waitUntil(task, this::isTaskReading);
+    waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
@@ -2408,6 +2408,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return new TestableKinesisIndexTask(
         taskId,
         null,
+        null,
         cloneDataSchema(dataSchema),
         tuningConfig,
         ioConfig,
@@ -2461,6 +2462,16 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.READING;
   }
 
+  /**
+   * Return true if specified task is in PUBLISHING state
+   * @param task {@link KinesisIndexTask} having its state checked
+   * @return true if task is in PUBLISHING state, otherwise false
+   */
+  private boolean isTaskPublishing(KinesisIndexTask task)
+  {
+    return task.getRunner().getStatus() == SeekableStreamIndexTaskRunner.Status.PUBLISHING;
+  }
+
   private static KinesisRecordEntity kjb(
       String timestamp,
       String dim1,
@@ -2481,6 +2492,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     @JsonCreator
     private TestableKinesisIndexTask(
         @JsonProperty("id") String id,
+        @JsonProperty("supervisorId") @Nullable String supervisorId,
         @JsonProperty("resource") TaskResource taskResource,
         @JsonProperty("dataSchema") DataSchema dataSchema,
         @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
@@ -2491,6 +2503,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     {
       super(
           id,
+          supervisorId,
           taskResource,
           dataSchema,
           tuningConfig,

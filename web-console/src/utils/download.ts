@@ -19,78 +19,80 @@
 import type { QueryResult } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
+import { Align, getMarkdownTable } from 'markdown-table-ts';
 
 import { copyAndAlert, stringifyValue } from './general';
 import { queryResultToValuesQuery } from './values-query';
 
-export type Format = 'csv' | 'tsv' | 'json' | 'sql';
+export type FileFormat = 'csv' | 'tsv' | 'json' | 'sql' | 'markdown';
+export const FILE_FORMATS: FileFormat[] = ['csv', 'tsv', 'json', 'sql', 'markdown'];
 
-export function downloadUrl(url: string, filename: string) {
-  // Create a link and set the URL using `createObjectURL`
-  const link = document.createElement('a');
-  link.style.display = 'none';
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
+const FILE_FORMAT_TO_MIME_TYPE: Record<FileFormat, string> = {
+  csv: 'text/csv',
+  tsv: 'text/tab-separated-values',
+  json: 'application/json',
+  sql: 'text/plain',
+  markdown: 'text/markdown',
+};
 
-  // To make this work on Firefox we need to wait
-  // a little while before removing it.
-  setTimeout(() => {
-    if (!link.parentNode) return;
-    link.parentNode.removeChild(link);
-  }, 0);
-}
+export const FILE_FORMAT_TO_LABEL: Record<FileFormat, string> = {
+  csv: 'CSV',
+  tsv: 'TSV',
+  json: 'JSON (new line delimited)',
+  sql: 'SQL (VALUES)',
+  markdown: 'Markdown table',
+};
 
-export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
+export function stringifyCsvValue(s: null | string | number | Date): string {
   if (s == null) return '';
+  const str = stringifyValue(s).replace(/\r?\n/g, ' ').replace(/"/g, '""');
 
-  // stringify and remove line break
-  const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
-
-  if (format === 'csv') {
-    // csv: single quote => double quote, handle ','
-    return `"${str.replace(/"/g, '""')}"`;
-  } else {
-    // tsv: single quote => double quote, \t => ''
-    return str.replace(/\t/g, '').replace(/"/g, '""');
-  }
-}
-
-export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType;
-  switch (type) {
-    case 'json':
-      blobType = 'application/json';
-      break;
-    case 'tsv':
-      blobType = 'text/tab-separated-values';
-      break;
-    default:
-      // csv
-      blobType = `text/${type}`;
-      break;
+  if (/["\n\t,]/.test(str)) {
+    return `"${str}"`;
   }
 
-  const blob = new Blob([text], {
-    type: blobType,
-  });
-
-  FileSaver.saveAs(blob, filename);
+  return str;
 }
 
-function queryResultsToString(queryResult: QueryResult, format: Format): string {
+export function stringifyTsvValue(s: null | string | number | Date): string {
+  if (s == null) return '';
+  return stringifyValue(s).replace(/\r?\n|\t/g, ' ');
+}
+
+export function stringifyMarkdownValue(s: null | string | number | Date): string {
+  if (s == null) return '';
+  return stringifyValue(s).replace(/\r?\n/g, '<br>');
+}
+
+function queryResultToDsv(
+  queryResult: QueryResult,
+  delimiter: string,
+  valueFormatter: (v: any) => string,
+): string {
+  return [
+    queryResult.header.map(column => valueFormatter(column.name)).join(delimiter),
+    ...queryResult.rows.map(row => row.map(cell => valueFormatter(cell)).join(delimiter)),
+  ].join('\n');
+}
+
+export function downloadFile(text: string, fileFormat: FileFormat, filename: string): void {
+  FileSaver.saveAs(
+    new Blob([text], {
+      type: FILE_FORMAT_TO_MIME_TYPE[fileFormat],
+    }),
+    filename,
+  );
+}
+
+export function queryResultsToString(queryResult: QueryResult, format: FileFormat): string {
   const { header, rows } = queryResult;
 
   switch (format) {
     case 'csv':
-    case 'tsv': {
-      const separator = format === 'csv' ? ',' : '\t';
-      return [
-        header.map(column => formatForFormat(column.name, format)).join(separator),
-        ...rows.map(r => r.map(cell => formatForFormat(cell, format)).join(separator)),
-      ].join('\n');
-    }
+      return queryResultToDsv(queryResult, ',', stringifyCsvValue);
+
+    case 'tsv':
+      return queryResultToDsv(queryResult, '\t', stringifyTsvValue);
 
     case 'sql':
       return queryResultToValuesQuery(queryResult).toString();
@@ -101,6 +103,15 @@ function queryResultsToString(queryResult: QueryResult, format: Format): string 
         .map(r => JSONBig.stringify(r))
         .join('\n');
 
+    case 'markdown':
+      return getMarkdownTable({
+        table: {
+          head: header.map(column => column.name),
+          body: rows.map(row => row.map(stringifyMarkdownValue)),
+        },
+        alignment: header.map(column => (column.isNumeric() ? Align.Right : Align.Left)),
+      });
+
     default:
       throw new Error(`unknown format: ${format}`);
   }
@@ -109,13 +120,16 @@ function queryResultsToString(queryResult: QueryResult, format: Format): string 
 export function downloadQueryResults(
   queryResult: QueryResult,
   filename: string,
-  format: Format,
+  fileFormat: FileFormat,
 ): void {
-  const resultString: string = queryResultsToString(queryResult, format);
-  downloadFile(resultString, format, filename);
+  const resultString: string = queryResultsToString(queryResult, fileFormat);
+  downloadFile(resultString, fileFormat, filename);
 }
 
-export function copyQueryResultsToClipboard(queryResult: QueryResult, format: Format): void {
-  const resultString: string = queryResultsToString(queryResult, format);
+export function copyQueryResultsToClipboard(
+  queryResult: QueryResult,
+  fileFormat: FileFormat,
+): void {
+  const resultString: string = queryResultsToString(queryResult, fileFormat);
   copyAndAlert(resultString, 'Query results copied to clipboard');
 }

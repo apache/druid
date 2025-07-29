@@ -78,7 +78,8 @@ EXPLAIN PLAN statements return:
 
 Example 1: EXPLAIN PLAN for a `SELECT` query on the `wikipedia` datasource:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -93,7 +94,8 @@ GROUP BY channel
 
 The above EXPLAIN PLAN query returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [
@@ -235,7 +237,8 @@ The above EXPLAIN PLAN query returns the following result:
 
 Example 2: EXPLAIN PLAN for an `INSERT` query that inserts data into the `wikipedia` datasource:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -263,7 +266,8 @@ PARTITIONED BY ALL
 
 The above EXPLAIN PLAN returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [
@@ -452,7 +456,8 @@ The above EXPLAIN PLAN returns the following result:
 Example 3: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource with a `DAY`
 time partitioning, and `cityName` and `countryName` as the clustering columns:
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -482,7 +487,8 @@ CLUSTERED BY cityName, countryName
 
 The above EXPLAIN PLAN query returns the following result:
 
-<details><summary>Show the result</summary>
+<details>
+<summary>Show the result</summary>
 
 ```json
 [
@@ -723,8 +729,9 @@ by time.
 
 - [TopN](topnquery.md) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
 clauses, do not have HAVING clauses, and are not nested. However, the TopN query type will deliver approximate ranking
-and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". TopN results are always
-computed in memory. See the TopN documentation for more details.
+and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". Additionally, TopN queries
+with lexicographic ordering (sorting by dimension values) can be disabled by setting "useLexicographicTopN" to "false".
+TopN results are always computed in memory. See the TopN documentation for more details.
 
 - [GroupBy](groupbyquery.md) is used for all other aggregations, including any nested aggregation queries. Druid's
 GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of

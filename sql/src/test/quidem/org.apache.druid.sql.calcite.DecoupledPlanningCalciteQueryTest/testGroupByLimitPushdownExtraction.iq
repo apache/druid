@@ -35,29 +35,11 @@ DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[
 
 !druidPlan
 {
-  "queryType" : "topN",
+  "queryType" : "groupBy",
   "dataSource" : {
     "type" : "table",
     "name" : "numfoo"
   },
-  "dimension" : {
-    "type" : "extraction",
-    "dimension" : "dim5",
-    "outputName" : "d0",
-    "outputType" : "STRING",
-    "extractionFn" : {
-      "type" : "substring",
-      "index" : 0,
-      "length" : 1
-    }
-  },
-  "metric" : {
-    "type" : "dimension",
-    "ordering" : {
-      "type" : "lexicographic"
-    }
-  },
-  "threshold" : 2,
   "intervals" : {
     "type" : "intervals",
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
@@ -71,6 +53,17 @@ DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[
   "granularity" : {
     "type" : "all"
   },
+  "dimensions" : [ {
+    "type" : "extraction",
+    "dimension" : "dim5",
+    "outputName" : "d0",
+    "outputType" : "STRING",
+    "extractionFn" : {
+      "type" : "substring",
+      "index" : 0,
+      "length" : 1
+    }
+  } ],
   "aggregations" : [ {
     "type" : "count",
     "name" : "a0"
@@ -80,6 +73,11 @@ DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[
     "name" : "s0",
     "expression" : "'a'",
     "outputType" : "STRING"
-  } ]
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ ],
+    "limit" : 2
+  }
 }
 !nativePlan

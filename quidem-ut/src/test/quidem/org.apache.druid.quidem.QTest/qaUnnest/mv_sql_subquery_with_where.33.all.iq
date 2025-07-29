@@ -1,0 +1,1528 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B32_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long IN
+    (SELECT col
+     FROM (
+           VALUES(0),(1),(2)) AS t(col))
+  AND c_long NOT IN
+    (SELECT col
+     FROM (
+           VALUES(3),(4)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES(''),('my_null'),('my_empty'),('1'),('-1'),('0'),('999')) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long=1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long=1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B34_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B34_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long<>1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B34_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long<>1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B34_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long<>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B34_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B35_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B35_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long>1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B35_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long>1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B35_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B35_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long>1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B36_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long>=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B36_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long>=1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B36_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long>=1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B36_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long>=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B36_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long>=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B37_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B37_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long<1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B37_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long<1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B37_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long<1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B37_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B38_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B38_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_long<=1);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B38_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_long<=1), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B38_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_long<=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B38_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_long<=1;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B39_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE (NOT c_str<>''
+       OR NOT c_str<>'str2'
+       OR NOT c_long<>0
+       OR NOT c_long<>1
+       OR NOT c_long<>2
+       OR NOT c_long<>999)
+  AND (NOT c_str='str3'
+       OR NOT c_str='str4'
+       OR NOT c_long=3
+       OR NOT c_long=4
+       OR NOT c_long=999);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B39_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE (NOT c_str<>''
+          OR NOT c_str<>'str2'
+          OR NOT c_long<>0
+          OR NOT c_long<>1
+          OR NOT c_long<>2
+          OR NOT c_long<>999)
+     AND (NOT c_str='str3'
+          OR NOT c_str='str4'
+          OR NOT c_long=3
+          OR NOT c_long=4
+          OR NOT c_long=999));
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B39_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (NOT c_str<>''
+          OR NOT c_str<>'str2'
+          OR NOT c_long<>0
+          OR NOT c_long<>1
+          OR NOT c_long<>2
+          OR NOT c_long<>999)
+     AND (NOT c_str='str3'
+          OR NOT c_str='str4'
+          OR NOT c_long=3
+          OR NOT c_long=4
+          OR NOT c_long=999)), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B39_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE (NOT c_str<>''
+       OR NOT c_str<>'str2'
+       OR NOT c_long<>0
+       OR NOT c_long<>1
+       OR NOT c_long<>2
+       OR NOT c_long<>999)
+  AND (NOT c_str='str3'
+       OR NOT c_str='str4'
+       OR NOT c_long=3
+       OR NOT c_long=4
+       OR NOT c_long=999);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B39_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE (NOT c_str<>''
+       OR NOT c_str<>'str2'
+       OR NOT c_long<>0
+       OR NOT c_long<>1
+       OR NOT c_long<>2
+       OR NOT c_long<>999)
+  AND (NOT c_str='str3'
+       OR NOT c_str='str4'
+       OR NOT c_long=3
+       OR NOT c_long=4
+       OR NOT c_long=999);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B40_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE (c_str=''
+       OR c_str='str2'
+       OR c_long=0
+       OR c_long=1
+       OR c_long=2
+       OR c_long=999)
+  AND NOT c_str='str3'
+  AND NOT c_str='str4'
+  AND NOT c_long=3
+  AND NOT c_long=4
+  AND NOT c_long=999;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B40_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE (c_str=''
+          OR c_str='str2'
+          OR c_long=0
+          OR c_long=1
+          OR c_long=2
+          OR c_long=999)
+     AND NOT c_str='str3'
+     AND NOT c_str='str4'
+     AND NOT c_long=3
+     AND NOT c_long=4
+     AND NOT c_long=999);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B40_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (c_str=''
+          OR c_str='str2'
+          OR c_long=0
+          OR c_long=1
+          OR c_long=2
+          OR c_long=999)
+     AND NOT c_str='str3'
+     AND NOT c_str='str4'
+     AND NOT c_long=3
+     AND NOT c_long=4
+     AND NOT c_long=999), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B40_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE (c_str=''
+       OR c_str='str2'
+       OR c_long=0
+       OR c_long=1
+       OR c_long=2
+       OR c_long=999)
+  AND NOT c_str='str3'
+  AND NOT c_str='str4'
+  AND NOT c_long=3
+  AND NOT c_long=4
+  AND NOT c_long=999;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B40_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE (c_str=''
+       OR c_str='str2'
+       OR c_long=0
+       OR c_long=1
+       OR c_long=2
+       OR c_long=999)
+  AND NOT c_str='str3'
+  AND NOT c_str='str4'
+  AND NOT c_long=3
+  AND NOT c_long=4
+  AND NOT c_long=999;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(10 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B41_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_str IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B41_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_str IS NULL);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B41_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_str IS NULL), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B41_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_str IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B41_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_str IS NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B42_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+WHERE c_str IS NOT NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B42_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c)
+   WHERE c_str IS NOT NULL);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B42_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c_str IS NOT NULL), unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c);
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A7_B42_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_all_null_and_empty_val)) AS u(c))
+WHERE c_str IS NOT NULL;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(20 rows)
+
+!ok
+

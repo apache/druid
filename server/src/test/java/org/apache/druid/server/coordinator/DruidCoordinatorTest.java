@@ -43,6 +43,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
@@ -71,6 +72,7 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -167,7 +169,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
   }
 
@@ -175,12 +179,13 @@ public class DruidCoordinatorTest
   {
     return new MetadataManager(
         null,
-        new CoordinatorConfigManager(configManager, null, null),
+        new CoordinatorConfigManager(configManager, null, null, null),
         segmentsMetadataManager,
         null,
         metadataRuleManager,
         null,
-        null
+        null,
+        NoopSegmentMetadataCache.instance()
     );
   }
 
@@ -476,7 +481,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -526,7 +533,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -576,7 +585,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -636,13 +647,9 @@ public class DruidCoordinatorTest
     DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Collections.singleton(dataSegment)
     );
-    EasyMock
-        .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
-        .andReturn(dataSourcesSnapshot)
-        .anyTimes();
+    EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
+            .andReturn(dataSourcesSnapshot).anyTimes();
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedSegments())
-            .andReturn(Collections.singletonList(dataSegment)).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
@@ -688,7 +695,9 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -816,12 +825,12 @@ public class DruidCoordinatorTest
   {
     DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(Collections.emptyList());
     EasyMock
-        .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
+        .expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
         .andReturn(dataSourcesSnapshot)
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
     CompactionSimulateResult result = coordinator.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(0.2, null, null, null)
+        new ClusterCompactionConfig(0.2, null, null, null, null)
     );
     Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
   }
@@ -829,23 +838,11 @@ public class DruidCoordinatorTest
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
-    EasyMock
-        .expect(segmentsMetadataManager.iterateAllUsedSegments())
-        .andReturn(dataSource.getSegments())
-        .anyTimes();
-    EasyMock
-        .expect(segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-        .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
-        .anyTimes();
     DataSourcesSnapshot dataSourcesSnapshot =
         DataSourcesSnapshot.fromUsedSegments(dataSource.getSegments());
     EasyMock
-        .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
+        .expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
         .andReturn(dataSourcesSnapshot)
-        .anyTimes();
-    EasyMock
-        .expect(segmentsMetadataManager.retrieveAllDataSourceNames())
-        .andReturn(Collections.singleton(dataSource.getName()))
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
 

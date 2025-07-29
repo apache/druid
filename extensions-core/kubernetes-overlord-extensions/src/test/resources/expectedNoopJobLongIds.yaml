@@ -4,6 +4,7 @@ metadata:
   name: "apiissuedkillwikipedia3omjobnb-18ed64f09a02fab468b9bba38739871f"
   labels:
     druid.k8s.peons: "true"
+    druid.overlord.namespace: "namespace"
     druid.task.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
     druid.task.type: "noop"
     druid.task.group.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
@@ -22,6 +23,7 @@ spec:
     metadata:
       labels:
         druid.k8s.peons: "true"
+        druid.overlord.namespace: "namespace"
         druid.task.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
         druid.task.type: "noop"
         druid.task.group.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
@@ -41,6 +43,8 @@ spec:
             - "3600"
           env:
             - name: "TASK_DIR"
+              value: "/tmp/api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+            - name: "druid_indexer_task_baseTaskDir"
               value: "/tmp"
             - name: "TASK_ID"
               value: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"

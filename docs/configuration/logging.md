@@ -24,7 +24,7 @@ title: "Logging"
 
 
 Apache Druid services emit logs that to help you debug. 
-The same services also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
+The same services also emit periodic [metrics](../configuration/index.md#metrics-monitors) about their state.
 To disable metric info logs set the following runtime property: `-Ddruid.emitter.logging.logLevel=debug`.
 
 Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging.
@@ -95,9 +95,6 @@ The following example log4j2.xml is based upon the micro quickstart:
     </Logger>
 
     <!-- Quieter logging at startup -->
-    <Logger name="org.skife.config" level="warn" additivity="false">
-      <Appender-ref ref="FileAppender"/>
-    </Logger>
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
       <Appender-ref ref="FileAppender"/>
     </Logger>
@@ -109,7 +106,7 @@ Peons always output logs to standard output. Middle Managers redirect task logs 
 [long-term storage](index.md#log-long-term-storage).
 
 :::info
- NOTE:
+
  Druid shares the log4j configuration file among all services, including task peon processes.
  However, you must define a console appender in the logger for your peon processes.
  If you don't define a console appender, Druid creates and configures a new console appender

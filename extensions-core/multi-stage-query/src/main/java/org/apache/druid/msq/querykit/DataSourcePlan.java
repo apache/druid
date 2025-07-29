@@ -43,7 +43,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
+import org.apache.druid.msq.querykit.common.SortMergeJoinStageProcessor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -58,7 +58,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -551,7 +551,7 @@ public class DataSourcePlan
   )
   {
     // This is done to prevent loss of generality since MSQ can plan any type of DataSource.
-    List<DataSource> children = unionDataSource.getDataSources();
+    List<DataSource> children = unionDataSource.getChildren();
 
     final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final List<DataSource> newChildren = new ArrayList<>();
@@ -600,7 +600,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
-    final DataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
+    final JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKitSpec,
@@ -608,7 +608,7 @@ public class DataSourcePlan
         analysis.getBaseDataSource(),
         querySegmentSpec,
         filter,
-        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis),
+        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis::isBaseColumn),
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -665,11 +665,11 @@ public class DataSourcePlan
   )
   {
     checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
-    SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis());
+    SortMergeJoinStageProcessor.validateCondition(dataSource.getConditionAnalysis());
 
     // Partition by keys given by the join condition.
-    final List<List<KeyColumn>> partitionKeys = SortMergeJoinFrameProcessorFactory.toKeyColumns(
-        SortMergeJoinFrameProcessorFactory.validateCondition(dataSource.getConditionAnalysis())
+    final List<List<KeyColumn>> partitionKeys = SortMergeJoinStageProcessor.toKeyColumns(
+        SortMergeJoinStageProcessor.validateCondition(dataSource.getConditionAnalysis())
     );
 
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
@@ -742,8 +742,8 @@ public class DataSourcePlan
                        )
                        .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
                        .signature(joinSignatureBuilder.build())
-                       .processorFactory(
-                           new SortMergeJoinFrameProcessorFactory(
+                       .processor(
+                           new SortMergeJoinStageProcessor(
                                dataSource.getRightPrefix(),
                                dataSource.getConditionAnalysis(),
                                dataSource.getJoinType()
@@ -791,10 +791,7 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   * <p>
-   * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
-   * <p>
+   *
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.

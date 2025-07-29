@@ -22,6 +22,8 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
 /**
@@ -36,25 +38,48 @@ public class SegmentsMetadataManagerConfig
   private final Period pollDuration;
 
   @JsonProperty
-  private final boolean useCache;
+  private final SegmentMetadataCache.UsageMode useIncrementalCache;
+
+  @JsonProperty
+  private final UnusedSegmentKillerConfig killUnused;
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
       @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useCache") Boolean useCache
+      @JsonProperty("useIncrementalCache") SegmentMetadataCache.UsageMode useIncrementalCache,
+      @JsonProperty("killUnused") UnusedSegmentKillerConfig killUnused
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, false);
+    this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
+    this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null));
+    if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
+      throw DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.INVALID_INPUT)
+          .build(
+              "Segment metadata cache must be enabled to allow killing of unused segments."
+              + " Set 'druid.manager.segments.useIncrementalCache=always'"
+              + " or 'druid.manager.segments.useIncrementalCache=ifSynced' to enable the cache."
+          );
+    }
   }
 
-  public boolean isUseCache()
+  /**
+   * Usage mode of the incremental cache.
+   */
+  public SegmentMetadataCache.UsageMode getCacheUsageMode()
   {
-    return useCache;
+    return useIncrementalCache;
   }
 
   public Period getPollDuration()
   {
     return pollDuration;
+  }
+
+  public UnusedSegmentKillerConfig getKillUnused()
+  {
+    return killUnused;
   }
 }

@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -74,22 +76,26 @@ public class BrokerServerViewTest extends CuratorTestBase
   private final ZkPathsConfig zkPathsConfig;
 
   private CountDownLatch segmentViewInitLatch;
+  private CountDownLatch serverAddedLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
+  private BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   public BrokerServerViewTest()
   {
     jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
+    brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
   }
 
   @Before
   public void setUp() throws Exception
   {
     setupServerAndCurator();
+    brokerViewOfCoordinatorConfig.start();
     curator.start();
     curator.blockUntilConnected();
   }
@@ -128,7 +134,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     ServerSelector selector = (actualPartitionHolder.iterator().next()).getObject();
     Assert.assertFalse(selector.isEmpty());
     Assert.assertEquals(segment, selector.getSegment());
-    Assert.assertEquals(druidServer, selector.pick(null).getServer());
+    Assert.assertEquals(druidServer, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
     Assert.assertNotNull(timeline.findChunk(intervals, "v1", partition));
 
     unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
@@ -153,7 +159,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         hostname -> setupHistoricalServer("default_tier", hostname, 0)
     );
 
@@ -232,6 +238,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   public void testMultipleServerAndBroker() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
+    serverAddedLatch = new CountDownLatch(6);
     segmentAddedLatch = new CountDownLatch(6);
 
     // temporarily set latch count to 1
@@ -249,12 +256,25 @@ public class BrokerServerViewTest extends CuratorTestBase
         0
     );
 
-    final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        hostname -> setupHistoricalServer("default_tier", hostname, 0)
-    );
+    // Materialize this list so all servers are set up
+    final List<DruidServer> druidServers =
+        ImmutableList.copyOf(
+            Lists.transform(
+                ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+                hostname -> setupHistoricalServer("default_tier", hostname, 0)
+            )
+        );
 
     setupZNodeForServer(druidBroker, zkPathsConfig, jsonMapper);
+
+    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(serverAddedLatch));
+
+    // check server metadatas
+    Assert.assertEquals(
+        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
+        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
+    );
 
     final List<DataSegment> segments = Lists.transform(
         ImmutableList.of(
@@ -272,7 +292,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
@@ -290,12 +309,6 @@ public class BrokerServerViewTest extends CuratorTestBase
                 "2011-04-01/2011-04-09"
             )
         )
-    );
-
-    // check server metadatas
-    Assert.assertEquals(
-        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
-        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
     );
 
     // unannounce the broker segment should do nothing to announcements
@@ -387,9 +400,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks Tier 1
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(server21, selector.pick(null).getServer());
+      Assert.assertEquals(server21, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
@@ -447,9 +460,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks the Historical server
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(historicalServer, selector.pick(null).getServer());
+      Assert.assertEquals(historicalServer, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2));
+    Assert.assertEquals(Collections.singletonList(historicalServer.getMetadata()), selector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
@@ -509,9 +522,9 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Verify that the ServerSelector always picks Tier 1
     for (int i = 0; i < 5; ++i) {
-      Assert.assertEquals(server21, selector.pick(null).getServer());
+      Assert.assertEquals(server21, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
     }
-    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2));
+    Assert.assertEquals(Collections.singletonList(server21.getMetadata()), selector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test(expected = ISE.class)
@@ -591,7 +604,7 @@ public class BrokerServerViewTest extends CuratorTestBase
       ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
                                                                                                     .next()).getObject();
       Assert.assertFalse(selector.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null).getServer());
+      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick(null, CloneQueryMode.EXCLUDECLONES).getServer());
       Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());
     }
   }
@@ -612,6 +625,29 @@ public class BrokerServerViewTest extends CuratorTestBase
         "test"
     )
     {
+      @Override
+      public void registerServerCallback(Executor exec, ServerCallback callback)
+      {
+        super.registerServerCallback(
+            exec,
+            new ServerCallback() {
+              @Override
+              public CallbackAction serverAdded(DruidServer server)
+              {
+                final CallbackAction res = callback.serverAdded(server);
+                serverAddedLatch.countDown();
+                return res;
+              }
+
+              @Override
+              public CallbackAction serverRemoved(DruidServer server)
+              {
+                return callback.serverRemoved(server);
+              }
+            }
+        );
+      }
+
       @Override
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
@@ -685,7 +721,8 @@ public class BrokerServerViewTest extends CuratorTestBase
           {
             return ignoredTiers;
           }
-        }
+        },
+        brokerViewOfCoordinatorConfig
     );
 
     baseView.start();

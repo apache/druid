@@ -123,8 +123,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     log.info(
-        "LagBasedAutoScaler will collect lag every [%d] millis and will keep [%d] data points for the last [%d] millis for dataSource [%s]",
-        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.size(),
+        "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
+        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.maxSize(),
         lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), dataSource
     );
   }
@@ -178,7 +178,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
           }
           log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
         } else {
-          log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);
+          log.debug("Supervisor[%s] is suspended, skipping lag collection", dataSource);
         }
       }
       catch (Exception e) {
@@ -237,7 +237,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
       int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMax) {
-        log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
+        log.debug("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
         );
         emitter.emit(metricBuilder
@@ -258,7 +258,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
       int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMin) {
-        log.warn("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource [%s].",
+        log.debug("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource[%s].",
             dataSource
         );
         emitter.emit(metricBuilder

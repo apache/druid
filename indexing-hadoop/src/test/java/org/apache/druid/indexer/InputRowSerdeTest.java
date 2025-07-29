@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -38,6 +37,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -277,8 +277,8 @@ public class InputRowSerdeTest
     long expected = 9 + 18 + 4 + 14 + 4 + 4 + 4 + 1;
 
     Assert.assertEquals(expected, result.length);
-    Assert.assertEquals(result[48], NullHandling.IS_NULL_BYTE);
-    Assert.assertEquals(result[52], NullHandling.IS_NULL_BYTE);
-    Assert.assertEquals(result[56], NullHandling.IS_NULL_BYTE);
+    Assert.assertEquals(result[48], TypeStrategies.IS_NULL_BYTE);
+    Assert.assertEquals(result[52], TypeStrategies.IS_NULL_BYTE);
+    Assert.assertEquals(result[56], TypeStrategies.IS_NULL_BYTE);
   }
 }

@@ -31,16 +31,17 @@ import java.util.Objects;
 
 public class AutoCompactionSnapshot
 {
-  public enum AutoCompactionScheduleStatus
+  public enum ScheduleStatus
   {
     NOT_ENABLED,
+    AWAITING_FIRST_RUN,
     RUNNING
   }
 
   @JsonProperty
   private final String dataSource;
   @JsonProperty
-  private final AutoCompactionScheduleStatus scheduleStatus;
+  private final ScheduleStatus scheduleStatus;
   @JsonProperty
   private final String message;
   @JsonProperty
@@ -64,13 +65,13 @@ public class AutoCompactionSnapshot
 
   public static Builder builder(String dataSource)
   {
-    return new Builder(dataSource).withStatus(AutoCompactionScheduleStatus.RUNNING);
+    return new Builder(dataSource).withStatus(ScheduleStatus.RUNNING);
   }
 
   @JsonCreator
   public AutoCompactionSnapshot(
       @JsonProperty("dataSource") @NotNull String dataSource,
-      @JsonProperty("scheduleStatus") @NotNull AutoCompactionScheduleStatus scheduleStatus,
+      @JsonProperty("scheduleStatus") @NotNull AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       @JsonProperty("message") @Nullable String message,
       @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
       @JsonProperty("bytesCompacted") long bytesCompacted,
@@ -104,7 +105,7 @@ public class AutoCompactionSnapshot
   }
 
   @NotNull
-  public AutoCompactionScheduleStatus getScheduleStatus()
+  public AutoCompactionSnapshot.ScheduleStatus getScheduleStatus()
   {
     return scheduleStatus;
   }
@@ -206,7 +207,7 @@ public class AutoCompactionSnapshot
   public static class Builder
   {
     private final String dataSource;
-    private AutoCompactionScheduleStatus scheduleStatus;
+    private ScheduleStatus scheduleStatus;
     private String message;
 
     private final CompactionStatistics compactedStats = new CompactionStatistics();
@@ -223,7 +224,7 @@ public class AutoCompactionSnapshot
       this.dataSource = dataSource;
     }
 
-    public Builder withStatus(AutoCompactionScheduleStatus status)
+    public Builder withStatus(ScheduleStatus status)
     {
       this.scheduleStatus = Preconditions.checkNotNull(status, "scheduleStatus cannot be null");
       return this;

@@ -357,7 +357,7 @@ public class DatasourceInputFormatTest
   {
     // Use the builtin supplier, reading from the local filesystem, rather than testFormatter.
     final File tmpFile = temporaryFolder.newFile("something:with:colons");
-    Files.write("dummy", tmpFile, StandardCharsets.UTF_8);
+    Files.asCharSink(tmpFile, StandardCharsets.UTF_8).write("dummy");
 
     final ImmutableList<WindowedDataSegment> mySegments = ImmutableList.of(
         WindowedDataSegment.of(

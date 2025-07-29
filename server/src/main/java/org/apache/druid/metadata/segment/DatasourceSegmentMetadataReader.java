@@ -40,7 +40,7 @@ public interface DatasourceSegmentMetadataReader
    * Retrieves the IDs of segments (out of the given set) which already exist in
    * the metadata store.
    */
-  Set<String> findExistingSegmentIds(Set<DataSegment> segments);
+  Set<String> findExistingSegmentIds(Set<SegmentId> segments);
 
   /**
    * Retrieves IDs of used segments that belong to the datasource and overlap
@@ -68,7 +68,7 @@ public interface DatasourceSegmentMetadataReader
   /**
    * Retrieves used segments for the given segment IDs.
    */
-  List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds);
+  List<DataSegmentPlus> findUsedSegments(Set<SegmentId> segmentIds);
 
   /**
    * Retrieves used segments that overlap with any of the given intervals. If the
@@ -98,7 +98,7 @@ public interface DatasourceSegmentMetadataReader
    * Retrieves segments for the given segment IDs.
    */
   List<DataSegmentPlus> findSegments(
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   );
 
   /**
@@ -106,7 +106,7 @@ public interface DatasourceSegmentMetadataReader
    * schema fingerprint for the given segment IDs.
    */
   List<DataSegmentPlus> findSegmentsWithSchema(
-      Set<String> segmentIds
+      Set<SegmentId> segmentIds
   );
 
   /**

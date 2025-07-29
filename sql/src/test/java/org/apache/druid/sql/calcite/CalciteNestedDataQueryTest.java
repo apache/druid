@@ -542,6 +542,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "JSON_VALUE(nest, '$.x'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1 LIMIT 10",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(DATA_SOURCE)
@@ -556,18 +557,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(
             new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .add("EXPR$1", ColumnType.LONG)
-                    .build()
+        )
     );
   }
 
@@ -5683,7 +5680,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 new ExpressionDimFilter(
-                                    "array_contains(array_to_mv(\"arrayLongNulls\"),'1')",
+                                    "mv_contains(array_to_mv(\"arrayLongNulls\"),'1')",
                                     queryFramework().macroTable()
                                 )
                             )
@@ -5748,8 +5745,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 or(
-                                    expressionFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
-                                    expressionFilter("array_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
+                                    expressionFilter("mv_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
+                                    expressionFilter("mv_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
                                 )
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -5871,7 +5868,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 new ExpressionDimFilter(
-                                    "array_contains(array_to_mv(\"arrayStringNulls\"),'b')",
+                                    "mv_contains(array_to_mv(\"arrayStringNulls\"),'b')",
                                     queryFramework().macroTable()
                                 )
                             )
@@ -6002,7 +5999,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "1",
                 "[]",
                 "[51,-35]",
-                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}",
+                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"c\":null,\"v\":[]}",
                 "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
                 null,
                 "[\"a\",\"b\"]",
@@ -6040,7 +6037,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "\"b\"",
                 "2",
                 "b",
-                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}",
+                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}",
                 "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
                 "[\"a\",\"b\",\"c\"]",
                 "[null,\"b\"]",
@@ -6078,7 +6075,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "1",
                 "1",
                 "1",
-                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}",
+                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":[100],\"v\":[]}",
                 "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"a\",\"b\"]",
                 "[\"a\",\"b\"]",
@@ -6116,7 +6113,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "{}",
                 "4",
                 "1",
-                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}",
+                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"c\":{\"a\":1},\"v\":[]}",
                 "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"d\",\"e\"]",
                 "[\"b\",\"b\"]",
@@ -6154,7 +6151,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "{}",
                 "[]",
                 "hello",
-                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}",
+                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"c\":\"hello\",\"v\":\"a\"}",
                 "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
                 null,
                 null,
@@ -6192,7 +6189,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "\"a\"",
                 "6",
                 null,
-                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}",
+                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"c\":12.3,\"v\":\"b\"}",
                 null,
                 "[\"a\",\"b\"]",
                 null,
@@ -6804,44 +6801,93 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
-    // The data set has empty arrays, however MSQ returns nulls. The root cause of the issue is the incorrect
-    // capabilities returned by NestedFieldVirtualColumn when planning which causes MSQ to treat the nested path
-    // as STRING, even though it is an array.
-    msqIncompatible();
-    // test for regression
     skipVectorize();
-    testQuery(
-        "SELECT json_value(cObj, '$.z.d') FROM druid.all_auto",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(DATA_SOURCE_ALL)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("v0")
-                  .columnTypes(ColumnType.STRING)
-                  .virtualColumns(
-                      new NestedFieldVirtualColumn(
-                          "cObj",
-                          "$.z.d",
-                          "v0",
-                          ColumnType.STRING
+    testBuilder()
+        .sql("SELECT json_value(cObj, '$.z.d') FROM druid.all_auto")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ALL)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("v0")
+                      .columnTypes(ColumnType.STRING)
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn(
+                              "cObj",
+                              "$.z.d",
+                              "v0",
+                              ColumnType.STRING
+                          )
                       )
-                  )
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"},
-            new Object[]{"[]"}
-        ),
-        RowSignature.builder()
-                    .add("EXPR$0", ColumnType.STRING)
-                    .build()
-    );
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{null}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testJsonValueNestedEmptyArrayReturning()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT json_value(cObj, '$.z.d' returning varchar array) FROM druid.all_auto")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ALL)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("v0")
+                      .columnTypes(ColumnType.STRING_ARRAY)
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn(
+                              "cObj",
+                              "$.z.d",
+                              "v0",
+                              ColumnType.STRING_ARRAY
+                          )
+                      )
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()},
+                new Object[]{Collections.emptyList()}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING_ARRAY)
+                        .build()
+        )
+        .run();
   }
 
   @Test
@@ -7261,6 +7307,340 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"}
         ),
         RowSignature.builder().add("EXPR$0", ColumnType.STRING).build()
+    );
+  }
+
+  @Test
+  public void testSumPathWithArrays()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{112.3d}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArrays()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    // capturing existing behavior... the count should be 4 if it was counting all non-null primitive values, but that
+    // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
+    // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
+    // values, so the object row is rightfully skipped
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturningNumber()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING DOUBLE)) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturning()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING VARCHAR ARRAY)) "
+        + "FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING_ARRAY))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testSumPathWithArraysRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{112.3d}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    // capturing existing behavior... the count should be 4 if it was counting all non-null primitive values, but that
+    // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
+    // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
+    // values, so the object row is rightfully skipped
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c')) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturningNumberRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING DOUBLE)) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.DOUBLE))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCountPathWithArraysReturningRealtime()
+  {
+    /*
+    "obj":{... "c": [100], ...}
+    "obj":{... "c": ["a", "b"], ...}
+    "obj":{...}
+    "obj":{... "c": {"a": 1}, ...},
+    "obj":{... "c": "hello", ...},
+    "obj":{... "c": 12.3, ...},
+    "obj":{... "c": null, ...},
+     */
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "COUNT(JSON_VALUE(obj, '$.c' RETURNING VARCHAR ARRAY)) "
+        + "FROM druid.all_auto_realtime",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_REALTIME)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(new NestedFieldVirtualColumn("obj", "$.c", "v0", ColumnType.STRING_ARRAY))
+                  .aggregators(
+                      aggregators(
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a0"),
+                              not(isNull("v0"))
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
     );
   }
 }

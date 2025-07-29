@@ -28,10 +28,38 @@ public class MSQSpecTest
 {
 
   @Test
+  public void testLegacyEquals()
+  {
+    EqualsVerifier.forClass(LegacyMSQSpec.class)
+                  .withNonnullFields("destination", "tuningConfig")
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testQueryDefEquals()
+  {
+    EqualsVerifier.forClass(QueryDefMSQSpec.class)
+                  .withNonnullFields("destination", "tuningConfig")
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(MSQSpec.class)
-                  .withNonnullFields("query", "destination", "tuningConfig")
+                  .withNonnullFields("destination", "tuningConfig")
                   .withPrefabValues(
                       IndexSpec.class,
                       IndexSpec.DEFAULT,

@@ -111,7 +111,8 @@ public class TaskQueueScaleTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnectorRule.getConnector(),
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -137,12 +138,13 @@ public class TaskQueueScaleTest
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
-        new TaskLockbox(taskStorage, storageCoordinator),
+        new GlobalTaskLockbox(taskStorage, storageCoordinator),
         new NoopServiceEmitter(),
         jsonMapper,
         new NoopTaskContextEnricher()
     );
 
+    storageCoordinator.start();
     taskQueue.start();
     closer.register(taskQueue::stop);
   }
@@ -322,7 +324,7 @@ public class TaskQueueScaleTest
       }
       if (!existingTask.getResult().isDone()) {
         exec.schedule(() -> {
-          existingTask.setResult(TaskStatus.failure("taskId", "stopped"));
+          existingTask.setResult(TaskStatus.failure(existingTask.getTaskId(), "stopped"));
           synchronized (knownTasks) {
             knownTasks.remove(taskid);
           }

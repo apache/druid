@@ -23,8 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -72,22 +74,22 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -105,6 +107,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final Closer closer = Closer.create();
 
   private Cursor cursor;
+  private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -117,7 +120,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       @Nullable final AtomicLong runningCountForLimit,
       final ObjectMapper jsonMapper,
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
@@ -192,16 +195,29 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler)
+      throws IOException
   {
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
+
+      if (dataServerQueryResultFuture == null) {
+        dataServerQueryResultFuture =
+            dataServerQueryHandler.fetchRowsFromDataServer(
+                preparedQuery,
+                ScanQueryFrameProcessor::mappingFunction,
+                closer
+            );
+
+        // Give up the processing thread while we wait for the query to finish. This is only really asynchronous
+        // with Dart. On tasks, the IndexerDataServerQueryHandler does not return from fetchRowsFromDataServer until
+        // the response has started to come back.
+        return ReturnOrAwait.awaitAllFutures(Collections.singletonList(dataServerQueryResultFuture));
+      }
+
       final DataServerQueryResult<Object[]> dataServerQueryResult =
-          dataServerQueryHandler.fetchRowsFromDataServer(
-              preparedQuery,
-              ScanQueryFrameProcessor::mappingFunction,
-              closer
-          );
+          FutureUtils.getUncheckedImmediately(dataServerQueryResultFuture);
+      dataServerQueryResultFuture = null;
       handedOffSegments = dataServerQueryResult.getHandedOffSegments();
       if (!handedOffSegments.getDescriptors().isEmpty()) {
         log.info(
@@ -253,8 +269,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null) {
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
-      final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
-      final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
+      final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
       if (cursorFactory == null) {
         throw new ISE(
             "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
@@ -268,7 +284,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
                   null
               )
           );
-      final Cursor nextCursor = nextCursorHolder.asCursor();
+
+      final Cursor nextCursor;
+
+      // If asCursor() fails, we need to close nextCursorHolder immediately.
+      try {
+        nextCursor = nextCursorHolder.asCursor();
+      }
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);
+      }
 
       if (nextCursor == null) {
         // No cursors!
@@ -302,10 +327,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
+        final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
-        final Segment mappedSegment = mapSegment(frameSegment);
-        final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
+        final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
         if (cursorFactory == null) {
           throw new ISE(
               "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."

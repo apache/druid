@@ -56,7 +56,7 @@ public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
     final FrameSequenceBuilder frameSequenceBuilder =
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(5)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
 
     final RowSignature signature = frameSequenceBuilder.signature();
@@ -73,11 +73,14 @@ public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
     final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);
 
     final QueryResultsFrameProcessor processor =
-        new QueryResultsFrameProcessor(ReadableInput.channel(
-            inputChannel.readable(),
-            FrameReader.create(signature),
-            stagePartition
-        ).getChannel(), outputChannel.writable());
+        new QueryResultsFrameProcessor(
+            ReadableInput.channel(
+                inputChannel.readable(),
+                FrameReader.create(signature),
+                stagePartition
+            ).getChannel(),
+            outputChannel.writable()
+        );
 
     ListenableFuture<Object> retVal = exec.runFully(processor, null);
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(

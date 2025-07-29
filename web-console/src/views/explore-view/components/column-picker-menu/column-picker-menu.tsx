@@ -17,13 +17,14 @@
  */
 
 import type { IconName } from '@blueprintjs/core';
-import { Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { ContextMenu, Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
 import { useState } from 'react';
 
-import { caseInsensitiveContains, columnToIcon, filterMap } from '../../../../utils';
+import { caseInsensitiveContains, columnToIcon, copyAndAlert, filterMap } from '../../../../utils';
 
 import './column-picker-menu.scss';
 
@@ -66,17 +67,33 @@ export const ColumnPickerMenu = function ColumnPickerMenu(props: ColumnPickerMen
           />
         )}
         {filterMap(columns, (c, i) => {
-          if (!caseInsensitiveContains(c.name, columnSearch)) return;
+          const columnName = c.name;
+          if (!caseInsensitiveContains(columnName, columnSearch)) return;
           const iconName = rightIconForColumn?.(c);
           return (
-            <MenuItem
+            <ContextMenu
               key={i}
-              icon={columnToIcon(c) || IconNames.BLANK}
-              text={c.name}
-              labelElement={iconName && <Icon icon={iconName} />}
-              onClick={() => onSelectColumn(c)}
-              shouldDismissPopover={shouldDismissPopover}
-            />
+              content={
+                <Menu>
+                  <MenuItem
+                    text="Copy"
+                    onClick={() => copyAndAlert(String(columnName), `Copied to clipboard`)}
+                  />
+                  <MenuItem
+                    text="Copy as SQL column"
+                    onClick={() => copyAndAlert(String(C(columnName)), `Copied to clipboard`)}
+                  />
+                </Menu>
+              }
+            >
+              <MenuItem
+                icon={columnToIcon(c) || IconNames.BLANK}
+                text={columnName}
+                labelElement={iconName && <Icon icon={iconName} />}
+                onClick={() => onSelectColumn(c)}
+                shouldDismissPopover={shouldDismissPopover}
+              />
+            </ContextMenu>
           );
         })}
       </Menu>

@@ -1,0 +1,997 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C2_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(s_int,array[1, 2, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(s_int,array[1, 2, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_CONTAINS' to arguments of type 'ARRAY_CONTAINS(<BIGINT>, <INTEGER ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],c) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C3_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],c) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C4_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],s_int) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C4_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],s_int) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C5_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],c) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C5_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],c) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C6_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],s_int) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C6_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],s_int) IS NOT NULL);
+Invalid expression
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C7_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C7_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C8_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C8_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C9_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C9_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C10_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],1) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C10_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],1) IS NOT NULL);
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
+| false |
+| false |
+| true  |
+| true  |
+| true  |
++-------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C11_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],array[c, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C11_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, c, 3],array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, c, 3],array[c, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C12_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],array[s_int, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C12_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, c, 3],array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, c, 3],array[s_int, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C13_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],array[c, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],array[c, s_int, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C13_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[c, s_int, 3],array[c, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[c, s_int, 3],array[c, s_int, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C14_D1
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],array[s_int, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],array[s_int, s_int, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B5_C14_D2
+#-------------------------------------------------------------------------
+SELECT array_contains(array[s_int, s_int, 3],array[s_int, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_contains(array[s_int, s_int, 3],array[s_int, s_int, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C1_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(c, s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c, s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C1_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c, s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C2_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int, c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int, c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C2_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int, c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C3_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, c, 3],c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, c, 3],c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C3_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, c, 3],c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, c, 3],c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C4_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, c, 3],s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, c, 3],s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C4_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, c, 3],s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, c, 3],s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C5_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, s_int, 3],c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, s_int, 3],c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C5_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, s_int, 3],c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, s_int, 3],c) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C6_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, s_int, 3],s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, s_int, 3],s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C6_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, s_int, 3],s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, s_int, 3],s_int) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT ARRAY>, <BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C7_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(c,array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c,array[c, c, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C7_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(c,array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c,array[c, c, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C8_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int,array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int,array[s_int, c, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C8_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int,array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int,array[s_int, c, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C9_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(c,array[c, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c,array[c, s_int, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C9_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(c,array[c, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(c,array[c, s_int, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C10_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int,array[s_int, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int,array[s_int, s_int, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C10_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(s_int,array[s_int, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(s_int,array[s_int, s_int, 3]) IS NOT NULL);
+Cannot apply 'ARRAY_OVERLAP' to arguments of type 'ARRAY_OVERLAP(<BIGINT>, <BIGINT ARRAY>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C11_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, c, 3],array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, c, 3],array[c, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C11_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, c, 3],array[c, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, c, 3],array[c, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C12_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, c, 3],array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, c, 3],array[s_int, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C12_D2
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[s_int, c, 3],array[s_int, c, 3]) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[s_int, c, 3],array[s_int, c, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_array_funcs TEST_ID: A1_B6_C13_D1
+#-------------------------------------------------------------------------
+SELECT array_overlap(array[c, s_int, 3],array[c, s_int, 3]) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (array_overlap(array[c, s_int, 3],array[c, s_int, 3]) IS NOT NULL);
++------+
+| col  |
++------+
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
+| true |
++------+
+(9 rows)
+
+!ok
+

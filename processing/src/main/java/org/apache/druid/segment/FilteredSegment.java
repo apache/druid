@@ -24,13 +24,13 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class FilteredSegment extends WrappedSegmentReference
+public class FilteredSegment extends WrappedSegment
 {
   @Nullable
   private final DimFilter filter;
 
   public FilteredSegment(
-      SegmentReference delegate,
+      Segment delegate,
       @Nullable DimFilter filter
   )
   {
@@ -38,19 +38,21 @@ public class FilteredSegment extends WrappedSegmentReference
     this.filter = filter;
   }
 
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new FilteredCursorFactory(delegate.asCursorFactory(), filter);
-  }
-
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
-    if (TopNOptimizationInspector.class.equals(clazz)) {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new FilteredCursorFactory(delegate.as(CursorFactory.class), filter);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(filter == null);
     }
-    return super.as(clazz);
+    return null;
+  }
+
+  @Override
+  public String getDebugString()
+  {
+    return "filtered->" + delegate.getDebugString();
   }
 }

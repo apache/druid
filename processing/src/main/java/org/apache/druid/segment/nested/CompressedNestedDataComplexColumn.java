@@ -854,11 +854,12 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
 
   @Nullable
   @Override
-  public Set<ColumnType> getColumnTypes(List<NestedPathPart> path)
+  public Set<ColumnType> getFieldTypes(List<NestedPathPart> path)
   {
     final TKeyDictionary fields = fieldsSupplier.get();
     String field = getField(path);
     int index = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
+    // if index is negative, check for an array element accessor in the path
     if (index < 0) {
       if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
         final String arrayField = getField(path.subList(0, path.size() - 1));
@@ -867,9 +868,9 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       if (index < 0) {
         return null;
       }
-      Set<ColumnType> arrayTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
-      Set<ColumnType> elementTypes = Sets.newHashSetWithExpectedSize(arrayTypes.size());
-      for (ColumnType type : arrayTypes) {
+      final Set<ColumnType> arrayFieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+      final Set<ColumnType> elementTypes = Sets.newHashSetWithExpectedSize(arrayFieldTypes.size());
+      for (ColumnType type : arrayFieldTypes) {
         if (type.isArray()) {
           elementTypes.add((ColumnType) type.getElementType());
         } else {
@@ -879,6 +880,40 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       return elementTypes;
     }
     return FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+  }
+
+  @Nullable
+  @Override
+  public ColumnType getFieldLogicalType(List<NestedPathPart> path)
+  {
+    final String field = getField(path);
+    final Set<ColumnType> fieldTypes;
+    int index = fieldsSupplier.get().indexOf(StringUtils.toUtf8ByteBuffer(field));
+    ColumnType leastRestrictiveType = null;
+    if (index < 0) {
+      if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
+        final String arrayField = getField(path.subList(0, path.size() - 1));
+        index = fieldsSupplier.get().indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
+      }
+      if (index < 0) {
+        return null;
+      }
+      fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+      for (ColumnType type : fieldTypes) {
+        if (type.isArray()) {
+          leastRestrictiveType = ColumnType.leastRestrictiveType(
+              leastRestrictiveType,
+              (ColumnType) type.getElementType()
+          );
+        } else {
+          leastRestrictiveType = ColumnType.leastRestrictiveType(leastRestrictiveType, type);
+        }
+      }
+    } else {
+      fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+      leastRestrictiveType = ColumnType.leastRestrictiveType(fieldTypes);
+    }
+    return leastRestrictiveType;
   }
 
   @Nullable
@@ -1000,7 +1035,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
       ColumnType theType = types.getSingleType();
-      columnBuilder.setType(theType == null ? ColumnType.STRING : theType);
+      if (theType == null) {
+        theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()));
+      }
+      columnBuilder.setType(theType);
 
       GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,

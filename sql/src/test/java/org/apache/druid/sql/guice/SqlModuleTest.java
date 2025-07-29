@@ -29,11 +29,8 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -41,6 +38,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -55,6 +53,7 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -97,9 +96,6 @@ public class SqlModuleTest
   private TimelineServerView timelineServerView;
 
   @Mock
-  private DruidLeaderClient druidLeaderClient;
-
-  @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   @Mock
@@ -132,7 +128,6 @@ public class SqlModuleTest
         serviceEmitter,
         inventoryView,
         timelineServerView,
-        druidLeaderClient,
         druidNodeDiscoveryProvider,
         genericQueryMetricsFactory,
         querySegmentWalker,
@@ -185,6 +180,7 @@ public class SqlModuleTest
             new LifecycleModule(),
             new ServerModule(),
             new JacksonModule(),
+            new PolicyModule(),
             new AuthenticatorMapperModule(),
             binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
@@ -194,12 +190,10 @@ public class SqlModuleTest
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(new NoopEscalator());
               binder.bind(ServiceEmitter.class).toInstance(serviceEmitter);
-              binder.bind(RequestLogger.class).toInstance(new NoopRequestLogger());
+              binder.bind(RequestLogger.class).toInstance(NoopRequestLogger.instance());
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
-              binder.bind(DruidLeaderClient.class).annotatedWith(Coordinator.class).toInstance(druidLeaderClient);
-              binder.bind(DruidLeaderClient.class).annotatedWith(IndexingService.class).toInstance(druidLeaderClient);
               binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
               binder.bind(GenericQueryMetricsFactory.class).toInstance(genericQueryMetricsFactory);
               binder.bind(QuerySegmentWalker.class).toInstance(querySegmentWalker);
@@ -216,6 +210,9 @@ public class SqlModuleTest
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
               binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
+              binder.bind(CentralizedDatasourceSchemaConfig.class)
+                    .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
+              binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
             },
             sqlModule,
             new TestViewManagerModule()

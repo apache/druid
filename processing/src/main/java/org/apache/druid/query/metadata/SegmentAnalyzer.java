@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class SegmentAnalyzer
 {
@@ -90,13 +91,14 @@ public class SegmentAnalyzer
 
     // index is null for incremental-index-based segments, but segmentInspector should always be available
     final QueryableIndex index = segment.as(QueryableIndex.class);
+    final CursorFactory cursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
 
     final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;
 
     // Use LinkedHashMap to preserve column order.
     final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
-    final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+    final RowSignature rowSignature = cursorFactory.getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
 
@@ -131,7 +133,7 @@ public class SegmentAnalyzer
             if (index != null) {
               analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
             } else {
-              analysis = analyzeStringColumn(capabilities, segmentInspector, segment.asCursorFactory(), columnName);
+              analysis = analyzeStringColumn(capabilities, segmentInspector, cursorFactory, columnName);
             }
             break;
           case ARRAY:

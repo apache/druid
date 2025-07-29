@@ -597,7 +597,7 @@ public class GroupingEngine
     GroupByRowProcessor.ResultSupplier resultSupplier = null;
 
     try {
-      final GroupByQuery queryToRun;
+      GroupByQuery queryToRun;
 
       if (wasQueryPushedDown) {
         // If the query was pushed down, filters would have been applied downstream, so skip it here.
@@ -605,6 +605,13 @@ public class GroupingEngine
                           .withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY));
       } else {
         queryToRun = query;
+      }
+
+      if (queryToRun.getLimitSpec() instanceof DefaultLimitSpec) {
+        // If the query has an offset, incorporate it into the limit before processing subquery results.
+        // This allows limit pushdown to work properly during processing. Later on, we'll use the GroupByQuery's
+        // postProcessingFn to apply the offset.
+        queryToRun = queryToRun.withLimitSpec(((DefaultLimitSpec) queryToRun.getLimitSpec()).withOffsetToLimit());
       }
 
       resultSupplier = GroupByRowProcessor.process(

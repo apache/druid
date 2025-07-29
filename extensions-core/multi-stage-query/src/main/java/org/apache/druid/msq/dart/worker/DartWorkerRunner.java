@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.worker;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -29,21 +30,25 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.http.DartWorkerInfo;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.exec.WorkerContext;
+import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,7 +58,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -73,16 +77,16 @@ public class DartWorkerRunner
    */
   @GuardedBy("this")
   private final Map<String, WorkerHolder> workerMap = new HashMap<>();
-  private final DartWorkerFactory workerFactory;
-  private final ExecutorService workerExec;
+  private final DartWorkerContextFactory workerFactory;
+  private final ListeningExecutorService workerExec;
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final ResourcePermissionMapper permissionMapper;
   private final AuthorizerMapper authorizerMapper;
   private final File baseTempDir;
 
   public DartWorkerRunner(
-      final DartWorkerFactory workerFactory,
-      final ExecutorService workerExec,
+      final DartWorkerContextFactory workerFactory,
+      final ListeningExecutorService workerExec,
       final DruidNodeDiscoveryProvider discoveryProvider,
       final ResourcePermissionMapper permissionMapper,
       final AuthorizerMapper authorizerMapper,
@@ -124,9 +128,10 @@ public class DartWorkerRunner
         holder = existingHolder;
         newHolder = false;
       } else {
-        final Worker worker = workerFactory.build(queryId, controllerHost, baseTempDir, context);
+        final WorkerContext workerContext = workerFactory.build(queryId, controllerHost, baseTempDir, context);
+        final Worker worker = new WorkerImpl(null, workerContext);
         final WorkerResource resource = new WorkerResource(worker, permissionMapper, authorizerMapper);
-        holder = new WorkerHolder(worker, controllerHost, resource, DateTimes.nowUtc());
+        holder = new WorkerHolder(worker, workerContext, controllerHost, resource, DateTimes.nowUtc());
         workerMap.put(queryId, holder);
         this.notifyAll();
         newHolder = true;
@@ -134,28 +139,19 @@ public class DartWorkerRunner
     }
 
     if (newHolder) {
-      workerExec.submit(() -> {
-        final String originalThreadName = Thread.currentThread().getName();
-        try {
-          Thread.currentThread().setName(StringUtils.format("%s[%s]", originalThreadName, queryId));
-          holder.worker.run();
-        }
-        catch (Throwable t) {
-          if (Thread.interrupted() || MSQFaultUtils.isCanceledException(t)) {
-            log.debug(t, "Canceled, exiting thread.");
-          } else {
-            log.warn(t, "Worker for query[%s] failed and stopped.", queryId);
-          }
-        }
-        finally {
-          synchronized (this) {
-            workerMap.remove(queryId, holder);
-            this.notifyAll();
-          }
-
-          Thread.currentThread().setName(originalThreadName);
-        }
-      });
+      holder.runRef.run(holder.worker, workerExec).addListener(
+          () -> {
+            synchronized (this) {
+              workerMap.remove(queryId, holder);
+              CloseableUtils.closeAndSuppressExceptions(
+                  holder,
+                  e -> log.warn(e, "Failed to close worker[%s]", holder.worker.id())
+              );
+              this.notifyAll();
+            }
+          },
+          Execs.directExecutor()
+      );
     }
 
     return holder.worker;
@@ -173,7 +169,7 @@ public class DartWorkerRunner
     }
 
     if (holder != null) {
-      holder.worker.stop();
+      holder.runRef.cancel();
     }
   }
 
@@ -234,11 +230,11 @@ public class DartWorkerRunner
       final Collection<WorkerHolder> holders = workerMap.values();
 
       for (final WorkerHolder holder : holders) {
-        holder.worker.stop();
+        holder.runRef.cancel();
       }
 
       for (final WorkerHolder holder : holders) {
-        holder.worker.awaitStop();
+        holder.runRef.awaitStop();
       }
     }
   }
@@ -285,24 +281,35 @@ public class DartWorkerRunner
     }
   }
 
-  private static class WorkerHolder
+  private static class WorkerHolder implements Closeable
   {
     private final Worker worker;
+    private final WorkerContext workerContext;
     private final WorkerResource resource;
     private final String controllerHost;
     private final DateTime acceptTime;
+    private final WorkerRunRef runRef;
 
     public WorkerHolder(
-        Worker worker,
-        String controllerHost,
-        WorkerResource resource,
+        final Worker worker,
+        final WorkerContext workerContext,
+        final String controllerHost,
+        final WorkerResource resource,
         final DateTime acceptTime
     )
     {
       this.worker = worker;
+      this.workerContext = workerContext;
       this.resource = resource;
       this.controllerHost = controllerHost;
       this.acceptTime = acceptTime;
+      this.runRef = new WorkerRunRef();
+    }
+
+    @Override
+    public void close()
+    {
+      workerContext.close();
     }
   }
 
@@ -327,20 +334,20 @@ public class DartWorkerRunner
       final Set<String> hostsRemoved =
           nodes.stream().map(node -> node.getDruidNode().getHostAndPortToUse()).collect(Collectors.toSet());
 
-      final List<Worker> workersToNotify = new ArrayList<>();
+      final List<WorkerHolder> workersToNotify = new ArrayList<>();
 
       synchronized (DartWorkerRunner.this) {
         activeControllerHosts.removeAll(hostsRemoved);
 
         for (Map.Entry<String, WorkerHolder> entry : workerMap.entrySet()) {
           if (hostsRemoved.contains(entry.getValue().controllerHost)) {
-            workersToNotify.add(entry.getValue().worker);
+            workersToNotify.add(entry.getValue());
           }
         }
       }
 
-      for (final Worker worker : workersToNotify) {
-        worker.controllerFailed();
+      for (final WorkerHolder workerHolder : workersToNotify) {
+        workerHolder.runRef.cancel();
       }
     }
   }

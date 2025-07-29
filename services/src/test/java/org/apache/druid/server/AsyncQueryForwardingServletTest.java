@@ -590,7 +590,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
+    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").anyTimes();
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI())
@@ -652,7 +652,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        new NoopRequestLogger(),
+        NoopRequestLogger.instance(),
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         properties,
@@ -683,7 +683,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     catch (NullPointerException ignored) {
     }
-    Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    // Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }
@@ -762,8 +763,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               hostFinder,
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
-              new NoopServiceEmitter(),
-              new NoopRequestLogger(),
+              NoopServiceEmitter.instance(),
+              NoopRequestLogger.instance(),
               new DefaultGenericQueryMetricsFactory(),
               new AuthenticatorMapper(ImmutableMap.of()),
               new Properties(),
@@ -984,8 +985,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             null,
             null,
             null,
-            new NoopServiceEmitter(),
-            new NoopRequestLogger(),
+            NoopServiceEmitter.instance(),
+            NoopRequestLogger.instance(),
             new DefaultGenericQueryMetricsFactory(),
             new AuthenticatorMapper(ImmutableMap.of()),
             new Properties(),

@@ -45,19 +45,10 @@ import {
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
-  queryDruidSqlDart,
+  wrapInExplainIfNeeded,
 } from '../../../utils';
 
 import './explain-dialog.scss';
-
-function isExplainQuery(query: string): boolean {
-  return /^\s*EXPLAIN\sPLAN\sFOR/im.test(query);
-}
-
-function wrapInExplainIfNeeded(query: string): string {
-  if (isExplainQuery(query)) return query;
-  return `EXPLAIN PLAN FOR ${query}`;
-}
 
 export interface QueryContextEngine extends QueryWithContext {
   engine: DruidEngine;
@@ -99,6 +90,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       let result: any[];
       switch (engine) {
         case 'sql-native':
+        case 'sql-msq-dart':
           result = await queryDruidSql(payload, cancelToken);
           break;
 
@@ -108,10 +100,6 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
-          break;
-
-        case 'sql-msq-dart':
-          result = await queryDruidSqlDart(payload, cancelToken);
           break;
 
         default:

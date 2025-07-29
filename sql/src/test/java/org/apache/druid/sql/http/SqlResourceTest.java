@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
@@ -63,6 +64,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -259,6 +261,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -276,27 +279,25 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter = new StubServiceEmitter("test", "test");
     final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     final SqlToolbox sqlToolbox = new SqlToolbox(
-        engine,
+        null,
         plannerFactory,
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        defaultQueryConfig,
         lifecycleManager
     );
     sqlStatementFactory = new SqlStatementFactory(null)
     {
       @Override
       public HttpStatement httpStatement(
-          final SqlQuery sqlQuery,
+          final SqlQueryPlus sqlQueryPlus,
           final HttpServletRequest req
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
-            sqlToolbox,
-            sqlQuery,
+            sqlToolbox.withEngine(engine),
+            sqlQueryPlus,
             req,
             validateAndAuthorizeLatchSupplier,
             planLatchSupplier,
@@ -321,13 +322,15 @@ public class SqlResourceTest extends CalciteTestBase
         throw new UnsupportedOperationException();
       }
     };
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate, sqlStatementFactory);
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
   }
@@ -401,6 +404,14 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void test_getEnabled()
+  {
+    Response response = resource.getSupportedEngines(req);
+    Set<EngineInfo> supportedEngines = ((SupportedEnginesResponse) response.getEntity()).getEngines();
+    Assert.assertTrue(supportedEngines.contains(new EngineInfo(NativeSqlEngine.NAME)));
+  }
+
+  @Test
   public void testCountStarWithMissingIntervalsContext() throws Exception
   {
     final SqlQuery sqlQuery = new SqlQuery(
@@ -423,16 +434,32 @@ public class SqlResourceTest extends CalciteTestBase
 
     final MockHttpServletResponse response = postForAsyncResponse(sqlQuery, makeRegularUserReq());
 
-    Assert.assertEquals(
+    // In tests, MockHttpServletResponse stores headers as a MultiMap.
+    // This allows the same header key to be set multiple times (e.g., once at the start and once at the end of query processing).
+    // As a result, we observe duplicate context entries for this test in the expected set.
+    // This differs from typical behavior for other headers, where a new value would overwrite any previously set value.
+    final Object expectedMissingHeaders = ImmutableList.of(
         ImmutableMap.of(
             "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
             "uncoveredIntervalsOverflowed", "true"
         ),
-        JSON_MAPPER.readValue(
-            Iterables.getOnlyElement(response.headers.get("X-Druid-Response-Context")),
-            Map.class
+        ImmutableMap.of(
+            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
+            "uncoveredIntervalsOverflowed", "true"
         )
     );
+    final Object observedMissingHeaders = response.headers.get("X-Druid-Response-Context").stream()
+                                                           .map(s -> {
+                                                             try {
+                                                               return JSON_MAPPER.readValue(s, new TypeReference<Map<String, String>>() {});
+                                                             }
+                                                             catch (JsonProcessingException e) {
+                                                               throw new RuntimeException(e);
+                                                             }
+                                                           })
+                                                           .collect(Collectors.toList());
+
+    Assert.assertEquals(expectedMissingHeaders, observedMissingHeaders);
 
     Object results = JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class);
 
@@ -557,6 +584,46 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testTimestampsInResponseLosAngelesTimeZone_setViaDefaultQueryConfig() throws Exception
+  {
+    // Create a new SqlResource with a DefaultQueryConfig that sets sqlTimeZone
+    final DefaultQueryConfig queryConfigWithTimezone = new DefaultQueryConfig(
+        ImmutableMap.of("sqlTimeZone", "America/Los_Angeles")
+    );
+
+    // We need to create a new SqlResource instance with our custom DefaultQueryConfig
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        queryConfigWithTimezone,
+        DUMMY_DRUID_NODE
+    );
+
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            null,
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", "1999-12-31T16:00:00.000-08:00", "t2", "1999-12-31T00:00:00.000-08:00")
+        ),
+        rows
+    );
+  }
+
+  @Test
   public void testTimestampsInResponseWithNulls() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
@@ -629,6 +696,109 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of("x", "abc", "y", "abc")
         ),
         rows
+    );
+  }
+
+
+  @Test
+  public void testPivotRowTypePreservedInDecoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='DECOUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
+    );
+  }
+
+  @Test
+  public void testPivotRowTypePreservedInCoupledPlanner() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+            new SqlQuery(
+                    "SET plannerStrategy='COUPLED';" +
+                            " WITH t1 AS (\n" +
+                            "  SELECT *\n" +
+                            "  FROM (\n" +
+                            "    VALUES\n" +
+                            "    ('18-19', 'female', 84),\n" +
+                            "    ('18-19', 'male', 217),\n" +
+                            "    ('20-29', 'female', 321),\n" +
+                            "    ('20-29', 'male', 820),\n" +
+                            "    ('30-39', 'female', 63),\n" +
+                            "    ('30-39', 'male', 449),\n" +
+                            "    ('40-49', 'female', 10),\n" +
+                            "    ('40-49', 'male', 83),\n" +
+                            "    ('50-59', 'female', 2),\n" +
+                            "    ('50-59', 'male', 13)\n" +
+                            "  ) AS data(Age, Gender, Visitors)\n" +
+                            "),\n" +
+                            "t2 AS (\n" +
+                            "  SELECT Age, Gender, CAST(SUM(Visitors) AS double) / (SELECT SUM(Visitors) FROM t1) AS Share\n" +
+                            "  FROM t1\n" +
+                            "  GROUP BY 1, 2\n" +
+                            ")\n" +
+                            "SELECT *\n" +
+                            "FROM t2\n" +
+                            "PIVOT (MAX(Share) FOR Gender IN ('female' AS Women, 'male' AS Men));",
+                    ResultFormat.OBJECT,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null
+            )
+    ).rhs;
+
+    Assert.assertEquals(
+            ImmutableList.of(
+                    ImmutableMap.of("Age", "18-19", "Women", 0.040737148399612025, "Men", 0.1052376333656644),
+                    ImmutableMap.of("Age", "20-29", "Women", 0.1556741028128031, "Men", 0.3976721629485936),
+                    ImmutableMap.of("Age", "30-39", "Women", 0.030552861299709022, "Men", 0.2177497575169738),
+                    ImmutableMap.of("Age", "40-49", "Women", 0.004849660523763337, "Men", 0.040252182347235696),
+                    ImmutableMap.of("Age", "50-59", "Women", 0.0009699321047526673, "Men", 0.006304558680892337)
+            ),
+            rows
     );
   }
 
@@ -1351,7 +1521,7 @@ public class SqlResourceTest extends CalciteTestBase
         errorResponse,
         "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
-    checkSqlRequestLog(false);
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1460,15 +1630,10 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
             null
         ),
-        501
+        DruidException.Category.INVALID_INPUT.getExpectedStatus()
     );
 
-    validateLegacyQueryExceptionErrorResponse(
-        exception,
-        QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
-        QueryUnsupportedException.class.getName(),
-        ""
-    );
+    validateInvalidSqlError(exception, "Incorrect syntax near the keyword 'TO'");
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1493,32 +1658,31 @@ public class SqlResourceTest extends CalciteTestBase
 
     // This is checked in the common method that returns the response, but checking it again just protects
     // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    assertStatusAndCommonHeaders(response, DruidException.Category.INVALID_INPUT.getExpectedStatus());
     Assert.assertEquals(queryId, getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(queryId, getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext()
+  public void testErrorResponseReturnNoQueryIdWhenNotSetInContext()
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = postForSyncResponse(
-        new SqlQuery(
-            "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
-            false,
-            false,
-            false,
-            ImmutableMap.of(),
-            null
-        ),
-        req
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT ANSWER TO LIFE",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of(),
+        null
     );
 
-    // This is checked in the common method that returns the response, but checking it again just protects
-    // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    final Response response = resource.doPost(sqlQuery, req);
+
+    // Query ID won't be set, but we can look for other aspects of the response that we expect.
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
+    Assert.assertEquals("application/json", getContentType(response));
   }
 
   @Test
@@ -1527,8 +1691,6 @@ public class SqlResourceTest extends CalciteTestBase
     resource = new SqlResource(
         JSON_MAPPER,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        sqlStatementFactory,
-        lifecycleManager,
         new ServerConfig()
         {
           @Override
@@ -1543,7 +1705,10 @@ public class SqlResourceTest extends CalciteTestBase
             return new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of());
           }
         },
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
 
@@ -1551,7 +1716,7 @@ public class SqlResourceTest extends CalciteTestBase
     failOnExecute(errorMessage);
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
-            "SELECT ANSWER TO LIFE",
+            "SELECT 1",
             ResultFormat.OBJECT,
             false,
             false,
@@ -2167,7 +2332,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     private TestHttpStatement(
         final SqlToolbox lifecycleContext,
-        final SqlQuery sqlQuery,
+        final SqlQueryPlus sqlQueryPlus,
         final HttpServletRequest req,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
@@ -2177,7 +2342,7 @@ public class SqlResourceTest extends CalciteTestBase
         final Consumer<DirectStatement> onAuthorize
     )
     {
-      super(lifecycleContext, sqlQuery, req);
+      super(lifecycleContext, sqlQueryPlus, req);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

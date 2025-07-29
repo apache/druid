@@ -39,6 +39,7 @@ import org.apache.druid.segment.TimeBoundaryInspector;
 import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 /**
  *
@@ -102,7 +103,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         final NonBlockingPool<ByteBuffer> processingBufferPool
     )
     {
-      this.cursorFactory = segment.asCursorFactory();
+      this.cursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
       this.timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
       this.groupingEngine = groupingEngine;
       this.processingBufferPool = processingBufferPool;

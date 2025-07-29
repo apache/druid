@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,6 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TypeStrategies
 {
+  public static final byte IS_NULL_BYTE = (byte) 1;
+  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
+  
   public static final int VALUE_OFFSET = Byte.BYTES;
   public static final int NULLABLE_LONG_SIZE = Byte.BYTES + Long.BYTES;
   public static final int NULLABLE_DOUBLE_SIZE = Byte.BYTES + Double.BYTES;
@@ -91,7 +93,7 @@ public class TypeStrategies
   }
 
   /**
-   * Clear and set the 'null' byte of a nullable value to {@link NullHandling#IS_NULL_BYTE} to a {@link ByteBuffer} at
+   * Clear and set the 'null' byte of a nullable value to {@link TypeStrategies#IS_NULL_BYTE} to a {@link ByteBuffer} at
    * the supplied position. This method does not change the buffer position, limit, or mark, because it does not expect
    * to own the buffer given to it (i.e. buffer aggs)
    *
@@ -104,29 +106,29 @@ public class TypeStrategies
    */
   public static int writeNull(ByteBuffer buffer, int offset)
   {
-    buffer.put(offset, NullHandling.IS_NULL_BYTE);
+    buffer.put(offset, IS_NULL_BYTE);
     return 1;
   }
 
   /**
-   * Checks if a 'nullable' value's null byte is set to {@link NullHandling#IS_NULL_BYTE}. This method will mask the
+   * Checks if a 'nullable' value's null byte is set to {@link TypeStrategies#IS_NULL_BYTE}. This method will mask the
    * value of the null byte to only check if the null bit is set, meaning that the higher bits can be utilized for
    * flags as necessary (e.g. using high bits to indicate if the value has been set or not for aggregators).
    *
    * Note that writing nullable values with the methods of {@link Types} will always clear and set the null byte to
-   * either {@link NullHandling#IS_NULL_BYTE} or {@link NullHandling#IS_NOT_NULL_BYTE}, losing any flag bits.
+   * either {@link TypeStrategies#IS_NULL_BYTE} or {@link TypeStrategies#IS_NOT_NULL_BYTE}, losing any flag bits.
    *
    * layout: | null (byte) | value |
    */
   public static boolean isNullableNull(ByteBuffer buffer, int offset)
   {
     // use & so that callers can use the high bits of the null byte to pack additional information if necessary
-    return (buffer.get(offset) & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE;
+    return (buffer.get(offset) & IS_NULL_BYTE) == IS_NULL_BYTE;
   }
 
   /**
    * Write a non-null long value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
-   * set to {@link NullHandling#IS_NOT_NULL_BYTE}, the long value is written in the next 8 bytes.
+   * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the long value is written in the next 8 bytes.
    *
    * layout: | null (byte) | long |
    *
@@ -137,7 +139,7 @@ public class TypeStrategies
    */
   public static int writeNotNullNullableLong(ByteBuffer buffer, int offset, long value)
   {
-    buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.put(offset++, IS_NOT_NULL_BYTE);
     buffer.putLong(offset, value);
     return NULLABLE_LONG_SIZE;
   }
@@ -158,7 +160,7 @@ public class TypeStrategies
 
   /**
    * Write a non-null double value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
-   * set to {@link NullHandling#IS_NOT_NULL_BYTE}, the double value is written in the next 8 bytes.
+   * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the double value is written in the next 8 bytes.
    *
    * layout: | null (byte) | double |
    *
@@ -169,7 +171,7 @@ public class TypeStrategies
    */
   public static int writeNotNullNullableDouble(ByteBuffer buffer, int offset, double value)
   {
-    buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.put(offset++, IS_NOT_NULL_BYTE);
     buffer.putDouble(offset, value);
     return NULLABLE_DOUBLE_SIZE;
   }
@@ -190,7 +192,7 @@ public class TypeStrategies
 
   /**
    * Write a non-null float value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
-   * set to {@link NullHandling#IS_NOT_NULL_BYTE}, the float value is written in the next 4 bytes.
+   * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the float value is written in the next 4 bytes.
    *
    * layout: | null (byte) | float |
    *
@@ -201,7 +203,7 @@ public class TypeStrategies
    */
   public static int writeNotNullNullableFloat(ByteBuffer buffer, int offset, float value)
   {
-    buffer.put(offset++, NullHandling.IS_NOT_NULL_BYTE);
+    buffer.put(offset++, IS_NOT_NULL_BYTE);
     buffer.putFloat(offset, value);
     return NULLABLE_FLOAT_SIZE;
   }

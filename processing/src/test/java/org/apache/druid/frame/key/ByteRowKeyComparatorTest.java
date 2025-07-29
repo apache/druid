@@ -22,6 +22,7 @@ package org.apache.druid.frame.key;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -394,7 +395,7 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
   )
   {
     return objectss.stream()
-                   .map(objects -> KeyTestUtils.createKey(rowSignature, objects).array())
+                   .map(objects -> KeyTestUtils.createKey(rowSignature, FrameType.latestRowBased(), objects).array())
                    .sorted(ByteRowKeyComparator.create(keyColumns, rowSignature))
                    .map(RowKey::wrap)
                    .collect(Collectors.toList());
@@ -426,7 +427,7 @@ public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
     final List<RowKey> sortedKeys = new ArrayList<>();
 
     for (final Object[] objects : sortedObjectssCopy) {
-      sortedKeys.add(KeyTestUtils.createKey(rowSignature, objects));
+      sortedKeys.add(KeyTestUtils.createKey(rowSignature, FrameType.latestRowBased(), objects));
     }
 
     return sortedKeys;

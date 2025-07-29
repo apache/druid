@@ -154,6 +154,7 @@ export const ExpressionMenu = function ExpressionMenu(props: ExpressionMenuProps
               columns={columns}
               placeholder="SQL expression"
               autoFocus
+              includeAggregates
             />
           </div>
           <FormGroup label="Name">

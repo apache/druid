@@ -21,13 +21,18 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -46,8 +51,24 @@ public class KubernetesPeonClient
 
   private final KubernetesClientApi clientApi;
   private final String namespace;
+  private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
+
+  public KubernetesPeonClient(
+      KubernetesClientApi clientApi,
+      String namespace,
+      String overlordNamespace,
+      boolean debugJobs,
+      ServiceEmitter emitter
+  )
+  {
+    this.clientApi = clientApi;
+    this.namespace = namespace;
+    this.overlordNamespace = overlordNamespace;
+    this.debugJobs = debugJobs;
+    this.emitter = emitter;
+  }
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
@@ -56,10 +77,7 @@ public class KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    this.clientApi = clientApi;
-    this.namespace = namespace;
-    this.debugJobs = debugJobs;
-    this.emitter = emitter;
+    this(clientApi, namespace, "", debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -67,12 +85,22 @@ public class KubernetesPeonClient
     long start = System.currentTimeMillis();
     // launch job
     return clientApi.executeRequest(client -> {
-      client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
       String jobName = job.getMetadata().getName();
-      log.info("Successfully submitted job: %s ... waiting for job to launch", jobName);
+
+      log.info("Submitting job[%s] for task[%s].", jobName, task.getId());
+      client.batch()
+            .v1()
+            .jobs()
+            .inNamespace(namespace)
+            .resource(job)
+            .create();
+      log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
+
       // wait until the pod is running or complete or failed, any of those is fine
       Pod mainPod = getPeonPodWithRetries(jobName);
-      Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
+      Pod result = client.pods()
+                         .inNamespace(namespace)
+                         .withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
                            if (pod == null) {
                              return true;
@@ -81,7 +109,7 @@ public class KubernetesPeonClient
                          }, howLong, timeUnit);
       
       if (result == null) {
-        throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
+        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
@@ -182,11 +210,30 @@ public class KubernetesPeonClient
 
   public List<Job> getPeonJobs()
   {
+    return this.overlordNamespace.isEmpty()
+           ? getPeonJobsWithoutOverlordNamespaceKeyLabels()
+           : getPeonJobsWithOverlordNamespaceKeyLabels();
+  }
+
+  private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels()
+  {
     return clientApi.executeRequest(client -> client.batch()
                                                     .v1()
                                                     .jobs()
                                                     .inNamespace(namespace)
                                                     .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                    .list()
+                                                    .getItems());
+  }
+
+  private List<Job> getPeonJobsWithOverlordNamespaceKeyLabels()
+  {
+    return clientApi.executeRequest(client -> client.batch()
+                                                    .v1()
+                                                    .jobs()
+                                                    .inNamespace(namespace)
+                                                    .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                    .withLabel(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, overlordNamespace)
                                                     .list()
                                                     .getItems());
   }
@@ -258,16 +305,74 @@ public class KubernetesPeonClient
             if (maybePod.isPresent()) {
               return maybePod.get();
             }
-            throw new KubernetesResourceNotFoundException(
-                "K8s pod with label: job-name="
-                + jobName
-                + " not found");
+
+            // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
+            List<Event> events = getPeonEvents(client, jobName);
+
+            if (events.isEmpty()) {
+              throw new KubernetesResourceNotFoundException("K8s pod with label[job-name=%s] not found", jobName);
+            } else {
+              Event latestEvent = events.get(events.size() - 1);
+              throw new KubernetesResourceNotFoundException(
+                  "Job[%s] failed to create pods. Message[%s]", jobName, latestEvent.getMessage());
+            }
           },
-          DruidK8sConstants.IS_TRANSIENT, quietTries, maxTries
+          this::shouldRetryStartingPeonPod, quietTries, maxTries
       );
+    }
+    catch (KubernetesResourceNotFoundException e) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(e, e.getMessage());
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
+    }
+  }
+
+  /**
+   * Determines if this exception, specifically when containing Kubernetes job event messages, permits a retry attempt.
+   * <p>
+   * The method checks the exception message against a predefined list of Kubernetes event messages.
+   * These substrings, found in {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES},
+   * represent Kubernetes event that indicate a retry for starting the Peon Pod would likely be futile.
+   */
+  private boolean shouldRetryStartingPeonPod(Throwable e)
+  {
+    if (!(e instanceof KubernetesResourceNotFoundException)) {
+      return false;
+    }
+
+    String errorMessage = e.getMessage();
+    for (String blacklistedMessage : DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES) {
+      if (errorMessage.contains(blacklistedMessage)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private List<Event> getPeonEvents(KubernetesClient client, String jobName)
+  {
+    ObjectReference objectReference = new ObjectReferenceBuilder()
+        .withApiVersion("batch/v1")
+        .withKind("Job")
+        .withName(jobName)
+        .withNamespace(this.namespace)
+        .build();
+
+    try {
+      return client.v1()
+                   .events()
+                   .inNamespace(this.namespace)
+                   .withInvolvedObject(objectReference)
+                   .list()
+                   .getItems();
+    }
+    catch (KubernetesClientException e) {
+      log.warn("Failed to get events for job[%s]; %s", jobName, e.getMessage());
+      return List.of();
     }
   }
 

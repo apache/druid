@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Aggregate projection schema and row count information to store in {@link Metadata} which itself is stored inside a
@@ -110,6 +111,15 @@ public class AggregateProjectionMetadata
     return Objects.hash(schema, numRows);
   }
 
+  @Override
+  public String toString()
+  {
+    return "AggregateProjectionMetadata{" +
+           "schema=" + schema +
+           ", numRows=" + numRows +
+           '}';
+  }
+
   public static class Schema
   {
     /**
@@ -173,9 +183,15 @@ public class AggregateProjectionMetadata
         @JsonProperty("ordering") List<OrderBy> ordering
     )
     {
+      if (name == null || name.isEmpty()) {
+        throw DruidException.defensive("projection schema name cannot be null or empty");
+      }
       this.name = name;
       if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
-        throw DruidException.defensive("groupingColumns and aggregators must not both be null or empty");
+        throw DruidException.defensive("projection schema[%s] groupingColumns and aggregators must not both be null or empty", name);
+      }
+      if (ordering == null) {
+        throw DruidException.defensive("projection schema[%s] ordering must not be null", name);
       }
       this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
       this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
@@ -294,10 +310,6 @@ public class AggregateProjectionMetadata
       }
       Projections.ProjectionMatchBuilder matchBuilder = new Projections.ProjectionMatchBuilder();
 
-      if (timeColumnName != null) {
-        matchBuilder.remapColumn(timeColumnName, ColumnHolder.TIME_COLUMN_NAME)
-                    .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-      }
       final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
       if (queryGrouping != null) {
         for (String queryColumn : queryGrouping) {
@@ -308,6 +320,10 @@ public class AggregateProjectionMetadata
               physicalColumnChecker
           );
           if (matchBuilder == null) {
+            return null;
+          }
+          // a query grouping column must also be defined as a projection grouping column
+          if (isInvalidGrouping(queryColumn) || isInvalidGrouping(matchBuilder.getRemapValue(queryColumn))) {
             return null;
           }
         }
@@ -334,7 +350,8 @@ public class AggregateProjectionMetadata
             if (combining != null) {
               matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
                           .addReferencedPhysicalColumn(projectionAgg.getName())
-                          .addPreAggregatedAggregator(combining);
+                          .addPreAggregatedAggregator(combining)
+                          .addMatchedQueryColumns(queryAgg.requiredFields());
               foundMatch = true;
               break;
             }
@@ -343,6 +360,40 @@ public class AggregateProjectionMetadata
         }
         if (!allMatch) {
           return null;
+        }
+      }
+      // validate physical and virtual columns have all been accounted for
+      final Set<String> matchedQueryColumns = matchBuilder.getMatchedQueryColumns();
+      if (queryCursorBuildSpec.getPhysicalColumns() != null) {
+        for (String queryColumn : queryCursorBuildSpec.getPhysicalColumns()) {
+          // time is special handled
+          if (ColumnHolder.TIME_COLUMN_NAME.equals(queryColumn)) {
+            continue;
+          }
+          if (!matchedQueryColumns.contains(queryColumn)) {
+            matchBuilder = matchRequiredColumn(
+                matchBuilder,
+                queryColumn,
+                queryCursorBuildSpec.getVirtualColumns(),
+                physicalColumnChecker
+            );
+            if (matchBuilder == null) {
+              return null;
+            }
+          }
+        }
+        for (VirtualColumn vc : queryCursorBuildSpec.getVirtualColumns().getVirtualColumns()) {
+          if (!matchedQueryColumns.contains(vc.getOutputName())) {
+            matchBuilder = matchRequiredColumn(
+                matchBuilder,
+                vc.getOutputName(),
+                queryCursorBuildSpec.getVirtualColumns(),
+                physicalColumnChecker
+            );
+            if (matchBuilder == null) {
+              return null;
+            }
+          }
         }
       }
       return matchBuilder.build(queryCursorBuildSpec);
@@ -380,36 +431,45 @@ public class AggregateProjectionMetadata
         Projections.PhysicalColumnChecker physicalColumnChecker
     )
     {
-      final VirtualColumn buildSpecVirtualColumn = queryVirtualColumns.getVirtualColumn(column);
-      if (buildSpecVirtualColumn != null) {
+      final VirtualColumn queryVirtualColumn = queryVirtualColumns.getVirtualColumn(column);
+      if (queryVirtualColumn != null) {
+        matchBuilder.addMatchedQueryColumn(column)
+                    .addMatchedQueryColumns(queryVirtualColumn.requiredColumns());
         // check to see if we have an equivalent virtual column defined in the projection, if so we can
-        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
+        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(queryVirtualColumn);
         if (projectionEquivalent != null) {
-          if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
-            matchBuilder.remapColumn(
-                buildSpecVirtualColumn.getOutputName(),
-                projectionEquivalent.getOutputName()
-            );
+          final String remapColumnName;
+          if (Objects.equals(projectionEquivalent.getOutputName(), timeColumnName)) {
+            remapColumnName = ColumnHolder.TIME_COLUMN_NAME;
+          } else {
+            remapColumnName = projectionEquivalent.getOutputName();
           }
-          return matchBuilder.addReferencedPhysicalColumn(projectionEquivalent.getOutputName());
+          if (!queryVirtualColumn.getOutputName().equals(remapColumnName)) {
+            matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), remapColumnName);
+          }
+          return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
         }
 
-        matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
-        final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
+        matchBuilder.addReferenceedVirtualColumn(queryVirtualColumn);
+        final List<String> requiredInputs = queryVirtualColumn.requiredColumns();
         if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
           // special handle time granularity. in the future this should be reworked to push this concept into the
           // virtual column and underlying expression itself, but this will do for now
-          final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
+          final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
           if (virtualGranularity != null) {
             if (virtualGranularity.isFinerThan(granularity)) {
               return null;
             }
-            return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
-                               .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            // same granularity, replace virtual column directly by remapping it to the physical column
+            if (granularity.equals(virtualGranularity)) {
+              return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
+                                 .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+            }
+            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           } else {
             // anything else with __time requires none granularity
             if (Granularities.NONE.equals(granularity)) {
-              return matchBuilder;
+              return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
             }
             return null;
           }
@@ -429,10 +489,27 @@ public class AggregateProjectionMetadata
         }
       } else {
         if (physicalColumnChecker.check(name, column)) {
-          return matchBuilder.addReferencedPhysicalColumn(column);
+          return matchBuilder.addMatchedQueryColumn(column)
+                             .addReferencedPhysicalColumn(column);
         }
         return null;
       }
+    }
+
+    /**
+     * Check if a column is either part of {@link #groupingColumns}, or at least is not present in
+     * {@link #virtualColumns}. Naively we would just check that grouping column contains the column in question,
+     * however we can also use a projection when a column is truly missing. {@link #matchRequiredColumn} returns a
+     * match builder if the column is present as either a physical column, or a virtual column, but a virtual column
+     * could also be present for an aggregator input, so we must further check that a column not in the grouping list
+     * is also not a virtual column, the implication being that it is a missing column.
+     */
+    private boolean isInvalidGrouping(@Nullable String columnName)
+    {
+      if (columnName == null) {
+        return false;
+      }
+      return !groupingColumns.contains(columnName) && virtualColumns.exists(columnName);
     }
 
     @Override
@@ -464,6 +541,22 @@ public class AggregateProjectionMetadata
           Arrays.hashCode(aggregators),
           ordering
       );
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Schema{" +
+             "name='" + name + '\'' +
+             ", timeColumnName='" + timeColumnName + '\'' +
+             ", virtualColumns=" + virtualColumns +
+             ", groupingColumns=" + groupingColumns +
+             ", aggregators=" + Arrays.toString(aggregators) +
+             ", ordering=" + ordering +
+             ", timeColumnPosition=" + timeColumnPosition +
+             ", granularity=" + granularity +
+             ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
+             '}';
     }
   }
 }

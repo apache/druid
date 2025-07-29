@@ -19,8 +19,9 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { max, sum } from 'd3-array';
-import React from 'react';
-import type { Filter } from 'react-table';
+import memoize from 'memoize-one';
+import React, { createContext, useContext } from 'react';
+import type { Column, Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -37,8 +38,13 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
+import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -62,6 +68,8 @@ import {
   ResultWithAuxiliaryWork,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+
+import { FillIndicator } from './fill-indicator/fill-indicator';
 
 import './services-view.scss';
 
@@ -115,7 +123,7 @@ export interface ServicesViewProps {
 }
 
 export interface ServicesViewState {
-  servicesState: QueryState<ServiceResultRow[]>;
+  servicesState: QueryState<ServicesWithAuxiliaryInfo>;
   groupServicesBy?: 'service_type' | 'tier';
 
   middleManagerDisableWorkerHost?: string;
@@ -135,9 +143,15 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
-  readonly loadQueueInfo?: LoadQueueInfo;
-  readonly workerInfo?: WorkerInfo;
 }
+
+interface ServicesWithAuxiliaryInfo {
+  readonly services: ServiceResultRow[];
+  readonly loadQueueInfo: Record<string, LoadQueueInfo>;
+  readonly workerInfo: Record<string, WorkerInfo>;
+}
+
+export const LoadQueueInfoContext = createContext<Record<string, LoadQueueInfo>>({});
 
 interface LoadQueueInfo {
   readonly segmentsToDrop: NumberLike;
@@ -202,7 +216,7 @@ interface WorkerInfo {
 }
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private readonly serviceQueryManager: QueryManager<ServicesQuery, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<ServicesQuery, ServicesWithAuxiliaryInfo>;
 
   // Ranking
   //   coordinator => 8
@@ -280,10 +294,10 @@ ORDER BY
           throw new Error(`must have SQL or coordinator access`);
         }
 
-        const auxiliaryQueries: AuxiliaryQueryFn<ServiceResultRow[]>[] = [];
+        const auxiliaryQueries: AuxiliaryQueryFn<ServicesWithAuxiliaryInfo>[] = [];
 
-        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Details')) {
-          auxiliaryQueries.push(async (services, cancelToken) => {
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
             try {
               const loadQueueInfos = (
                 await Api.instance.get<Record<string, LoadQueueInfo>>(
@@ -291,23 +305,23 @@ ORDER BY
                   { cancelToken },
                 )
               ).data;
-              return services.map(s => ({
-                ...s,
-                loadQueueInfo: loadQueueInfos[s.service],
-              }));
+              return {
+                ...servicesWithAuxiliaryInfo,
+                loadQueueInfo: loadQueueInfos,
+              };
             } catch {
               AppToaster.show({
                 icon: IconNames.ERROR,
                 intent: Intent.DANGER,
                 message: 'There was an error getting the load queue info',
               });
-              return services;
+              return servicesWithAuxiliaryInfo;
             }
           });
         }
 
         if (capabilities.hasOverlordAccess()) {
-          auxiliaryQueries.push(async (services, cancelToken) => {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
             try {
               const workerInfos = await getApiArray<WorkerInfo>(
                 '/druid/indexer/v1/workers',
@@ -319,10 +333,10 @@ ORDER BY
                 m => m.worker?.host,
               );
 
-              return services.map(s => ({
-                ...s,
-                workerInfo: workerInfoLookup[s.service],
-              }));
+              return {
+                ...servicesWithAuxiliaryInfo,
+                workerInfo: workerInfoLookup,
+              };
             } catch (e) {
               // Swallow this error because it simply a reflection of a local task runner.
               if (
@@ -334,12 +348,15 @@ ORDER BY
                   message: 'There was an error getting the worker info',
                 });
               }
-              return services;
+              return servicesWithAuxiliaryInfo;
             }
           });
         }
 
-        return new ResultWithAuxiliaryWork(services, auxiliaryQueries);
+        return new ResultWithAuxiliaryWork<ServicesWithAuxiliaryInfo>(
+          { services, loadQueueInfo: {}, workerInfo: {} },
+          auxiliaryQueries,
+        );
       },
       onStateChange: servicesState => {
         this.setState({
@@ -350,333 +367,347 @@ ORDER BY
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
-    const { visibleColumns } = this.state;
-    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+    this.fetchData();
   }
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
   }
 
+  private readonly fetchData = () => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
+  };
+
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      );
+    };
   }
 
   renderServicesTable() {
-    const { capabilities, filters, onFiltersChange } = this.props;
+    const { filters, onFiltersChange } = this.props;
     const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
-    const fillIndicator = (value: number) => {
-      let formattedValue = (value * 100).toFixed(1);
-      if (formattedValue === '0.0' && value > 0) formattedValue = '~' + formattedValue;
-      return (
-        <div className="fill-indicator">
-          <div className="bar" style={{ width: `${value * 100}%` }} />
-          <div className="label">{formattedValue + '%'}</div>
-        </div>
-      );
+    const { services, loadQueueInfo, workerInfo } = servicesState.data || {
+      services: [],
+      loadQueueInfo: {},
+      workerInfo: {},
     };
 
-    const services = servicesState.data || [];
     return (
-      <ReactTable
-        data={services}
-        loading={servicesState.loading}
-        noDataText={
-          servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
-        }
-        filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
-        pivotBy={groupServicesBy ? [groupServicesBy] : []}
-        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
-        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
-        columns={[
-          {
-            Header: 'Service',
-            show: visibleColumns.shown('Service'),
-            accessor: 'service',
-            width: 300,
-            Cell: this.renderFilterableCell('service'),
-            Aggregated: () => '',
-          },
-          {
-            Header: 'Type',
-            show: visibleColumns.shown('Type'),
-            accessor: 'service_type',
-            width: 150,
-            Cell: this.renderFilterableCell('service_type'),
-          },
-          {
-            Header: 'Tier',
-            show: visibleColumns.shown('Tier'),
-            id: 'tier',
-            width: 180,
-            accessor: row => {
-              if (row.tier) return row.tier;
-              return deepGet(row, 'workerInfo.worker.category');
-            },
-            Cell: this.renderFilterableCell('tier'),
-          },
-          {
-            Header: 'Host',
-            show: visibleColumns.shown('Host'),
-            accessor: 'host',
-            width: 200,
-            Cell: this.renderFilterableCell('host'),
-            Aggregated: () => '',
-          },
-          {
-            Header: 'Port',
-            show: visibleColumns.shown('Port'),
-            id: 'port',
-            width: 100,
-            accessor: row => {
-              const ports: string[] = [];
-              if (row.plaintext_port !== -1) {
-                ports.push(`${row.plaintext_port} (plain)`);
-              }
-              if (row.tls_port !== -1) {
-                ports.push(`${row.tls_port} (TLS)`);
-              }
-              return ports.join(', ') || 'No port';
-            },
-            Cell: this.renderFilterableCell('port'),
-            Aggregated: () => '',
-          },
-          {
-            Header: 'Current size',
-            show: visibleColumns.shown('Current size'),
-            id: 'curr_size',
-            width: 100,
-            filterable: false,
-            accessor: 'curr_size',
-            className: 'padded',
-            Aggregated: ({ subRows }) => {
-              const originalRows = subRows.map(r => r._original);
-              if (!originalRows.some(r => r.service_type === 'historical')) return '';
-              const totalCurr = sum(originalRows, s => s.curr_size);
-              return formatBytes(totalCurr);
-            },
-            Cell: ({ value, aggregated, original }) => {
-              if (aggregated || original.service_type !== 'historical') return '';
-              if (value === null) return '';
-              return formatBytes(value);
-            },
-          },
-          {
-            Header: 'Max size',
-            show: visibleColumns.shown('Max size'),
-            id: 'max_size',
-            width: 100,
-            filterable: false,
-            accessor: 'max_size',
-            className: 'padded',
-            Aggregated: ({ subRows }) => {
-              const originalRows = subRows.map(r => r._original);
-              if (!originalRows.some(r => r.service_type === 'historical')) return '';
-              const totalMax = sum(originalRows, s => s.max_size);
-              return formatBytes(totalMax);
-            },
-            Cell: ({ value, aggregated, original }) => {
-              if (aggregated || original.service_type !== 'historical') return '';
-              if (value === null) return '';
-              return formatBytes(value);
-            },
-          },
-          {
-            Header: 'Usage',
-            show: visibleColumns.shown('Usage'),
-            id: 'usage',
-            width: 140,
-            filterable: false,
-            className: 'padded',
-            accessor: row => {
-              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
-                const { workerInfo } = row;
-                if (!workerInfo) return 0;
-                return (
-                  (Number(workerInfo.currCapacityUsed) || 0) / Number(workerInfo.worker?.capacity)
-                );
-              } else {
-                return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
-              }
-            },
-            Aggregated: ({ subRows }) => {
-              const originalRows = subRows.map(r => r._original);
-
-              if (originalRows.some(r => r.service_type === 'historical')) {
-                const totalCurr = sum(originalRows, s => Number(s.curr_size));
-                const totalMax = sum(originalRows, s => Number(s.max_size));
-                return fillIndicator(totalCurr / totalMax);
-              } else if (
-                originalRows.some(
-                  r => r.service_type === 'indexer' || r.service_type === 'middle_manager',
-                )
-              ) {
-                const workerInfos: WorkerInfo[] = filterMap(originalRows, r => r.workerInfo);
-                if (!workerInfos.length) return '';
-
-                const totalCurrCapacityUsed = sum(
-                  workerInfos,
-                  w => Number(w.currCapacityUsed) || 0,
-                );
-                const totalWorkerCapacity = sum(
-                  workerInfos,
-                  s => deepGet(s, 'worker.capacity') || 0,
-                );
-                return `Slots used: ${totalCurrCapacityUsed} of ${totalWorkerCapacity}`;
-              } else {
-                return '';
-              }
-            },
-            Cell: ({ value, aggregated, original }) => {
-              if (aggregated) return '';
-              const { service_type } = original;
-              switch (service_type) {
-                case 'historical':
-                  return fillIndicator(value);
-
-                case 'indexer':
-                case 'middle_manager': {
-                  if (!deepGet(original, 'workerInfo')) return '';
-                  const currCapacityUsed = deepGet(original, 'workerInfo.currCapacityUsed') || 0;
-                  const capacity = deepGet(original, 'workerInfo.worker.capacity');
-                  if (typeof capacity === 'number') {
-                    return `Slots used: ${currCapacityUsed} of ${capacity}`;
-                  } else {
-                    return 'Slots used: -';
-                  }
-                }
-
-                default:
-                  return '';
-              }
-            },
-          },
-          {
-            Header: 'Start time',
-            show: visibleColumns.shown('Start time'),
-            accessor: 'start_time',
-            width: 200,
-            Cell: this.renderFilterableCell('start_time'),
-            Aggregated: () => '',
-          },
-          {
-            Header: 'Detail',
-            show: visibleColumns.shown('Detail'),
-            id: 'queue',
-            width: 400,
-            filterable: false,
-            className: 'padded',
-            accessor: row => {
-              switch (row.service_type) {
-                case 'middle_manager':
-                case 'indexer': {
-                  const { workerInfo } = row;
-                  if (!workerInfo) return '';
-
-                  if (workerInfo.worker.version === '') return 'Disabled';
-
-                  const details: string[] = [];
-                  if (workerInfo.lastCompletedTaskTime) {
-                    details.push(
-                      `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
-                        workerInfo.lastCompletedTaskTime,
-                      )}`,
-                    );
-                  }
-                  if (workerInfo.blacklistedUntil) {
-                    details.push(
-                      `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
-                        workerInfo.blacklistedUntil,
-                      )}`,
-                    );
-                  }
-                  return details.join(' ');
-                }
-
-                case 'coordinator':
-                case 'overlord':
-                  return row.is_leader === 1 ? 'Leader' : '';
-
-                case 'historical': {
-                  const { loadQueueInfo } = row;
-                  if (!loadQueueInfo) return 0;
-                  return (
-                    (Number(loadQueueInfo.segmentsToLoad) || 0) +
-                    (Number(loadQueueInfo.segmentsToDrop) || 0)
-                  );
-                }
-
-                default:
-                  return 0;
-              }
-            },
-            Cell: ({ value, aggregated, original }) => {
-              if (aggregated) return '';
-              const { service_type } = original;
-              switch (service_type) {
-                case 'middle_manager':
-                case 'indexer':
-                case 'coordinator':
-                case 'overlord':
-                  return value;
-
-                case 'historical': {
-                  const { loadQueueInfo } = original;
-                  return loadQueueInfo ? formatLoadQueueInfo(loadQueueInfo) : '';
-                }
-
-                default:
-                  return '';
-              }
-            },
-            Aggregated: ({ subRows }) => {
-              const originalRows = subRows.map(r => r._original);
-              if (!originalRows.some(r => r.service_type === 'historical')) return '';
-              const loadQueueInfos: LoadQueueInfo[] = filterMap(originalRows, r => r.loadQueueInfo);
-              return loadQueueInfos.length
-                ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
-                : '';
-            },
-          },
-          {
-            Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasOverlordAccess(),
-            id: ACTION_COLUMN_ID,
-            width: ACTION_COLUMN_WIDTH,
-            accessor: row => row.workerInfo,
-            filterable: false,
-            sortable: false,
-            Cell: ({ value, aggregated }) => {
-              if (aggregated) return '';
-              if (!value) return null;
-              const { worker } = value;
-              const disabled = worker.version === '';
-              const workerActions = this.getWorkerActions(worker.host, disabled);
-              return <ActionCell actions={workerActions} menuTitle={worker.host} />;
-            },
-            Aggregated: () => '',
-          },
-        ]}
-      />
+      <LoadQueueInfoContext.Provider value={loadQueueInfo}>
+        <ReactTable
+          data={services}
+          loading={servicesState.loading}
+          noDataText={
+            servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+          }
+          filterable
+          filtered={filters}
+          onFilteredChange={onFiltersChange}
+          pivotBy={groupServicesBy ? [groupServicesBy] : []}
+          defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+          pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+          showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
+          columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
+        />
+      </LoadQueueInfoContext.Provider>
     );
   }
+
+  private readonly getTableColumns = memoize(
+    (
+      visibleColumns: LocalStorageBackedVisibility,
+      _filters: Filter[],
+      _onFiltersChange: (filters: Filter[]) => void,
+      workerInfoLookup: Record<string, WorkerInfo>,
+    ): Column<ServiceResultRow>[] => {
+      const { capabilities } = this.props;
+      return [
+        {
+          Header: 'Service',
+          show: visibleColumns.shown('Service'),
+          accessor: 'service',
+          width: 300,
+          Cell: this.renderFilterableCell('service'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Type',
+          show: visibleColumns.shown('Type'),
+          Filter: suggestibleFilterInput([
+            'coordinator',
+            'overlord',
+            'router',
+            'broker',
+            'historical',
+            'indexer',
+            'middle_manager',
+            'peon',
+          ]),
+          accessor: 'service_type',
+          width: 150,
+          Cell: this.renderFilterableCell('service_type'),
+        },
+        {
+          Header: 'Tier',
+          show: visibleColumns.shown('Tier'),
+          id: 'tier',
+          width: 180,
+          accessor: row => {
+            if (row.tier) return row.tier;
+            return workerInfoLookup[row.service]?.worker?.category;
+          },
+          Cell: this.renderFilterableCell('tier'),
+        },
+        {
+          Header: 'Host',
+          show: visibleColumns.shown('Host'),
+          accessor: 'host',
+          width: 200,
+          Cell: this.renderFilterableCell('host'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Port',
+          show: visibleColumns.shown('Port'),
+          id: 'port',
+          width: 100,
+          accessor: row => {
+            const ports: string[] = [];
+            if (row.plaintext_port !== -1) {
+              ports.push(`${row.plaintext_port} (plain)`);
+            }
+            if (row.tls_port !== -1) {
+              ports.push(`${row.tls_port} (TLS)`);
+            }
+            return ports.join(', ') || 'No port';
+          },
+          Cell: this.renderFilterableCell('port'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Current size',
+          show: visibleColumns.shown('Current size'),
+          id: 'curr_size',
+          width: 100,
+          filterable: false,
+          accessor: 'curr_size',
+          className: 'padded',
+          Aggregated: ({ subRows }) => {
+            const originalRows = subRows.map(r => r._original);
+            if (!originalRows.some(r => r.service_type === 'historical')) return '';
+            const totalCurr = sum(originalRows, s => s.curr_size);
+            return formatBytes(totalCurr);
+          },
+          Cell: ({ value, aggregated, original }) => {
+            if (aggregated || original.service_type !== 'historical') return '';
+            if (value === null) return '';
+            return formatBytes(value);
+          },
+        },
+        {
+          Header: 'Max size',
+          show: visibleColumns.shown('Max size'),
+          id: 'max_size',
+          width: 100,
+          filterable: false,
+          accessor: 'max_size',
+          className: 'padded',
+          Aggregated: ({ subRows }) => {
+            const originalRows = subRows.map(r => r._original);
+            if (!originalRows.some(r => r.service_type === 'historical')) return '';
+            const totalMax = sum(originalRows, s => s.max_size);
+            return formatBytes(totalMax);
+          },
+          Cell: ({ value, aggregated, original }) => {
+            if (aggregated || original.service_type !== 'historical') return '';
+            if (value === null) return '';
+            return formatBytes(value);
+          },
+        },
+        {
+          Header: 'Usage',
+          show: visibleColumns.shown('Usage'),
+          id: 'usage',
+          width: 140,
+          filterable: false,
+          className: 'padded',
+          accessor: row => {
+            if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
+              const workerInfo = workerInfoLookup[row.service];
+              if (!workerInfo) return 0;
+              return (
+                (Number(workerInfo.currCapacityUsed) || 0) / Number(workerInfo.worker?.capacity)
+              );
+            } else {
+              return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
+            }
+          },
+          Aggregated: ({ subRows }) => {
+            const originalRows = subRows.map(r => r._original);
+
+            if (originalRows.some(r => r.service_type === 'historical')) {
+              const totalCurr = sum(originalRows, s => Number(s.curr_size));
+              const totalMax = sum(originalRows, s => Number(s.max_size));
+              return <FillIndicator value={totalCurr / totalMax} />;
+            } else if (
+              originalRows.some(
+                r => r.service_type === 'indexer' || r.service_type === 'middle_manager',
+              )
+            ) {
+              const workerInfos: WorkerInfo[] = filterMap(
+                originalRows,
+                r => workerInfoLookup[r.service],
+              );
+
+              if (!workerInfos.length) return '';
+
+              const totalCurrCapacityUsed = sum(workerInfos, w => Number(w.currCapacityUsed) || 0);
+              const totalWorkerCapacity = sum(workerInfos, s => deepGet(s, 'worker.capacity') || 0);
+              return `Slots used: ${totalCurrCapacityUsed} of ${totalWorkerCapacity}`;
+            } else {
+              return '';
+            }
+          },
+          Cell: ({ value, aggregated, original }) => {
+            if (aggregated) return '';
+            const { service_type } = original;
+
+            switch (service_type) {
+              case 'historical':
+                return <FillIndicator value={value} />;
+
+              case 'indexer':
+              case 'middle_manager': {
+                const workerInfo = workerInfoLookup[original.service];
+                if (!workerInfo) return '';
+
+                const currCapacityUsed = workerInfo.currCapacityUsed || 0;
+                const capacity = deepGet(workerInfo, 'worker.capacity');
+                if (typeof capacity === 'number') {
+                  return `Slots used: ${currCapacityUsed} of ${capacity}`;
+                } else {
+                  return 'Slots used: -';
+                }
+              }
+
+              default:
+                return '';
+            }
+          },
+        },
+        {
+          Header: 'Start time',
+          show: visibleColumns.shown('Start time'),
+          accessor: 'start_time',
+          width: 200,
+          Cell: this.renderFilterableCell('start_time'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Detail',
+          show: visibleColumns.shown('Detail'),
+          id: 'queue',
+          width: 400,
+          filterable: false,
+          className: 'padded',
+          accessor: 'service',
+          Cell: ({ original }) => {
+            const { service_type, service, is_leader } = original;
+            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+
+            switch (service_type) {
+              case 'middle_manager':
+              case 'indexer': {
+                const workerInfo = workerInfoLookup[service];
+                if (!workerInfo) return null;
+
+                if (workerInfo.worker.version === '') return 'Disabled';
+
+                const details: string[] = [];
+                if (workerInfo.lastCompletedTaskTime) {
+                  details.push(
+                    `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
+                      workerInfo.lastCompletedTaskTime,
+                    )}`,
+                  );
+                }
+                if (workerInfo.blacklistedUntil) {
+                  details.push(
+                    `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
+                      workerInfo.blacklistedUntil,
+                    )}`,
+                  );
+                }
+                return details.join(' ') || null;
+              }
+
+              case 'coordinator':
+              case 'overlord':
+                return is_leader === 1 ? 'Leader' : '';
+
+              case 'historical': {
+                const loadQueueInfo = loadQueueInfoContext[service];
+                if (!loadQueueInfo) return null;
+
+                return formatLoadQueueInfo(loadQueueInfo);
+              }
+
+              default:
+                return null;
+            }
+          },
+          Aggregated: ({ subRows }) => {
+            const loadQueueInfoContext = useContext(LoadQueueInfoContext);
+            const originalRows = subRows.map(r => r._original);
+            if (!originalRows.some(r => r.service_type === 'historical')) return '';
+
+            const loadQueueInfos: LoadQueueInfo[] = filterMap(
+              originalRows,
+              r => loadQueueInfoContext[r.service],
+            );
+
+            return loadQueueInfos.length
+              ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
+              : '';
+          },
+        },
+        {
+          Header: ACTION_COLUMN_LABEL,
+          show: capabilities.hasOverlordAccess(),
+          id: ACTION_COLUMN_ID,
+          width: ACTION_COLUMN_WIDTH,
+          accessor: 'service',
+          filterable: false,
+          sortable: false,
+          Cell: ({ value, aggregated }) => {
+            if (aggregated) return '';
+
+            const workerInfo = workerInfoLookup[value];
+            if (!workerInfo) return null;
+
+            const { worker } = workerInfo;
+            const disabled = worker.version === '';
+            const workerActions = this.getWorkerActions(worker.host, disabled);
+            return <ActionCell actions={workerActions} menuTitle={worker.host} />;
+          },
+          Aggregated: () => '',
+        },
+      ];
+    },
+  );
 
   private getWorkerActions(workerHost: string, disabled: boolean): BasicAction[] {
     if (disabled) {
@@ -771,7 +802,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />
@@ -823,6 +854,7 @@ ORDER BY
                 visibleColumns: prevState.visibleColumns.toggle(column),
               }))
             }
+            onClose={this.fetchData}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>

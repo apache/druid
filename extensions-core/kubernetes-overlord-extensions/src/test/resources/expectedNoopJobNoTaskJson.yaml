@@ -4,6 +4,7 @@ metadata:
   name: "id-3e70afe5cd823dfc7dd308eea616426b"
   labels:
     druid.k8s.peons: "true"
+    druid.overlord.namespace: "namespace"
     druid.task.id: "id"
     druid.task.type: "noop"
     druid.task.group.id: "id"
@@ -22,6 +23,7 @@ spec:
     metadata:
       labels:
         druid.k8s.peons: "true"
+        druid.overlord.namespace: "namespace"
         druid.task.id: "id"
         druid.task.type: "noop"
         druid.task.group.id: "id"
@@ -40,6 +42,8 @@ spec:
             - "3600"
           env:
             - name: "TASK_DIR"
+              value: "/tmp/id"
+            - name: "druid_indexer_task_baseTaskDir"
               value: "/tmp"
             - name: "TASK_ID"
               value: "id"

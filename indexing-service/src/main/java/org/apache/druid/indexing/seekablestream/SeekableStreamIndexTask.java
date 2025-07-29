@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
@@ -41,7 +42,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -52,9 +52,7 @@ import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -64,7 +62,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     extends AbstractTask implements ChatHandler, PendingSegmentAllocatingTask
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
-  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
 
   protected final DataSchema dataSchema;
   protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
@@ -72,17 +69,16 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final Map<String, Object> context;
   protected final LockGranularity lockGranularityToUse;
   protected final TaskLockType lockTypeToUse;
+  protected final String supervisorId;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
 
-  @MonotonicNonNull
-  protected AuthorizerMapper authorizerMapper;
-
   public SeekableStreamIndexTask(
       final String id,
+      final @Nullable String supervisorId,
       @Nullable final TaskResource taskResource,
       final DataSchema dataSchema,
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
@@ -108,11 +104,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
+    this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
   }
 
-  protected static String getFormattedGroupId(String dataSource, String type)
+  protected static String getFormattedGroupId(String supervisorId, String type)
   {
-    return StringUtils.format("%s_%s", type, dataSource);
+    return StringUtils.format("%s_%s", type, supervisorId);
   }
 
   @Override
@@ -131,6 +128,16 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public DataSchema getDataSchema()
   {
     return dataSchema;
+  }
+
+  /**
+   * Returns the supervisor ID of the supervisor this task belongs to.
+   * If null/unspecified, this defaults to the datasource name.
+   */
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
@@ -200,7 +207,11 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getSegmentLoaderConfig(),
         getId(),
         dataSchema,
-        tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        SeekableStreamAppenderatorConfig.fromTuningConfig(
+            tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+            toolbox.getProcessingConfig()
+        ),
+        toolbox.getConfig(),
         metrics,
         toolbox.getSegmentPusher(),
         toolbox.getJsonMapper(),
@@ -214,9 +225,9 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
+        toolbox.getPolicyEnforcer(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates(),
         toolbox.getCentralizedTableSchemaConfig()
     );
   }

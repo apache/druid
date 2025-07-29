@@ -54,6 +54,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -979,6 +980,12 @@ public class Druids
       this.columnTypes = Arrays.asList(columnType);
       return this;
     }
+
+    public ScanQueryBuilder columns(RowSignature sig)
+    {
+      return columnTypes(sig.getColumnTypes())
+          .columns(sig.getColumnNames());
+    }
   }
 
   public static ScanQueryBuilder newScanQueryBuilder()
@@ -1064,10 +1071,5 @@ public class Druids
   public static DataSourceMetadataQueryBuilder newDataSourceMetadataQueryBuilder()
   {
     return new DataSourceMetadataQueryBuilder();
-  }
-
-  public static FilteredDataSource filteredDataSource(DataSource base, DimFilter filter)
-  {
-    return FilteredDataSource.create(base, filter);
   }
 }

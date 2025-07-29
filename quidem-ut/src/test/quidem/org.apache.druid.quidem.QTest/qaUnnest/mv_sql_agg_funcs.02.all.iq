@@ -1,0 +1,1076 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C5
+#-------------------------------------------------------------------------
+SELECT avg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c;
++-----+
+| col |
++-----+
+| 1.0 |
+| 1.0 |
+| 1.0 |
+| 1.0 |
+| 1.0 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C6
+#-------------------------------------------------------------------------
+SELECT avg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long;
++-----+
+| col |
++-----+
+| 0.0 |
+| 1.0 |
+| 2.0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C7
+#-------------------------------------------------------------------------
+SELECT avg(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING avg(c) IS NULL
+OR cast(avg(c) AS char) IN ('NaN',
+                            '1.0',
+                            '2.0',
+                            '3.0');
++-----+
+| col |
++-----+
+| 1.0 |
+| 2.0 |
+| 3.0 |
+|     |
+|     |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C8
+#-------------------------------------------------------------------------
+SELECT avg(c) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING avg(c) IN (2.0,
+                  1.2);
++-----+
+| col |
++-----+
+| 2.0 |
+| 2.0 |
+| 2.0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C9
+#-------------------------------------------------------------------------
+SELECT avg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c
+HAVING avg(c_long) IN (1);
++-----+
+| col |
++-----+
+| 1.0 |
+| 1.0 |
+| 1.0 |
+| 1.0 |
+| 1.0 |
++-----+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B6_C10
+#-------------------------------------------------------------------------
+SELECT avg(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+GROUP BY c_long
+HAVING avg(c_long) IN (0,
+                       1,
+                       2);
++-----+
+| col |
++-----+
+| 0.0 |
+| 1.0 |
+| 2.0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C5
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C7
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C8
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING approx_count_distinct(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C9
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING approx_count_distinct(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING approx_count_distinct(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C5
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C7
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C8
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING approx_count_distinct_builtin(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C9
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING approx_count_distinct_builtin(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT approx_count_distinct_builtin(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING approx_count_distinct_builtin(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C5
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C7
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING earliest(cast(c AS int)) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C8
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING earliest(cast(c AS int)) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C9
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING earliest(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING earliest(c_long) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c, 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c_long AS char), 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c, 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c, 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C5
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c_long AS char), 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C6
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c_long AS char), 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C7
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c, 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING earliest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C8
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(c, 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING earliest(c) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C9
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c_long AS char), 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c
+   HAVING earliest(cast(c_long AS char), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B18_C10
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest(cast(c_long AS char), 100) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long
+   HAVING earliest(cast(c_long AS char), 100) IS NOT NULL);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(cast(c AS int), time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(c_long, time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2));
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(cast(c AS int), time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c);
++-----+
+| cnt |
++-----+
+|   5 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B19_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT earliest_by(cast(c AS int), time_floor(__time, 'P1D')) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+   GROUP BY c_long);
++-----+
+| cnt |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+

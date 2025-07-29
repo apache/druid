@@ -30,10 +30,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
+import org.apache.druid.indexer.HadoopIndexTask;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -44,7 +45,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
@@ -56,6 +56,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -85,7 +86,6 @@ public class MaterializedViewSupervisorTest
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private String derivativeDatasourceName;
@@ -113,7 +113,8 @@ public class MaterializedViewSupervisorTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentMetadataCache()
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
         ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -122,7 +123,6 @@ public class MaterializedViewSupervisorTest
         CentralizedDatasourceSchemaConfig.create()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
-    sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);
 
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
@@ -141,7 +141,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),
@@ -261,7 +260,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), task1);
     runningVersion.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "test_version1");
@@ -275,7 +275,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), task2);
     runningVersion.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), "test_version2");
@@ -323,7 +324,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),

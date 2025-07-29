@@ -26,10 +26,12 @@ import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class HttpEmitterTest
@@ -56,43 +58,51 @@ public class HttpEmitterTest
       @Override
       protected ListenableFuture<Response> go(Request request)
       {
-        int timeout = request.getRequestTimeout();
-        timeoutUsed.set(timeout);
+        Duration timeout = request.getRequestTimeout();
+        timeoutUsed.set(timeout.toMillis());
         return GoHandlers.immediateFuture(EmitterTest.okResponse());
       }
     });
   }
 
   @Test
-  public void timeoutEmptyQueue() throws IOException, InterruptedException
+  public void timeoutEmptyQueue() throws Exception
   {
-    float timeoutAllowanceFactor = 2.0f;
+    // In HttpPostEmitter, when batch is empty, the timeout is lastBatchFillTimeMillis * config.httpTimeoutAllowanceFactor, and lastBatchFillTimeMillis is at least 1.
+    double timeoutAllowanceFactor = 2.0d;
     final HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
-        .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
+        .setHttpTimeoutAllowanceFactor((float) timeoutAllowanceFactor)
         .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .build();
-    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER)) {
-      long startMs = System.currentTimeMillis();
-      emitter.start();
-      emitter.emitAndReturnBatch(new IntEvent());
-      emitter.flush();
-      long fillTimeMs = System.currentTimeMillis() - startMs;
-      MatcherAssert.assertThat(
-          (double) timeoutUsed.get(),
-          Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5))
-      );
+    Field lastBatchFillTimeMillis = HttpPostEmitter.class.getDeclaredField("lastBatchFillTimeMillis");
+    lastBatchFillTimeMillis.setAccessible(true);
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
 
-      startMs = System.currentTimeMillis();
-      final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
-      Thread.sleep(1000);
-      batch.seal();
-      emitter.flush();
-      fillTimeMs = System.currentTimeMillis() - startMs;
-      MatcherAssert.assertThat(
-          (double) timeoutUsed.get(),
-          Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5))
-      );
-    }
+    long startMs = System.currentTimeMillis();
+    emitter.start();
+    emitter.emitAndReturnBatch(new IntEvent());
+    emitter.flush();
+
+    // sometimes System.currentTimeMillis() - startMs might be 0, so we need to use Math.max(1, System.currentTimeMillis() - startMs)
+    long fillTimeMs = Math.max(1, System.currentTimeMillis() - startMs);
+    Assume.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
+    MatcherAssert.assertThat(
+        (double) timeoutUsed.get(),
+        Matchers.lessThanOrEqualTo(fillTimeMs * timeoutAllowanceFactor)
+    );
+
+    startMs = System.currentTimeMillis();
+    final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
+    Thread.sleep(1000);
+    batch.seal();
+    emitter.flush();
+    // sometimes System.currentTimeMillis() - startMs might be 0, so we need to use Math.max(1, System.currentTimeMillis() - startMs)
+    fillTimeMs = Math.max(1, System.currentTimeMillis() - startMs);
+    Assume.assumeTrue(fillTimeMs >= (Long) lastBatchFillTimeMillis.get(emitter));
+    MatcherAssert.assertThat(
+        (double) timeoutUsed.get(),
+        Matchers.lessThanOrEqualTo(fillTimeMs * timeoutAllowanceFactor)
+    );
   }
 }

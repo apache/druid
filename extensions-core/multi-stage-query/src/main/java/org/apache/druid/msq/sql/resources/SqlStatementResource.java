@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -67,6 +68,7 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -84,6 +86,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.ResultFormat;
@@ -95,7 +98,7 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -114,6 +117,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -122,13 +126,15 @@ public class SqlStatementResource
 {
 
   public static final String RESULT_FORMAT = "__resultFormat";
+  public static final String CONTENT_DISPOSITION_RESPONSE_HEADER = "Content-Disposition";
+  private static final Pattern FILENAME_PATTERN = Pattern.compile("^[^/:*?><\\\\\"|\0\n\r]*$");
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
   private final ObjectMapper jsonMapper;
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
-
+  private final DefaultQueryConfig defaultQueryConfig;
 
   @Inject
   public SqlStatementResource(
@@ -136,7 +142,8 @@ public class SqlStatementResource
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -144,6 +151,7 @@ public class SqlStatementResource
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
   }
 
   /**
@@ -163,17 +171,36 @@ public class SqlStatementResource
 
   @POST
   @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
+  public Response doPost(@Context final HttpServletRequest req,
+                         @Context final HttpContext httpContext)
   {
-    SqlQuery modifiedQuery = createModifiedSqlQuery(sqlQuery);
+    return doPost(SqlQuery.from(httpContext), req);
+  }
 
-    final HttpStatement stmt = msqSqlStatementFactory.httpStatement(modifiedQuery, req);
+  @VisibleForTesting
+  Response doPost(
+      SqlQuery sqlQuery, // Not final: reassigned using createModifiedSqlQuery
+      final HttpServletRequest req
+  )
+  {
+    final SqlQueryPlus sqlQueryPlus;
+    final HttpStatement stmt;
+    final QueryContext queryContext;
+
+    try {
+      sqlQuery = createModifiedSqlQuery(sqlQuery);
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
+      queryContext = QueryContext.of(sqlQueryPlus.context());
+      stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
+    }
+    catch (Exception e) {
+      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+    }
+
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
     boolean isDebug = false;
     try {
-      QueryContext queryContext = QueryContext.of(modifiedQuery.getContext());
       isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
@@ -191,7 +218,7 @@ public class SqlStatementResource
         return buildTaskResponse(sequence, stmt.query().authResult());
       } else {
         // Used for EXPLAIN
-        return buildStandardResponse(sequence, modifiedQuery, sqlQueryId, rowTransformer);
+        return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
       }
     }
     catch (DruidException e) {
@@ -277,6 +304,7 @@ public class SqlStatementResource
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
       @QueryParam("resultFormat") String resultFormat,
+      @QueryParam("filename") String filename,
       @Context final HttpServletRequest req
   )
   {
@@ -309,10 +337,12 @@ public class SqlStatementResource
       );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
+      final String contentDispositionHeaderValue = filename != null ? StringUtils.format("attachment; filename=\"%s\"", validateFilename(filename)) : null;
+
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       if (!signature.isPresent() || MSQControllerTask.isIngestion(msqControllerTask.getQuerySpec())) {
         // Since it's not a select query, nothing to return.
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       // returning results
@@ -321,18 +351,20 @@ public class SqlStatementResource
       results = getResultYielder(queryId, page, msqControllerTask, closer);
       if (!results.isPresent()) {
         // no results, return empty
-        return Response.ok().build();
+        return addContentDisposition(Response.ok(), contentDispositionHeaderValue).build();
       }
 
       ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec());
-      return Response.ok((StreamingOutput) outputStream -> resultPusher(
+      final Response.ResponseBuilder responseBuilder = Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
           new CountingOutputStream(outputStream),
           preferredFormat
-      )).build();
+      ));
+
+      return addContentDisposition(responseBuilder, contentDispositionHeaderValue).build();
     }
 
 
@@ -974,6 +1006,42 @@ public class SqlStatementResource
                               )
                           );
     }
+  }
+
+  private static Response.ResponseBuilder addContentDisposition(
+      Response.ResponseBuilder responseBuilder,
+      String contentDisposition
+  )
+  {
+    if (contentDisposition != null) {
+      responseBuilder.header(CONTENT_DISPOSITION_RESPONSE_HEADER, contentDisposition);
+    }
+    return responseBuilder;
+  }
+
+  /**
+   * Validates that a filename is valid. Filenames are considered to be valid if it is:
+   * <ul>
+   *   <li>Not empty.</li>
+   *   <li>Not longer than 255 characters.</li>
+   *   <li>Does not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.</li>
+   * </ul>
+   */
+  @VisibleForTesting
+  static String validateFilename(@NotNull String filename)
+  {
+    if (filename.isEmpty()) {
+      throw InvalidInput.exception("Filename cannot be empty.");
+    }
+
+    if (filename.length() > 255) {
+      throw InvalidInput.exception("Filename cannot be longer than 255 characters.");
+    }
+
+    if (!FILENAME_PATTERN.matcher(filename).matches()) {
+      throw InvalidInput.exception("Filename contains invalid characters. (/, \\, :, *, ?, \", <, >, |, \0, \n, or \r)");
+    }
+    return filename;
   }
 
   private <T> T contactOverlord(final ListenableFuture<T> future, String queryId)

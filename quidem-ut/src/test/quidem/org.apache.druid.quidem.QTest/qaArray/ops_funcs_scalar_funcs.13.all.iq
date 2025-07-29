@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B26_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_DOUBLE_TO_LONG_BITS' to arguments of type 'BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B26_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_DOUBLE_TO_LONG_BITS' to arguments of type 'BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C1_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_bool) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C2_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C3_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C4_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_int) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C5_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C6_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C7_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_float) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C8_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C9_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C10_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_str) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C11_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C12_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C13_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_null) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C14_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C15_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C16_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_empty) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C17_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C18_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C19_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_mixed) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C20_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C21_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C22_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(a_nested) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B27_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_long_bits_to_double(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE' to arguments of type 'BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C1_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C2_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C3_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C4_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C5_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C6_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C7_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C8_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C9_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C10_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C11_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C12_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C13_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C14_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C15_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C16_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C17_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C18_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C19_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C20_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C21_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C22_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C23_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B28_C24_D1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'BITWISE_OR' to arguments of type 'BITWISE_OR(
+!error
+

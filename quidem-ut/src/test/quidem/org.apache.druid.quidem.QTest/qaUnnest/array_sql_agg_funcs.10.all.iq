@@ -1,0 +1,1075 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B31_C10_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING string_agg(s_int, '|') IS NOT NULL;
++-------+
+| col   |
++-------+
+| 1|1|1 |
+| 2|2|2 |
++-------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C1_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+| 1|2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C1_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+| 1|2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C2_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+| 1|2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C2_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+| 1|2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C3_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C3_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C4_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C4_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C5_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C5_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C6_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C6_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C7_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C7_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C8_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C8_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT c, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING string_agg(DISTINCT c, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C9_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING string_agg(DISTINCT s_int, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C9_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING string_agg(DISTINCT s_int, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1|2 |
+| 1|2 |
+| 1|2 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C10_D1
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING string_agg(DISTINCT s_int, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B32_C10_D2
+#-------------------------------------------------------------------------
+SELECT string_agg(DISTINCT s_int, '|') AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING string_agg(DISTINCT s_int, '|') IS NOT NULL;
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C1_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C2_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   0 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C3_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C4_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C5_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C6_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C6_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C7_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C7_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C8_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C8_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_and(c) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C9_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_and(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C9_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c
+HAVING bit_and(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C10_D1
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_and(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B33_C10_D2
+#-------------------------------------------------------------------------
+SELECT bit_and(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int
+HAVING bit_and(s_int) IS NOT NULL;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C1_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C1_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C2_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C2_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL;
++-----+
+| col |
++-----+
+|   3 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C3_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C3_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C4_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C4_D2
+#-------------------------------------------------------------------------
+SELECT bit_or(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY s_int;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B34_C5_D1
+#-------------------------------------------------------------------------
+SELECT bit_or(s_int) AS col
+FROM test_unnest,
+     unnest(a_int) AS u(c)
+WHERE s_int IN (0,
+                1,
+                2)
+  OR s_int IS NULL
+GROUP BY c;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
++-----+
+(3 rows)
+
+!ok
+

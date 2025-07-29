@@ -80,32 +80,6 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
     }
   }
 
-  @Override
-  public <T> T read(DatasourceSegmentCache.Action<T> action) throws Exception
-  {
-    stateLock.readLock().lock();
-    try {
-      verifyCacheIsNotStopped();
-      return action.perform();
-    }
-    finally {
-      stateLock.readLock().unlock();
-    }
-  }
-
-  @Override
-  public <T> T write(DatasourceSegmentCache.Action<T> action) throws Exception
-  {
-    stateLock.writeLock().lock();
-    try {
-      verifyCacheIsNotStopped();
-      return action.perform();
-    }
-    finally {
-      stateLock.writeLock().unlock();
-    }
-  }
-
   private void verifyCacheIsNotStopped()
   {
     if (isStopped) {

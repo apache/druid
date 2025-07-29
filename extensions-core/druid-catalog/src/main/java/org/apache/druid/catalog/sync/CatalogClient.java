@@ -21,69 +21,69 @@ package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
+import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
-
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Guice-injected client for the catalog update sync process. Requests
- * tables and schemas from the catalog component on the Coordinator.
- *
- * This class handles any recoverable error case. If this class throws
- * an exception, then something went very wrong and there is little the
- * caller can do to make things better. All the caller can do is try
- * again later and hope things improve.
+ * Used by Brokers and Overlord to sync the catalog by querying the Coordinator.
+ * <p>
+ * Modeled after other {@link ServiceClient}-based classes such as {@code CoordinatorClient}.
  */
 public class CatalogClient implements CatalogSource
 {
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
-  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<>() {};
-  // Not strictly needed as a TypeReference, but doing so makes the code simpler.
-  private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<>() {};
+  private static final String TABLE_CREATE_PATH = CatalogResource.ROOT_PATH + "/schemas/{schema}/tables/{name}";
 
-  private final DruidLeaderClient coordClient;
-  private final ObjectMapper smileMapper;
+  private final ServiceClient serviceClient;
+  private final ObjectMapper jsonMapper;
   private final TableDefnRegistry tableRegistry;
 
   @Inject
   public CatalogClient(
-      @Coordinator DruidLeaderClient coordClient,
-      @Smile ObjectMapper smileMapper,
-      @Json ObjectMapper jsonMapper
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Coordinator final ServiceLocator serviceLocator,
+      ObjectMapper jsonMapper
   )
   {
-    this.coordClient = coordClient;
-    this.smileMapper = smileMapper;
+    this.jsonMapper = jsonMapper;
     this.tableRegistry = new TableDefnRegistry(jsonMapper);
+    this.serviceClient = clientFactory.makeClient(
+        NodeRole.COORDINATOR.getJsonName(),
+        serviceLocator,
+        StandardRetryPolicy.builder().maxAttempts(6).build()
+    );
   }
 
   @Override
   public List<TableMetadata> tablesForSchema(String dbSchema)
   {
-    String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{schema}", StringUtils.urlEncode(dbSchema));
-    List<TableMetadata> results = send(url, LIST_OF_TABLE_METADATA_TYPE);
+    List<TableMetadata> results = getResult(fetchTablesForSchema(dbSchema));
 
     // Not found for a list is an empty list.
     return results == null ? Collections.emptyList() : results;
@@ -92,9 +92,7 @@ public class CatalogClient implements CatalogSource
   @Override
   public TableMetadata table(TableId id)
   {
-    String url = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", StringUtils.urlEncode(id.schema()));
-    url = StringUtils.replace(url, "{name}", StringUtils.urlEncode(id.name()));
-    return send(url, TABLE_METADATA_TYPE);
+    return getResult(fetchTableForId(id));
   }
 
   @Override
@@ -105,46 +103,87 @@ public class CatalogClient implements CatalogSource
   }
 
   /**
-   * Send the update. Exceptions are "unexpected": they should never occur in a
-   * working system. If they occur, something is broken.
-   *
-   * @return the requested update, or null if the item was not found in the
-   * catalog.
+   * Creates a table for the given {@link TableId} and {@link TableSpec}.
+   * If a table already exists for this id, it is overwritten.
+   * <p>
+   * This method is currently used only in tests.
    */
-  private <T> T send(String url, TypeReference<T> typeRef)
+  public void createTable(TableId tableId, TableSpec tableSpec)
   {
-    final Request request;
+    getResult(postCreateTable(tableId, tableSpec));
+  }
+
+  /**
+   * Posts the given table spec to the Coordinator.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}}
+   */
+  private ListenableFuture<Void> postCreateTable(TableId tableId, TableSpec tableSpec)
+  {
+    String path = StringUtils.replace(TABLE_CREATE_PATH, "{schema}", StringUtils.urlEncode(tableId.schema()));
+    path = StringUtils.replace(path, "{name}", StringUtils.urlEncode(tableId.name()));
+
+    return serviceClient.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, tableSpec),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  /**
+   * Fetches the metadata of a table from the Coordinator.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/catalog/sync/schemas/{schema}/{name}}
+   */
+  private ListenableFuture<TableMetadata> fetchTableForId(TableId id)
+  {
+    String path = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", StringUtils.urlEncode(id.schema()));
+    path = StringUtils.replace(path, "{name}", StringUtils.urlEncode(id.name()));
+
+    return FutureUtils.transform(
+        serviceClient.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TableMetadata.class)
+    );
+  }
+
+  /**
+   * Fetches the metadata of all tables in a schema from the Coordinator.
+   * <p>
+   * API: {@code GET /druid/coordinator/v1/catalog/sync/schemas/{schema}}
+   */
+  private ListenableFuture<List<TableMetadata>> fetchTablesForSchema(String schemaName)
+  {
+    final String path = StringUtils.replace(
+        SCHEMA_SYNC_PATH,
+        "{schema}",
+        StringUtils.urlEncode(schemaName)
+    );
+
+    return FutureUtils.transform(
+        serviceClient.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  /**
+   * Gets the result from the given future.
+   *
+   * @return null if the API returns a 404 not found status.
+   */
+  @Nullable
+  private <T> T getResult(ListenableFuture<T> future)
+  {
     try {
-      request = coordClient.makeRequest(HttpMethod.GET, url)
-          .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON);
+      return FutureUtils.getUnchecked(future, true);
     }
-    catch (IOException e) {
-      throw new ISE("Cannot create catalog sync request");
-    }
-    final StringFullResponseHolder responseHolder;
-    try {
-      responseHolder = coordClient.go(request);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to send catalog sync");
-    }
-    catch (InterruptedException e1) {
-      // Treat as a not-found: the only way this exception should occur
-      // is during shutdown.
-      return null;
-    }
-    if (responseHolder.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
-      // Not found means the item disappeared. Returning null means "not found".
-      return null;
-    }
-    if (responseHolder.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
-      throw new ISE("Unexpected status from catalog sync: " + responseHolder.getStatus());
-    }
-    try {
-      return smileMapper.readValue(responseHolder.getContent(), typeRef);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Could not decode the JSON response from catalog sync.");
+    catch (Exception e) {
+      return ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(e, () -> null);
     }
   }
 }

@@ -119,7 +119,11 @@ public class SupervisorResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specPost(final SupervisorSpec spec, @Context final HttpServletRequest req)
+  public Response specPost(
+      final SupervisorSpec spec,
+      @QueryParam("skipRestartIfUnmodified") Boolean skipRestartIfUnmodified,
+      @Context final HttpServletRequest req
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
@@ -150,6 +154,9 @@ public class SupervisorResource
 
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
+          }
+          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
+            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
@@ -216,29 +223,28 @@ public class SupervisorResource
                               .withDetailedState(theState.get().toString())
                               .withHealthy(theState.get().isHealthy());
                   }
-                  if (includeFull) {
-                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
-                    if (theSpec.isPresent()) {
-                      theBuilder.withSpec(manager.getSupervisorSpec(x).get());
+                  Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                  if (theSpec.isPresent()) {
+                    final SupervisorSpec spec = theSpec.get();
+                    theBuilder.withDataSource(spec.getDataSources().stream().findFirst().orElse(null));
+                    if (includeFull) {
+                      theBuilder.withSpec(spec);
                     }
-                  }
-                  if (includeSystem) {
-                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
-                    if (theSpec.isPresent()) {
+                    if (includeSystem) {
                       try {
                         // serializing SupervisorSpec here, so that callers of `druid/indexer/v1/supervisor?system`
                         // which are outside the overlord process can deserialize the response and get a json
                         // payload of SupervisorSpec object when they don't have guice bindings for all the fields
                         // for example, broker does not have bindings for all fields of `KafkaSupervisorSpec` or
                         // `KinesisSupervisorSpec`
-                        theBuilder.withSpecString(objectMapper.writeValueAsString(manager.getSupervisorSpec(x).get()));
+                        theBuilder.withSpecString(objectMapper.writeValueAsString(spec));
                       }
                       catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
                       }
-                      theBuilder.withType(manager.getSupervisorSpec(x).get().getType())
-                                .withSource(manager.getSupervisorSpec(x).get().getSource())
-                                .withSuspended(manager.getSupervisorSpec(x).get().isSuspended());
+                      theBuilder.withType(spec.getType())
+                                .withSource(spec.getSource())
+                                .withSuspended(spec.isSuspended());
                     }
                   }
                   return theBuilder.build();

@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
@@ -54,11 +53,5 @@ public class IPv6AddressMatchOperatorConversion extends DirectOperatorConversion
   public IPv6AddressMatchOperatorConversion()
   {
     super(SQL_FUNCTION, IPv6AddressMatchExprMacro.FN_NAME);
-  }
- 
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return SQL_FUNCTION;
   }
 }

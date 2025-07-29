@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 if ($BUILD_DRUID_CLSUTER); then
 

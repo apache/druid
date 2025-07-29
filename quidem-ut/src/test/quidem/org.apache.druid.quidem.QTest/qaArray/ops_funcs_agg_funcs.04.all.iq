@@ -1,0 +1,585 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C11_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C12_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C14_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C15_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C17_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C18_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C19_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C20_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C21_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C22_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C23_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B7_C24_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING approx_count_distinct(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_bool) AS col
+FROM test_array
+WHERE a_bool<>ARRAY[1,
+                    0,
+                    NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_int) AS col
+FROM test_array
+WHERE a_int<>ARRAY[1,
+                   2,
+                   NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C5_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C6_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C7_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C8_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C9_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C10_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C11_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C12_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C14_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C15_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C17_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C18_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C19_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C20_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C21_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C22_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C23_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B8_C24_D1
+#-------------------------------------------------------------------------
+SELECT approx_count_distinct_builtin(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING approx_count_distinct_builtin(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'APPROX_COUNT_DISTINCT_BUILTIN' to arguments of type 'APPROX_COUNT_DISTINCT_BUILTIN(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C2_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[0]' RETURNING boolean array);
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C3_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][0]' RETURNING boolean array)
+HAVING earliest(json_value(a_nested, '$[7][0]' RETURNING boolean array)) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [null, 0, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C5_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[1]' RETURNING bigint array);
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C6_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][1]' RETURNING bigint array)
+HAVING earliest(json_value(a_nested, '$[7][1]' RETURNING bigint array)) IS NOT NULL;
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C8_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C9_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING earliest(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C11_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C12_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING earliest(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [null, S2, S1] |
++----------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C14_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C15_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING earliest(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
++--------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C17_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C18_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING earliest(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
++-----+
+| col |
++-----+
+| []  |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C20_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C21_D1
+#-------------------------------------------------------------------------
+SELECT earliest(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING earliest(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_agg_funcs TEST_ID: A1_B17_C22_D1
+#-------------------------------------------------------------------------
+SELECT earliest(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type
+!error
+

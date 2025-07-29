@@ -60,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchAppr
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.PhysicalSegmentInspector;
@@ -77,7 +78,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
+import org.apache.druid.sql.calcite.SqlVectorizedExpressionResultConsistencyTest;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -338,7 +339,7 @@ public class SqlBaseBenchmark
 
     if (vectorizeContext.shouldVectorize(true)) {
       try {
-        SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+        SqlVectorizedExpressionResultConsistencyTest.testQuery(
             engine,
             plannerFactory,
             getQuery()
@@ -452,6 +453,7 @@ public class SqlBaseBenchmark
         new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
 
@@ -472,9 +474,8 @@ public class SqlBaseBenchmark
       walker.add(
           descriptor,
           new FrameSegment(
-              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.latestRowBased()),
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable
@@ -494,9 +495,8 @@ public class SqlBaseBenchmark
       walker.add(
           descriptor,
           new FrameSegment(
-              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.COLUMNAR),
-              FrameReader.create(cursorFactory.getRowSignature()),
-              descriptor.getId()
+              FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.latestColumnar()),
+              FrameReader.create(cursorFactory.getRowSignature())
           )
           {
             @Nullable

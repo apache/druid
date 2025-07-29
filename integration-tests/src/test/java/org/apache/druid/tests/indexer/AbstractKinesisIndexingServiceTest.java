@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -29,6 +30,7 @@ import org.apache.druid.testing.utils.StreamEventWriter;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
@@ -56,16 +58,24 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
 
   @Override
   Function<String, String> generateStreamIngestionPropsTransform(
+      String supervisorId,
       String streamName,
       String fullDatasourceName,
       String parserType,
       String parserOrInputFormat,
       List<String> dimensions,
+      Map<String, Object> context,
+      LagAggregator lagAggregator,
       IntegrationTestingConfig config
   )
   {
     return spec -> {
       try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SUPERVISOR_ID%%",
+            supervisorId
+        );
         spec = StringUtils.replace(
             spec,
             "%%DATASOURCE%%",
@@ -128,6 +138,16 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
             spec,
             "%%DIMENSIONS%%",
             jsonMapper.writeValueAsString(dimensions)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%CONTEXT%%",
+            jsonMapper.writeValueAsString(context)
+        );
+        spec = StringUtils.replace(
+            spec,
+            "%%LAG_AGGREGATOR%%",
+            jsonMapper.writeValueAsString(lagAggregator)
         );
         return StringUtils.replace(
             spec,

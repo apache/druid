@@ -30,6 +30,7 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import io.netty.util.SuppressForbidden;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.curator.x.discovery.DownInstancePolicy;
@@ -495,6 +496,7 @@ public class DiscoveryModule implements Module
     }
 
     @Override
+    @SuppressForbidden(reason = "org.apache.curator.shaded.com.google.common.base.Predicate")
     public ServiceProviderBuilder<T> additionalFilter(InstanceFilter<T> tInstanceFilter)
     {
       return this;

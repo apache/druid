@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -49,6 +50,7 @@ public class FakeIndexTaskUtil
     try {
       ObjectMapper om = objectMapper.copy();
       om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
+      om.registerSubtypes(new NamedType(ResourceInputSource.class, "classpath"));
       FakeIndexTask indexTask = om.readValue(src, FakeIndexTask.class);
       FakeIngestionSpec spec = indexTask.spec;
       InputSource inputSource = relativizeLocalInputSource(
@@ -75,7 +77,7 @@ public class FakeIndexTaskUtil
     if (localInputSource.getBaseDir().isAbsolute()) {
       return inputSource;
     }
-    File newBaseDir = localInputSource.getBaseDir().toPath().resolve(projectRoot.toPath()).toFile();
+    File newBaseDir = projectRoot.toPath().resolve(localInputSource.getBaseDir().toPath()).toFile();
     return new LocalInputSource(
         newBaseDir,
         localInputSource.getFilter(),

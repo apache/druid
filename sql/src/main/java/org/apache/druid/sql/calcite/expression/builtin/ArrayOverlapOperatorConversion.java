@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.expression.builtin;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -72,7 +73,12 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
 
   public ArrayOverlapOperatorConversion()
   {
-    super(SQL_FUNCTION, EXPR_FUNCTION);
+    this(SQL_FUNCTION, EXPR_FUNCTION);
+  }
+
+  protected ArrayOverlapOperatorConversion(SqlOperator operator, String druidFunctionName)
+  {
+    super(operator, druidFunctionName);
   }
 
   @Nullable
@@ -198,7 +204,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           return new ArrayContainsElementFilter(
               leftExpr.getSimpleExtraction().getColumn(),
               ExpressionType.toColumnType(exprEval.type()),
-              exprEval.valueOrDefault(),
+              exprEval.value(),
               null
           );
         }

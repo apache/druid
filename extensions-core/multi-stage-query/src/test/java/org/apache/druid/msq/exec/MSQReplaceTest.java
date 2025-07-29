@@ -53,6 +53,7 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
@@ -65,6 +66,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -2715,6 +2717,44 @@ public class MSQReplaceTest extends MSQTestBase
     );
   }
 
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceMetrics(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         " REPLACE INTO foo OVERWRITE WHERE __time >= TIMESTAMP '2000-01-02' AND __time < TIMESTAMP '2000-01-03' "
+                         + "SELECT __time, m1 "
+                         + "FROM foo "
+                         + "WHERE __time >= TIMESTAMP '2000-01-02' AND __time < TIMESTAMP '2000-01-03' "
+                         + "PARTITIONED by DAY ")
+                     .setExpectedDataSource("foo")
+                     .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
+                         "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-02T/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{946771200000L, 2.0f}))
+                     .setExpectedMetricDimensions(
+                         Map.of(
+                             DruidMetrics.DATASOURCE, "foo",
+                             DruidMetrics.INTERVAL, List.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             DruidMetrics.DURATION, Duration.standardDays(1),
+                             DruidMetrics.SUCCESS, true
+                             )
+                     )
+                     .verifyResults();
+  }
+
   @Nonnull
   private List<Object[]> expectedFooRows()
   {
@@ -2789,7 +2829,8 @@ public class MSQReplaceTest extends MSQTestBase
         metricsSpec,
         null,
         indexSpec,
-        granularitySpec
+        granularitySpec,
+        null
     );
 
   }

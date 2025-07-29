@@ -1,0 +1,1146 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaSql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(DISTINCT time_floor(__time, 'PT1H')) cnt
+FROM test_sql
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-----+
+| cnt |
++-----+
+|   7 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A1_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       count(*)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (count(*)+1 IS NULL
+     OR (count(*)+1 = count(*)+1
+         AND count(*)+1 IS NOT DISTINCT
+         FROM count(*)+1
+         AND count(*)+1 <> count(*)
+         AND (count(*)+1 IS DISTINCT
+              FROM count(*))
+         AND count(*)+1 > count(*)
+         AND count(*)+1 >= count(*)
+         AND count(*)+1 < count(*)+2
+         AND count(*)+1 <= count(*)+2
+         AND (count(*)+1 <> count(*)) IS TRUE
+         AND (count(*)+1 = count(*)) IS NOT TRUE
+         AND (count(*)+1 = count(*)) IS FALSE
+         AND (count(*)+1 <> count(*)) IS NOT FALSE
+         AND count(*)+1 BETWEEN count(*) AND count(*)+2
+         AND count(*)+1 NOT BETWEEN count(*)+1 AND count(*)
+         AND count(*)+1 like '%'
+         AND count(*)+1 not like '__DOES_NOT_EXIST__%'
+         AND count(*)+1 IN (count(*),
+                            count(*)+1,
+                            count(*)+2)
+         AND count(*)+1 NOT IN (count(*),
+                                count(*)+2))) ;
++-------------------------+-------+
+| t                       | c     |
++-------------------------+-------+
+| 2019-08-25 00:00:00.000 | 13588 |
+| 2019-08-25 01:00:00.000 | 13442 |
+| 2019-08-25 02:00:00.000 | 15006 |
+| 2019-08-25 03:00:00.000 | 12879 |
+| 2019-08-25 04:00:00.000 |  9084 |
+| 2019-08-25 05:00:00.000 |  8057 |
+| 2019-08-25 06:00:00.000 |  6148 |
++-------------------------+-------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A2_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       count(agent)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (count(agent)+1 IS NULL
+     OR (count(agent)+1 = count(agent)+1
+         AND count(agent)+1 IS NOT DISTINCT
+         FROM count(agent)+1
+         AND count(agent)+1 <> count(agent)
+         AND (count(agent)+1 IS DISTINCT
+              FROM count(agent))
+         AND count(agent)+1 > count(agent)
+         AND count(agent)+1 >= count(agent)
+         AND count(agent)+1 < count(agent)+2
+         AND count(agent)+1 <= count(agent)+2
+         AND (count(agent)+1 <> count(agent)) IS TRUE
+         AND (count(agent)+1 = count(agent)) IS NOT TRUE
+         AND (count(agent)+1 = count(agent)) IS FALSE
+         AND (count(agent)+1 <> count(agent)) IS NOT FALSE
+         AND count(agent)+1 BETWEEN count(agent) AND count(agent)+2
+         AND count(agent)+1 NOT BETWEEN count(agent)+1 AND count(agent)
+         AND count(agent)+1 like '%'
+         AND count(agent)+1 not like '__DOES_NOT_EXIST__%'
+         AND count(agent)+1 IN (count(agent),
+                                count(agent)+1,
+                                count(agent)+2)
+         AND count(agent)+1 NOT IN (count(agent),
+                                    count(agent)+2))) ;
++-------------------------+-------+
+| t                       | c     |
++-------------------------+-------+
+| 2019-08-25 00:00:00.000 | 13588 |
+| 2019-08-25 01:00:00.000 | 13442 |
+| 2019-08-25 02:00:00.000 | 15006 |
+| 2019-08-25 03:00:00.000 | 12879 |
+| 2019-08-25 04:00:00.000 |  9084 |
+| 2019-08-25 05:00:00.000 |  8057 |
+| 2019-08-25 06:00:00.000 |  6148 |
++-------------------------+-------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A3_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       count(DISTINCT agent)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (count(DISTINCT agent)+1 IS NULL
+     OR (count(DISTINCT agent)+1 = count(DISTINCT agent)+1
+         AND count(DISTINCT agent)+1 IS NOT DISTINCT
+         FROM count(DISTINCT agent)+1
+         AND count(DISTINCT agent)+1 <> count(DISTINCT agent)
+         AND (count(DISTINCT agent)+1 IS DISTINCT
+              FROM count(DISTINCT agent))
+         AND count(DISTINCT agent)+1 > count(DISTINCT agent)
+         AND count(DISTINCT agent)+1 >= count(DISTINCT agent)
+         AND count(DISTINCT agent)+1 < count(DISTINCT agent)+2
+         AND count(DISTINCT agent)+1 <= count(DISTINCT agent)+2
+         AND (count(DISTINCT agent)+1 <> count(DISTINCT agent)) IS TRUE
+         AND (count(DISTINCT agent)+1 = count(DISTINCT agent)) IS NOT TRUE
+         AND (count(DISTINCT agent)+1 = count(DISTINCT agent)) IS FALSE
+         AND (count(DISTINCT agent)+1 <> count(DISTINCT agent)) IS NOT FALSE
+         AND count(DISTINCT agent)+1 BETWEEN count(DISTINCT agent) AND count(DISTINCT agent)+2
+         AND count(DISTINCT agent)+1 NOT BETWEEN count(DISTINCT agent)+1 AND count(DISTINCT agent)
+         AND count(DISTINCT agent)+1 like '%'
+         AND count(DISTINCT agent)+1 not like '__DOES_NOT_EXIST__%'
+         AND count(DISTINCT agent)+1 IN (count(DISTINCT agent),
+                                         count(DISTINCT agent)+1,
+                                         count(DISTINCT agent)+2)
+         AND count(DISTINCT agent)+1 NOT IN (count(DISTINCT agent),
+                                             count(DISTINCT agent)+2))) ;
++-------------------------+-----+
+| t                       | c   |
++-------------------------+-----+
+| 2019-08-25 00:00:00.000 | 118 |
+| 2019-08-25 01:00:00.000 | 114 |
+| 2019-08-25 02:00:00.000 | 114 |
+| 2019-08-25 03:00:00.000 | 120 |
+| 2019-08-25 04:00:00.000 |  97 |
+| 2019-08-25 05:00:00.000 |  88 |
+| 2019-08-25 06:00:00.000 |  85 |
++-------------------------+-----+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A4_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       sum(session_length)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (sum(session_length)+1 IS NULL
+     OR (sum(session_length)+1 = sum(session_length)+1
+         AND sum(session_length)+1 IS NOT DISTINCT
+         FROM sum(session_length)+1
+         AND sum(session_length)+1 <> sum(session_length)
+         AND (sum(session_length)+1 IS DISTINCT
+              FROM sum(session_length))
+         AND sum(session_length)+1 > sum(session_length)
+         AND sum(session_length)+1 >= sum(session_length)
+         AND sum(session_length)+1 < sum(session_length)+2
+         AND sum(session_length)+1 <= sum(session_length)+2
+         AND (sum(session_length)+1 <> sum(session_length)) IS TRUE
+         AND (sum(session_length)+1 = sum(session_length)) IS NOT TRUE
+         AND (sum(session_length)+1 = sum(session_length)) IS FALSE
+         AND (sum(session_length)+1 <> sum(session_length)) IS NOT FALSE
+         AND sum(session_length)+1 BETWEEN sum(session_length) AND sum(session_length)+2
+         AND sum(session_length)+1 NOT BETWEEN sum(session_length)+1 AND sum(session_length)
+         AND sum(session_length)+1 like '%'
+         AND sum(session_length)+1 not like '__DOES_NOT_EXIST__%'
+         AND sum(session_length)+1 IN (sum(session_length),
+                                       sum(session_length)+1,
+                                       sum(session_length)+2)
+         AND sum(session_length)+1 NOT IN (sum(session_length),
+                                           sum(session_length)+2))) ;
++-------------------------+------------+
+| t                       | c          |
++-------------------------+------------+
+| 2019-08-25 00:00:00.000 | 6285177784 |
+| 2019-08-25 01:00:00.000 | 1983213622 |
+| 2019-08-25 02:00:00.000 | 2149033768 |
+| 2019-08-25 03:00:00.000 | 2764093084 |
+| 2019-08-25 04:00:00.000 | 5181690410 |
+| 2019-08-25 05:00:00.000 | 2010439102 |
+| 2019-08-25 06:00:00.000 | 4873692912 |
++-------------------------+------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A5_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       min(session_length)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (min(session_length)+1 IS NULL
+     OR (min(session_length)+1 = min(session_length)+1
+         AND min(session_length)+1 IS NOT DISTINCT
+         FROM min(session_length)+1
+         AND min(session_length)+1 <> min(session_length)
+         AND (min(session_length)+1 IS DISTINCT
+              FROM min(session_length))
+         AND min(session_length)+1 > min(session_length)
+         AND min(session_length)+1 >= min(session_length)
+         AND min(session_length)+1 < min(session_length)+2
+         AND min(session_length)+1 <= min(session_length)+2
+         AND (min(session_length)+1 <> min(session_length)) IS TRUE
+         AND (min(session_length)+1 = min(session_length)) IS NOT TRUE
+         AND (min(session_length)+1 = min(session_length)) IS FALSE
+         AND (min(session_length)+1 <> min(session_length)) IS NOT FALSE
+         AND min(session_length)+1 BETWEEN min(session_length) AND min(session_length)+2
+         AND min(session_length)+1 NOT BETWEEN min(session_length)+1 AND min(session_length)
+         AND min(session_length)+1 like '%'
+         AND min(session_length)+1 not like '__DOES_NOT_EXIST__%'
+         AND min(session_length)+1 IN (min(session_length),
+                                       min(session_length)+1,
+                                       min(session_length)+2)
+         AND min(session_length)+1 NOT IN (min(session_length),
+                                           min(session_length)+2))) ;
++-------------------------+----+
+| t                       | c  |
++-------------------------+----+
+| 2019-08-25 00:00:00.000 | 16 |
+| 2019-08-25 01:00:00.000 | 21 |
+| 2019-08-25 02:00:00.000 | 15 |
+| 2019-08-25 03:00:00.000 |  5 |
+| 2019-08-25 04:00:00.000 |  4 |
+| 2019-08-25 05:00:00.000 | 16 |
+| 2019-08-25 06:00:00.000 | 16 |
++-------------------------+----+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A6_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       min(time_floor(__time, 'PT1H'))+interval '1' YEAR c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR IS NULL
+     OR (min(time_floor(__time, 'PT1H'))+interval '1' YEAR = min(time_floor(__time, 'PT1H'))+interval '1' YEAR
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR IS NOT DISTINCT
+         FROM min(time_floor(__time, 'PT1H'))+interval '1' YEAR
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR <> min(time_floor(__time, 'PT1H'))
+         AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR IS DISTINCT
+              FROM min(time_floor(__time, 'PT1H')))
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR > min(time_floor(__time, 'PT1H'))
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR >= min(time_floor(__time, 'PT1H'))
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR < min(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR <= min(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR <> min(time_floor(__time, 'PT1H'))) IS TRUE
+         AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR = min(time_floor(__time, 'PT1H'))) IS NOT TRUE
+         AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR = min(time_floor(__time, 'PT1H'))) IS FALSE
+         AND (min(time_floor(__time, 'PT1H'))+interval '1' YEAR <> min(time_floor(__time, 'PT1H'))) IS NOT FALSE
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR BETWEEN min(time_floor(__time, 'PT1H')) AND min(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR NOT BETWEEN min(time_floor(__time, 'PT1H'))+interval '1' YEAR AND min(time_floor(__time, 'PT1H'))
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR like '%'
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR not like '__DOES_NOT_EXIST__%'
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR IN (min(time_floor(__time, 'PT1H')),
+                                                                   min(time_floor(__time, 'PT1H'))+interval '1' YEAR,
+                                                                   min(time_floor(__time, 'PT1H'))+interval '2' YEAR)
+         AND min(time_floor(__time, 'PT1H'))+interval '1' YEAR NOT IN (min(time_floor(__time, 'PT1H')),
+                                                                       min(time_floor(__time, 'PT1H'))+interval '2' YEAR))) ;
++-------------------------+-------------------------+
+| t                       | c                       |
++-------------------------+-------------------------+
+| 2019-08-25 00:00:00.000 | 2020-08-25 00:00:00.000 |
+| 2019-08-25 01:00:00.000 | 2020-08-25 01:00:00.000 |
+| 2019-08-25 02:00:00.000 | 2020-08-25 02:00:00.000 |
+| 2019-08-25 03:00:00.000 | 2020-08-25 03:00:00.000 |
+| 2019-08-25 04:00:00.000 | 2020-08-25 04:00:00.000 |
+| 2019-08-25 05:00:00.000 | 2020-08-25 05:00:00.000 |
+| 2019-08-25 06:00:00.000 | 2020-08-25 06:00:00.000 |
++-------------------------+-------------------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A7_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       max(session_length)+1 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (max(session_length)+1 IS NULL
+     OR (max(session_length)+1 = max(session_length)+1
+         AND max(session_length)+1 IS NOT DISTINCT
+         FROM max(session_length)+1
+         AND max(session_length)+1 <> max(session_length)
+         AND (max(session_length)+1 IS DISTINCT
+              FROM max(session_length))
+         AND max(session_length)+1 > max(session_length)
+         AND max(session_length)+1 >= max(session_length)
+         AND max(session_length)+1 < max(session_length)+2
+         AND max(session_length)+1 <= max(session_length)+2
+         AND (max(session_length)+1 <> max(session_length)) IS TRUE
+         AND (max(session_length)+1 = max(session_length)) IS NOT TRUE
+         AND (max(session_length)+1 = max(session_length)) IS FALSE
+         AND (max(session_length)+1 <> max(session_length)) IS NOT FALSE
+         AND max(session_length)+1 BETWEEN max(session_length) AND max(session_length)+2
+         AND max(session_length)+1 NOT BETWEEN max(session_length)+1 AND max(session_length)
+         AND max(session_length)+1 like '%'
+         AND max(session_length)+1 not like '__DOES_NOT_EXIST__%'
+         AND max(session_length)+1 IN (max(session_length),
+                                       max(session_length)+1,
+                                       max(session_length)+2)
+         AND max(session_length)+1 NOT IN (max(session_length),
+                                           max(session_length)+2))) ;
++-------------------------+-----------+
+| t                       | c         |
++-------------------------+-----------+
+| 2019-08-25 00:00:00.000 | 160820137 |
+| 2019-08-25 01:00:00.000 |  85049999 |
+| 2019-08-25 02:00:00.000 | 133242163 |
+| 2019-08-25 03:00:00.000 | 169648384 |
+| 2019-08-25 04:00:00.000 | 189948466 |
+| 2019-08-25 05:00:00.000 | 740328869 |
+| 2019-08-25 06:00:00.000 | 679295139 |
++-------------------------+-----------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A8_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       max(time_floor(__time, 'PT1H'))+interval '1' YEAR c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR IS NULL
+     OR (max(time_floor(__time, 'PT1H'))+interval '1' YEAR = max(time_floor(__time, 'PT1H'))+interval '1' YEAR
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR IS NOT DISTINCT
+         FROM max(time_floor(__time, 'PT1H'))+interval '1' YEAR
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR <> max(time_floor(__time, 'PT1H'))
+         AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR IS DISTINCT
+              FROM max(time_floor(__time, 'PT1H')))
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR > max(time_floor(__time, 'PT1H'))
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR >= max(time_floor(__time, 'PT1H'))
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR < max(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR <= max(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR <> max(time_floor(__time, 'PT1H'))) IS TRUE
+         AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR = max(time_floor(__time, 'PT1H'))) IS NOT TRUE
+         AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR = max(time_floor(__time, 'PT1H'))) IS FALSE
+         AND (max(time_floor(__time, 'PT1H'))+interval '1' YEAR <> max(time_floor(__time, 'PT1H'))) IS NOT FALSE
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR BETWEEN max(time_floor(__time, 'PT1H')) AND max(time_floor(__time, 'PT1H'))+interval '2' YEAR
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR NOT BETWEEN max(time_floor(__time, 'PT1H'))+interval '1' YEAR AND max(time_floor(__time, 'PT1H'))
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR like '%'
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR not like '__DOES_NOT_EXIST__%'
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR IN (max(time_floor(__time, 'PT1H')),
+                                                                   max(time_floor(__time, 'PT1H'))+interval '1' YEAR,
+                                                                   max(time_floor(__time, 'PT1H'))+interval '2' YEAR)
+         AND max(time_floor(__time, 'PT1H'))+interval '1' YEAR NOT IN (max(time_floor(__time, 'PT1H')),
+                                                                       max(time_floor(__time, 'PT1H'))+interval '2' YEAR))) ;
++-------------------------+-------------------------+
+| t                       | c                       |
++-------------------------+-------------------------+
+| 2019-08-25 00:00:00.000 | 2020-08-25 00:00:00.000 |
+| 2019-08-25 01:00:00.000 | 2020-08-25 01:00:00.000 |
+| 2019-08-25 02:00:00.000 | 2020-08-25 02:00:00.000 |
+| 2019-08-25 03:00:00.000 | 2020-08-25 03:00:00.000 |
+| 2019-08-25 04:00:00.000 | 2020-08-25 04:00:00.000 |
+| 2019-08-25 05:00:00.000 | 2020-08-25 05:00:00.000 |
+| 2019-08-25 06:00:00.000 | 2020-08-25 06:00:00.000 |
++-------------------------+-------------------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A9_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       cast(avg(session_length)+1 AS bigint) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (cast(avg(session_length)+1 AS bigint) IS NULL
+     OR (cast(avg(session_length)+1 AS bigint) = cast(avg(session_length)+1 AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) IS NOT DISTINCT
+         FROM cast(avg(session_length)+1 AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) <> cast(avg(session_length) AS bigint)
+         AND (cast(avg(session_length)+1 AS bigint) IS DISTINCT
+              FROM cast(avg(session_length) AS bigint))
+         AND cast(avg(session_length)+1 AS bigint) > cast(avg(session_length) AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) >= cast(avg(session_length) AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) < cast(avg(session_length)+2 AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) <= cast(avg(session_length)+2 AS bigint)
+         AND (cast(avg(session_length)+1 AS bigint) <> cast(avg(session_length) AS bigint)) IS TRUE
+         AND (cast(avg(session_length)+1 AS bigint) = cast(avg(session_length) AS bigint)) IS NOT TRUE
+         AND (cast(avg(session_length)+1 AS bigint) = cast(avg(session_length) AS bigint)) IS FALSE
+         AND (cast(avg(session_length)+1 AS bigint) <> cast(avg(session_length) AS bigint)) IS NOT FALSE
+         AND cast(avg(session_length)+1 AS bigint) BETWEEN cast(avg(session_length) AS bigint) AND cast(avg(session_length)+2 AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) NOT BETWEEN cast(avg(session_length)+1 AS bigint) AND cast(avg(session_length) AS bigint)
+         AND cast(avg(session_length)+1 AS bigint) like '%'
+         AND cast(avg(session_length)+1 AS bigint) not like '__DOES_NOT_EXIST__%'
+         AND cast(avg(session_length)+1 AS bigint) IN (cast(avg(session_length) AS bigint),
+                                                       cast(avg(session_length)+1 AS bigint),
+                                                       cast(avg(session_length)+2 AS bigint))
+         AND cast(avg(session_length)+1 AS bigint) NOT IN (cast(avg(session_length) AS bigint),
+                                                           cast(avg(session_length)+2 AS bigint)))) ;
++-------------------------+--------+
+| t                       | c      |
++-------------------------+--------+
+| 2019-08-25 00:00:00.000 | 462588 |
+| 2019-08-25 01:00:00.000 | 147550 |
+| 2019-08-25 02:00:00.000 | 143222 |
+| 2019-08-25 03:00:00.000 | 214637 |
+| 2019-08-25 04:00:00.000 | 570483 |
+| 2019-08-25 05:00:00.000 | 249558 |
+| 2019-08-25 06:00:00.000 | 792858 |
++-------------------------+--------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A10_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       approx_count_distinct(client_ip)+1000 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (approx_count_distinct(client_ip)+1000 IS NULL
+     OR (approx_count_distinct(client_ip)+1000 = approx_count_distinct(client_ip)+1000
+         AND approx_count_distinct(client_ip)+1000 IS NOT DISTINCT
+         FROM approx_count_distinct(client_ip)+1000
+         AND approx_count_distinct(client_ip)+1000 <> approx_count_distinct(client_ip)
+         AND (approx_count_distinct(client_ip)+1000 IS DISTINCT
+              FROM approx_count_distinct(client_ip))
+         AND approx_count_distinct(client_ip)+1000 > approx_count_distinct(client_ip)
+         AND approx_count_distinct(client_ip)+1000 >= approx_count_distinct(client_ip)
+         AND approx_count_distinct(client_ip)+1000 < approx_count_distinct(client_ip)+2000
+         AND approx_count_distinct(client_ip)+1000 <= approx_count_distinct(client_ip)+2000
+         AND (approx_count_distinct(client_ip)+1000 <> approx_count_distinct(client_ip)) IS TRUE
+         AND (approx_count_distinct(client_ip)+1000 = approx_count_distinct(client_ip)) IS NOT TRUE
+         AND (approx_count_distinct(client_ip)+1000 = approx_count_distinct(client_ip)) IS FALSE
+         AND (approx_count_distinct(client_ip)+1000 <> approx_count_distinct(client_ip)) IS NOT FALSE
+         AND approx_count_distinct(client_ip)+1000 BETWEEN approx_count_distinct(client_ip) AND approx_count_distinct(client_ip)+2000
+         AND approx_count_distinct(client_ip)+1000 NOT BETWEEN approx_count_distinct(client_ip)+1000 AND approx_count_distinct(client_ip)
+         AND approx_count_distinct(client_ip)+1000 like '%'
+         AND approx_count_distinct(client_ip)+1000 not like '__DOES_NOT_EXIST__%'
+         AND approx_count_distinct(client_ip)+1000 IN (approx_count_distinct(client_ip),
+                                                       approx_count_distinct(client_ip)+1000,
+                                                       approx_count_distinct(client_ip)+2000)
+         AND approx_count_distinct(client_ip)+1000 NOT IN (approx_count_distinct(client_ip),
+                                                           approx_count_distinct(client_ip)+2000))) ;
++-------------------------+------+
+| t                       | c    |
++-------------------------+------+
+| 2019-08-25 00:00:00.000 | 1825 |
+| 2019-08-25 01:00:00.000 | 1870 |
+| 2019-08-25 02:00:00.000 | 1925 |
+| 2019-08-25 03:00:00.000 | 1727 |
+| 2019-08-25 04:00:00.000 | 1539 |
+| 2019-08-25 05:00:00.000 | 1500 |
+| 2019-08-25 06:00:00.000 | 1360 |
++-------------------------+------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A11_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       approx_count_distinct_builtin(client_ip)+1000 c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (approx_count_distinct_builtin(client_ip)+1000 IS NULL
+     OR (approx_count_distinct_builtin(client_ip)+1000 = approx_count_distinct_builtin(client_ip)+1000
+         AND approx_count_distinct_builtin(client_ip)+1000 IS NOT DISTINCT
+         FROM approx_count_distinct_builtin(client_ip)+1000
+         AND approx_count_distinct_builtin(client_ip)+1000 <> approx_count_distinct_builtin(client_ip)
+         AND (approx_count_distinct_builtin(client_ip)+1000 IS DISTINCT
+              FROM approx_count_distinct_builtin(client_ip))
+         AND approx_count_distinct_builtin(client_ip)+1000 > approx_count_distinct_builtin(client_ip)
+         AND approx_count_distinct_builtin(client_ip)+1000 >= approx_count_distinct_builtin(client_ip)
+         AND approx_count_distinct_builtin(client_ip)+1000 < approx_count_distinct_builtin(client_ip)+2000
+         AND approx_count_distinct_builtin(client_ip)+1000 <= approx_count_distinct_builtin(client_ip)+2000
+         AND (approx_count_distinct_builtin(client_ip)+1000 <> approx_count_distinct_builtin(client_ip)) IS TRUE
+         AND (approx_count_distinct_builtin(client_ip)+1000 = approx_count_distinct_builtin(client_ip)) IS NOT TRUE
+         AND (approx_count_distinct_builtin(client_ip)+1000 = approx_count_distinct_builtin(client_ip)) IS FALSE
+         AND (approx_count_distinct_builtin(client_ip)+1000 <> approx_count_distinct_builtin(client_ip)) IS NOT FALSE
+         AND approx_count_distinct_builtin(client_ip)+1000 BETWEEN approx_count_distinct_builtin(client_ip) AND approx_count_distinct_builtin(client_ip)+2000
+         AND approx_count_distinct_builtin(client_ip)+1000 NOT BETWEEN approx_count_distinct_builtin(client_ip)+1000 AND approx_count_distinct_builtin(client_ip)
+         AND approx_count_distinct_builtin(client_ip)+1000 like '%'
+         AND approx_count_distinct_builtin(client_ip)+1000 not like '__DOES_NOT_EXIST__%'
+         AND approx_count_distinct_builtin(client_ip)+1000 IN (approx_count_distinct_builtin(client_ip),
+                                                               approx_count_distinct_builtin(client_ip)+1000,
+                                                               approx_count_distinct_builtin(client_ip)+2000)
+         AND approx_count_distinct_builtin(client_ip)+1000 NOT IN (approx_count_distinct_builtin(client_ip),
+                                                                   approx_count_distinct_builtin(client_ip)+2000))) ;
++-------------------------+------+
+| t                       | c    |
++-------------------------+------+
+| 2019-08-25 00:00:00.000 | 1825 |
+| 2019-08-25 01:00:00.000 | 1870 |
+| 2019-08-25 02:00:00.000 | 1925 |
+| 2019-08-25 03:00:00.000 | 1727 |
+| 2019-08-25 04:00:00.000 | 1539 |
+| 2019-08-25 05:00:00.000 | 1500 |
+| 2019-08-25 06:00:00.000 | 1360 |
++-------------------------+------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A20_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||earliest(client_ip) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||earliest(client_ip) IS NULL
+     OR ('1'||earliest(client_ip) = 1||earliest(client_ip)
+         AND '1'||earliest(client_ip) IS NOT DISTINCT
+         FROM 1||earliest(client_ip)
+         AND '1'||earliest(client_ip) <> '0'||earliest(client_ip)
+         AND ('1'||earliest(client_ip) IS DISTINCT
+              FROM '0'||earliest(client_ip))
+         AND '1'||earliest(client_ip) > '0'||earliest(client_ip)
+         AND '1'||earliest(client_ip) >= '0'||earliest(client_ip)
+         AND '1'||earliest(client_ip) < 2||earliest(client_ip)
+         AND '1'||earliest(client_ip) <= 2||earliest(client_ip)
+         AND ('1'||earliest(client_ip) <> '0'||earliest(client_ip)) IS TRUE
+         AND ('1'||earliest(client_ip) = '0'||earliest(client_ip)) IS NOT TRUE
+         AND ('1'||earliest(client_ip) = '0'||earliest(client_ip)) IS FALSE
+         AND ('1'||earliest(client_ip) <> '0'||earliest(client_ip)) IS NOT FALSE
+         AND '1'||earliest(client_ip) BETWEEN '0'||earliest(client_ip) AND 2||earliest(client_ip)
+         AND '1'||earliest(client_ip) NOT BETWEEN '1'||earliest(client_ip) AND '0'||earliest(client_ip)
+         AND '1'||earliest(client_ip) like '%'
+         AND '1'||earliest(client_ip) not like '__DOES_NOT_EXIST__%'
+         AND '1'||earliest(client_ip) IN ('0'||earliest(client_ip),
+                                          1||earliest(client_ip),
+                                          2||earliest(client_ip))
+         AND '1'||earliest(client_ip) NOT IN ('0'||earliest(client_ip),
+                                              2||earliest(client_ip)))) ;
++-------------------------+-----------------+
+| t                       | c               |
++-------------------------+-----------------+
+| 2019-08-25 00:00:00.000 | 1181.13.41.82   |
+| 2019-08-25 01:00:00.000 | 199.253.86.170  |
+| 2019-08-25 02:00:00.000 | 1190.62.251.216 |
+| 2019-08-25 03:00:00.000 | 1184.96.197.148 |
+| 2019-08-25 04:00:00.000 | 1186.65.90.120  |
+| 2019-08-25 05:00:00.000 | 1174.45.230.138 |
+| 2019-08-25 06:00:00.000 | 149.178.15.174  |
++-------------------------+-----------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A21_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||json_value(earliest(agent), '$.type') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||json_value(earliest(agent), '$.type') IS NULL
+     OR ('1'||json_value(earliest(agent), '$.type') = 1||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') IS NOT DISTINCT
+         FROM 1||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') <> '0'||json_value(earliest(agent), '$.type')
+         AND ('1'||json_value(earliest(agent), '$.type') IS DISTINCT
+              FROM '0'||json_value(earliest(agent), '$.type'))
+         AND '1'||json_value(earliest(agent), '$.type') > '0'||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') >= '0'||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') < 2||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') <= 2||json_value(earliest(agent), '$.type')
+         AND ('1'||json_value(earliest(agent), '$.type') <> '0'||json_value(earliest(agent), '$.type')) IS TRUE
+         AND ('1'||json_value(earliest(agent), '$.type') = '0'||json_value(earliest(agent), '$.type')) IS NOT TRUE
+         AND ('1'||json_value(earliest(agent), '$.type') = '0'||json_value(earliest(agent), '$.type')) IS FALSE
+         AND ('1'||json_value(earliest(agent), '$.type') <> '0'||json_value(earliest(agent), '$.type')) IS NOT FALSE
+         AND '1'||json_value(earliest(agent), '$.type') BETWEEN '0'||json_value(earliest(agent), '$.type') AND 2||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') NOT BETWEEN '1'||json_value(earliest(agent), '$.type') AND '0'||json_value(earliest(agent), '$.type')
+         AND '1'||json_value(earliest(agent), '$.type') like '%'
+         AND '1'||json_value(earliest(agent), '$.type') not like '__DOES_NOT_EXIST__%'
+         AND '1'||json_value(earliest(agent), '$.type') IN ('0'||json_value(earliest(agent), '$.type'),
+                                                            1||json_value(earliest(agent), '$.type'),
+                                                            2||json_value(earliest(agent), '$.type'))
+         AND '1'||json_value(earliest(agent), '$.type') NOT IN ('0'||json_value(earliest(agent), '$.type'),
+                                                                2||json_value(earliest(agent), '$.type')))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 |   |
+| 2019-08-25 01:00:00.000 |   |
+| 2019-08-25 02:00:00.000 |   |
+| 2019-08-25 03:00:00.000 |   |
+| 2019-08-25 04:00:00.000 |   |
+| 2019-08-25 05:00:00.000 |   |
+| 2019-08-25 06:00:00.000 |   |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A22_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') IS NULL
+     OR ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') = 1||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') IS NOT DISTINCT
+         FROM 1||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') IS DISTINCT
+              FROM '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00'))
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') > '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') >= '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') < 2||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') <= 2||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS TRUE
+         AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') = '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS NOT TRUE
+         AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') = '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS FALSE
+         AND ('1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS NOT FALSE
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') BETWEEN '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') AND 2||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') NOT BETWEEN '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') AND '0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') like '%'
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') not like '__DOES_NOT_EXIST__%'
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') IN ('0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                              1||earliest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                              2||earliest_by(client_ip, timestamp '2019-08-25 04:00:00'))
+         AND '1'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00') NOT IN ('0'||earliest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                                  2||earliest_by(client_ip, timestamp '2019-08-25 04:00:00')))) ;
++-------------------------+-----------------+
+| t                       | c               |
++-------------------------+-----------------+
+| 2019-08-25 00:00:00.000 | 1181.13.41.82   |
+| 2019-08-25 01:00:00.000 | 199.253.86.170  |
+| 2019-08-25 02:00:00.000 | 1190.62.251.216 |
+| 2019-08-25 03:00:00.000 | 1184.96.197.148 |
+| 2019-08-25 04:00:00.000 | 1186.65.90.120  |
+| 2019-08-25 05:00:00.000 | 1174.45.230.138 |
+| 2019-08-25 06:00:00.000 | 149.178.15.174  |
++-------------------------+-----------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A23_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS NULL
+     OR ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = 1||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS NOT DISTINCT
+         FROM 1||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS DISTINCT
+              FROM '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'))
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') > '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') >= '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') < 2||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <= 2||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS TRUE
+         AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS NOT TRUE
+         AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS FALSE
+         AND ('1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS NOT FALSE
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') BETWEEN '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') AND 2||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') NOT BETWEEN '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') AND '0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') like '%'
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') not like '__DOES_NOT_EXIST__%'
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IN ('0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                    1||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                    2||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'))
+         AND '1'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') NOT IN ('0'||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                        2||json_value(earliest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 |   |
+| 2019-08-25 01:00:00.000 |   |
+| 2019-08-25 02:00:00.000 |   |
+| 2019-08-25 03:00:00.000 |   |
+| 2019-08-25 04:00:00.000 |   |
+| 2019-08-25 05:00:00.000 |   |
+| 2019-08-25 06:00:00.000 |   |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A24_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||latest(client_ip) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||latest(client_ip) IS NULL
+     OR ('1'||latest(client_ip) = 1||latest(client_ip)
+         AND '1'||latest(client_ip) IS NOT DISTINCT
+         FROM 1||latest(client_ip)
+         AND '1'||latest(client_ip) <> '0'||latest(client_ip)
+         AND ('1'||latest(client_ip) IS DISTINCT
+              FROM '0'||latest(client_ip))
+         AND '1'||latest(client_ip) > '0'||latest(client_ip)
+         AND '1'||latest(client_ip) >= '0'||latest(client_ip)
+         AND '1'||latest(client_ip) < 2||latest(client_ip)
+         AND '1'||latest(client_ip) <= 2||latest(client_ip)
+         AND ('1'||latest(client_ip) <> '0'||latest(client_ip)) IS TRUE
+         AND ('1'||latest(client_ip) = '0'||latest(client_ip)) IS NOT TRUE
+         AND ('1'||latest(client_ip) = '0'||latest(client_ip)) IS FALSE
+         AND ('1'||latest(client_ip) <> '0'||latest(client_ip)) IS NOT FALSE
+         AND '1'||latest(client_ip) BETWEEN '0'||latest(client_ip) AND 2||latest(client_ip)
+         AND '1'||latest(client_ip) NOT BETWEEN '1'||latest(client_ip) AND '0'||latest(client_ip)
+         AND '1'||latest(client_ip) like '%'
+         AND '1'||latest(client_ip) not like '__DOES_NOT_EXIST__%'
+         AND '1'||latest(client_ip) IN ('0'||latest(client_ip),
+                                        1||latest(client_ip),
+                                        2||latest(client_ip))
+         AND '1'||latest(client_ip) NOT IN ('0'||latest(client_ip),
+                                            2||latest(client_ip)))) ;
++-------------------------+-----------------+
+| t                       | c               |
++-------------------------+-----------------+
+| 2019-08-25 00:00:00.000 | 1162.225.88.161 |
+| 2019-08-25 01:00:00.000 | 168.7.15.214    |
+| 2019-08-25 02:00:00.000 | 1108.242.161.77 |
+| 2019-08-25 03:00:00.000 | 147.24.19.134   |
+| 2019-08-25 04:00:00.000 | 124.1.163.114   |
+| 2019-08-25 05:00:00.000 | 1172.58.139.180 |
+| 2019-08-25 06:00:00.000 | 192.35.126.102  |
++-------------------------+-----------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A25_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||json_value(latest(agent), '$.type') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||json_value(latest(agent), '$.type') IS NULL
+     OR ('1'||json_value(latest(agent), '$.type') = 1||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') IS NOT DISTINCT
+         FROM 1||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') <> '0'||json_value(latest(agent), '$.type')
+         AND ('1'||json_value(latest(agent), '$.type') IS DISTINCT
+              FROM '0'||json_value(latest(agent), '$.type'))
+         AND '1'||json_value(latest(agent), '$.type') > '0'||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') >= '0'||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') < 2||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') <= 2||json_value(latest(agent), '$.type')
+         AND ('1'||json_value(latest(agent), '$.type') <> '0'||json_value(latest(agent), '$.type')) IS TRUE
+         AND ('1'||json_value(latest(agent), '$.type') = '0'||json_value(latest(agent), '$.type')) IS NOT TRUE
+         AND ('1'||json_value(latest(agent), '$.type') = '0'||json_value(latest(agent), '$.type')) IS FALSE
+         AND ('1'||json_value(latest(agent), '$.type') <> '0'||json_value(latest(agent), '$.type')) IS NOT FALSE
+         AND '1'||json_value(latest(agent), '$.type') BETWEEN '0'||json_value(latest(agent), '$.type') AND 2||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') NOT BETWEEN '1'||json_value(latest(agent), '$.type') AND '0'||json_value(latest(agent), '$.type')
+         AND '1'||json_value(latest(agent), '$.type') like '%'
+         AND '1'||json_value(latest(agent), '$.type') not like '__DOES_NOT_EXIST__%'
+         AND '1'||json_value(latest(agent), '$.type') IN ('0'||json_value(latest(agent), '$.type'),
+                                                          1||json_value(latest(agent), '$.type'),
+                                                          2||json_value(latest(agent), '$.type'))
+         AND '1'||json_value(latest(agent), '$.type') NOT IN ('0'||json_value(latest(agent), '$.type'),
+                                                              2||json_value(latest(agent), '$.type')))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 |   |
+| 2019-08-25 01:00:00.000 |   |
+| 2019-08-25 02:00:00.000 |   |
+| 2019-08-25 03:00:00.000 |   |
+| 2019-08-25 04:00:00.000 |   |
+| 2019-08-25 05:00:00.000 |   |
+| 2019-08-25 06:00:00.000 |   |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A26_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') IS NULL
+     OR ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') = 1||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') IS NOT DISTINCT
+         FROM 1||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') IS DISTINCT
+              FROM '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00'))
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') > '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') >= '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') < 2||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') <= 2||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS TRUE
+         AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') = '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS NOT TRUE
+         AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') = '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS FALSE
+         AND ('1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') <> '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')) IS NOT FALSE
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') BETWEEN '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') AND 2||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') NOT BETWEEN '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') AND '0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00')
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') like '%'
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') not like '__DOES_NOT_EXIST__%'
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') IN ('0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                            1||latest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                            2||latest_by(client_ip, timestamp '2019-08-25 04:00:00'))
+         AND '1'||latest_by(client_ip, timestamp '2019-08-25 04:00:00') NOT IN ('0'||latest_by(client_ip, timestamp '2019-08-25 04:00:00'),
+                                                                                2||latest_by(client_ip, timestamp '2019-08-25 04:00:00')))) ;
++-------------------------+-----------------+
+| t                       | c               |
++-------------------------+-----------------+
+| 2019-08-25 00:00:00.000 | 1162.225.88.161 |
+| 2019-08-25 01:00:00.000 | 168.7.15.214    |
+| 2019-08-25 02:00:00.000 | 1108.242.161.77 |
+| 2019-08-25 03:00:00.000 | 147.24.19.134   |
+| 2019-08-25 04:00:00.000 | 124.1.163.114   |
+| 2019-08-25 05:00:00.000 | 1172.58.139.180 |
+| 2019-08-25 06:00:00.000 | 192.35.126.102  |
++-------------------------+-----------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A27_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS NULL
+     OR ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = 1||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS NOT DISTINCT
+         FROM 1||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IS DISTINCT
+              FROM '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'))
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') > '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') >= '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') < 2||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <= 2||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS TRUE
+         AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS NOT TRUE
+         AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') = '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS FALSE
+         AND ('1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') <> '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')) IS NOT FALSE
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') BETWEEN '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') AND 2||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') NOT BETWEEN '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') AND '0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') like '%'
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') not like '__DOES_NOT_EXIST__%'
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') IN ('0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                  1||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                  2||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'))
+         AND '1'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type') NOT IN ('0'||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type'),
+                                                                                                      2||json_value(latest_by(client_ip, timestamp '2019-08-25 04:00:00'), '$.type')))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 |   |
+| 2019-08-25 01:00:00.000 |   |
+| 2019-08-25 02:00:00.000 |   |
+| 2019-08-25 03:00:00.000 |   |
+| 2019-08-25 04:00:00.000 |   |
+| 2019-08-25 05:00:00.000 |   |
+| 2019-08-25 06:00:00.000 |   |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A28_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||any_value(client_ip) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||any_value(client_ip) IS NULL
+     OR ('1'||any_value(client_ip) = 1||any_value(client_ip)
+         AND '1'||any_value(client_ip) IS NOT DISTINCT
+         FROM 1||any_value(client_ip)
+         AND '1'||any_value(client_ip) <> '0'||any_value(client_ip)
+         AND ('1'||any_value(client_ip) IS DISTINCT
+              FROM '0'||any_value(client_ip))
+         AND '1'||any_value(client_ip) > '0'||any_value(client_ip)
+         AND '1'||any_value(client_ip) >= '0'||any_value(client_ip)
+         AND '1'||any_value(client_ip) < 2||any_value(client_ip)
+         AND '1'||any_value(client_ip) <= 2||any_value(client_ip)
+         AND ('1'||any_value(client_ip) <> '0'||any_value(client_ip)) IS TRUE
+         AND ('1'||any_value(client_ip) = '0'||any_value(client_ip)) IS NOT TRUE
+         AND ('1'||any_value(client_ip) = '0'||any_value(client_ip)) IS FALSE
+         AND ('1'||any_value(client_ip) <> '0'||any_value(client_ip)) IS NOT FALSE
+         AND '1'||any_value(client_ip) BETWEEN '0'||any_value(client_ip) AND 2||any_value(client_ip)
+         AND '1'||any_value(client_ip) NOT BETWEEN '1'||any_value(client_ip) AND '0'||any_value(client_ip)
+         AND '1'||any_value(client_ip) like '%'
+         AND '1'||any_value(client_ip) not like '__DOES_NOT_EXIST__%'
+         AND '1'||any_value(client_ip) IN ('0'||any_value(client_ip),
+                                           1||any_value(client_ip),
+                                           2||any_value(client_ip))
+         AND '1'||any_value(client_ip) NOT IN ('0'||any_value(client_ip),
+                                               2||any_value(client_ip)))) ;
++-------------------------+-----------------+
+| t                       | c               |
++-------------------------+-----------------+
+| 2019-08-25 00:00:00.000 | 1181.13.41.82   |
+| 2019-08-25 01:00:00.000 | 199.253.86.170  |
+| 2019-08-25 02:00:00.000 | 1190.62.251.216 |
+| 2019-08-25 03:00:00.000 | 1184.96.197.148 |
+| 2019-08-25 04:00:00.000 | 1186.65.90.120  |
+| 2019-08-25 05:00:00.000 | 1174.45.230.138 |
+| 2019-08-25 06:00:00.000 | 149.178.15.174  |
++-------------------------+-----------------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A29_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       '1'||json_value(any_value(agent), '$.type') c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND ('1'||json_value(any_value(agent), '$.type') IS NULL
+     OR ('1'||json_value(any_value(agent), '$.type') = 1||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') IS NOT DISTINCT
+         FROM 1||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') <> '0'||json_value(any_value(agent), '$.type')
+         AND ('1'||json_value(any_value(agent), '$.type') IS DISTINCT
+              FROM '0'||json_value(any_value(agent), '$.type'))
+         AND '1'||json_value(any_value(agent), '$.type') > '0'||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') >= '0'||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') < 2||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') <= 2||json_value(any_value(agent), '$.type')
+         AND ('1'||json_value(any_value(agent), '$.type') <> '0'||json_value(any_value(agent), '$.type')) IS TRUE
+         AND ('1'||json_value(any_value(agent), '$.type') = '0'||json_value(any_value(agent), '$.type')) IS NOT TRUE
+         AND ('1'||json_value(any_value(agent), '$.type') = '0'||json_value(any_value(agent), '$.type')) IS FALSE
+         AND ('1'||json_value(any_value(agent), '$.type') <> '0'||json_value(any_value(agent), '$.type')) IS NOT FALSE
+         AND '1'||json_value(any_value(agent), '$.type') BETWEEN '0'||json_value(any_value(agent), '$.type') AND 2||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') NOT BETWEEN '1'||json_value(any_value(agent), '$.type') AND '0'||json_value(any_value(agent), '$.type')
+         AND '1'||json_value(any_value(agent), '$.type') like '%'
+         AND '1'||json_value(any_value(agent), '$.type') not like '__DOES_NOT_EXIST__%'
+         AND '1'||json_value(any_value(agent), '$.type') IN ('0'||json_value(any_value(agent), '$.type'),
+                                                             1||json_value(any_value(agent), '$.type'),
+                                                             2||json_value(any_value(agent), '$.type'))
+         AND '1'||json_value(any_value(agent), '$.type') NOT IN ('0'||json_value(any_value(agent), '$.type'),
+                                                                 2||json_value(any_value(agent), '$.type')))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 |   |
+| 2019-08-25 01:00:00.000 |   |
+| 2019-08-25 02:00:00.000 |   |
+| 2019-08-25 03:00:00.000 |   |
+| 2019-08-25 04:00:00.000 |   |
+| 2019-08-25 05:00:00.000 |   |
+| 2019-08-25 06:00:00.000 |   |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A39_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       bit_and(session_length) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (bit_and(session_length) IS NULL
+     OR (bit_and(session_length) = bit_and(session_length)+0
+         AND bit_and(session_length) IS NOT DISTINCT
+         FROM bit_and(session_length)+0
+         AND bit_and(session_length) <> bit_and(session_length)-1
+         AND (bit_and(session_length) IS DISTINCT
+              FROM bit_and(session_length)-1)
+         AND bit_and(session_length) > bit_and(session_length)-1
+         AND bit_and(session_length) >= bit_and(session_length)-1
+         AND bit_and(session_length) < bit_and(session_length)+1
+         AND bit_and(session_length) <= bit_and(session_length)+1
+         AND (bit_and(session_length) <> bit_and(session_length)-1) IS TRUE
+         AND (bit_and(session_length) = bit_and(session_length)-1) IS NOT TRUE
+         AND (bit_and(session_length) = bit_and(session_length)-1) IS FALSE
+         AND (bit_and(session_length) <> bit_and(session_length)-1) IS NOT FALSE
+         AND bit_and(session_length) BETWEEN bit_and(session_length)-1 AND bit_and(session_length)+1
+         AND bit_and(session_length) NOT BETWEEN bit_and(session_length) AND bit_and(session_length)-1
+         AND bit_and(session_length) like '%'
+         AND bit_and(session_length) not like '__DOES_NOT_EXIST__%'
+         AND bit_and(session_length) IN (bit_and(session_length)-1,
+                                                                bit_and(session_length)+0,
+                                                                bit_and(session_length)+1)
+         AND bit_and(session_length) NOT IN (bit_and(session_length)-1,
+                                                                    bit_and(session_length)+1))) ;
++-------------------------+---+
+| t                       | c |
++-------------------------+---+
+| 2019-08-25 00:00:00.000 | 0 |
+| 2019-08-25 01:00:00.000 | 0 |
+| 2019-08-25 02:00:00.000 | 0 |
+| 2019-08-25 03:00:00.000 | 0 |
+| 2019-08-25 04:00:00.000 | 0 |
+| 2019-08-25 05:00:00.000 | 0 |
+| 2019-08-25 06:00:00.000 | 0 |
++-------------------------+---+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A40_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       bit_or(session_length) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (bit_or(session_length) IS NULL
+     OR (bit_or(session_length) = bit_or(session_length)+0
+         AND bit_or(session_length) IS NOT DISTINCT
+         FROM bit_or(session_length)+0
+         AND bit_or(session_length) <> bit_or(session_length)-1
+         AND (bit_or(session_length) IS DISTINCT
+              FROM bit_or(session_length)-1)
+         AND bit_or(session_length) > bit_or(session_length)-1
+         AND bit_or(session_length) >= bit_or(session_length)-1
+         AND bit_or(session_length) < bit_or(session_length)+1
+         AND bit_or(session_length) <= bit_or(session_length)+1
+         AND (bit_or(session_length) <> bit_or(session_length)-1) IS TRUE
+         AND (bit_or(session_length) = bit_or(session_length)-1) IS NOT TRUE
+         AND (bit_or(session_length) = bit_or(session_length)-1) IS FALSE
+         AND (bit_or(session_length) <> bit_or(session_length)-1) IS NOT FALSE
+         AND bit_or(session_length) BETWEEN bit_or(session_length)-1 AND bit_or(session_length)+1
+         AND bit_or(session_length) NOT BETWEEN bit_or(session_length) AND bit_or(session_length)-1
+         AND bit_or(session_length) like '%'
+         AND bit_or(session_length) not like '__DOES_NOT_EXIST__%'
+         AND bit_or(session_length) IN (bit_or(session_length)-1,
+                                                              bit_or(session_length)+0,
+                                                              bit_or(session_length)+1)
+         AND bit_or(session_length) NOT IN (bit_or(session_length)-1,
+                                                                  bit_or(session_length)+1))) ;
++-------------------------+-----------+
+| t                       | c         |
++-------------------------+-----------+
+| 2019-08-25 00:00:00.000 | 268435455 |
+| 2019-08-25 01:00:00.000 | 100663295 |
+| 2019-08-25 02:00:00.000 | 134217727 |
+| 2019-08-25 03:00:00.000 | 201326591 |
+| 2019-08-25 04:00:00.000 | 201326591 |
+| 2019-08-25 05:00:00.000 | 805306367 |
+| 2019-08-25 06:00:00.000 | 704643071 |
++-------------------------+-----------+
+(7 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: aggr_general TEST_ID: A41_q_grpby
+#-------------------------------------------------------------------------
+SELECT time_floor(__time, 'PT1H') t,
+       bit_xor(session_length) c
+FROM test_sql
+GROUP BY 1
+HAVING time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+AND (bit_xor(session_length) IS NULL
+     OR (bit_xor(session_length) = bit_xor(session_length)+0
+         AND bit_xor(session_length) IS NOT DISTINCT
+         FROM bit_xor(session_length)+0
+         AND bit_xor(session_length) <> bit_xor(session_length)-1
+         AND (bit_xor(session_length) IS DISTINCT
+              FROM bit_xor(session_length)-1)
+         AND bit_xor(session_length) > bit_xor(session_length)-1
+         AND bit_xor(session_length) >= bit_xor(session_length)-1
+         AND bit_xor(session_length) < bit_xor(session_length)+1
+         AND bit_xor(session_length) <= bit_xor(session_length)+1
+         AND (bit_xor(session_length) <> bit_xor(session_length)-1) IS TRUE
+         AND (bit_xor(session_length) = bit_xor(session_length)-1) IS NOT TRUE
+         AND (bit_xor(session_length) = bit_xor(session_length)-1) IS FALSE
+         AND (bit_xor(session_length) <> bit_xor(session_length)-1) IS NOT FALSE
+         AND bit_xor(session_length) BETWEEN bit_xor(session_length)-1 AND bit_xor(session_length)+1
+         AND bit_xor(session_length) NOT BETWEEN bit_xor(session_length) AND bit_xor(session_length)-1
+         AND bit_xor(session_length) like '%'
+         AND bit_xor(session_length) not like '__DOES_NOT_EXIST__%'
+         AND bit_xor(session_length) IN (bit_xor(session_length)-1,
+                                                                bit_xor(session_length)+0,
+                                                                bit_xor(session_length)+1)
+         AND bit_xor(session_length) NOT IN (bit_xor(session_length)-1,
+                                                                    bit_xor(session_length)+1))) ;
++-------------------------+-----------+
+| t                       | c         |
++-------------------------+-----------+
+| 2019-08-25 00:00:00.000 | 234315927 |
+| 2019-08-25 01:00:00.000 |  95944477 |
+| 2019-08-25 02:00:00.000 | 111843809 |
+| 2019-08-25 03:00:00.000 | 177632213 |
+| 2019-08-25 04:00:00.000 | 163411073 |
+| 2019-08-25 05:00:00.000 | 775476257 |
+| 2019-08-25 06:00:00.000 | 695627807 |
++-------------------------+-----------+
+(7 rows)
+
+!ok
+

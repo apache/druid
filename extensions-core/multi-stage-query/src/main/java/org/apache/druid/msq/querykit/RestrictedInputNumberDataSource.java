@@ -23,19 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.DataSource;
+import org.apache.druid.query.LeafDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
@@ -48,7 +44,7 @@ import java.util.function.Function;
  * join tree.
  */
 @JsonTypeName("restrictedInputNumber")
-public class RestrictedInputNumberDataSource implements DataSource
+public class RestrictedInputNumberDataSource extends LeafDataSource
 {
   private final int inputNumber;
   private final Policy policy;
@@ -82,22 +78,6 @@ public class RestrictedInputNumberDataSource implements DataSource
   }
 
   @Override
-  public List<DataSource> getChildren()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DataSource withChildren(final List<DataSource> children)
-  {
-    if (!children.isEmpty()) {
-      throw new IAE("Cannot accept children");
-    }
-
-    return this;
-  }
-
-  @Override
   public boolean isCacheable(boolean isBroker)
   {
     return false;
@@ -110,33 +90,21 @@ public class RestrictedInputNumberDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
     return true;
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return baseSegment -> new RestrictedSegment(baseSegment, policy);
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
+    return SegmentMapFunction.IDENTITY.thenMap(segment -> new RestrictedSegment(segment, policy));
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return null;
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   @Override

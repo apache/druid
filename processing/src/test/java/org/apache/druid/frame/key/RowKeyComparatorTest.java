@@ -21,6 +21,7 @@ package org.apache.druid.frame.key;
 
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.column.RowSignature;
@@ -232,7 +233,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     final List<RowKey> sortedKeys = new ArrayList<>();
 
     for (final Object[] objects : objectss) {
-      sortedKeys.add(KeyTestUtils.createKey(rowSignature, objects));
+      sortedKeys.add(KeyTestUtils.createKey(rowSignature, FrameType.latestRowBased(), objects));
     }
 
     sortedKeys.sort(RowKeyComparator.create(keyColumns, rowSignature));
@@ -265,7 +266,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     final List<RowKey> sortedKeys = new ArrayList<>();
 
     for (final Object[] objects : sortedObjectssCopy) {
-      sortedKeys.add(KeyTestUtils.createKey(rowSignature, objects));
+      sortedKeys.add(KeyTestUtils.createKey(rowSignature, FrameType.latestRowBased(), objects));
     }
 
     return sortedKeys;

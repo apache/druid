@@ -329,6 +329,7 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         METRICS_SPEC,
         transformSpec,
+        null,
         context,
         new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );

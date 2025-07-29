@@ -1,0 +1,1048 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B24_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE (s_int=1
+       OR s_int=997)
+  AND NOT s_int=0
+  AND NOT s_int=999
+  AND (c=0.2
+       OR c=998)
+  AND NOT c=0.1
+  AND NOT c=999;
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B25_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IS NULL
+  AND c IS NULL;
++---+
+| c |
++---+
+|   |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B25_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IS NULL
+     AND c IS NULL);
++---+
+| c |
++---+
+|   |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B25_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IS NULL
+     AND c IS NULL), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B25_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IS NULL
+  AND c IS NULL;
++---+
+| c |
++---+
+|   |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B25_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IS NULL
+  AND c IS NULL;
++---+
+| c |
++---+
+|   |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B26_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IS NOT NULL
+  AND c IS NOT NULL;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.2 |
+| 0.2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B26_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IS NOT NULL
+     AND c IS NOT NULL);
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.2 |
+| 0.2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B26_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IS NOT NULL
+     AND c IS NOT NULL), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B26_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IS NOT NULL
+  AND c IS NOT NULL;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.2 |
+| 0.2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B26_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IS NOT NULL
+  AND c IS NOT NULL;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.1 |
+| 0.2 |
+| 0.2 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B27_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN (0.2,
+            998) IS TRUE
+  AND c IN (0.1,
+            999) IS NOT TRUE;
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B27_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IN (1,
+                   996) IS TRUE
+     AND s_int IN (0,
+                   997) IS NOT TRUE
+     AND c IN (0.2,
+               998) IS TRUE
+     AND c IN (0.1,
+               999) IS NOT TRUE);
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B27_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996) IS TRUE
+     AND s_int IN (0,
+                   997) IS NOT TRUE
+     AND c IN (0.2,
+               998) IS TRUE
+     AND c IN (0.1,
+               999) IS NOT TRUE), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B27_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN (0.2,
+            998) IS TRUE
+  AND c IN (0.1,
+            999) IS NOT TRUE;
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B27_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996) IS TRUE
+  AND s_int IN (0,
+                997) IS NOT TRUE
+  AND c IN (0.2,
+            998) IS TRUE
+  AND c IN (0.1,
+            999) IS NOT TRUE;
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B28_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN (0.2,
+            998) IS FALSE
+  AND c IN (0.1,
+            999) IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B28_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IN (1,
+                   996) IS FALSE
+     AND s_int IN (0,
+                   997) IS NOT FALSE
+     AND c IN (0.2,
+               998) IS FALSE
+     AND c IN (0.1,
+               999) IS NOT FALSE);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B28_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996) IS FALSE
+     AND s_int IN (0,
+                   997) IS NOT FALSE
+     AND c IN (0.2,
+               998) IS FALSE
+     AND c IN (0.1,
+               999) IS NOT FALSE), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B28_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN (0.2,
+            998) IS FALSE
+  AND c IN (0.1,
+            999) IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B28_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996) IS FALSE
+  AND s_int IN (0,
+                997) IS NOT FALSE
+  AND c IN (0.2,
+            998) IS FALSE
+  AND c IN (0.1,
+            999) IS NOT FALSE;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B29_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 0.2 AND 0.3)
+  AND (c NOT BETWEEN 0.4 AND 0.5);
++-----+
+| c   |
++-----+
+| 0.2 |
+| 0.2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B29_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE (s_int BETWEEN 1 AND 2)
+     AND (s_int NOT BETWEEN 3 AND 4)
+     AND (c BETWEEN 0.2 AND 0.3)
+     AND (c NOT BETWEEN 0.4 AND 0.5));
++-----+
+| c   |
++-----+
+| 0.2 |
+| 0.2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B29_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (s_int BETWEEN 1 AND 2)
+     AND (s_int NOT BETWEEN 3 AND 4)
+     AND (c BETWEEN 0.2 AND 0.3)
+     AND (c NOT BETWEEN 0.4 AND 0.5)), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B29_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 0.2 AND 0.3)
+  AND (c NOT BETWEEN 0.4 AND 0.5);
++-----+
+| c   |
++-----+
+| 0.2 |
+| 0.2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B29_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE (s_int BETWEEN 1 AND 2)
+  AND (s_int NOT BETWEEN 3 AND 4)
+  AND (c BETWEEN 0.2 AND 0.3)
+  AND (c NOT BETWEEN 0.4 AND 0.5);
++-----+
+| c   |
++-----+
+| 0.2 |
+| 0.2 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B30_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B30_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE (cast(s_int AS varchar) like '%1%')
+     AND (cast(s_int AS varchar) not like '%3%')
+     AND (cast(c AS varchar) like '%2%')
+     AND (cast(c AS varchar) not like '%3%'));
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B30_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (cast(s_int AS varchar) like '%1%')
+     AND (cast(s_int AS varchar) not like '%3%')
+     AND (cast(c AS varchar) like '%2%')
+     AND (cast(c AS varchar) not like '%3%')), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B30_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B30_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE (cast(s_int AS varchar) like '%1%')
+  AND (cast(s_int AS varchar) not like '%3%')
+  AND (cast(c AS varchar) like '%2%')
+  AND (cast(c AS varchar) not like '%3%');
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B31_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN (0.2,
+            998)
+  AND c NOT IN (0.1,
+                999);
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B31_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IN (1,
+                   996)
+     AND s_int NOT IN (0,
+                       997)
+     AND c IN (0.2,
+               998)
+     AND c NOT IN (0.1,
+                   999));
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B31_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN (1,
+                   996)
+     AND s_int NOT IN (0,
+                       997)
+     AND c IN (0.2,
+               998)
+     AND c NOT IN (0.1,
+                   999)), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B31_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN (0.2,
+            998)
+  AND c NOT IN (0.1,
+                999);
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B31_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IN (1,
+                996)
+  AND s_int NOT IN (0,
+                    997)
+  AND c IN (0.2,
+            998)
+  AND c NOT IN (0.1,
+                999);
++-----+
+| c   |
++-----+
+| 0.2 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B32_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES(0.2),(998)) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES(0.1),(999)) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B32_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int IN
+       (SELECT col
+        FROM (
+              VALUES(1),(996)) AS t(col))
+     AND s_int NOT IN
+       (SELECT col
+        FROM (
+              VALUES(1),(997)) AS t(col))
+     AND c IN
+       (SELECT col
+        FROM (
+              VALUES(0.2),(998)) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES(0.1),(999)) AS t(col)));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B32_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int IN
+       (SELECT col
+        FROM (
+              VALUES(1),(996)) AS t(col))
+     AND s_int NOT IN
+       (SELECT col
+        FROM (
+              VALUES(1),(997)) AS t(col))
+     AND c IN
+       (SELECT col
+        FROM (
+              VALUES(0.2),(998)) AS t(col))
+     AND c NOT IN
+       (SELECT col
+        FROM (
+              VALUES(0.1),(999)) AS t(col))), unnest(a_float) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B32_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES(0.2),(998)) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES(0.1),(999)) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B32_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int IN
+    (SELECT col
+     FROM (
+           VALUES(1),(996)) AS t(col))
+  AND s_int NOT IN
+    (SELECT col
+     FROM (
+           VALUES(1),(997)) AS t(col))
+  AND c IN
+    (SELECT col
+     FROM (
+           VALUES(0.2),(998)) AS t(col))
+  AND c NOT IN
+    (SELECT col
+     FROM (
+           VALUES(0.1),(999)) AS t(col));
+Unhandled Query Planning Failure
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B33_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int=1;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B33_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int=1);
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B33_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int=1), unnest(a_float) AS u(c);
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B33_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int=1;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B33_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(a_float) AS u(c)
+WHERE s_int=1;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B34_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(a_float) AS u(c)
+WHERE s_int<>1;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B34_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c)
+   WHERE s_int<>1);
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B34_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE s_int<>1), unnest(a_float) AS u(c);
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B34_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(a_float) AS u(c))
+WHERE s_int<>1;
++-----+
+| c   |
++-----+
+| 0.1 |
+| 0.2 |
+|     |
++-----+
+(3 rows)
+
+!ok
+

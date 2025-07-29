@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 
 public class TestPeonLifecycleFactory implements PeonLifecycleFactory
 {
@@ -31,7 +32,7 @@ public class TestPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener)
+  public KubernetesPeonLifecycle build(Task task, K8sTaskId taskId, KubernetesPeonLifecycle.TaskStateListener stateListener)
   {
     return kubernetesPeonLifecycle;
   }

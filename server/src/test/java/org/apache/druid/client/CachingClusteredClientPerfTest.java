@@ -53,6 +53,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.ServerManagerTest;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestCoordinatorClient;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -86,6 +87,8 @@ public class CachingClusteredClientPerfTest
     final List<SegmentDescriptor> segmentDescriptors = new ArrayList<>(segmentCount);
     final List<DataSegment> dataSegments = new ArrayList<>(segmentCount);
     final VersionedIntervalTimeline<String, ServerSelector> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig = new BrokerViewOfCoordinatorConfig(new TestCoordinatorClient());
+    brokerViewOfCoordinatorConfig.start();
     final DruidServer server = new DruidServer(
         "server",
         "localhost:9000",
@@ -105,7 +108,8 @@ public class CachingClusteredClientPerfTest
         Iterators.transform(dataSegments.iterator(), segment -> {
           ServerSelector ss = new ServerSelector(
               segment,
-              new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+              new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+              brokerViewOfCoordinatorConfig
           );
           ss.addServerAndUpdateSegment(new QueryableDruidServer(
               server,

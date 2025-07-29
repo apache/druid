@@ -17,28 +17,23 @@ name: "CI"
 
 on:
   workflow_call:
-    inputs:
-      jdk:
-        required: false
-        type: string
-        default: '17'
 
 jobs:
   run-unit-tests:
-    name: "unit tests"
+    name: "unit tests(main)"
     strategy:
       fail-fast: false
       matrix:
-        Dtest: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
+        pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.Dtest }}' -Dmaven.test.failure.ignore=true
-      jdk: ${{ inputs.jdk }}
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      jdk: 17
       artifact_prefix: "unit-test-reports"
-      key: ${{ matrix.Dtest }}
+      key: "test-jdk17-[${{ matrix.pattern }}]"
 
-  reporting-unit-test-failures:
-    name: "report-unit-test-failures"
+  test-report:
+    name: "test-report"
     needs: run-unit-tests
     runs-on: ubuntu-latest
     steps:
@@ -61,11 +56,38 @@ jobs:
           truncate_stack_traces: false
 
   reporting-jacoco-coverage-failures:
-    name: "report-jacoco-coverage-failures"
+    name: "coverage-jacoco"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
+    if: ${{ !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
-      key: "jacoco-coverage-report"
+      key: "coverage-jacoco"
+
+  run-unit-tests-all-jdk:
+    needs: test-report
+    name: "unit tests(all jdk)"
+    if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "11", "21.0.4" ]
+        pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -fae
+      jdk: ${{ matrix.jdk }}
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+
+  # this will be running in parallel with the ITs later; but until that migration happens - run them in parallel with normal tests
+  run-qtest:
+    strategy:
+      fail-fast: false
+      matrix:
+        split: [ "0/4", "1/4", "2/4", "3/4" ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
+      key: QTest-${{ matrix.split }}
+      jdk: 21

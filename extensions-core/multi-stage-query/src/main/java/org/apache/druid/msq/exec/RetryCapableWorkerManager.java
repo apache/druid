@@ -30,7 +30,7 @@ public interface RetryCapableWorkerManager extends WorkerManager
   void submitForRelaunch(int workerNumber);
 
   /**
-   * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   * Report a worker that failed without active orders. To be retried if it is required for future stages only.
    */
   void reportFailedInactiveWorker(int workerNumber);
 
@@ -39,7 +39,7 @@ public interface RetryCapableWorkerManager extends WorkerManager
    * to figure out if the worker taskId is canceled by the controller. If yes, the errors from that worker taskId
    * are ignored for the error reports.
    *
-   * @return true if task is canceled by the controller, else false
+   * @return true if the task is canceled by the controller, else false
    */
   boolean isTaskCanceledByController(String taskId);
 }

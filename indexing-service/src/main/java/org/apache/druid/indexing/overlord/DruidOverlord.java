@@ -59,6 +59,8 @@ public class DruidOverlord
 
   private final DruidLeaderSelector overlordLeaderSelector;
   private final DruidLeaderSelector.Listener leadershipListener;
+  private final SegmentMetadataCache segmentMetadataCache;
+  private final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
   private final ReentrantLock giant = new ReentrantLock(true);
 
@@ -78,7 +80,7 @@ public class DruidOverlord
       final TaskLockConfig taskLockConfig,
       final TaskQueueConfig taskQueueConfig,
       final DefaultTaskConfig defaultTaskConfig,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final TaskStorage taskStorage,
       final TaskActionClientFactory taskActionClientFactory,
       @Self final DruidNode selfNode,
@@ -98,6 +100,8 @@ public class DruidOverlord
   )
   {
     this.overlordLeaderSelector = overlordLeaderSelector;
+    this.segmentMetadataCache = segmentMetadataCache;
+    this.coordinatorOverlordServiceConfig = coordinatorOverlordServiceConfig;
 
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
                            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
@@ -166,7 +170,7 @@ public class DruidOverlord
                 public void start()
                 {
                   taskMaster.becomeFullLeader();
-                  compactionScheduler.start();
+                  compactionScheduler.becomeLeader();
                   scheduledBatchTaskManager.start();
 
                   // Announce the node only after all the services have been initialized
@@ -179,7 +183,7 @@ public class DruidOverlord
                 {
                   serviceAnnouncer.unannounce(node);
                   scheduledBatchTaskManager.stop();
-                  compactionScheduler.stop();
+                  compactionScheduler.stopBeingLeader();
                   taskMaster.downgradeToHalfLeader();
                 }
               }
@@ -225,6 +229,9 @@ public class DruidOverlord
     giant.lock();
 
     try {
+      if (isStandalone()) {
+        segmentMetadataCache.start();
+      }
       overlordLeaderSelector.registerListener(leadershipListener);
     }
     finally {
@@ -244,6 +251,9 @@ public class DruidOverlord
     try {
       gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
+      if (isStandalone()) {
+        segmentMetadataCache.stop();
+      }
     }
     finally {
       giant.unlock();
@@ -286,6 +296,11 @@ public class DruidOverlord
     catch (Exception ex) {
       // fail silently since we are stopping anyway
     }
+  }
+
+  private boolean isStandalone()
+  {
+    return !coordinatorOverlordServiceConfig.isEnabled();
   }
 
 }

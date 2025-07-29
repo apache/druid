@@ -86,10 +86,11 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-ddsketch|Support for DDSketch approximate quantiles based on [DDSketch](https://github.com/datadog/sketches-java) | [link](../development/extensions-contrib/ddsketch-quantiles.md)|
 |druid-deltalake-extensions|Support for ingesting Delta Lake tables.|[link](../development/extensions-contrib/delta-lake.md)|
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.md)|
+|druid-exact-count-bitmap|Support for exact cardinality counting using Roaring Bitmap over a Long column.|[link](../development/extensions-contrib/druid-exact-count-bitmap.md)|
 |druid-iceberg-extensions|Support for ingesting Iceberg tables.|[link](../development/extensions-contrib/iceberg.md)|
 |druid-redis-cache|A cache implementation for Druid based on Redis.|[link](../development/extensions-contrib/redis-cache.md)|
 |druid-time-min-max|Min/Max aggregator for timestamp.|[link](../development/extensions-contrib/time-min-max.md)|
-|sqlserver-metadata-storage|Microsoft SQLServer deep storage.|[link](../development/extensions-contrib/sqlserver.md)|
+|sqlserver-metadata-storage|Microsoft SQLServer metadata store.|[link](../development/extensions-contrib/sqlserver.md)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.md)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.md)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.md)|
@@ -101,7 +102,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
-|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (<https://prometheus.io/>)|[link](../development/extensions-contrib/prometheus.md)|
+|prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for [Prometheus](https://prometheus.io/)|[link](../development/extensions-contrib/prometheus.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
 |druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|

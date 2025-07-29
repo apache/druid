@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>33.0.0-SNAPSHOT</version>
+        <version>35.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -257,6 +257,8 @@
                                         <argument>org.apache.druid.extensions:druid-kubernetes-overlord-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-testing-tools</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
@@ -460,6 +462,8 @@
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-exact-count-bitmap</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

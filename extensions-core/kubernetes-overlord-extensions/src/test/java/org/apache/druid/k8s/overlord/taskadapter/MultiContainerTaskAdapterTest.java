@@ -88,7 +88,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
@@ -105,7 +105,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()
@@ -139,7 +139,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .withPrimaryContainerName("primary")
         .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
@@ -159,7 +159,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()
@@ -193,7 +193,7 @@ class MultiContainerTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .withPrimaryContainerName("primary")
         .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
         .build();
@@ -215,7 +215,7 @@ class MultiContainerTaskAdapterTest
         task,
         new PeonCommandContext(
             Collections.singletonList(
-                "/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6 1"),
+                "/peon.sh"),
             new ArrayList<>(),
             new File("/tmp"),
             config.getCpuCoreInMicro()

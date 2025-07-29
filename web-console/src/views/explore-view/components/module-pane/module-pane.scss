@@ -18,47 +18,71 @@
 
 @import '../../../../variables';
 
-$tob-bar-height: 34px;
+$filter-bar-height: 34px;
+$control-bar-height: 34px;
 $control-pane-width: 240px;
+$small-border: 1px;
 
 .module-pane {
   position: relative;
   @include card-like;
   overflow: hidden;
 
-  .module-top-bar {
+  .filter-pane {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 90px;
+    height: $filter-bar-height;
+    border-bottom: $small-border solid $dark-gray2;
+    padding: 2px 0;
+  }
+
+  .module-control-bar {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: $tob-bar-height;
-    border-bottom: 1px solid $dark-gray2;
+    height: $control-bar-height;
+    border-bottom: $small-border solid $dark-gray2;
     padding: 2px;
     display: flex;
-
-    .bar-expander {
-      flex: 1;
-    }
   }
 
   .control-pane-container {
     position: absolute;
-    top: $tob-bar-height + 1;
+    top: $control-bar-height + 1;
     bottom: 0;
     width: $control-pane-width;
     right: 0;
-    border-left: 1px solid $dark-gray2;
+    border-left: $small-border solid $dark-gray2;
     padding: 8px;
     overflow: auto;
   }
 
   &.show-controls .module-inner-container {
-    right: $control-pane-width + 1;
+    right: $control-pane-width + $small-border;
+  }
+
+  &.show-filter {
+    .module-control-bar {
+      top: $filter-bar-height + $small-border;
+    }
+
+    .module-inner-container {
+      top: $filter-bar-height + $small-border + $control-bar-height + $small-border;
+    }
+  }
+
+  .corner-buttons {
+    position: absolute;
+    top: 2px;
+    right: 2px;
   }
 
   .module-inner-container {
     position: absolute;
-    top: $tob-bar-height + 1;
+    top: $control-bar-height + $small-border;
     bottom: 0;
     left: 0;
     right: 0;

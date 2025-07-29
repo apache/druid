@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.controller.sql;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
@@ -39,27 +40,35 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.LegacyMSQSpec;
+import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -72,6 +81,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -88,7 +98,7 @@ public class DartQueryMaker implements QueryMaker
 {
   private static final Logger log = new Logger(DartQueryMaker.class);
 
-  private final List<Entry<Integer, String>> fieldMapping;
+  final List<Entry<Integer, String>> fieldMapping;
   private final DartControllerContextFactory controllerContextFactory;
   private final PlannerContext plannerContext;
 
@@ -107,6 +117,9 @@ public class DartQueryMaker implements QueryMaker
    * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
    */
   private final ExecutorService controllerExecutor;
+  private final ServerConfig serverConfig;
+
+  final QueryKitSpecFactory queryKitSpecFactory;
 
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
@@ -114,7 +127,9 @@ public class DartQueryMaker implements QueryMaker
       PlannerContext plannerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      ExecutorService controllerExecutor
+      ExecutorService controllerExecutor,
+      QueryKitSpecFactory queryKitSpecFactory,
+      ServerConfig serverConfig
   )
   {
     this.fieldMapping = fieldMapping;
@@ -123,49 +138,84 @@ public class DartQueryMaker implements QueryMaker
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
+    this.queryKitSpecFactory = queryKitSpecFactory;
+    this.serverConfig = serverConfig;
   }
 
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
-    if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
-    }
-    final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec(
+    ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
+    final LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
         null,
         druidQuery,
-        fieldMapping,
+        finalizeTimeout(druidQuery.getQuery().context()),
+        columnMappings,
         plannerContext,
-        null // Only used for DML, which this isn't
+        null
     );
-    final List<Pair<SqlTypeName, ColumnType>> types =
-        MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
 
-    final String dartQueryId = druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID);
-    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
-    final ControllerImpl controller = new ControllerImpl(
-        dartQueryId,
+
+    final ResultsContext resultsContext = MSQTaskQueryMaker.makeResultsContext(druidQuery, fieldMapping, plannerContext);
+
+    return runLegacyMSQSpec(querySpec, druidQuery.getQuery().context(), resultsContext);
+  }
+
+  public static ResultsContext makeResultsContext(DruidQuery druidQuery, List<Entry<Integer, String>> fieldMapping,
+      PlannerContext plannerContext)
+  {
+    final List<Pair<SqlTypeName, ColumnType>> types = MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
+    final ResultsContext resultsContext = new ResultsContext(
+        types.stream().map(p -> p.lhs).collect(Collectors.toList()),
+        SqlResults.Context.fromPlannerContext(plannerContext)
+    );
+    return resultsContext;
+  }
+
+  private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerContext controllerContext = controllerContextFactory.newContext(context);
+
+    return new ControllerImpl(
         querySpec,
-        new ResultsContext(
-            types.stream().map(p -> p.lhs).collect(Collectors.toList()),
-            SqlResults.Context.fromPlannerContext(plannerContext)
-        ),
-        controllerContext
+        resultsContext,
+        controllerContext,
+        queryKitSpecFactory
     );
+  }
 
+  private ControllerImpl makeQueryDefController(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerContext controllerContext = controllerContextFactory.newContext(context);
+
+    return new ControllerImpl(
+        querySpec,
+        resultsContext,
+        controllerContext,
+        queryKitSpecFactory
+    );
+  }
+
+  public QueryResponse<Object[]> runLegacyMSQSpec(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport());
+  }
+
+  public QueryResponse<Object[]> runQueryDefMSQSpec(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
+  {
+    final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
+    return runController(controller, context.getFullReport());
+  }
+
+  private QueryResponse<Object[]> runController(final ControllerImpl controller, final boolean fullReport)
+  {
     final ControllerHolder controllerHolder = new ControllerHolder(
         controller,
-        controllerContext,
         plannerContext.getSqlQueryId(),
         plannerContext.getSql(),
-        controllerContext.selfNode().getHostAndPortToUse(),
         plannerContext.getAuthenticationResult(),
         DateTimes.nowUtc()
-    );
-
-    final boolean fullReport = druidQuery.getQuery().context().getBoolean(
-        DartSqlEngine.CTX_FULL_REPORT,
-        DartSqlEngine.CTX_FULL_REPORT_DEFAULT
     );
 
     // Register controller before submitting anything to controllerExeuctor, so it shows up in
@@ -184,6 +234,18 @@ public class DartQueryMaker implements QueryMaker
       controllerRegistry.deregister(controllerHolder);
       throw e;
     }
+  }
+
+  /**
+   * Adds the timeout parameter to the query context, considering the default and maximum values from
+   * {@link ServerConfig}.
+   */
+  private QueryContext finalizeTimeout(QueryContext queryContext)
+  {
+    final long timeout = queryContext.getTimeout(serverConfig.getDefaultQueryTimeout());
+    QueryContext timeoutContext = queryContext.override(Map.of(QueryContexts.TIMEOUT_KEY, timeout));
+    timeoutContext.verifyMaxQueryTimeout(serverConfig.getMaxQueryTimeout());
+    return timeoutContext;
   }
 
   /**
@@ -215,7 +277,7 @@ public class DartQueryMaker implements QueryMaker
                     "maxQueryReportSize[%,d] exceeded. "
                     + "Try limiting the result set for your query, or run it with %s[false]",
                     limit,
-                    DartSqlEngine.CTX_FULL_REPORT
+                    QueryContexts.CTX_FULL_REPORT
                 )
             ),
             plannerContext.getJsonMapper(),
@@ -229,7 +291,12 @@ public class DartQueryMaker implements QueryMaker
         } else {
           // Controller was canceled before it ran.
           throw MSQErrorReport
-              .fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+              .fromFault(
+                  controllerHolder.getController().queryId(),
+                  null,
+                  null,
+                  CanceledFault.userRequest()
+              )
               .toDruidException();
         }
       }
@@ -288,7 +355,7 @@ public class DartQueryMaker implements QueryMaker
         "%s-sqlQueryId[%s]-queryId[%s]",
         Thread.currentThread().getName(),
         plannerContext.getSqlQueryId(),
-        plannerContext.queryContext().get(DartSqlEngine.CTX_DART_QUERY_ID)
+        plannerContext.queryContext().get(QueryContexts.CTX_DART_QUERY_ID)
     );
   }
 
@@ -298,12 +365,13 @@ public class DartQueryMaker implements QueryMaker
   class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
   {
     private final ControllerHolder controllerHolder;
-    private final ResultIterator resultIterator = new ResultIterator();
+    private final ResultIterator resultIterator;
     private boolean made;
 
     public ResultIteratorMaker(ControllerHolder holder)
     {
       this.controllerHolder = holder;
+      this.resultIterator = new ResultIterator(controllerHolder.getController().getQueryContext().getTimeoutDuration());
       submitController();
     }
 
@@ -324,8 +392,12 @@ public class DartQueryMaker implements QueryMaker
             // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
             // returned by "runWithoutReport" can resolve.
             resultIterator.pushError(
-                MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
-                              .toDruidException()
+                MSQErrorReport.fromFault(
+                    controllerHolder.getController().queryId(),
+                    null,
+                    null,
+                    CanceledFault.userRequest()
+                ).toDruidException()
             );
           }
         }
@@ -336,6 +408,15 @@ public class DartQueryMaker implements QueryMaker
               plannerContext.getSqlQueryId(),
               controller.queryId()
           );
+        }
+        catch (Throwable e) {
+          log.error(
+              e,
+              "Controller failed for sqlQueryId[%s], controllerHost[%s]",
+              plannerContext.getSqlQueryId(),
+              controller.queryId()
+          );
+          throw e;
         }
         finally {
           controllerRegistry.deregister(controllerHolder);
@@ -359,7 +440,7 @@ public class DartQueryMaker implements QueryMaker
     public void cleanup(final ResultIterator iterFromMake)
     {
       if (!iterFromMake.complete) {
-        controllerHolder.cancel();
+        controllerHolder.cancel(CancellationReason.UNKNOWN);
       }
     }
   }
@@ -387,6 +468,14 @@ public class DartQueryMaker implements QueryMaker
 
     private volatile boolean complete;
 
+    @Nullable
+    private final Duration timeout;
+
+    public ResultIterator(@Nullable Duration timeout)
+    {
+      this.timeout = timeout;
+    }
+
     @Override
     public boolean hasNext()
     {
@@ -405,7 +494,14 @@ public class DartQueryMaker implements QueryMaker
     {
       if (current == null) {
         try {
-          current = rowBuffer.take();
+          if (timeout != null) {
+            current = rowBuffer.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            if (current == null) {
+              throw DruidException.defensive("Result reader timed out [%s]", timeout);
+            }
+          } else {
+            current = rowBuffer.take();
+          }
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();

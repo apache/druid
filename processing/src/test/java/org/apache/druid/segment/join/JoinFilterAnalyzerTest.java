@@ -32,6 +32,7 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -75,7 +76,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -148,7 +149,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -200,7 +201,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -263,7 +264,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -328,7 +329,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -394,7 +395,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -467,7 +468,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         virtualColumns
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
@@ -570,7 +571,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -693,7 +694,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -784,7 +785,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         "Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -829,7 +830,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -927,7 +928,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1013,7 +1014,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1083,7 +1084,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1137,7 +1138,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1190,7 +1191,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1242,7 +1243,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1295,7 +1296,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1346,7 +1347,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1401,7 +1402,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1455,7 +1456,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1506,7 +1507,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1556,7 +1557,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1610,7 +1611,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1663,7 +1664,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1715,7 +1716,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1778,7 +1779,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1845,7 +1846,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1914,7 +1915,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -1979,7 +1980,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
@@ -2055,7 +2056,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
@@ -2225,7 +2226,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         VirtualColumns.EMPTY
     );
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -2384,7 +2385,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
@@ -2460,7 +2461,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
-        factSegment.asCursorFactory(),
+        factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis

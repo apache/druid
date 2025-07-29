@@ -144,6 +144,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -158,6 +159,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -165,7 +167,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,
@@ -197,6 +200,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -211,6 +215,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -218,7 +223,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,
@@ -250,6 +256,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA_KAFKA_TIMESTAMP,
         null,
         new KafkaSupervisorIOConfig(
@@ -273,6 +280,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -280,7 +288,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,
@@ -363,6 +372,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         dataSchema,
         null,
         new KafkaSupervisorIOConfig(
@@ -377,6 +387,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -384,7 +395,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,
@@ -544,6 +556,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -561,6 +574,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -568,7 +582,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,
@@ -600,6 +615,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -617,6 +633,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             true,
             null,
             null,
@@ -624,7 +641,8 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            null
+            null,
+            false
         ),
         null,
         null,

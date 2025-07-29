@@ -25,11 +25,12 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.SuperSorter;
+import org.apache.druid.indexing.seekablestream.SeekableStreamAppenderatorConfig;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
-import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.stage.ReadablePartition;
@@ -58,7 +59,7 @@ import java.util.Objects;
  * (see {@link #computeProcessorMemory}).
  *
  * The remainder is called "bundle free memory", a pool of memory that can be used for {@link SuperSorter} or
- * {@link SegmentGeneratorFrameProcessorFactory}. The amounts overlap, because the same {@link WorkOrder} never
+ * {@link SegmentGeneratorStageProcessor}. The amounts overlap, because the same {@link WorkOrder} never
  * does both.
  */
 public class WorkerMemoryParameters
@@ -79,11 +80,6 @@ public class WorkerMemoryParameters
    * unfortunately have a variety of unaccounted-for memory usage.
    */
   private static final double APPENDERATOR_BUNDLE_FREE_MEMORY_FRACTION = 0.67;
-
-  /**
-   * (Very) rough estimate of the on-heap overhead of reading a column.
-   */
-  private static final int APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN = 3_000;
 
   /**
    * Maximum percent of each bundle's free memory that will be used for maxRetainedBytes of
@@ -305,7 +301,9 @@ public class WorkerMemoryParameters
   public int getAppenderatorMaxColumnsToMerge()
   {
     // Half for indexing, half for merging.
-    return Ints.checkedCast(Math.max(2, getAppenderatorMemory() / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
+    final long calculatedMaxColumnsToMerge =
+        getAppenderatorMemory() / 2 / SeekableStreamAppenderatorConfig.APPENDERATOR_MERGE_ROUGH_HEAP_MEMORY_PER_COLUMN;
+    return Ints.checkedCast(Math.max(2, calculatedMaxColumnsToMerge));
   }
 
   public int getFrameSize()

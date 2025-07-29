@@ -28,7 +28,6 @@ import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -38,9 +37,11 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -161,7 +162,8 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(aggs)
         .setGranularity(Granularities.DAY)
         .build();
-    Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    Assert.assertEquals(innerQuerySegmentSpec, ev.getEffectiveQuerySegmentSpec());
   }
 
   @Test
@@ -205,6 +207,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("quality", "market", "v0"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(List.of(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -257,6 +260,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
+    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -310,6 +314,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
+    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -28,7 +29,7 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.ReplaceTaskLock;
@@ -52,24 +53,26 @@ public class TaskLocks
 {
   static void checkLockCoversSegments(
       final Task task,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final Collection<DataSegment> segments
   )
   {
     if (!isLockCoversSegments(task, taskLockbox, segments)) {
-      throw new ISE(
-          "Segments[%s] are not covered by locks[%s] for task[%s]",
-          segments,
-          taskLockbox.findLocksForTask(task),
-          task.getId()
-      );
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.CONFLICT)
+                          .build(
+                              "Segment IDs[%s] are not covered by locks[%s] for task[%s]",
+                              segments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
+                              taskLockbox.findLocksForTask(task),
+                              task.getId()
+                          );
     }
   }
 
   @VisibleForTesting
   static boolean isLockCoversSegments(
       final Task task,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final Collection<DataSegment> segments
   )
   {
@@ -176,7 +179,7 @@ public class TaskLocks
    */
   public static Map<DataSegment, ReplaceTaskLock> findReplaceLocksCoveringSegments(
       final String datasource,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final Set<DataSegment> segments
   )
   {
@@ -206,7 +209,7 @@ public class TaskLocks
 
   public static List<TaskLock> findLocksForSegments(
       final Task task,
-      final TaskLockbox taskLockbox,
+      final GlobalTaskLockbox taskLockbox,
       final Collection<DataSegment> segments
   )
   {
@@ -245,7 +248,7 @@ public class TaskLocks
     return found;
   }
 
-  private static NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskLockbox taskLockbox, Task task)
+  private static NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(GlobalTaskLockbox taskLockbox, Task task)
   {
     final List<TaskLock> taskLocks = taskLockbox.findLocksForTask(task);
     final NavigableMap<DateTime, List<TaskLock>> taskLockMap = new TreeMap<>();

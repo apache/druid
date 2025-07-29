@@ -127,6 +127,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(ForbiddenExceptionMapper.class).in(LazySingleton.class);
     binder.bind(BadRequestExceptionMapper.class).in(LazySingleton.class);
     binder.bind(ServiceUnavailableExceptionMapper.class).in(LazySingleton.class);
+    binder.bind(HttpExceptionMapper.class).in(LazySingleton.class);
 
     serve("/*").with(GuiceContainer.class);
 
@@ -499,8 +500,7 @@ public class JettyServerModule extends JerseyServletModule
   private static int getTCPAcceptQueueSize()
   {
     if (SystemUtils.IS_OS_LINUX) {
-      try {
-        BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
+      try (BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"))) {
         String acceptQueueSize = in.readLine();
         if (acceptQueueSize != null) {
           return Integer.parseInt(acceptQueueSize);

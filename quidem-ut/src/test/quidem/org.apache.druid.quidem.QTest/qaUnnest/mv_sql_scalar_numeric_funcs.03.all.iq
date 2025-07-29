@@ -1,0 +1,1040 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C2
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE))<>99999;
++---------------------+
+| col                 |
++---------------------+
+| 4611686018427387904 |
+| 4611686018427387904 |
+| 4611686018427387904 |
+| 4616189618054758400 |
+| 4616189618054758400 |
+| 4616189618054758400 |
+| 4618441417868443648 |
+| 4618441417868443648 |
+| 4618441417868443648 |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C3
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(c_long))<>99999;
++----------------------+
+| col                  |
++----------------------+
+| -9221120237041090560 |
+| -9223372036854775808 |
+|  4607182418800017408 |
+|  4611686018427387904 |
+|  4613937818241073152 |
+|  9214364837600034816 |
+|  9218868437227405312 |
+|  9218868437227405312 |
+|  9221120237041090560 |
++----------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C4
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+c_long)<>99999;
++---------------------+
+| col                 |
++---------------------+
+| 4607182418800017408 |
+| 4611686018427387904 |
+| 4611686018427387904 |
+| 4613937818241073152 |
+| 4613937818241073152 |
+| 4613937818241073152 |
+| 4616189618054758400 |
+| 4616189618054758400 |
+| 4617315517961601024 |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C1
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(cast(c AS int))+bitwise_convert_long_bits_to_double(cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND (bitwise_convert_long_bits_to_double(cast(c AS int))+bitwise_convert_long_bits_to_double(cast(c AS int)))<>99999);
++-----+
+| cnt |
++-----+
+|   9 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C2
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(cast(c AS int)+cast(c AS int)) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND bitwise_convert_long_bits_to_double(cast(c AS int)+cast(c AS int))<>99999);
++-----+
+| cnt |
++-----+
+|   9 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C3
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(cast(c AS int))+bitwise_convert_long_bits_to_double(c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND (bitwise_convert_long_bits_to_double(cast(c AS int))+bitwise_convert_long_bits_to_double(c_long))<>99999);
++-----+
+| cnt |
++-----+
+|   9 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C4
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(cast(c AS int)+c_long) AS col
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+   WHERE c_long IN (0,
+                    1,
+                    2)
+     AND bitwise_convert_long_bits_to_double(cast(c AS int)+c_long)<>99999);
++-----+
+| cnt |
++-----+
+|   9 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C1
+#-------------------------------------------------------------------------
+SELECT bitwise_or(cast(c AS int), 1)+bitwise_or(cast(c AS int), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_or(cast(c AS int), 1)+bitwise_or(cast(c AS int), 1)) IN (2,
+                                                                        6);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
+|   6 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C2
+#-------------------------------------------------------------------------
+SELECT bitwise_or(cast(c AS int), cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_or(cast(c AS int), cast(c AS int)) IN (0,
+                                                     1,
+                                                     2,
+                                                     3);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C3
+#-------------------------------------------------------------------------
+SELECT bitwise_or(cast(c AS int), 1)+bitwise_or(c_long, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_or(cast(c AS int), 1)+bitwise_or(c_long, 1)) IN (2,
+                                                                4,
+                                                                6);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   4 |
+|   4 |
+|   4 |
+|   4 |
+|   4 |
+|   6 |
+|   6 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C4
+#-------------------------------------------------------------------------
+SELECT bitwise_or(cast(c AS int), c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_or(cast(c AS int), c_long) IN (0,
+                                             1,
+                                             2,
+                                             3);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(cast(c AS int), 1)+bitwise_shift_left(cast(c AS int), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_shift_left(cast(c AS int), 1)+bitwise_shift_left(cast(c AS int), 1)) IN (0,
+                                                                                        4,
+                                                                                        8,
+                                                                                        12);
++-----+
+| col |
++-----+
+|  12 |
+|  12 |
+|  12 |
+|   4 |
+|   4 |
+|   4 |
+|   8 |
+|   8 |
+|   8 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(cast(c AS int), cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_shift_left(cast(c AS int), cast(c AS int)) IN (0,
+                                                             2,
+                                                             8,
+                                                             24);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
+|  24 |
+|  24 |
+|  24 |
+|   8 |
+|   8 |
+|   8 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C3
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(cast(c AS int), 1)+bitwise_shift_left(c_long, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_shift_left(cast(c AS int), 1)+bitwise_shift_left(c_long, 1)) IN (0,
+                                                                                2,
+                                                                                4,
+                                                                                6,
+                                                                                8,
+                                                                                10);
++-----+
+| col |
++-----+
+|  10 |
+|   2 |
+|   4 |
+|   4 |
+|   6 |
+|   6 |
+|   6 |
+|   8 |
+|   8 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C4
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(cast(c AS int), c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_shift_left(cast(c AS int), c_long) IN (0,
+                                                     1,
+                                                     2,
+                                                     3,
+                                                     4,
+                                                     6,
+                                                     8,
+                                                     12);
++-----+
+| col |
++-----+
+|   1 |
+|  12 |
+|   2 |
+|   2 |
+|   3 |
+|   4 |
+|   4 |
+|   6 |
+|   8 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C1
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(cast(c AS int), 1)+bitwise_shift_right(cast(c AS int), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_shift_right(cast(c AS int), 1)+bitwise_shift_right(cast(c AS int), 1)) IN (0,
+                                                                                          2);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
+|   2 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(cast(c AS int), cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_shift_right(cast(c AS int), cast(c AS int)) IN (0);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C3
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(cast(c AS int), 1)+bitwise_shift_right(c_long, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_shift_right(cast(c AS int), 1)+bitwise_shift_right(c_long, 1)) IN (0,
+                                                                                  1,
+                                                                                  2);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C4
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(cast(c AS int), c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_shift_right(cast(c AS int), c_long) IN (0,
+                                                      1,
+                                                      2,
+                                                      3);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   3 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C1
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(cast(c AS int), 1)+bitwise_xor(cast(c AS int), 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_xor(cast(c AS int), 1)+bitwise_xor(cast(c AS int), 1)) IN (0,
+                                                                          2,
+                                                                          4,
+                                                                          6);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   4 |
+|   4 |
+|   4 |
+|   6 |
+|   6 |
+|   6 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C2
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(cast(c AS int), cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_xor(cast(c AS int), cast(c AS int)) IN (0);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C3
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(cast(c AS int), 1)+bitwise_xor(c_long, 1) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (bitwise_xor(cast(c AS int), 1)+bitwise_xor(c_long, 1)) IN (0,
+                                                                  1,
+                                                                  2,
+                                                                  3,
+                                                                  4,
+                                                                  5,
+                                                                  6);
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
+|   4 |
+|   5 |
+|   6 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C4
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(cast(c AS int), c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND bitwise_xor(cast(c AS int), c_long) IN (0,
+                                              1,
+                                              2,
+                                              3);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C1
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(cast(c AS int))+human_readable_binary_byte_format(cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (human_readable_binary_byte_format(cast(c AS int))+human_readable_binary_byte_format(cast(c AS int)))<>99999;
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C2
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(cast(c AS int)+cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_binary_byte_format(cast(c AS int)+cast(c AS int)) IS NOT NULL;
++-----+
+| col |
++-----+
+| 2 B |
+| 2 B |
+| 2 B |
+| 4 B |
+| 4 B |
+| 4 B |
+| 6 B |
+| 6 B |
+| 6 B |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C3
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(cast(c AS int))+human_readable_binary_byte_format(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (human_readable_binary_byte_format(cast(c AS int))+human_readable_binary_byte_format(c_long))<>99999;
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C4
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(cast(c AS int)+c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_binary_byte_format(c+c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+| 1 B |
+| 2 B |
+| 2 B |
+| 3 B |
+| 3 B |
+| 3 B |
+| 4 B |
+| 4 B |
+| 5 B |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(cast(c AS int))+human_readable_decimal_byte_format(cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (human_readable_decimal_byte_format(cast(c AS int))+human_readable_decimal_byte_format(cast(c AS int)))<>99999;
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(cast(c AS int)+cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_decimal_byte_format(cast(c AS int)+cast(c AS int)) IS NOT NULL;
++-----+
+| col |
++-----+
+| 2 B |
+| 2 B |
+| 2 B |
+| 4 B |
+| 4 B |
+| 4 B |
+| 6 B |
+| 6 B |
+| 6 B |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C3
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(cast(c AS int))+human_readable_decimal_byte_format(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (human_readable_decimal_byte_format(cast(c AS int))+human_readable_decimal_byte_format(c_long))<>99999;
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C4
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(cast(c AS int)+c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_decimal_byte_format(cast(c AS int)+c_long) IS NOT NULL;
++-----+
+| col |
++-----+
+| 1 B |
+| 2 B |
+| 2 B |
+| 3 B |
+| 3 B |
+| 3 B |
+| 4 B |
+| 4 B |
+| 5 B |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C1
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(cast(c AS int))+human_readable_decimal_format(cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (human_readable_decimal_format(cast(c AS int))+human_readable_decimal_format(cast(c AS int))) IN (0,
+                                                                                                        2,
+                                                                                                        4,
+                                                                                                        6);
++-----+
+| col |
++-----+
+| 2.0 |
+| 2.0 |
+| 2.0 |
+| 4.0 |
+| 4.0 |
+| 4.0 |
+| 6.0 |
+| 6.0 |
+| 6.0 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(cast(c AS int)+cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_decimal_format(cast(c AS int)+cast(c AS int)) IN (0,
+                                                                       2,
+                                                                       4,
+                                                                       6);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+| 4   |
+| 4   |
+| 4   |
+| 6   |
+| 6   |
+| 6   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C3
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(cast(c AS int))+ceil(c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_decimal_format(cast(c AS int))+ceil(c_long) IN (0,
+                                                                     1,
+                                                                     2,
+                                                                     3,
+                                                                     4,
+                                                                     5);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|   2 |
+|   3 |
+|   3 |
+|   3 |
+|   4 |
+|   4 |
+|   5 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C4
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(cast(c AS int)+c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND human_readable_decimal_format(cast(c AS int)+c_long) IN (0,
+                                                               1,
+                                                               2,
+                                                               3,
+                                                               4,
+                                                               5);
++-----+
+| col |
++-----+
+| 1   |
+| 2   |
+| 2   |
+| 3   |
+| 3   |
+| 3   |
+| 4   |
+| 4   |
+| 5   |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C1
+#-------------------------------------------------------------------------
+SELECT safe_divide(cast(c AS int), 0)+safe_divide(cast(c AS int), 0) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (safe_divide(cast(c AS int), 0)+safe_divide(cast(c AS int), 0)) IN (0);
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C2
+#-------------------------------------------------------------------------
+SELECT safe_divide(cast(c AS int), cast(c AS int)) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND safe_divide(cast(c AS int), cast(c AS int)) IN (0,
+                                                      1);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C3
+#-------------------------------------------------------------------------
+SELECT safe_divide(cast(c AS int), 0)+safe_divide(c_long, 0) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND (safe_divide(cast(c AS int), 0)+safe_divide(c_long, 0)) IN (0);
++-----+
+| col |
++-----+
++-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C4
+#-------------------------------------------------------------------------
+SELECT safe_divide(cast(c AS int), c_long) AS col
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_num_with_null_and_empty_val)) AS u(c)
+WHERE c_long IN (0,
+                 1,
+                 2)
+  AND safe_divide(cast(c AS int), c_long) IN (0,
+                                              1,
+                                              2,
+                                              3);
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   3 |
++-----+
+(6 rows)
+
+!ok
+

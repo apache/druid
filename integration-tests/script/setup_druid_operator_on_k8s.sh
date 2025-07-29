@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 export DRUID_OPERATOR_VERSION=v1.0.0
 export KUBECTL="/usr/local/bin/kubectl"

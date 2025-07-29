@@ -18,7 +18,8 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import React, { type ReactNode } from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
@@ -36,9 +37,17 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
-import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
+import {
+  getConsoleViewIcon,
+  TASK_CANCELED_ERROR_MESSAGES,
+  TASK_CANCELED_PREDICATE,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   formatDuration,
@@ -63,6 +72,7 @@ const taskTableColumns: string[] = [
   'Type',
   'Datasource',
   'Status',
+  'Error',
   'Created time',
   'Duration',
   'Location',
@@ -162,6 +172,7 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
+        ['Error'],
       ),
     };
 
@@ -315,20 +326,26 @@ ORDER BY
     );
   }
 
-  private renderTaskFilterableCell(field: string) {
+  private renderTaskFilterableCell(
+    field: string,
+    enableComparisons = false,
+    valueFn: (value: string) => ReactNode = String,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
-    // eslint-disable-next-line react/display-name
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function TaskFilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+        >
+          {valueFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   private onTaskDetail(task: TaskQueryResultRow) {
@@ -408,6 +425,14 @@ ORDER BY
             Header: 'Status',
             id: 'status',
             width: 110,
+            Filter: suggestibleFilterInput([
+              'CANCELED',
+              'FAILED',
+              'PENDING',
+              'RUNNING',
+              'SUCCESS',
+              'WAITING',
+            ]),
             accessor: row => ({
               status: row.status,
               created_time: row.created_time,
@@ -458,10 +483,28 @@ ORDER BY
             show: visibleColumns.shown('Status'),
           },
           {
+            Header: 'Error',
+            id: 'error',
+            accessor: row => row.error_msg || '',
+            width: 300,
+            Cell: this.renderTaskFilterableCell('error'),
+            Aggregated: () => '',
+            show: visibleColumns.shown('Error'),
+          },
+          {
             Header: 'Created time',
             accessor: 'created_time',
             width: 190,
-            Cell: this.renderTaskFilterableCell('created_time'),
+            Cell: this.renderTaskFilterableCell('created_time', true, value => {
+              const valueAsDate = new Date(value);
+              return isNaN(valueAsDate.valueOf()) ? (
+                String(value)
+              ) : (
+                <span data-tooltip={formatDistanceToNow(valueAsDate, { addSuffix: true })}>
+                  {value}
+                </span>
+              );
+            }),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
           },
@@ -474,7 +517,21 @@ ORDER BY
             Cell({ value, original, aggregated }) {
               if (aggregated) return '';
               if (value > 0) {
-                return formatDuration(value);
+                const shownDuration = formatDuration(value);
+
+                const start = new Date(original.created_time);
+                if (isNaN(start.valueOf())) return shownDuration;
+
+                const end = new Date(start.valueOf() + value);
+                return (
+                  <span
+                    data-tooltip={`End time: ${end.toISOString()}\n(${formatDistanceToNow(end, {
+                      addSuffix: true,
+                    })})`}
+                  >
+                    {shownDuration}
+                  </span>
+                );
               }
               if (oneOf(original.status, 'RUNNING', 'PENDING') && original.created_time) {
                 // Compute running duration from the created time if it exists
@@ -527,7 +584,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: TasksView.TASK_SQL })}
           />

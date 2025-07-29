@@ -27,26 +27,5 @@ import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
  */
 public interface DatasourceSegmentCache extends DatasourceSegmentMetadataWriter, DatasourceSegmentMetadataReader
 {
-  /**
-   * Performs a thread-safe read action on the cache.
-   * Read actions can be concurrent with other reads but are mutually exclusive
-   * from other write actions.
-   */
-  <T> T read(Action<T> action) throws Exception;
 
-  /**
-   * Performs a thread-safe write action on the cache.
-   * Write actions are mutually exclusive from other writes or reads.
-   */
-  <T> T write(Action<T> action) throws Exception;
-
-  /**
-   * Represents a thread-safe read or write action performed on the cache within
-   * required locks.
-   */
-  @FunctionalInterface
-  interface Action<T>
-  {
-    T perform() throws Exception;
-  }
 }

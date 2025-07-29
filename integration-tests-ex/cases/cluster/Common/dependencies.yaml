@@ -86,13 +86,18 @@ services:
         ipv4_address: 172.172.172.3
     ports:
       - 3306:3306
-    volumes:
-      - ${SHARED_DIR}/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_ROOT_PASSWORD: driud
       MYSQL_DATABASE: druid
       MYSQL_USER: druid
       MYSQL_PASSWORD: diurd
+    healthcheck:
+      test: "mysql -uroot -pdriud druid -e 'select 1'"
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 3m
+      start_interval: 15s
 
   minio:
     container_name: minio
@@ -111,6 +116,13 @@ services:
     environment:
       - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
       - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/ready" ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 1m
+      start_interval: 5s
 
   create_minio_buckets:
     image: minio/mc

@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -45,8 +46,8 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -233,6 +234,38 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor)
+  {
+    final String path = "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true";
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, supervisor),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/terminate",
+        StringUtils.urlEncode(supervisorId)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
   public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
   {
     final String path = "/druid/indexer/v1/supervisor?system";
@@ -313,27 +346,6 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskPayloadResponse.class)
-    );
-  }
-
-  @Override
-  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
-  {
-    final StringBuilder pathBuilder = new StringBuilder("/druid/indexer/v1/compaction/status");
-    if (dataSource != null && !dataSource.isEmpty()) {
-      pathBuilder.append("?").append("dataSource=").append(dataSource);
-    }
-
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
-            new BytesFullResponseHandler()
-        ),
-        holder -> JacksonUtils.readValue(
-            jsonMapper,
-            holder.getContent(),
-            CompactionStatusResponse.class
-        )
     );
   }
 
@@ -444,19 +456,6 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
-  {
-    final String path = "/druid/indexer/v1/compaction/progress?dataSource=" + dataSource;
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), CompactionProgressResponse.class)
-    );
-  }
-
-  @Override
   public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
   {
     return FutureUtils.transform(
@@ -465,6 +464,31 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), Boolean.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<ClusterCompactionConfig> getClusterCompactionConfig()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), ClusterCompactionConfig.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<UpdateResponse> updateClusterCompactionConfig(ClusterCompactionConfig config)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+                .jsonContent(jsonMapper, config),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), UpdateResponse.class)
     );
   }
 

@@ -19,45 +19,41 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
-import java.util.Optional;
 
 /**
- * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is automatically enforced.
- * The policy seamlessly governs queries on the wrapped segment, ensuring compliance. For example,
- * {@link #asCursorFactory()} returns a policy-enforced {@link RestrictedCursorFactory}.
+ * A {@link Segment} wrapper with a {@link Policy} restriction that is automatically enforced.
+ * The policy seamlessly governs queries on the wrapped segment, ensuring compliance for supported interfaces. For
+ * example, {@link #as(Class)} with {@link CursorFactory} returns a policy-enforced {@link RestrictedCursorFactory}.
  *
  * <p>
- * Direct access to the policy or the underlying SegmentReference (the delegate) is not allowed.
+ * Direct access to the policy or the underlying {@link Segment} (the delegate) is not allowed.
  * However, a backdoor is available via {@code as(BypassRestrictedSegment.class)}, allowing access to
  * a {@link BypassRestrictedSegment} instance, which provides flexibility on policy enforcement.
  */
-public class RestrictedSegment implements SegmentReference
+public class RestrictedSegment implements Segment
 {
-  protected final SegmentReference delegate;
+  protected final Segment delegate;
   protected final Policy policy;
 
-  public RestrictedSegment(
-      SegmentReference delegate,
-      Policy policy
-  )
+  public RestrictedSegment(Segment delegate, Policy policy)
   {
+    // This is a sanity check, a restricted data source should alway wrap a druid table directly.
+    Preconditions.checkArgument(
+        delegate instanceof ReferenceCountedSegmentProvider.LeafReference,
+        "delegate must be a Segment checked out from a ReferenceCountingObjectProvider"
+    );
     this.delegate = delegate;
     this.policy = policy;
-  }
-
-  @Override
-  public Optional<Closeable> acquireReferences()
-  {
-    return delegate.acquireReferences();
   }
 
   @Override
@@ -72,25 +68,12 @@ public class RestrictedSegment implements SegmentReference
     return delegate.getDataInterval();
   }
 
-  @Override
-  public CursorFactory asCursorFactory()
-  {
-    return new RestrictedCursorFactory(delegate.asCursorFactory(), policy);
-  }
-
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
     if (CursorFactory.class.equals(clazz)) {
-      return (T) asCursorFactory();
+      return (T) new RestrictedCursorFactory(delegate.as(CursorFactory.class), policy);
     } else if (QueryableIndex.class.equals(clazz)) {
       return null;
     } else if (TimeBoundaryInspector.class.equals(clazz)) {
@@ -110,6 +93,12 @@ public class RestrictedSegment implements SegmentReference
   }
 
   @Override
+  public void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  {
+    policyEnforcer.validateOrElseThrow(delegate, policy);
+  }
+
+  @Override
   public boolean isTombstone()
   {
     return delegate.isTombstone();
@@ -122,8 +111,8 @@ public class RestrictedSegment implements SegmentReference
   }
 
   @Override
-  public String asString()
+  public String getDebugString()
   {
-    return delegate.asString();
+    return "restricted->" + delegate.getDebugString();
   }
 }

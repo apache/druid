@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.util.Providers;
-import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,13 +50,16 @@ import java.util.Properties;
  */
 public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorBuilder>
 {
+
+  static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
+  static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
+
   public StartupInjectorBuilder()
   {
     add(
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new ConfigModule(),
-        new NullHandlingModule(),
         new ExpressionProcessingModule(),
         binder -> binder.bind(DruidSecondaryModule.class),
         binder -> binder.bind(PropertiesValidator.class) // this gets properties injected, later call to validate checks
@@ -92,10 +94,7 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
   public StartupInjectorBuilder forServer()
   {
     withExtensions();
-    add(
-        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
-        new RuntimeInfoModule()
-    );
+    add(new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")));
     return this;
   }
 
@@ -131,25 +130,25 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
     public void validate()
     {
       final boolean defaultValueMode = Boolean.parseBoolean(
-          properties.getProperty(NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING, "false")
+          properties.getProperty(NULL_HANDLING_CONFIG_STRING, "false")
       );
       if (defaultValueMode) {
         final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", getVersionString());
         throw new ISE(
             "%s set to 'true', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
-            NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING,
+            NULL_HANDLING_CONFIG_STRING,
             docsLink
         );
       }
 
       final boolean no3vl = !Boolean.parseBoolean(
-          properties.getProperty(NullValueHandlingConfig.THREE_VALUE_LOGIC_CONFIG_STRING, "true")
+          properties.getProperty(THREE_VALUE_LOGIC_CONFIG_STRING, "true")
       );
       if (no3vl) {
         final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", getVersionString());
         throw new ISE(
             "%s set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
-            NullValueHandlingConfig.THREE_VALUE_LOGIC_CONFIG_STRING,
+            THREE_VALUE_LOGIC_CONFIG_STRING,
             docsLink
         );
       }
@@ -163,6 +162,51 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
             "%s set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
             ExpressionProcessingConfig.NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
             docsLink
+        );
+      }
+
+      validateRemovedProcessingConfigs();
+    }
+
+    private void validateRemovedProcessingConfigs()
+    {
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.initialYieldNumRows",
+          "druid.processing.merge.initialYieldNumRows"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.targetRunTimeMillis",
+          "druid.processing.merge.targetRunTimeMillis"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.smallBatchNumRows",
+          "druid.processing.merge.smallBatchNumRows"
+      );
+
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.awaitShutdownMillis",
+          "druid.processing.merge.awaitShutdownMillis"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.parallelism",
+          "druid.processing.merge.parallelism"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.defaultMaxQueryParallelism",
+          "druid.processing.merge.defaultMaxQueryParallelism"
+      );
+    }
+
+    /**
+     * Checks if a deleted config is present in the properties and throws an ISE.
+     */
+    private void checkDeletedConfigAndThrow(String deletedConfigName, String replaceConfigName)
+    {
+      if (properties.getProperty(deletedConfigName) != null) {
+        throw new ISE(
+            "Config[%s] has been removed. Please use config[%s] instead.",
+            deletedConfigName,
+            replaceConfigName
         );
       }
     }

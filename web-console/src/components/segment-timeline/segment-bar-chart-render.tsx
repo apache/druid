@@ -40,6 +40,7 @@ import {
   filterMap,
   formatBytes,
   formatNumber,
+  formatNumberAbbreviated,
   formatStartDuration,
   groupBy,
   groupByAsMap,
@@ -345,7 +346,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         return formatNumber(n); // + ' seg/day';
 
       case 'rows':
-        return formatNumber(n); // + ' row/day';
+        return formatNumberAbbreviated(n); // + ' row/day';
 
       case 'size':
         return formatBytes(n);
@@ -644,8 +645,8 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         className={classNames('load-rule', loadRuleToBaseType(loadRule))}
         data-tooltip={title}
         style={{
-          left: xWidth.x,
-          width: xWidth.width,
+          left: clamp(xWidth.x, 0, innerStage.width),
+          width: clamp(xWidth.width, 0, innerStage.width),
         }}
       >
         {title}

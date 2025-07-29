@@ -35,12 +35,12 @@ sidebar_label: Known issues
 
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with
-an [UnknownError](./reference.md#error_UnknownError) with a message including "No space left on device".
+an [UnknownError](./reference.md#error-codes) with a message including "No space left on device".
 
 ## `SELECT` Statement
 
 - `GROUPING SETS` are not implemented. Queries using these features return a
-  [QueryNotSupported](reference.md#error_QueryNotSupported) error.
+  [QueryNotSupported](./reference.md#error-codes) error.
 
 ## `INSERT` and `REPLACE` Statements
 
