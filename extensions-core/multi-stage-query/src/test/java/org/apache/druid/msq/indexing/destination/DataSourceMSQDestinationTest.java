@@ -71,6 +71,7 @@ public class DataSourceMSQDestinationTest
                       ImmutableList.of(
                           new AggregateProjectionSpec(
                               "projection1",
+                              null,
                               VirtualColumns.EMPTY,
                               ImmutableList.of(
                                   new StringDimensionSchema("region")
@@ -83,6 +84,7 @@ public class DataSourceMSQDestinationTest
                       ImmutableList.of(
                           new AggregateProjectionSpec(
                               "projection2",
+                              null,
                               VirtualColumns.create(
                                   Granularities.toVirtualColumn(
                                       Granularities.HOUR,

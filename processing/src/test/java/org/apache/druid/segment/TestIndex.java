@@ -188,12 +188,14 @@ public class TestIndex
   public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS = ImmutableList.of(
       new AggregateProjectionSpec(
           "daily_market_maxQuality",
+          null,
           VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
           List.of(new LongDimensionSchema("__gran"), new StringDimensionSchema("market")),
           new AggregatorFactory[]{new LongMaxAggregatorFactory("maxQuality", "qualityLong")}
       ),
       new AggregateProjectionSpec(
           "daily_countAndQualityCardinalityAndMaxLongNullable",
+          null,
           VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
           List.of(new LongDimensionSchema("__gran")),
           new AggregatorFactory[]{

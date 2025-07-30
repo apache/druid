@@ -86,6 +86,7 @@ public class SegmentAnalysisTest
             new AggregateProjectionMetadata.Schema(
                 "channel_added_hourly",
                 Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(
                         Granularities.HOUR,

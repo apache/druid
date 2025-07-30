@@ -164,6 +164,7 @@ public class SqlBenchmarkDatasets
             Arrays.asList(
                 new AggregateProjectionSpec(
                     "string2_hourly_sums_hll",
+                    null,
                     VirtualColumns.create(
                         Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                     ),
@@ -179,6 +180,7 @@ public class SqlBenchmarkDatasets
                 ),
                 new AggregateProjectionSpec(
                     "string2_long2_sums",
+                    null,
                     VirtualColumns.EMPTY,
                     Arrays.asList(
                         new StringDimensionSchema("string2"),
@@ -409,6 +411,7 @@ public class SqlBenchmarkDatasets
           projections.stream()
                      .map(projection -> new AggregateProjectionSpec(
                          projection.getName(),
+                         null,
                          projection.getVirtualColumns(),
                          projection.getGroupingColumns()
                                    .stream()

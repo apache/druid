@@ -34,7 +34,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.IsBooleanFilter;
+import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -42,7 +47,9 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -58,6 +65,7 @@ import java.util.Set;
 public class AggregateProjectionMetadata
 {
   private static final Interner<Schema> SCHEMA_INTERNER = Interners.newWeakInterner();
+
 
   public static final Comparator<AggregateProjectionMetadata> COMPARATOR = (o1, o2) -> {
     int rowCompare = Integer.compare(o1.numRows, o2.numRows);
@@ -130,10 +138,10 @@ public class AggregateProjectionMetadata
      */
     public static final Comparator<Schema> COMPARATOR = (o1, o2) -> {
       // coarsest granularity first
-      if (o1.getGranularity().isFinerThan(o2.getGranularity())) {
+      if (o1.getEffectiveGranularity().isFinerThan(o2.getEffectiveGranularity())) {
         return 1;
       }
-      if (o2.getGranularity().isFinerThan(o1.getGranularity())) {
+      if (o2.getEffectiveGranularity().isFinerThan(o1.getEffectiveGranularity())) {
         return -1;
       }
       // fewer dimensions first
@@ -163,6 +171,8 @@ public class AggregateProjectionMetadata
     private final String name;
     @Nullable
     private final String timeColumnName;
+    @Nullable
+    private final DimFilter filter;
     private final VirtualColumns virtualColumns;
     private final List<String> groupingColumns;
     private final AggregatorFactory[] aggregators;
@@ -171,12 +181,13 @@ public class AggregateProjectionMetadata
 
     // computed fields
     private final int timeColumnPosition;
-    private final Granularity granularity;
+    private final Granularity effectiveGranularity;
 
     @JsonCreator
     public Schema(
         @JsonProperty("name") String name,
         @JsonProperty("timeColumnName") @Nullable String timeColumnName,
+        @JsonProperty("filter") @Nullable DimFilter filter,
         @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
         @JsonProperty("groupingColumns") @Nullable List<String> groupingColumns,
         @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
@@ -188,11 +199,15 @@ public class AggregateProjectionMetadata
       }
       this.name = name;
       if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
-        throw DruidException.defensive("projection schema[%s] groupingColumns and aggregators must not both be null or empty", name);
+        throw DruidException.defensive(
+            "projection schema[%s] groupingColumns and aggregators must not both be null or empty",
+            name
+        );
       }
       if (ordering == null) {
         throw DruidException.defensive("projection schema[%s] ordering must not be null", name);
       }
+      this.filter = filter;
       this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
       this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
       this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
@@ -219,7 +234,7 @@ public class AggregateProjectionMetadata
       }
       this.timeColumnName = timeColumnName;
       this.timeColumnPosition = foundTimePosition;
-      this.granularity = granularity == null ? Granularities.ALL : granularity;
+      this.effectiveGranularity = granularity == null ? Granularities.ALL : granularity;
     }
 
     @JsonProperty
@@ -233,6 +248,13 @@ public class AggregateProjectionMetadata
     public String getTimeColumnName()
     {
       return timeColumnName;
+    }
+
+    @JsonProperty
+    @Nullable
+    public DimFilter getFilter()
+    {
+      return filter;
     }
 
     @JsonProperty
@@ -275,9 +297,9 @@ public class AggregateProjectionMetadata
     }
 
     @JsonIgnore
-    public Granularity getGranularity()
+    public Granularity getEffectiveGranularity()
     {
-      return granularity;
+      return effectiveGranularity;
     }
 
     /**
@@ -396,6 +418,45 @@ public class AggregateProjectionMetadata
           }
         }
       }
+
+      // if the projection has a filter, the query must contain this filter match
+      if (filter != null) {
+        final Filter queryFilter = queryCursorBuildSpec.getFilter();
+        if (queryFilter != null) {
+          // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
+          final Filter projectionFilter = filter.toOptimizedFilter(false);
+          final Map<String, String> filterRewrites = new HashMap<>();
+          // start with identity
+          for (String required : queryFilter.getRequiredColumns()) {
+            filterRewrites.put(required, required);
+          }
+          // overlay projection rewrites
+          filterRewrites.putAll(matchBuilder.getRemapColumns());
+
+          final Filter remappedQueryFilter = queryFilter.rewriteRequiredColumns(filterRewrites);
+
+          final Filter rewritten = rewriteFilter(projectionFilter, remappedQueryFilter);
+          // if the filter does not contain the projection filter, we cannot match this projection
+          if (rewritten == null) {
+            return null;
+          }
+          //noinspection ObjectEquality
+          if (rewritten == ProjectionFilterMatch.INSTANCE) {
+            // we can remove the whole thing since the query filter exactly matches the projection filter
+            matchBuilder.rewriteFilter(null);
+          } else {
+            // otherwise, we partially rewrote the query filter to eliminate the projection filter since it is baked in
+            matchBuilder.rewriteFilter(rewritten);
+          }
+        } else {
+          // projection has a filter, but the query doesn't, no good
+          return null;
+        }
+      } else {
+        // projection doesn't have a filter, retain the original
+        matchBuilder.rewriteFilter(queryCursorBuildSpec.getFilter());
+      }
+
       return matchBuilder.build(queryCursorBuildSpec);
     }
 
@@ -457,18 +518,18 @@ public class AggregateProjectionMetadata
           // virtual column and underlying expression itself, but this will do for now
           final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
           if (virtualGranularity != null) {
-            if (virtualGranularity.isFinerThan(granularity)) {
+            if (virtualGranularity.isFinerThan(effectiveGranularity)) {
               return null;
             }
             // same granularity, replace virtual column directly by remapping it to the physical column
-            if (granularity.equals(virtualGranularity)) {
+            if (effectiveGranularity.equals(virtualGranularity)) {
               return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
                                  .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
             }
             return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           } else {
             // anything else with __time requires none granularity
-            if (Granularities.NONE.equals(granularity)) {
+            if (Granularities.NONE.equals(effectiveGranularity)) {
               return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
             }
             return null;
@@ -524,6 +585,7 @@ public class AggregateProjectionMetadata
       Schema schema = (Schema) o;
       return Objects.equals(name, schema.name)
              && Objects.equals(timeColumnName, schema.timeColumnName)
+             && Objects.equals(filter, schema.filter)
              && Objects.equals(virtualColumns, schema.virtualColumns)
              && Objects.equals(groupingColumns, schema.groupingColumns)
              && Objects.deepEquals(aggregators, schema.aggregators)
@@ -536,6 +598,7 @@ public class AggregateProjectionMetadata
       return Objects.hash(
           name,
           timeColumnName,
+          filter,
           virtualColumns,
           groupingColumns,
           Arrays.hashCode(aggregators),
@@ -554,9 +617,73 @@ public class AggregateProjectionMetadata
              ", aggregators=" + Arrays.toString(aggregators) +
              ", ordering=" + ordering +
              ", timeColumnPosition=" + timeColumnPosition +
-             ", granularity=" + granularity +
+             ", effectiveGranularity=" + effectiveGranularity +
              ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
              '}';
     }
+  }
+
+  /**
+   * Rewrites a query {@link Filter} if possible, removing the {@link Filter} of a projection. To match a projection
+   * filter, the query filter must be equal to the projection filter, or must contain the projection filter as the child
+   * of an AND filter. This method returns null
+   * indicating that a rewrite is impossible with the implication that the query cannot use the projection because the
+   * projection doesn't contain all the rows the query would match if not using the projection.
+   */
+  @Nullable
+  public static Filter rewriteFilter(@Nullable Filter projectionFilter, @Nullable Filter queryFilter)
+  {
+    if (projectionFilter == null || queryFilter == null) {
+      return queryFilter;
+    }
+    if (queryFilter.equals(projectionFilter)) {
+      return ProjectionFilterMatch.INSTANCE;
+    }
+    if (queryFilter instanceof IsBooleanFilter && ((IsBooleanFilter) queryFilter).isTrue()) {
+      final IsBooleanFilter  isTrueFilter = (IsBooleanFilter) queryFilter;
+      final Filter rewritten = rewriteFilter(projectionFilter, isTrueFilter.getBaseFilter());
+      if (rewritten == null) {
+        return null;
+      }
+      //noinspection ObjectEquality
+      if (rewritten == ProjectionFilterMatch.INSTANCE) {
+        return ProjectionFilterMatch.INSTANCE;
+      }
+      return new IsBooleanFilter(rewritten, true);
+    }
+    if (queryFilter instanceof AndFilter) {
+      AndFilter andFilter = (AndFilter) queryFilter;
+      List<Filter> newChildren = Lists.newArrayListWithExpectedSize(andFilter.getFilters().size());
+      boolean childRewritten = false;
+      for (Filter filter : andFilter.getFilters()) {
+        Filter rewritten = rewriteFilter(projectionFilter, filter);
+        //noinspection ObjectEquality
+        if (rewritten == ProjectionFilterMatch.INSTANCE) {
+          childRewritten = true;
+        } else {
+          if (rewritten != null) {
+            newChildren.add(rewritten);
+            childRewritten = true;
+          } else {
+            newChildren.add(filter);
+          }
+        }
+      }
+      // at least one child must have been rewritten to rewrite the AND
+      if (childRewritten) {
+        if (newChildren.size() > 1) {
+          return new AndFilter(newChildren);
+        } else {
+          return newChildren.get(0);
+        }
+      }
+      return null;
+    }
+    return null;
+  }
+
+  static final class ProjectionFilterMatch extends TrueFilter
+  {
+    private static final ProjectionFilterMatch INSTANCE = new ProjectionFilterMatch();
   }
 }

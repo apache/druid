@@ -73,6 +73,7 @@ public class OnheapIncrementalIndexTest
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
     AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
         "proj",
+        null,
         VirtualColumns.EMPTY,
         ImmutableList.of(new StringDimensionSchema("string")),
         new AggregatorFactory[]{
@@ -100,12 +101,14 @@ public class OnheapIncrementalIndexTest
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
     AggregateProjectionSpec projectionSpec1 = new AggregateProjectionSpec(
         "proj",
+        null,
         VirtualColumns.EMPTY,
         ImmutableList.of(),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
     );
     AggregateProjectionSpec projectionSpec2 = new AggregateProjectionSpec(
         "proj",
+        null,
         VirtualColumns.EMPTY,
         ImmutableList.of(),
         new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
@@ -160,6 +163,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "mismatched dims",
+                                                              null,
                                                               VirtualColumns.EMPTY,
                                                               ImmutableList.of(
                                                                   new LongDimensionSchema("string")
@@ -200,6 +204,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "sad grouping column",
+                                                              null,
                                                               VirtualColumns.create(
                                                                   new ExpressionVirtualColumn(
                                                                       "v0",
@@ -248,6 +253,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "sad virtual column",
+                                                              null,
                                                               VirtualColumns.create(
                                                                   new ExpressionVirtualColumn(
                                                                       "v0",
@@ -299,6 +305,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "mismatched agg",
+                                                              null,
                                                               VirtualColumns.EMPTY,
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
@@ -348,6 +355,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "renamed agg",
+                                                              null,
                                                               VirtualColumns.EMPTY,
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
@@ -391,6 +399,7 @@ public class OnheapIncrementalIndexTest
                                                       ImmutableList.of(
                                                           new AggregateProjectionSpec(
                                                               "sad agg virtual column",
+                                                              null,
                                                               VirtualColumns.create(
                                                                   new ExpressionVirtualColumn(
                                                                       "v0",
@@ -431,6 +440,7 @@ public class OnheapIncrementalIndexTest
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
     AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
         "proj",
+        null,
         VirtualColumns.EMPTY,
         ImmutableList.of(new StringDimensionSchema("string")),
         new AggregatorFactory[]{
@@ -491,6 +501,7 @@ public class OnheapIncrementalIndexTest
 
     AggregateProjectionSpec projectionSpecYear = new AggregateProjectionSpec(
         "proj",
+        null,
         VirtualColumns.create(
             Granularities.toVirtualColumn(Granularities.YEAR, "g")
         ),

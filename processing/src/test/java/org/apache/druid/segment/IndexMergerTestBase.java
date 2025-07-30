@@ -3013,6 +3013,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     List<AggregateProjectionSpec> projections = Arrays.asList(
         new AggregateProjectionSpec(
             "a_hourly_c_sum",
+            null,
             VirtualColumns.create(
                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
             ),
@@ -3026,6 +3027,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
         ),
         new AggregateProjectionSpec(
             "a_c_sum",
+            null,
             VirtualColumns.EMPTY,
             Collections.singletonList(
                 new StringDimensionSchema("a")

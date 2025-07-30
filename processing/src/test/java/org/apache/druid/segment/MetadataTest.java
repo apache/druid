@@ -104,6 +104,7 @@ public class MetadataTest extends InitializedNullHandlingTest
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
                 "__gran",
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -282,6 +283,7 @@ public class MetadataTest extends InitializedNullHandlingTest
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
                 "__gran",
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -300,6 +302,7 @@ public class MetadataTest extends InitializedNullHandlingTest
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
                 "__gran",
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -318,6 +321,7 @@ public class MetadataTest extends InitializedNullHandlingTest
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
                 "__gran",
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -333,6 +337,7 @@ public class MetadataTest extends InitializedNullHandlingTest
             new AggregateProjectionMetadata.Schema(
                 "some_projection2",
                 "__gran",
+                null,
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.DAY, "__gran")
                 ),

@@ -100,6 +100,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   private static final List<AggregateProjectionSpec> PROJECTIONS = Collections.singletonList(
       new AggregateProjectionSpec(
           "a_projection",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
@@ -120,6 +121,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   private static final List<AggregateProjectionSpec> AUTO_PROJECTIONS = PROJECTIONS.stream().map(projection -> {
     return new AggregateProjectionSpec(
         projection.getName(),
+        projection.getFilter(),
         projection.getVirtualColumns(),
         projection.getGroupingColumns()
                   .stream()

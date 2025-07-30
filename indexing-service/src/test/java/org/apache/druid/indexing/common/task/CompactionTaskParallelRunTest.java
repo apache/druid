@@ -120,6 +120,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
   private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
       "projection1",
+      null,
       VirtualColumns.create(
           Granularities.toVirtualColumn(
               Granularities.HOUR,
@@ -959,6 +960,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     );
     final AggregateProjectionSpec addProjection = new AggregateProjectionSpec(
         "projection2",
+        null,
         VirtualColumns.EMPTY,
         null,
         new AggregatorFactory[]{

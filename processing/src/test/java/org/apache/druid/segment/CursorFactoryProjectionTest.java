@@ -169,6 +169,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static final List<AggregateProjectionSpec> PROJECTIONS = Arrays.asList(
       new AggregateProjectionSpec(
           "ab_hourly_cd_sum",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
@@ -184,6 +185,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "a_hourly_c_sum_with_count_latest",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
@@ -199,6 +201,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "b_hourly_c_sum_non_time_ordered",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
@@ -214,6 +217,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "bf_daily_c_sum",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.DAY, "__gran")
           ),
@@ -228,6 +232,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "b_c_sum",
+          null,
           VirtualColumns.EMPTY,
           List.of(new StringDimensionSchema("b")),
           new AggregatorFactory[]{
@@ -237,6 +242,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       new AggregateProjectionSpec(
           "ab",
           null,
+          null,
           Arrays.asList(
               new StringDimensionSchema("a"),
               new StringDimensionSchema("b")
@@ -245,6 +251,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "abfoo",
+          null,
           VirtualColumns.create(
               new ExpressionVirtualColumn(
                   "bfoo",
@@ -261,6 +268,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "c_sum_daily",
+          null,
           VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
           Collections.singletonList(new LongDimensionSchema("__gran")),
           new AggregatorFactory[]{
@@ -269,6 +277,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "c_sum",
+          null,
           VirtualColumns.EMPTY,
           Collections.emptyList(),
           new AggregatorFactory[]{
@@ -277,10 +286,27 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "missing_column",
+          null,
           VirtualColumns.EMPTY,
           List.of(new StringDimensionSchema("missing")),
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("csum", "c")
+          }
+      ),
+      new AggregateProjectionSpec(
+          "ab_filter_baaonly_hourly_cd_sum",
+          new EqualityFilter("b", ColumnType.STRING, "aa", null),
+          VirtualColumns.create(
+              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+          ),
+          Arrays.asList(
+              new StringDimensionSchema("a"),
+              new StringDimensionSchema("b"),
+              new LongDimensionSchema("__gran")
+          ),
+          new AggregatorFactory[]{
+              new LongSumAggregatorFactory("_c_sum", "c"),
+              new DoubleSumAggregatorFactory("d", "d")
           }
       )
   );
@@ -288,6 +314,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static final List<AggregateProjectionSpec> ROLLUP_PROJECTIONS = Arrays.asList(
       new AggregateProjectionSpec(
           "a_hourly_c_sum_with_count",
+          null,
           VirtualColumns.create(
               Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
@@ -302,6 +329,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "afoo",
+          null,
           VirtualColumns.create(
               new ExpressionVirtualColumn(
                   "afoo",
@@ -323,6 +351,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       PROJECTIONS.stream()
                  .map(projection -> new AggregateProjectionSpec(
                      projection.getName(),
+                     projection.getFilter(),
                      projection.getVirtualColumns(),
                      projection.getGroupingColumns()
                                .stream()
@@ -336,6 +365,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ROLLUP_PROJECTIONS.stream()
                         .map(projection -> new AggregateProjectionSpec(
                             projection.getName(),
+                            projection.getFilter(),
                             projection.getVirtualColumns(),
                             projection.getGroupingColumns()
                                       .stream()
@@ -1684,6 +1714,46 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           results.get(1).getArray()
       );
     }
+  }
+
+
+  @Test
+  public void testProjectionFilter()
+  {
+    // since d isn't present on the smaller projection, cant use it, but can still use the larger projection
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("b", ColumnType.STRING, "aa", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new DoubleSumAggregatorFactory("d_sum", "d"))
+                    .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(3, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", 2L, 2.1}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 7L, 7.7}, results.get(1).getArray());
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)

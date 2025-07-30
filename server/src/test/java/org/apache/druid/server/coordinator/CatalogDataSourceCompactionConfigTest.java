@@ -55,6 +55,7 @@ public class CatalogDataSourceCompactionConfigTest
 
   private static final AggregateProjectionSpec TEST_PROJECTION_SPEC_1 = new AggregateProjectionSpec(
       "string_sum_long_hourly",
+      null,
       VirtualColumns.create(
           Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
       ),

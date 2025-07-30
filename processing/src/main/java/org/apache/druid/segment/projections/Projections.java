@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -183,6 +184,8 @@ public class Projections
     private final Map<String, String> remapColumns;
     private final List<AggregatorFactory> combiningFactories;
     private final Set<String> matchedQueryColumns;
+    @Nullable
+    private Filter rewriteFilter;
 
     public ProjectionMatchBuilder()
     {
@@ -250,6 +253,17 @@ public class Projections
       return this;
     }
 
+    public ProjectionMatchBuilder rewriteFilter(Filter rewriteFilter)
+    {
+      this.rewriteFilter = rewriteFilter;
+      return this;
+    }
+
+    public Map<String, String> getRemapColumns()
+    {
+      return remapColumns;
+    }
+
     public Set<String> getMatchedQueryColumns()
     {
       return matchedQueryColumns;
@@ -259,6 +273,7 @@ public class Projections
     {
       return new ProjectionMatch(
           CursorBuildSpec.builder(queryCursorBuildSpec)
+                         .setFilter(rewriteFilter)
                          .setPhysicalColumns(referencedPhysicalColumns)
                          .setVirtualColumns(VirtualColumns.fromIterable(referencedVirtualColumns))
                          .setAggregators(combiningFactories)

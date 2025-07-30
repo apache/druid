@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -57,8 +58,10 @@ public class AggregateProjectionSpec
   public static final String TYPE_NAME = "aggregate";
 
   private final String name;
-  private final List<DimensionSchema> groupingColumns;
+  @Nullable
+  private final DimFilter filter;
   private final VirtualColumns virtualColumns;
+  private final List<DimensionSchema> groupingColumns;
   private final AggregatorFactory[] aggregators;
   private final List<OrderBy> ordering;
   @Nullable
@@ -67,6 +70,7 @@ public class AggregateProjectionSpec
   @JsonCreator
   public AggregateProjectionSpec(
       @JsonProperty("name") String name,
+      @JsonProperty("filter") @Nullable DimFilter filter,
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
       @JsonProperty("groupingColumns") @Nullable List<DimensionSchema> groupingColumns,
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
@@ -77,10 +81,14 @@ public class AggregateProjectionSpec
     }
     this.name = name;
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
-      throw InvalidInput.exception("projection[%s] groupingColumns and aggregators must not both be null or empty", name);
+      throw InvalidInput.exception(
+          "projection[%s] groupingColumns and aggregators must not both be null or empty",
+          name
+      );
     }
-    this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
+    this.filter = filter;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
     // in the future this should be expanded to support user specified ordering, but for now we compute it based on
     // the grouping columns, which is consistent with how rollup ordering works for incremental index base table
     final ProjectionOrdering ordering = computeOrdering(this.virtualColumns, this.groupingColumns);
@@ -93,6 +101,14 @@ public class AggregateProjectionSpec
   public String getName()
   {
     return name;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public DimFilter getFilter()
+  {
+    return filter;
   }
 
   @JsonProperty
@@ -128,6 +144,7 @@ public class AggregateProjectionSpec
     return new AggregateProjectionMetadata.Schema(
         name,
         timeColumnName,
+        filter,
         virtualColumns,
         groupingColumns.stream().map(DimensionSchema::getName).collect(Collectors.toList()),
         aggregators,
@@ -146,6 +163,7 @@ public class AggregateProjectionSpec
     }
     AggregateProjectionSpec that = (AggregateProjectionSpec) o;
     return Objects.equals(name, that.name)
+           && Objects.equals(filter, that.filter)
            && Objects.equals(groupingColumns, that.groupingColumns)
            && Objects.equals(virtualColumns, that.virtualColumns)
            && Objects.deepEquals(aggregators, that.aggregators)
@@ -155,7 +173,7 @@ public class AggregateProjectionSpec
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, groupingColumns, virtualColumns, Arrays.hashCode(aggregators), ordering);
+    return Objects.hash(name, filter, virtualColumns, groupingColumns, Arrays.hashCode(aggregators), ordering);
   }
 
   @Override
@@ -163,8 +181,9 @@ public class AggregateProjectionSpec
   {
     return "AggregateProjectionSpec{" +
            "name='" + name + '\'' +
-           ", groupingColumns=" + groupingColumns +
+           ", filter=" + filter +
            ", virtualColumns=" + virtualColumns +
+           ", groupingColumns=" + groupingColumns +
            ", aggregators=" + Arrays.toString(aggregators) +
            ", ordering=" + ordering +
            '}';
