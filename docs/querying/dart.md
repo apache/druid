@@ -1,8 +1,8 @@
 ---
 id: dart
-title: "SQL queries using the Dart query engine"
-sidebar_label: "Dart query engine"
-description: Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine.
+title: "SQL queries using the Dart query profile"
+sidebar_label: "Dart query profile"
+description: The Dart query profile for the MSQ engine is an alternative to the native query engine that offers better parallelism and better performance for certain types of queries.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -29,18 +29,26 @@ import TabItem from '@theme/TabItem';
 
 :::info[Experimental]
 
-Dart is experimental. For production use, we recommend using the other available query engines.
+Dart is experimental. Use it in situations where it fits your use case better than the native query engine. But be aware that Dart has not received as much testing as the other query engines.
 
 :::
 
 
-Use the Dart query engine for light-weight queries that don't need all the capabilities of the MSQ task engine. For example, use Dart for GROUP BY queries that have intermediate results consisting of hundreds of millions of rows. In this case, the Dart engine's multi-threaded workers perform in-memory shuffles using locally cached data without pulling from deep storage.
+Dart is a profile of the MSQ engine that runs SELECT queries on Brokers and Historicals instead of on tasks. The Brokers act as controllers and the Historicals act as workers.
 
-You can query batch or realtime datasources with Dart.
+Use Dart as an alternative to the native query engine since it offers better parallelism, excelling at queries that involve:
+
+- large joins, which Dart performs using parallel sort-merges
+- high-cardinality exact groupBys 
+- high-cardinality exact count distinct
+
+When processing these kinds of queries, Dart can parallelize through the entire query, leading to better performance.
+
+By default, Dart queries include results form published segments and realtime tasks.
 
 ## Enable Dart
 
-To enable Dart, add the following line to your `broker/runtime.properties` and `historical/runtime.properties` files:
+To enable Dart, add the following line to your `_common/common.runtime.properties` files:
 
 ```
 druid.msq.dart.enabled = true
@@ -48,17 +56,22 @@ druid.msq.dart.enabled = true
 
 ### Configure resource consumption
 
-You can configure the Broker and the Historical to tune Dart's resource consumption.
+You can configure the Broker and the Historical to tune Dart's resource consumption. Since Brokers only act as controllers, they don't require substantial resources. Historicals, on the other hand, are processing the queries. More resources for Historicals can result in faster query processing.
 
 For Brokers, you can set the following configs:
 
-- `druid.msq.dart.controller.concurrentQueries`: The maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Defaults to 1.
-- `druid.msq.dart.query.context.targetPartitionsPerWorker`: The number of partitions per worker to create during a shuffle. Set this to the number of available threads on workers to fully take advantage of multi-threaded processing of shuffled data.
+| Property name | Description | Default |
+|---|---|---|
+| `druid.msq.dart.controller.concurrentQueries` | Maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Queries can get stuck waiting for each other if the total value on Brokers exceeds the setting on a single Historical (`druid.msq.dart.worker.concurrentQueries` ).| 1 |
+| `druid.msq.dart.query.context.targetPartitionsPerWorker` |Number of available threads on workers (`druid.processing.numThreads`) | 1 (Multithreading is turned off on Historicals) |
+
 
 For Historicals, you can set the following configs:
 
-- `druid.msq.dart.worker.concurrentQueries`: The maximum number of query workers that can run concurrently on that Historical. Default is equal to the number of merge buffers because each query needs one merge buffer. Ideally, this should be equal to or larger than the sum of the `concurrentQueries` setting on your Brokers.
-- `druid.msq.dart.worker.heapFraction`: The maximum amount of heap available for use across all Dart queries as a decimal. The default is 0.35, 35% of heap.
+| Property name | Description | Default Value |
+|---|---|---|
+| `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on that Historical. Set this to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. | Equal to the number of merge buffers |
+| `druid.msq.dart.worker.heapFraction` | Maximum amount of heap available for use across all Dart queries as a decimal. | 0.35 (35% of heap) |
 
 
 ## Run a Dart query
@@ -74,43 +87,54 @@ In the **Query** view, select **Engine: SQL (Dart)** from the engine selector me
 Dart uses the SQL endpoint `/druid/v2/sql`. To use Dart, include the query context parameter `engine` and set it to `msq-dart`:
 
 <Tabs>
-  <TabItem value="SET" label="SET" default>
-    
-  ```sql
-  curl --location 'http://HOST:PORT/druid/v2/sql' \
---header 'Content-Type: application/json' \
---data '{
-  "query":   "SET engine = 'msq-dart';\nSELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
-  ...
-  ...
-}'
-  ```
+<TabItem value="SET" label="SET" default>
 
-  </TabItem>
-  <TabItem value="context_block" label="Context block">
-    
-  ```sql
-  curl --location 'http://HOST:PORT/druid/v2/sql' \
-  --header 'Content-Type: application/json' \
-  --data '{
-  "query":   "SELECT\n  user,\n  commentLength,COUNT(*) AS \"COUNT\" FROM wikipedia \nGROUP BY 1, 2 \nORDER BY 2 DESC",
+As part of your query using `SET engine = 'msq-dart'`:
 
-  ...
-  ...
+```json
+"query":"SET \"engine\"='msq-dart';\nSELECT\n  user,\n  commentLength,\n  COUNT(*) AS \"COUNT\"\nFROM \"wikipedia\"\nGROUP BY 1, 2\nORDER BY 2 DESC"
+```
+
+</TabItem>
+
+<TabItem value="context_block" label="Context block">
+
+As part of a `context` block: 
+
+```json
+{
+  "query": "SELECT\n  user,\n  commentLength,\n  COUNT(*) AS \"COUNT\"\nFROM \"wikipedia\"\nGROUP BY 1, 2\nORDER BY 2 DESC",
   "context": {
-    "engine":"msq-dart"
-    ...
+    "engine": "msq-dart"
   }
-  }'
-  ```
+}
+```
+
 
   </TabItem>
   </Tabs>
 
-Dart supports many of the same [query context parameters as the MSQ task engine](../multi-stage-query/reference.md#context-parameters).
+## Query context parameters
+
+You can use query context parameters to control Dart's behavior. The following table lists the supported query context parameters:
+
+| Parameter | Description | Default value |
+|---|---|---|
+| `finalizeAggregations` | Determines the type of aggregation to return. If true, Druid finalizes the results of complex aggregations that directly appear in query results. If false, Druid returns the aggregation's intermediate type rather than finalized type. This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables. For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md). | `true` |
+| `includeSegmentSource` |  Controls the sources that are queried for results in addition to the segments present on deep storage. Can be `NONE` or `REALTIME`. If this value is `NONE`, only non-realtime (published and used) segments will be downloaded from deep storage. If this value is `REALTIME`, results will also be included from realtime tasks.|  `REALTIME` |
+| `removeNullBytes` |The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
+|`maxConcurrentStages`|Number of stages that can run concurrently for a query. A higher number can potentially improve pipelining but results in less memory available for each stage.|2|
+|`maxNonLeafWorkers`|Number of workers to use for stages beyond the leaf stage| 1 (Scatter-gather style)|
+| `sqlJoinAlgorithm` | Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
+|`targetPartitionsPerWorker`|Number of partitions Druid generates for each worker. This number controls how much parallelism can be maintained throughout a query.|1|
+
 
   ## Known issues and limitations
 
-  - If you encounter an issue where Dart can't find a segment, try rerunning your query. 
-  - If your data includes HLL Sketches for realtime data, Dart returns a `NullPointerException`.
-  - When a Dart query fails on a Historical with an error about no workers running for a query, it gets stuck retrying the query. If the query doesn't get canceled, it can cause other queries to fail.
+- Dart doesn't do the following:
+  - verify that `druid.msq.dart.controller.concurrentQueries` is set properly. If set too high, queries can get stuck on each other.
+  - use the query cache.
+  - perform query prioritization or laning
+- Dart doesn't support JDBC connections. The `engine` context parameter gets ignored.
+- Realtime scans from the MSQ engine cannot reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
+- The `NilStageOutputReader` can sometimes lead to a `NoClassDefFoundError`. For more information, see [#18336](https://github.com/apache/druid/pull/18336).
