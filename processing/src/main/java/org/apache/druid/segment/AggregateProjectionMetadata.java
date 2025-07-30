@@ -640,7 +640,7 @@ public class AggregateProjectionMetadata
       return ProjectionFilterMatch.INSTANCE;
     }
     if (queryFilter instanceof IsBooleanFilter && ((IsBooleanFilter) queryFilter).isTrue()) {
-      final IsBooleanFilter  isTrueFilter = (IsBooleanFilter) queryFilter;
+      final IsBooleanFilter isTrueFilter = (IsBooleanFilter) queryFilter;
       final Filter rewritten = rewriteFilter(projectionFilter, isTrueFilter.getBaseFilter());
       if (rewritten == null) {
         return null;
