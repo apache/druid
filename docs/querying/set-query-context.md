@@ -56,7 +56,13 @@ The following steps show you how to set the query context using the web console:
 
    ![Engine selection](../assets/set-query-context-select-engine.png)
 
-2. Enter the query you want to run.
+2. Enter the query you want to run. If you ingested the Wikipedia dataset from the [quickstart](../tutorials/index.md), you can use the following query: 
+
+    ```sql
+    SELECT * FROM wikipedia WHERE user='BlueMoon2662'
+    ```
+
+   This is how it looks like in the web console:
 
    ![Adding query](../assets/set-query-context-insert-query.png)
 
@@ -68,10 +74,11 @@ The following steps show you how to set the query context using the web console:
 
    ```json
    {
-     "timeout": 300000,
-     "useCache": false
+     "sqlTimeZone" : "UTC"
    }
    ```
+
+   In this example, the query context is configured using the `sqlTimeZone` parameter to ensure that the query results reflect the specified time zone, which may differ from your local time zone when viewing the data.
 
    The web console validates the JSON object containing the query context parameters and highlights any syntax errors.
 
@@ -94,14 +101,14 @@ When using the HTTP API, you include query context parameters in the `context` o
 
 The following example sets the `sqlTimeZone` parameter:
 
-   ```json
-   {
-     "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-     "context" : {
-       "sqlTimeZone" : "America/Los_Angeles"
-     }
-   }
-   ```
+```json
+{
+  "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
+  "context": {
+    "sqlTimeZone": "UTC"
+  },
+}
+```
 
 Druid executes your query using the specified context parameters and return the results.
 
@@ -109,12 +116,13 @@ You can set multiple context parameters in a single request:
 
 ```json
 {
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'",
-  "context" : {
-    "timeout" : 30000,
-    "useCache" : false,
-    "sqlTimeZone" : "America/Los_Angeles"
-  }
+    "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
+    "context": {
+    "sqlTimeZone": "UTC"
+    },
+    "header" : true,
+    "typesHeader" : true,
+    "sqlTypesHeader" : true
 }
 ```
 
@@ -128,12 +136,11 @@ When connecting to Druid through JDBC, you set query context parameters a JDBC c
 For example, you can set query context parameters when creating your JDBC connection:
 
 ```java
-String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
 
 // Set any query context parameters you need here.
 Properties connectionProperties = new Properties();
-connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
-connectionProperties.setProperty("useCache", "false");
+connectionProperties.setProperty("sqlTimeZone", "UTC"); // set the time zone to UTC
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   // create and execute statements, process result sets, etc
@@ -148,14 +155,9 @@ You can use the SET command to specify SQL query context parameters that modify 
 In the web console, you can write your SET statements followed by your query directly. For example, 
 
 ```sql
-SET useApproximateTopN = false;
-SET sqlTimeZone = 'America/Los_Angeles';
-SET timeout = 90000;
-SELECT some_column, COUNT(*) 
-FROM druid.foo 
-WHERE other_column = 'foo' 
-GROUP BY 1 
-ORDER BY 2 DESC
+SET sqlTimeZone = 'UTC';
+
+SELECT * FROM wikipedia WHERE user = 'BlueMoon2662';
 ```
 
 You can also include your SET statements as part of the query string in your HTTP API call. For example,
@@ -164,7 +166,7 @@ You can also include your SET statements as part of the query string in your HTT
 curl -X POST 'http://localhost:8888/druid/v2/sql' \
   -H 'Content-Type: application/json' \
   -d '{
-    "query": "SET useApproximateTopN = false; SET sqlTimeZone = '\''America/Los_Angeles'\''; SET timeout = 90000; SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = '\''foo'\'' GROUP BY 1 ORDER BY 2 DESC"
+  "query": "SET sqlTimeZone='UTC'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'"
   }'
 ```
 
@@ -172,10 +174,9 @@ You can also combine SET statements with the `context` field. If you include bot
 
 ```json
 {
-  "query": "SET timeout = 90000; SELECT COUNT(*) FROM data_source",
+  "query": "SET sqlTimeZone='UTC'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
   "context": {
-    "timeout": 30000,  // This will be overridden by SET
-    "priority": 100    // This will still apply
+    "sqlTimeZone": "America/Los_Angeles",  // This will be overridden by SET
   }
 }
 ```
@@ -189,13 +190,9 @@ You cannot use SET statements in JDBC connections.
 
 ## Native queries
 
-<<<<<<< HEAD
-For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [web console](./set-query-context.md#web-console).
-=======
 For native queries, you can include query context parameters in a JSON object named `context` within your query or through [web console](./set-query-context.md#web-console).
->>>>>>> df2884c1d098db4a153364d6250db7d53abc44a6
 
-The following example shows a native query that sets the query ID to `only_query_id_test`:
+The following example shows a native query that sets the `sqlTimeZone` to UTC and `queryId` to "only_query_id_test":
 
 ```json
 {
@@ -215,27 +212,43 @@ The following example shows a native query that sets the query ID to `only_query
   ],
   "intervals": ["2015-09-12T00:00:00.000/2015-09-13T00:00:00.000"],
   "context": {
-    "queryId": "only_query_id_test"
+    "sqlTimeZone": "UTC",
+    "queryId": "only_query_id_test",
   }
 }
 ```
 
-For more information about native queries, see [Native queries](querying.md).
+
+## Runtime Properties
+
+You can also configure query context parameters globally by adding a runtime property in the following format to your configuration file:
+
+```properties
+druid.query.default.context.{query_context_key}={value}
+```
+
+The `druid.query.default.context.` prefix applies to all current and future query context keys, just like context parameters specified directly in queries.
+
+
+For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
 
 
 ## Query context precedence
 
-You can set the query context using various methods. For a given parameter, Druid determines the value to use based on the following order of precedence, from lowest to highest:
+The sections above describe the different ways to set query context parameters. For a given context query, Druid determines the final query context value to use based on the following order of precedence, from lowest to highest:
 
-1. **Built-in defaults** — these are the system’s default values used if you don’t specify anything else.
-2. **Runtime properties** — if you configure parameters as `druid.query.default.context.{property_key}` in Druid’s configuration files, these override the built-in defaults and act as your system-wide defaults.  For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+1. **Built-in defaults**: these are the system’s default values used if you don’t specify anything else.
+2. **Runtime properties**: if you configure parameters as `druid.query.default.context.{property_key}` in Druid’s configuration files, these override the built-in defaults and act as your system-wide defaults.  
 
-3. **Context parameters you set in your query** : whether in the JSON `context` object or included directly in your queries, these override both the built-in defaults and the runtime properties.
-4. **SET statements** : when using SET, any parameters you set with `SET key = value;` commands take the highest precedence and override all other settings.
+3. **Context parameters set directly in queries (excluding SET statements)** : Parameters passed within the JSON `context` object or directly embedded in queries override both built-in defaults and runtime properties.
+
+4. **SET statements** : Parameters set using `SET key = value` commands take the highest precedence and override all other settings, including context parameters passed in the query body.
 
 For example, if you set a parameter both in the runtime properties and in your query, Druid will use the value you set in the query.
 
 If you don’t set a parameter anywhere, Druid uses the built-in default. If you set it as a runtime property, that overrides the built-in default. If you explicitly set the parameter in your query, that value overrides all others.
+
+If you set a query context parameter using both a SET statement and context parameters directly in the query, Druid will use the value from the SET statement as the final value.
 
 
 ## Learn more
