@@ -291,7 +291,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
       // If asCursor() or asVectorCursor() fails, we need to close nextCursorHolder immediately.
       try {
-        if (nextCursorHolder.canVectorize()) {
+        if (query.context().getVectorize().shouldVectorize(nextCursorHolder.canVectorize())) {
           final VectorCursor vectorCursor = nextCursorHolder.asVectorCursor();
           nextCursor = vectorCursor == null ? null : new ShimCursor(vectorCursor);
         } else {

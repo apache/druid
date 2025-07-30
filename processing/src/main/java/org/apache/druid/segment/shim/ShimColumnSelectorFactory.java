@@ -62,8 +62,10 @@ public class ShimColumnSelectorFactory implements ColumnSelectorFactory
           }
           final ColumnCapabilities capabilities = cursor.vectorColumnSelectorFactory
               .getColumnCapabilities(dimensionSpec.getDimension());
-          if (ColumnProcessors.useDictionaryEncodedSelector(capabilities)) {
-            if (capabilities.hasMultipleValues().isTrue()) {
+          if (capabilities == null) {
+            return DimensionSelector.nilSelector();
+          } else if (ColumnProcessors.useDictionaryEncodedSelector(capabilities)) {
+            if (capabilities.hasMultipleValues().isMaybeTrue()) {
               final MultiValueDimensionVectorSelector vectorSelector =
                   cursor.vectorColumnSelectorFactory.makeMultiValueDimensionSelector(spec);
               return new ShimMultiValueDimensionSelector(cursor, vectorSelector);
@@ -76,7 +78,7 @@ public class ShimColumnSelectorFactory implements ColumnSelectorFactory
             // Non-dictionary encoded column, like virtual columns.
             VectorObjectSelector vectorObjectSelector =
                 cursor.vectorColumnSelectorFactory.makeObjectSelector(spec.getDimension());
-            return new ShimVectorObjectDimSelector(cursor, vectorObjectSelector, capabilities.hasMultipleValues().isTrue());
+            return new ShimVectorObjectDimSelector(cursor, vectorObjectSelector, capabilities.hasMultipleValues().isMaybeTrue());
           }
         }
     );

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.shim;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -33,7 +34,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * {@link DimensionSelector} that internally uses a {@link VectorObjectSelector}. Does not support any dictionary
@@ -93,12 +94,20 @@ public class ShimVectorObjectDimSelector implements DimensionSelector
   @Override
   public IndexedInts getRow()
   {
+    Object object = getObject();
     if (hasMultipleValues) {
-      Object object = getObject();
-      ArrayList arrayList = (ArrayList) object;
-      RangeIndexedInts rangeIndexedInts = new RangeIndexedInts();
-      rangeIndexedInts.setSize(arrayList.size());
-      return rangeIndexedInts;
+      if (object == null) {
+        return IndexedInts.empty();
+      } else if (object instanceof String) {
+        return ZeroIndexedInts.instance();
+      } else if (object instanceof List) {
+        List arrayList = (List) object;
+        RangeIndexedInts rangeIndexedInts = new RangeIndexedInts();
+        rangeIndexedInts.setSize(arrayList.size());
+        return rangeIndexedInts;
+      } else {
+        throw DruidException.defensive("Found unexpected object type[%s]", object.getClass());
+      }
     }
     return ZeroIndexedInts.instance();
   }
@@ -133,8 +142,10 @@ public class ShimVectorObjectDimSelector implements DimensionSelector
   {
     Object object = getObject();
     if (hasMultipleValues) {
-      ArrayList arrayList = (ArrayList) object;
-      object = arrayList.get(id);
+      if (object instanceof List) {
+        List arrayList = (List) object;
+        object = arrayList.get(id);
+      }
     }
     return object == null ? null : object.toString();
   }
