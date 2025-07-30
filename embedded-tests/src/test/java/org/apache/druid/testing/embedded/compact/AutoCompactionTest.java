@@ -62,6 +62,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
@@ -499,7 +500,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null)
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null).getEffectiveSchema(IndexSpec.DEFAULT)
       );
 
       submitCompactionConfig(
