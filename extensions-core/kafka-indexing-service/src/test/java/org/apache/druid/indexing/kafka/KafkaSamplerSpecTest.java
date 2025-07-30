@@ -144,6 +144,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -199,6 +200,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -253,6 +255,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     insertData(generateRecords(TOPIC));
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
         null,
         DATA_SCHEMA_KAFKA_TIMESTAMP,
         null,
@@ -368,6 +371,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
                                       .build();
 
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
         null,
         dataSchema,
         null,
@@ -552,6 +556,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
         null,
+        null,
         DATA_SCHEMA,
         null,
         new KafkaSupervisorIOConfig(
@@ -609,6 +614,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public void testGetInputSourceResources()
   {
     KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
         null,
         DATA_SCHEMA,
         null,

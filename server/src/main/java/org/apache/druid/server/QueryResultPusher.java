@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
@@ -270,17 +271,14 @@ public abstract class QueryResultPusher
     }
 
     if (response == null) {
-      final Response.ResponseBuilder bob = Response
-          .status(e.getStatusCode())
-          .type(contentType)
-          .entity(new ErrorResponse(e));
-
-      bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
-      for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
-        bob.header(entry.getKey(), entry.getValue());
-      }
-
-      return bob.build();
+      return handleDruidExceptionBeforeResponseStarted(
+          e,
+          contentType,
+          ImmutableMap.<String, String>builder()
+                      .putAll(extraHeaders)
+                      .put(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId)
+                      .build()
+      );
     } else {
       if (response.isCommitted()) {
         QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
@@ -300,6 +298,27 @@ public abstract class QueryResultPusher
       }
       return null;
     }
+  }
+
+  /**
+   * Generates a response for a {@link DruidException} that occurs prior to any query results being sent out.
+   */
+  public static Response handleDruidExceptionBeforeResponseStarted(
+      final DruidException e,
+      final MediaType contentType,
+      final Map<String, String> extraHeaders
+  )
+  {
+    final Response.ResponseBuilder bob = Response
+        .status(e.getStatusCode())
+        .type(contentType)
+        .entity(new ErrorResponse(e));
+
+    for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+      bob.header(entry.getKey(), entry.getValue());
+    }
+
+    return bob.build();
   }
 
   public interface ResultsWriter extends Closeable

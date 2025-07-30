@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
@@ -29,6 +30,7 @@ import net.hydromatic.quidem.Quidem.ConfigBuilder;
 import org.apache.calcite.test.DiffTestCase;
 import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
@@ -44,23 +46,24 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -100,8 +103,13 @@ public abstract class DruidQuidemTestBase
 
   private static final String PROPERTY_FILTER = "quidem.filter";
 
-  private final String filterStr;
-  private final List<Pattern> filterPatterns;
+  /**
+   * This property enables the test system to split up huge cases into desired
+   * number of smaller testcases.
+   */
+  private static final String PROPERTY_SPLIT = "quidem.split";
+
+  private final PathMatcher filterMatcher;
 
   private DruidQuidemRunner druidQuidemRunner;
 
@@ -112,29 +120,93 @@ public abstract class DruidQuidemTestBase
 
   public DruidQuidemTestBase(DruidQuidemRunner druidQuidemRunner)
   {
-    this.filterStr = System.getProperty(PROPERTY_FILTER, null);
-    this.filterPatterns = buildFilterPatterns(filterStr);
+    String filterStr = Strings.emptyToNull(System.getProperty(PROPERTY_FILTER, null));
+    String splitStr = Strings.emptyToNull(System.getProperty(PROPERTY_SPLIT, null));
+    this.filterMatcher = buildFilterMatcher(filterStr, splitStr);
     this.druidQuidemRunner = druidQuidemRunner;
   }
 
-  private List<Pattern> buildFilterPatterns(@Nullable String filterStr)
+  private PathMatcher buildFilterMatcher(String filterStr, String splitStr)
   {
-    if (null == filterStr) {
-      return Collections.emptyList();
+    if (filterStr != null && splitStr != null) {
+      throw new IAE(
+          "Cannot configure multiple filter methods with properties: %s and %s.", PROPERTY_FILTER, PROPERTY_SPLIT
+      );
+    }
+    if (filterStr != null) {
+      return new IQPathMatcher(filterStr);
+    }
+    if (splitStr != null) {
+      return new QuidemSplitPathMatcher(splitStr);
+    }
+    return TrueFileFilter.INSTANCE;
+  }
+
+  static class QuidemSplitPathMatcher implements PathMatcher
+  {
+    private final int splitIndex;
+    private final int splitCount;
+
+    public QuidemSplitPathMatcher(String splitStr)
+    {
+      Pattern pattern = Pattern.compile("^([0-9]+)/([0-9]+)$");
+      Matcher m = pattern.matcher(splitStr);
+      if (!m.matches()) {
+        throw DruidException.defensive("Invalid split pattern; must match pattern [%s]", pattern);
+      }
+      splitIndex = Integer.parseInt(m.group(1));
+      splitCount = Integer.parseInt(m.group(2));
+      if (splitCount < 1 || splitIndex < 0 || splitIndex >= splitCount) {
+        throw DruidException.defensive("invalid splitStr [%s]", splitStr);
+      }
     }
 
-    final List<Pattern> filterPatterns = new ArrayList<>();
-    for (String filterGlob : filterStr.split(",")) {
-      if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
-        filterGlob = filterStr + IQ_SUFFIX;
-      }
-      filterPatterns.add(
-          Pattern.compile(
-              Arrays.stream(filterGlob.split("\\*", -1))
-                    .map(Pattern::quote)
-                    .collect(Collectors.joining("[^/]*"))));
+    @Override
+    public boolean matches(Path path)
+    {
+      return Math.floorMod(path.toString().hashCode(), splitCount) == splitIndex;
     }
-    return filterPatterns;
+
+    @Override
+    public String toString()
+    {
+      return "split:" + splitIndex + "/" + splitCount;
+    }
+  }
+
+  static class IQPathMatcher implements PathMatcher
+  {
+    private final List<PathMatcher> filterMatchers = new ArrayList<>();
+    private final String filterStr;
+
+    public IQPathMatcher(String filterStr)
+    {
+      this.filterStr = filterStr;
+      final FileSystem fileSystem = FileSystems.getDefault();
+      for (String filterGlob : filterStr.split(",")) {
+        if (!filterGlob.endsWith("*") && !filterGlob.endsWith(IQ_SUFFIX)) {
+          filterGlob = filterStr + IQ_SUFFIX;
+        }
+        filterMatchers.add(fileSystem.getPathMatcher("glob:" + filterGlob));
+      }
+    }
+
+    @Override
+    public boolean matches(Path path)
+    {
+      for (PathMatcher m : filterMatchers) {
+        if (m.matches(path)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public String toString()
+    {
+      return filterStr;
+    }
   }
 
   protected static class QuidemTestCaseConfiguration
@@ -370,7 +442,7 @@ public abstract class DruidQuidemTestBase
       throw new IAE(
           "There are no test cases in directory[%s] or there are no matches to filter[%s]",
           testRoot,
-          filterStr
+          filterMatcher
       );
     }
     Collections.sort(ret);
@@ -379,11 +451,10 @@ public abstract class DruidQuidemTestBase
 
   private boolean isTestIncluded(File testRoot, File f)
   {
-    String relativePath = testRoot.toPath().relativize(f.toPath()).toString();
+    Path relativePath = testRoot.toPath().relativize(f.toPath());
     return !f.isDirectory()
            && f.getName().endsWith(IQ_SUFFIX)
-           && (filterPatterns.isEmpty() || filterPatterns.stream()
-                                                         .anyMatch(pattern -> pattern.matcher(relativePath).matches()));
+           && filterMatcher.matches(relativePath);
   }
 
   protected abstract File getTestRoot();

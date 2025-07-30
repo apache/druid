@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -37,12 +38,15 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -88,6 +92,7 @@ public class DataSchema
 
   // This is used for backward compatibility
   private InputRowParser inputRowParser;
+  @Nullable
   private List<AggregateProjectionSpec> projections;
 
   @JsonCreator
@@ -130,6 +135,10 @@ public class DataSchema
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
     // this validation is not necessarily going to be able to catch everything. It will run again in getDimensionsSpec.
     computeAndValidateOutputFieldNames(this.dimensionsSpec, this.aggregators);
+    validateProjections(
+        this.projections,
+        this.granularitySpec instanceof UniformGranularitySpec ? this.granularitySpec.getSegmentGranularity() : null
+    );
 
     if (this.granularitySpec.isRollup() && this.aggregators.length == 0) {
       log.warn(
@@ -138,7 +147,149 @@ public class DataSchema
           dataSource
       );
     }
+
   }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @Nullable
+  @JsonProperty("timestampSpec")
+  private TimestampSpec getGivenTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  public TimestampSpec getTimestampSpec()
+  {
+    if (timestampSpec == null) {
+      timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
+    }
+    return timestampSpec;
+  }
+
+  @Nullable
+  @JsonProperty("dimensionsSpec")
+  private DimensionsSpec getGivenDimensionsSpec()
+  {
+    return dimensionsSpec;
+  }
+
+  public DimensionsSpec getDimensionsSpec()
+  {
+    if (dimensionsSpec == null) {
+      dimensionsSpec = computeDimensionsSpec(
+          getTimestampSpec(),
+          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
+          aggregators
+      );
+    }
+    return dimensionsSpec;
+  }
+
+  @JsonProperty("metricsSpec")
+  public AggregatorFactory[] getAggregators()
+  {
+    return aggregators;
+  }
+
+  @JsonProperty
+  public GranularitySpec getGranularitySpec()
+  {
+    return granularitySpec;
+  }
+
+  @JsonProperty
+  public TransformSpec getTransformSpec()
+  {
+    return transformSpec;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
+  @Nullable
+  public List<String> getProjectionNames()
+  {
+    if (projections == null) {
+      return null;
+    }
+    return projections.stream().map(AggregateProjectionSpec::getName).collect(Collectors.toList());
+  }
+
+  @Deprecated
+  @JsonProperty("parser")
+  @Nullable
+  @JsonInclude(Include.NON_NULL)
+  public Map<String, Object> getParserMap()
+  {
+    return parserMap;
+  }
+
+  @Nullable
+  public InputRowParser getParser()
+  {
+    if (inputRowParser == null) {
+      if (parserMap == null) {
+        return null;
+      }
+      //noinspection unchecked
+      inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
+      ParseSpec parseSpec = inputRowParser.getParseSpec();
+      parseSpec = parseSpec.withDimensionsSpec(
+          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
+      );
+      if (timestampSpec != null) {
+        parseSpec = parseSpec.withTimestampSpec(timestampSpec);
+      }
+      if (dimensionsSpec != null) {
+        parseSpec = parseSpec.withDimensionsSpec(dimensionsSpec);
+      }
+      inputRowParser = inputRowParser.withParseSpec(parseSpec);
+    }
+    return inputRowParser;
+  }
+
+  public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
+  {
+    return builder(this).withGranularity(granularitySpec).build();
+  }
+
+  public DataSchema withTransformSpec(TransformSpec transformSpec)
+  {
+    return builder(this).withTransform(transformSpec).build();
+  }
+
+  public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
+  {
+    return builder(this).withDimensions(dimensionsSpec).build();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DataSchema{" +
+           "dataSource='" + dataSource + '\'' +
+           ", aggregators=" + Arrays.toString(aggregators) +
+           ", granularitySpec=" + granularitySpec +
+           ", transformSpec=" + transformSpec +
+           ", parserMap=" + parserMap +
+           ", timestampSpec=" + timestampSpec +
+           ", dimensionsSpec=" + dimensionsSpec +
+           ", projections=" + projections +
+           ", inputRowParser=" + inputRowParser +
+           '}';
+  }
+
+
 
   private static void validateDatasourceName(String dataSource)
   {
@@ -186,7 +337,7 @@ public class DataSchema
 
   /**
    * Computes the set of field names that are specified by the provided dimensions and aggregator lists.
-   *
+   * <p>
    * If either list is null, it is ignored.
    *
    * @throws IllegalArgumentException if there are duplicate field names, or if any dimension or aggregator
@@ -297,133 +448,35 @@ public class DataSchema
     }
   }
 
-  @JsonProperty
-  public String getDataSource()
+  public static void validateProjections(
+      @Nullable List<AggregateProjectionSpec> projections,
+      @Nullable Granularity segmentGranularity
+  )
   {
-    return dataSource;
-  }
-
-  @Nullable
-  @JsonProperty("timestampSpec")
-  private TimestampSpec getGivenTimestampSpec()
-  {
-    return timestampSpec;
-  }
-
-  public TimestampSpec getTimestampSpec()
-  {
-    if (timestampSpec == null) {
-      timestampSpec = Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getTimestampSpec();
-    }
-    return timestampSpec;
-  }
-
-  @Nullable
-  @JsonProperty("dimensionsSpec")
-  private DimensionsSpec getGivenDimensionsSpec()
-  {
-    return dimensionsSpec;
-  }
-
-  public DimensionsSpec getDimensionsSpec()
-  {
-    if (dimensionsSpec == null) {
-      dimensionsSpec = computeDimensionsSpec(
-          getTimestampSpec(),
-          Preconditions.checkNotNull(getParser(), "inputRowParser").getParseSpec().getDimensionsSpec(),
-          aggregators
-      );
-    }
-    return dimensionsSpec;
-  }
-
-  @JsonProperty("metricsSpec")
-  public AggregatorFactory[] getAggregators()
-  {
-    return aggregators;
-  }
-
-  @JsonProperty
-  public GranularitySpec getGranularitySpec()
-  {
-    return granularitySpec;
-  }
-
-  @JsonProperty
-  public TransformSpec getTransformSpec()
-  {
-    return transformSpec;
-  }
-
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<AggregateProjectionSpec> getProjections()
-  {
-    return projections;
-  }
-
-  @Deprecated
-  @JsonProperty("parser")
-  @Nullable
-  @JsonInclude(Include.NON_NULL)
-  public Map<String, Object> getParserMap()
-  {
-    return parserMap;
-  }
-
-  @Nullable
-  public InputRowParser getParser()
-  {
-    if (inputRowParser == null) {
-      if (parserMap == null) {
-        return null;
+    if (projections != null) {
+      final Set<String> names = Sets.newHashSetWithExpectedSize(projections.size());
+      for (AggregateProjectionSpec projection : projections) {
+        if (names.contains(projection.getName())) {
+          throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
+        }
+        names.add(projection.getName());
+        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
+        if (schema.getTimeColumnName() == null) {
+          continue;
+        }
+        final Granularity projectionGranularity = schema.getGranularity();
+        if (segmentGranularity != null) {
+          if (segmentGranularity.isFinerThan(projectionGranularity)) {
+            throw InvalidInput.exception(
+                "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
+                projection.getName(),
+                projectionGranularity,
+                segmentGranularity
+            );
+          }
+        }
       }
-      //noinspection unchecked
-      inputRowParser = transformSpec.decorate(objectMapper.convertValue(this.parserMap, InputRowParser.class));
-      ParseSpec parseSpec = inputRowParser.getParseSpec();
-      parseSpec = parseSpec.withDimensionsSpec(
-          computeDimensionsSpec(parseSpec.getTimestampSpec(), parseSpec.getDimensionsSpec(), aggregators)
-      );
-      if (timestampSpec != null) {
-        parseSpec = parseSpec.withTimestampSpec(timestampSpec);
-      }
-      if (dimensionsSpec != null) {
-        parseSpec = parseSpec.withDimensionsSpec(dimensionsSpec);
-      }
-      inputRowParser = inputRowParser.withParseSpec(parseSpec);
     }
-    return inputRowParser;
-  }
-
-  public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
-  {
-    return builder(this).withGranularity(granularitySpec).build();
-  }
-
-  public DataSchema withTransformSpec(TransformSpec transformSpec)
-  {
-    return builder(this).withTransform(transformSpec).build();
-  }
-
-  public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
-  {
-    return builder(this).withDimensions(dimensionsSpec).build();
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DataSchema{" +
-           "dataSource='" + dataSource + '\'' +
-           ", aggregators=" + Arrays.toString(aggregators) +
-           ", granularitySpec=" + granularitySpec +
-           ", transformSpec=" + transformSpec +
-           ", parserMap=" + parserMap +
-           ", timestampSpec=" + timestampSpec +
-           ", dimensionsSpec=" + dimensionsSpec +
-           ", projections=" + projections +
-           ", inputRowParser=" + inputRowParser +
-           '}';
   }
 
   public static class Builder

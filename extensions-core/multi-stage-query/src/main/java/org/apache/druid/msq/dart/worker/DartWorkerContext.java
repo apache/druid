@@ -25,10 +25,14 @@ import com.google.inject.Injector;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -37,16 +41,17 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
@@ -74,6 +79,7 @@ public class DartWorkerContext implements WorkerContext
   private final Outbox<ControllerMessage> outbox;
   private final File tempDir;
   private final QueryContext queryContext;
+  private final ServiceEmitter emitter;
 
   /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
@@ -99,7 +105,8 @@ public class DartWorkerContext implements WorkerContext
       final Outbox<ControllerMessage> outbox,
       final File tempDir,
       final QueryContext queryContext,
-      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
+      final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
+      final ServiceEmitter emitter
   )
   {
     this.queryId = queryId;
@@ -120,6 +127,7 @@ public class DartWorkerContext implements WorkerContext
     this.outbox = outbox;
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
+    this.emitter = emitter;
   }
 
   @Override
@@ -155,16 +163,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public void registerWorker(Worker worker, Closer closer)
   {
-    closer.register(() -> {
-      synchronized (this) {
-        if (processingBuffersSet != null) {
-          processingBuffersSet.close();
-          processingBuffersSet = null;
-        }
-      }
-
-      workerClient.close();
-    });
+    // Nothing to register per-Worker.
   }
 
   @Override
@@ -175,6 +174,14 @@ public class DartWorkerContext implements WorkerContext
       throw new IAE("Illegal maxConcurrentStages[%s]", retVal);
     }
     return retVal;
+  }
+
+  @Override
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  {
+    metricBuilder.setDartDimensions(queryContext);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
+    emitter.emit(metricBuilder);
   }
 
   @Override
@@ -221,6 +228,7 @@ public class DartWorkerContext implements WorkerContext
     return new DartFrameContext(
         workOrder.getStageDefinition().getId(),
         this,
+        FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
         groupingEngine,
         dataSegmentProvider,
@@ -255,5 +263,18 @@ public class DartWorkerContext implements WorkerContext
   public DruidNode selfNode()
   {
     return selfNode;
+  }
+
+  @Override
+  public void close()
+  {
+    synchronized (this) {
+      if (processingBuffersSet != null) {
+        processingBuffersSet.close();
+        processingBuffersSet = null;
+      }
+    }
+
+    CloseableUtils.closeAndWrapExceptions(workerClient);
   }
 }

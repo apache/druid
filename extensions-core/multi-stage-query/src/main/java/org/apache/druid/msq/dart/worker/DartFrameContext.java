@@ -22,13 +22,13 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -40,7 +40,6 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
-import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -49,11 +48,11 @@ import java.io.File;
 public class DartFrameContext implements FrameContext
 {
   private final StageId stageId;
+  private final FrameWriterSpec frameWriterSpec;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerContext workerContext;
-  @Nullable
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
@@ -62,10 +61,11 @@ public class DartFrameContext implements FrameContext
   public DartFrameContext(
       final StageId stageId,
       final WorkerContext workerContext,
+      final FrameWriterSpec frameWriterSpec,
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
       final DataSegmentProvider dataSegmentProvider,
-      @Nullable ResourceHolder<ProcessingBuffers> processingBuffers,
+      ResourceHolder<ProcessingBuffers> processingBuffers,
       final WorkerMemoryParameters memoryParameters,
       final WorkerStorageParameters storageParameters,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
@@ -73,6 +73,7 @@ public class DartFrameContext implements FrameContext
   {
     this.stageId = stageId;
     this.segmentWrangler = segmentWrangler;
+    this.frameWriterSpec = frameWriterSpec;
     this.groupingEngine = groupingEngine;
     this.dataSegmentProvider = dataSegmentProvider;
     this.workerContext = workerContext;
@@ -151,11 +152,7 @@ public class DartFrameContext implements FrameContext
   @Override
   public ProcessingBuffers processingBuffers()
   {
-    if (processingBuffers != null) {
-      return processingBuffers.get();
-    } else {
-      throw new ISE("No processing buffers");
-    }
+    return processingBuffers.get();
   }
 
   @Override
@@ -177,10 +174,14 @@ public class DartFrameContext implements FrameContext
   }
 
   @Override
+  public FrameWriterSpec frameWriterSpec()
+  {
+    return frameWriterSpec;
+  }
+
+  @Override
   public void close()
   {
-    if (processingBuffers != null) {
-      processingBuffers.close();
-    }
+    processingBuffers.close();
   }
 }

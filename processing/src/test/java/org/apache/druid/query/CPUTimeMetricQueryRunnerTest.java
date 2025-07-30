@@ -69,7 +69,7 @@ public class CPUTimeMetricQueryRunnerTest
     );
 
     Assert.assertEquals(expectedResults, results.toList());
-    Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
 
     final Event event = Iterables.getOnlyElement(emitter.getEvents());
 

@@ -27,15 +27,14 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
+import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
-import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -44,6 +43,7 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -87,7 +87,6 @@ public class DartControllerContext implements ControllerContext
   private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final QueryContext context;
-  private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
   public DartControllerContext(
@@ -108,15 +107,17 @@ public class DartControllerContext implements ControllerContext
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
     this.context = context;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
     this.emitter = emitter;
   }
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(
-      final String queryId,
-      final MSQSpec querySpec
-  )
+  public String queryId()
+  {
+    return context.getString(QueryContexts.CTX_DART_QUERY_ID);
+  }
+
+  @Override
+  public ControllerQueryKernelConfig queryKernelConfig(final MSQSpec querySpec)
   {
     final List<DruidServerMetadata> servers = serverView.getDruidServerMetadatas();
 
@@ -127,7 +128,7 @@ public class DartControllerContext implements ControllerContext
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
       if (server.getType() == ServerType.HISTORICAL) {
-        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId()).toString());
       }
     }
 
@@ -172,9 +173,11 @@ public class DartControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(final String metric, final Number value)
+  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
   {
-    emitter.emit(metricBuilder.setMetric(metric, value));
+    metricBuilder.setDartDimensions(context);
+    metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, context.get(QueryContexts.CTX_DART_QUERY_ID));
+    emitter.emit(metricBuilder);
   }
 
   @Override
@@ -199,8 +202,7 @@ public class DartControllerContext implements ControllerContext
   public WorkerManager newWorkerManager(
       String queryId,
       MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig,
-      WorkerFailureListener workerFailureListener
+      ControllerQueryKernelConfig queryKernelConfig
   )
   {
     // We're ignoring WorkerFailureListener. Dart worker failures are routed into the controller by

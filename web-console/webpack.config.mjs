@@ -47,11 +47,6 @@ export default env => {
     druidUrl += druidUrl.startsWith('https://') ? ':9088' : ':8888';
   }
 
-  const proxyTarget = {
-    target: druidUrl,
-    secure: false,
-  };
-
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 
   // eslint-disable-next-line no-undef
@@ -111,11 +106,13 @@ export default env => {
         publicPath: '/public',
       },
       open: 'unified-console.html',
-      proxy: {
-        '/status': proxyTarget,
-        '/druid': proxyTarget,
-        '/proxy': proxyTarget,
-      },
+      proxy: [
+        {
+          context: ['/status', '/druid', '/proxy'],
+          target: druidUrl,
+          secure: false,
+        },
+      ],
     },
     module: {
       rules: [
@@ -185,7 +182,7 @@ export default env => {
     },
     plugins:
       process.env.BUNDLE_ANALYZER_PLUGIN === 'TRUE'
-        ? [...plugins, new BundleAnalyzerPlugin()]
+        ? [...plugins, new BundleAnalyzerPlugin({ analyzerPort: 18082 })]
         : plugins,
   };
 };

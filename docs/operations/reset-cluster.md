@@ -23,57 +23,7 @@ title: "reset-cluster tool"
   -->
 
 
-The `reset-cluster` tool can be used to completely wipe out Apache Druid cluster state stored on Metadata and Deep storage. This is
-intended to be used in dev/test environments where you typically want to reset the cluster before running
-the test suite.
-`reset-cluster` automatically figures out necessary information from Druid cluster configuration. So the java classpath
-used in the command must have all the necessary druid configuration files.
-
-It can be run in one of the following ways.
-
-```
-java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main \
-  tools reset-cluster \
-  [--metadataStore] \
-  [--segmentFiles] \
-  [--taskLogs] \
-  [--hadoopWorkingPath]
-```
-
-or
-
-```
-java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main \
-  tools reset-cluster \
-  --all
-```
-
-Usage documentation can be printed by running following command.
-
-```
-$ java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main help tools reset-cluster
-
-NAME
-        druid tools reset-cluster - Cleanup all persisted state from metadata
-        and deep storage.
-
-SYNOPSIS
-        druid tools reset-cluster [--all] [--hadoopWorkingPath]
-                [--metadataStore] [--segmentFiles] [--taskLogs]
-
-OPTIONS
-        --all
-            delete all state stored in metadata and deep storage
-
-        --hadoopWorkingPath
-            delete hadoopWorkingPath
-
-        --metadataStore
-            delete all records in metadata storage
-
-        --segmentFiles
-            delete all segment files from deep storage
-
-        --taskLogs
-            delete all tasklogs
-```
+In older versions of Apache Druid, `reset-cluster` was a tool that could wipe out Apache Druid cluster state stored in
+metadata and deep storage, intended primarily for use in dev and test environments. However, this tool was prone to
+becoming out of sync with the codebase since it was not used in practice during dev and testing, and could not cover
+all cleanup cases when extensions were involved. It was removed in Druid 35.0.0.

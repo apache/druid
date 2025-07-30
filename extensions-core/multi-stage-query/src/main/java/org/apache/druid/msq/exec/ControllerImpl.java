@@ -39,6 +39,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
@@ -124,7 +125,7 @@ import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
-import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorStageProcessor;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -160,7 +161,11 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
+import org.apache.druid.msq.util.MSQMetricUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -185,6 +190,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -207,6 +213,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -219,7 +226,6 @@ public class ControllerImpl implements Controller
   private static final Logger log = new Logger(ControllerImpl.class);
   private static final String RESULT_READER_CANCELLATION_ID = "result-reader";
 
-  private final String queryId;
   private final MSQSpec querySpec;
   private final Query<?> legacyQuery;
   private final ResultsContext resultsContext;
@@ -276,8 +282,8 @@ public class ControllerImpl implements Controller
 
   private WorkerSketchFetcher workerSketchFetcher;
 
-  // WorkerNumber -> WorkOrders which need to be retried and our determined by the controller.
-  // Map is always populated in the main controller thread by addToRetryQueue, and pruned in retryFailedTasks.
+  // WorkerNumber -> WorkOrders which need to be retried and are determined by the controller.
+  // Map is always populated in the main controller thread by addToRetryQueue and pruned in retryFailedTasks.
   private final Map<Integer, Set<WorkOrder>> workOrdersToRetry = new HashMap<>();
 
   // Time at which the query started.
@@ -295,15 +301,15 @@ public class ControllerImpl implements Controller
   @Nullable
   private MSQSegmentReport segmentReport;
 
+  private final AtomicLong mainThreadId = new AtomicLong();
+
   public ControllerImpl(
-      final String queryId,
       final LegacyMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = querySpec.getQuery();
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -313,14 +319,12 @@ public class ControllerImpl implements Controller
 
 
   public ControllerImpl(
-      final String queryId,
       final QueryDefMSQSpec querySpec,
       final ResultsContext resultsContext,
       final ControllerContext controllerContext,
       final QueryKitSpecFactory queryKitSpecFactory
   )
   {
-    this.queryId = Preconditions.checkNotNull(queryId, "queryId");
     this.querySpec = Preconditions.checkNotNull(querySpec, "querySpec");
     this.legacyQuery = null;
     this.resultsContext = Preconditions.checkNotNull(resultsContext, "resultsContext");
@@ -332,7 +336,7 @@ public class ControllerImpl implements Controller
   @Override
   public String queryId()
   {
-    return queryId;
+    return context.queryId();
   }
 
   @Override
@@ -342,8 +346,21 @@ public class ControllerImpl implements Controller
     try (final Closer closer = Closer.create()) {
       reportPayload = runInternal(queryListener, closer);
     }
+    catch (Throwable e) {
+      log.error(e, "Controller internal execution encountered exception.");
+      queryListener.onQueryComplete(makeStatusReportForException(e));
+      throw e;
+    }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
     queryListener.onQueryComplete(reportPayload);
+  }
+
+
+  private MSQTaskReportPayload makeStatusReportForException(Throwable e)
+  {
+    MSQErrorReport errorReport = MSQErrorReport.fromFault(queryId(), null, null, UnknownFault.forException(e));
+    MSQStatusReport statusReport = new MSQStatusReport(TaskState.FAILED, errorReport, null, null, 0, new HashMap<>(), 0, 0, null, null);
+    return new MSQTaskReportPayload(statusReport, null, null, null);
   }
 
   @Override
@@ -376,6 +393,8 @@ public class ControllerImpl implements Controller
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
+
+    mainThreadId.set(Thread.currentThread().getId());
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
@@ -413,7 +432,7 @@ public class ControllerImpl implements Controller
       exceptionEncountered = e;
     }
 
-    // Fetch final counters in separate try, in case runQueryUntilDone threw an exception.
+    // Fetch final counters in a separate try, in case runQueryUntilDone threw an exception.
     try {
       countersSnapshot = getFinalCountersSnapshot(queryKernel);
     }
@@ -553,9 +572,32 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-    // Emit summary metrics
+    // Emit metrics
+    emitQueryMetrics(queryDef, taskStateForReport.isSuccess());
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
+  }
+
+  private void emitQueryMetrics(@Nullable final QueryDefinition queryDef, final boolean success)
+  {
+    final Set<String> datasources = new HashSet<>();
+    final Set<Interval> intervals = new HashSet<>();
+    if (queryDef != null) {
+      for (StageDefinition stageDefinition : queryDef.getStageDefinitions()) {
+        datasources.addAll(stageDefinition.getDatasources());
+        intervals.addAll(MSQMetricUtils.getIntervals(stageDefinition));
+      }
+    }
+
+    long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
+
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
+                 .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
+                 .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
+                 .setDimension(DruidMetrics.SUCCESS, success)
+                 .setMetric("query/time", System.currentTimeMillis() - startTime);
+    context.emitMetric(metricBuilder);
   }
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
@@ -593,7 +635,10 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
-    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
+
+    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
+    context.emitMetric(metricBuilder);
   }
 
   /**
@@ -660,7 +705,7 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState()
   {
     this.selfDruidNode = context.selfNode();
-    this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
+    this.queryKernelConfig = context.queryKernelConfig(querySpec);
 
     final QueryContext queryContext = querySpec.getContext();
 
@@ -673,7 +718,7 @@ public class ControllerImpl implements Controller
           context.jsonMapper(),
           queryKitSpecFactory.makeQueryKitSpec(
               QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
-              queryId,
+              context.queryId(),
               querySpec.getTuningConfig(),
               querySpec.getContext()
           )
@@ -702,18 +747,9 @@ public class ControllerImpl implements Controller
     queryDefRef.set(queryDef);
 
     workerManager = context.newWorkerManager(
-        queryId,
+        context.queryId(),
         querySpec,
-        queryKernelConfig,
-        (failedTask, fault) -> {
-          if (queryKernelConfig.isFaultTolerant() && ControllerQueryKernel.isRetriableFault(fault)) {
-            addToKernelManipulationQueue(kernel -> {
-              addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-            });
-          } else {
-            throw new MSQException(fault);
-          }
-        }
+        queryKernelConfig
     );
 
     if (queryKernelConfig.isFaultTolerant() && !(workerManager instanceof RetryCapableWorkerManager)) {
@@ -746,6 +782,22 @@ public class ControllerImpl implements Controller
     return queryDef;
   }
 
+  private WorkerFailureListener getWorkerFailureListener(ControllerQueryKernel controllerQueryKernel)
+  {
+    return (failedTask, fault) -> {
+      throwIfNonRetriableFault(fault);
+      if (Thread.currentThread().getId() == mainThreadId.get()) {
+        // this is called from the main controller thread, so we can directly access the kernel.
+        addToRetryQueue(controllerQueryKernel, failedTask.getWorkerNumber(), fault);
+      } else {
+        // since this is called from the task launcher thread, we need to add it to the kernel manipulation queue so that only the controller thread can manipulate the kernel.
+        addToKernelManipulationQueue(kernel -> {
+          addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
+        });
+      }
+    };
+  }
+
   /**
    * Adds the work orders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
    * are work orders which needs reprocessing.
@@ -760,7 +812,7 @@ public class ControllerImpl implements Controller
 
     List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibleForRetryElseThrow(worker, fault);
     if (!retriableWorkOrders.isEmpty()) {
-      log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
+      log.debug("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
       retryCapableWorkerManager.submitForRelaunch(worker);
       workOrdersToRetry.compute(
           worker,
@@ -945,7 +997,7 @@ public class ControllerImpl implements Controller
           try {
             convertedResultObject = context.jsonMapper().convertValue(
                 resultObject,
-                queryKernel.getStageDefinition(stageId).getProcessorFactory().getResultTypeReference()
+                queryKernel.getStageDefinition(stageId).getProcessor().getResultTypeReference()
             );
           }
           catch (IllegalArgumentException e) {
@@ -1013,6 +1065,7 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination,
       final RowSignature signature,
       final ClusterBy clusterBy,
+      final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
@@ -1023,12 +1076,12 @@ public class ControllerImpl implements Controller
           destination,
           signature,
           clusterBy,
+          keyReader,
           partitionBoundaries,
           mayHaveMultiValuedClusterByFields,
           isStageOutputEmpty
       );
     } else {
-      final RowKeyReader keyReader = clusterBy.keyReader(signature);
       return generateSegmentIdsWithShardSpecsForAppend(
           destination,
           partitionBoundaries,
@@ -1190,6 +1243,7 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination,
       final RowSignature signature,
       final ClusterBy clusterBy,
+      final RowKeyReader keyReader,
       final ClusterByPartitions partitionBoundaries,
       final boolean mayHaveMultiValuedClusterByFields,
       @Nullable final Boolean isStageOutputEmpty
@@ -1199,7 +1253,6 @@ public class ControllerImpl implements Controller
       return Collections.emptyList();
     }
 
-    final RowKeyReader keyReader = clusterBy.keyReader(signature);
     final SegmentIdWithShardSpec[] retVal = new SegmentIdWithShardSpec[partitionBoundaries.size()];
     final Granularity segmentGranularity = destination.getSegmentGranularity();
     final Pair<List<String>, String> shardReasonPair = computeShardColumns(
@@ -1338,7 +1391,7 @@ public class ControllerImpl implements Controller
       final boolean retryOnFailure
   )
   {
-    // Sorted copy of target worker numbers to ensure consistent iteration order.
+    // Sorted copy of target worker numbers to ensure a consistent iteration order.
     final List<Integer> workersCopy = Ordering.natural().sortedCopy(workers);
     final List<String> workerIds = getWorkerIds();
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
@@ -1484,7 +1537,7 @@ public class ControllerImpl implements Controller
           segmentLoadWaiter = new SegmentLoadStatusFetcher(
               context.injector().getInstance(BrokerClient.class),
               context.jsonMapper(),
-              queryId,
+              context.queryId(),
               destination.getDataSource(),
               segmentsWithTombstones,
               true
@@ -1500,7 +1553,7 @@ public class ControllerImpl implements Controller
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
-            queryId,
+            context.queryId(),
             destination.getDataSource(),
             segments,
             true
@@ -1513,9 +1566,14 @@ public class ControllerImpl implements Controller
       );
     }
 
-    context.emitMetric("ingest/tombstones/count", numTombstones);
+    MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+
+    metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
+    context.emitMetric(metricBuilder);
+
     // Include tombstones in the reported segments count
-    context.emitMetric("ingest/segments/count", segmentsWithTombstones.size());
+    metricBuilder.setMetric("ingest/segments/count", segmentsWithTombstones.size());
+    context.emitMetric(metricBuilder);
   }
 
   private static TaskAction<SegmentPublishResult> createAppendAction(
@@ -1526,7 +1584,7 @@ public class ControllerImpl implements Controller
     if (taskLockType.equals(TaskLockType.APPEND)) {
       return SegmentTransactionalAppendAction.forSegments(segments, null);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null, null, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
@@ -1642,8 +1700,8 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         } else {
-          DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel
-              .getStageDefinition(finalStageId).getProcessorFactory()).getDataSchema();
+          DataSchema dataSchema = ((SegmentGeneratorStageProcessor) queryKernel
+              .getStageDefinition(finalStageId).getProcessor()).getDataSchema();
 
           ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
           ClusterBy clusterBy = queryKernel.getStageDefinition(finalStageId).getClusterBy();
@@ -2170,19 +2228,20 @@ public class ControllerImpl implements Controller
   {
     private final QueryDefinition queryDef;
     private final InputSpecSlicerFactory inputSpecSlicerFactory;
+    private final FrameType rowBasedFrameType;
     private final QueryListener queryListener;
     private final Closer closer;
     private final ControllerQueryKernel queryKernel;
 
     /**
-     * Return value of {@link WorkerManager#start()}. Set by {@link #startTaskLauncher()}.
+     * Return value of {@link WorkerManager#start(WorkerFailureListener)} )}. Set by {@link #startTaskLauncher()}.
      */
     private ListenableFuture<?> workerTaskLauncherFuture;
 
     /**
      * Segments to generate. Populated prior to launching the final stage of a query with destination
      * {@link DataSourceMSQDestination} (which originate from SQL INSERT or REPLACE). The final stage of such a query
-     * uses {@link SegmentGeneratorFrameProcessorFactory}, which requires a list of segment IDs to generate.
+     * uses {@link SegmentGeneratorStageProcessor}, which requires a list of segment IDs to generate.
      */
     private List<SegmentIdWithShardSpec> segmentsToGenerate;
 
@@ -2203,6 +2262,8 @@ public class ControllerImpl implements Controller
     {
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
+      this.rowBasedFrameType =
+          MultiStageQueryContext.getRowBasedFrameType(QueryContext.of(queryKernelConfig.getWorkerContextMap()));
       this.queryListener = queryListener;
       this.closer = closer;
       this.queryKernel = new ControllerQueryKernel(queryDef, queryKernelConfig);
@@ -2384,13 +2445,13 @@ public class ControllerImpl implements Controller
       // Start tasks.
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
-      workerTaskLauncherFuture = workerManager.start();
+      workerTaskLauncherFuture = workerManager.start(getWorkerFailureListener(queryKernel));
       closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->
               addToKernelManipulationQueue(queryKernel -> {
-                // Throw an exception in the main loop, if anything went wrong.
+                // Throw an exception in the main loop if anything went wrong.
                 FutureUtils.getUncheckedImmediately(workerTaskLauncherFuture);
               }),
           Execs.directExecutor()
@@ -2475,11 +2536,12 @@ public class ControllerImpl implements Controller
         newStageIds = queryKernel.createAndGetNewStageIds(
             inputSpecSlicerFactory,
             querySpec.getAssignmentStrategy(),
+            rowBasedFrameType,
             maxInputBytesPerWorker
         );
 
         for (final StageId stageId : newStageIds) {
-          // Allocate segments, if this is the final stage of an ingestion.
+          // Allocate segments if this is the final stage of ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
               && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
               && (((DataSourceMSQDestination) querySpec.getDestination()).getTerminalStageSpec() instanceof SegmentGenerationStageSpec)) {
@@ -2534,14 +2596,16 @@ public class ControllerImpl implements Controller
       final ClusterByPartitions partitionBoundaries =
           queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
 
+      final StageDefinition shuffleStageDef = queryKernel.getStageDefinition(shuffleStageId);
       final boolean mayHaveMultiValuedClusterByFields =
-          !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
+          !shuffleStageDef.mustGatherResultKeyStatistics()
           || queryKernel.hasStageCollectorEncounteredAnyMultiValueField(shuffleStageId);
 
       segmentsToGenerate = generateSegmentIdsWithShardSpecs(
           (DataSourceMSQDestination) querySpec.getDestination(),
-          queryKernel.getStageDefinition(shuffleStageId).getSignature(),
-          queryKernel.getStageDefinition(shuffleStageId).getClusterBy(),
+          shuffleStageDef.getSignature(),
+          shuffleStageDef.getClusterBy(),
+          shuffleStageDef.getClusterBy().keyReader(shuffleStageDef.getSignature(), rowBasedFrameType),
           partitionBoundaries,
           mayHaveMultiValuedClusterByFields,
           isShuffleStageOutputEmpty
@@ -2692,7 +2756,8 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
+      if (queryKernelConfig.isDurableStorage()
+          || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
@@ -2713,11 +2778,11 @@ public class ControllerImpl implements Controller
             queryDef,
             queryKernel.getResultPartitionsForStage(finalStageId),
             inputChannelFactory,
+            FrameWriterSpec.fromContext(querySpec.getContext()),
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
             RESULT_READER_CANCELLATION_ID,
-            null,
-            MultiStageQueryContext.removeNullBytes(querySpec.getContext())
+            null
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(
@@ -2792,6 +2857,13 @@ public class ControllerImpl implements Controller
           }
         }
       }
+    }
+  }
+
+  private void throwIfNonRetriableFault(MSQFault fault)
+  {
+    if (!queryKernelConfig.isFaultTolerant() || !ControllerQueryKernel.isRetriableFault(fault)) {
+      throw new MSQException(fault);
     }
   }
 
@@ -2888,5 +2960,11 @@ public class ControllerImpl implements Controller
   public ControllerContext getControllerContext()
   {
     return context;
+  }
+
+  @Override
+  public QueryContext getQueryContext()
+  {
+    return querySpec.getContext();
   }
 }

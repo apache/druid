@@ -23,11 +23,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -37,8 +41,13 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class OnheapIncrementalIndexTest
 {
@@ -49,6 +58,75 @@ public class OnheapIncrementalIndexTest
   {
     OnheapIncrementalIndex.Spec spec = new OnheapIncrementalIndex.Spec(true);
     Assert.assertEquals(spec, MAPPER.readValue(MAPPER.writeValueAsString(spec), OnheapIncrementalIndex.Spec.class));
+  }
+
+  @Test
+  public void testProjectionHappyPath()
+  {
+    // arrange
+    DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
+                                                  .setDimensions(ImmutableList.of(
+                                                      new StringDimensionSchema("string"),
+                                                      new LongDimensionSchema("long")
+                                                  ))
+                                                  .build();
+    AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(new StringDimensionSchema("string")),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long"),
+            new DoubleSumAggregatorFactory("double", "double")
+        }
+    );
+    // act & assert
+    IncrementalIndex index = IndexBuilder.create()
+                                         .schema(IncrementalIndexSchema.builder()
+                                                                       .withDimensionsSpec(dimensionsSpec)
+                                                                       .withRollup(true)
+                                                                       .withMetrics(aggregatorFactory)
+                                                                       .withProjections(ImmutableList.of(projectionSpec))
+                                                                       .build())
+                                         .buildIncrementalIndex();
+    Assert.assertNotNull(index.getProjection("proj"));
+  }
+
+  @Test
+  public void testProjectionDuplicatedName()
+  {
+    // arrange
+    DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
+    AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
+    AggregateProjectionSpec projectionSpec1 = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(),
+        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
+    );
+    AggregateProjectionSpec projectionSpec2 = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(),
+        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
+    );
+    // act & assert
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> IndexBuilder.create()
+                          .schema(IncrementalIndexSchema.builder()
+                                                        .withDimensionsSpec(dimensionsSpec)
+                                                        .withRollup(true)
+                                                        .withMetrics(aggregatorFactory)
+                                                        .withProjections(ImmutableList.of(
+                                                            projectionSpec1,
+                                                            projectionSpec2
+                                                        ))
+                                                        .build())
+                          .buildIncrementalIndex()
+    );
+    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+    Assert.assertEquals("duplicate projection[proj]", e.getMessage());
   }
 
   @Test
@@ -95,6 +173,54 @@ public class OnheapIncrementalIndexTest
     );
     Assert.assertEquals(
         "projection[mismatched dims] contains dimension[string] with different type[LONG] than type[STRING] in base table",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testBadProjectionDimensionNoVirtualColumnOrBaseTable()
+  {
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () ->
+            IndexBuilder.create()
+                        .schema(
+                            IncrementalIndexSchema.builder()
+                                                  .withDimensionsSpec(
+                                                      DimensionsSpec.builder()
+                                                                    .setDimensions(
+                                                                        ImmutableList.of(
+                                                                            new StringDimensionSchema("string"),
+                                                                            new LongDimensionSchema("long")
+                                                                        )
+                                                                    )
+                                                                    .build()
+                                                  )
+                                                  .withProjections(
+                                                      ImmutableList.of(
+                                                          new AggregateProjectionSpec(
+                                                              "sad grouping column",
+                                                              VirtualColumns.create(
+                                                                  new ExpressionVirtualColumn(
+                                                                      "v0",
+                                                                      "cast(long, 'double')",
+                                                                      ColumnType.DOUBLE,
+                                                                      TestExprMacroTable.INSTANCE
+                                                                  )
+                                                              ),
+                                                              ImmutableList.of(
+                                                                  new DoubleDimensionSchema("v0"),
+                                                                  new StringDimensionSchema("missing")
+                                                              ),
+                                                              null
+                                                          )
+                                                      )
+                                                  )
+                                                  .build()
+                        ).buildIncrementalIndex()
+    );
+    Assert.assertEquals(
+        "projection[sad grouping column] contains dimension[missing] that is not present on the base table or a virtual column",
         t.getMessage()
     );
   }
@@ -177,8 +303,11 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
                                                               ),
-                                                              new AggregatorFactory[] {
-                                                                  new LongSumAggregatorFactory("sum_double", "sum_double")
+                                                              new AggregatorFactory[]{
+                                                                  new LongSumAggregatorFactory(
+                                                                      "sum_double",
+                                                                      "sum_double"
+                                                                  )
                                                               }
                                                           )
                                                       )
@@ -223,7 +352,7 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new StringDimensionSchema("string")
                                                               ),
-                                                              new AggregatorFactory[] {
+                                                              new AggregatorFactory[]{
                                                                   new LongSumAggregatorFactory("sum_long", "long"),
                                                                   new DoubleSumAggregatorFactory("sum_double", "double")
                                                               }
@@ -273,7 +402,7 @@ public class OnheapIncrementalIndexTest
                                                               ImmutableList.of(
                                                                   new LongDimensionSchema("long")
                                                               ),
-                                                              new AggregatorFactory[] {
+                                                              new AggregatorFactory[]{
                                                                   new LongSumAggregatorFactory("v0_sum", "v0")
                                                               }
                                                           )
@@ -284,6 +413,121 @@ public class OnheapIncrementalIndexTest
     );
     Assert.assertEquals(
         "projection[sad agg virtual column] contains aggregator[v0_sum] that is has required field[v0] which is a virtual column, this is not yet supported",
+        t.getMessage()
+    );
+  }
+
+
+  @Test
+  public void testTimestampOutOfRange()
+  {
+    // arrange
+    DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
+                                                  .setDimensions(ImmutableList.of(
+                                                      new StringDimensionSchema("string"),
+                                                      new LongDimensionSchema("long")
+                                                  ))
+                                                  .build();
+    AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.EMPTY,
+        ImmutableList.of(new StringDimensionSchema("string")),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long"),
+            new DoubleSumAggregatorFactory("double", "double")
+        }
+    );
+
+    final DateTime minTimestamp = DateTimes.nowUtc();
+    final DateTime outOfRangeTimestamp = DateTimes.nowUtc().minusDays(1);
+    final DateTime outOfRangeProjectionTimestamp = Granularities.YEAR.bucketStart(outOfRangeTimestamp);
+
+    final IncrementalIndex index = IndexBuilder.create()
+                                               .schema(IncrementalIndexSchema.builder()
+                                                                             .withDimensionsSpec(dimensionsSpec)
+                                                                             .withRollup(true)
+                                                                             .withMetrics(aggregatorFactory)
+                                                                             .withProjections(List.of(projectionSpec))
+                                                                             .withMinTimestamp(minTimestamp.getMillis())
+                                                                             .build())
+                                               .buildIncrementalIndex();
+
+    IncrementalIndexAddResult addResult = index.add(
+        new MapBasedInputRow(
+            minTimestamp,
+            List.of("string", "long"),
+            Map.of(
+                "string", "hello",
+                "long", 10L
+            )
+        )
+    );
+    Assert.assertTrue(addResult.isRowAdded());
+
+    final Map<String, Object> rowMap = new LinkedHashMap<>();
+    rowMap.put("string", "hello");
+    rowMap.put("long", 10L);
+
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> index.add(
+            new MapBasedInputRow(
+                outOfRangeTimestamp.getMillis(),
+                List.of("string", "long"),
+                rowMap
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        "Cannot add row[{timestamp="
+        + outOfRangeTimestamp
+        + ", event={string=hello, long=10}, dimensions=[string, long]}] because it is below the minTimestamp["
+        + minTimestamp
+        + "]",
+        t.getMessage()
+    );
+
+    AggregateProjectionSpec projectionSpecYear = new AggregateProjectionSpec(
+        "proj",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.YEAR, "g")
+        ),
+        ImmutableList.of(new StringDimensionSchema("string"), new LongDimensionSchema("g")),
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("sum_long", "long"),
+            new DoubleSumAggregatorFactory("double", "double")
+        }
+    );
+    IncrementalIndex index2 = IndexBuilder.create()
+                                          .schema(IncrementalIndexSchema.builder()
+                                                                        .withDimensionsSpec(dimensionsSpec)
+                                                                        .withRollup(true)
+                                                                        .withMetrics(aggregatorFactory)
+                                                                        .withProjections(List.of(projectionSpecYear))
+                                                                        .withMinTimestamp(minTimestamp.getMillis())
+                                                                        .build())
+                                          .buildIncrementalIndex();
+
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> index2.add(
+            new MapBasedInputRow(
+                minTimestamp,
+                List.of("string", "long"),
+                rowMap
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        "Cannot add row[{timestamp="
+        + minTimestamp
+        + ", event={string=hello, long=10}, dimensions=[string, long]}] to projection[proj] because projection effective timestamp["
+        + outOfRangeProjectionTimestamp
+        + "] is below the minTimestamp["
+        + minTimestamp + "]",
         t.getMessage()
     );
   }

@@ -1732,25 +1732,18 @@ public class CachingClusteredClientTest
       int partitions
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new HashBasedNumberedShardSpec(
-            partitionNum,
-            partitions,
-            partitionNum,
-            partitions,
-            partitionDimensions,
-            partitionFunction,
-            TestHelper.makeJsonMapper()
-        ),
-        null,
-        9,
-        0L
-    );
-
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new HashBasedNumberedShardSpec(
+                                               partitionNum,
+                                               partitions,
+                                               partitionNum,
+                                               partitions,
+                                               partitionDimensions,
+                                               partitionFunction,
+                                               TestHelper.makeJsonMapper()
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
     ServerSelector selector = new ServerSelector(
         segment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -1768,22 +1761,15 @@ public class CachingClusteredClientTest
       int partitionNum
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new SingleDimensionShardSpec(
-            dimension,
-            start,
-            end,
-            partitionNum,
-            SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
-        ),
-        null,
-        9,
-        0L
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new SingleDimensionShardSpec(dimension,
+                                                                                   start,
+                                                                                   end,
+                                                                                   partitionNum,
+                                                                                   SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
 
     ServerSelector selector = new ServerSelector(
         segment,
@@ -2457,13 +2443,13 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.<String, Object>builder()
-                      .put("rows", objects[i + 1])
-                      .put("imps", objects[i + 2])
-                      .put("impers", objects[i + 2])
-                      .put("avg_imps_per_row", avg_impr)
-                      .put("avg_imps_per_row_half", avg_impr / 2)
-                      .put("avg_imps_per_row_double", avg_impr * 2)
-                      .build()
+                              .put("rows", objects[i + 1])
+                              .put("imps", objects[i + 2])
+                              .put("impers", objects[i + 2])
+                              .put("avg_imps_per_row", avg_impr)
+                              .put("avg_imps_per_row_half", avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .build()
               )
           )
       );
@@ -2530,14 +2516,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                .put(names.get(0), objects[index])
-                .put(names.get(1), rows)
-                .put(names.get(2), imps)
-                .put(names.get(3), imps)
-                .put(names.get(4), imps / rows)
-                .put(names.get(5), ((imps * 2) / rows))
-                .put(names.get(6), (imps / (rows * 2)))
-                .build()
+                        .put(names.get(0), objects[index])
+                        .put(names.get(1), rows)
+                        .put(names.get(2), imps)
+                        .put(names.get(3), imps)
+                        .put(names.get(4), imps / rows)
+                        .put(names.get(5), ((imps * 2) / rows))
+                        .put(names.get(6), (imps / (rows * 2)))
+                        .build()
         );
         index += 3;
       }
@@ -2643,7 +2629,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+          public void registerServerCallback(Executor exec, ServerCallback callback)
           {
 
           }

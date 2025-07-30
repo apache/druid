@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.controller.sql;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
@@ -67,6 +68,7 @@ import org.apache.druid.sql.calcite.run.SqlResults;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -79,6 +81,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -171,11 +174,9 @@ public class DartQueryMaker implements QueryMaker
 
   private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
-    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
     final ControllerContext controllerContext = controllerContextFactory.newContext(context);
 
     return new ControllerImpl(
-        dartQueryId,
         querySpec,
         resultsContext,
         controllerContext,
@@ -185,11 +186,9 @@ public class DartQueryMaker implements QueryMaker
 
   private ControllerImpl makeQueryDefController(QueryDefMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)
   {
-    final String dartQueryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
     final ControllerContext controllerContext = controllerContextFactory.newContext(context);
 
     return new ControllerImpl(
-        dartQueryId,
         querySpec,
         resultsContext,
         controllerContext,
@@ -366,12 +365,13 @@ public class DartQueryMaker implements QueryMaker
   class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
   {
     private final ControllerHolder controllerHolder;
-    private final ResultIterator resultIterator = new ResultIterator();
+    private final ResultIterator resultIterator;
     private boolean made;
 
     public ResultIteratorMaker(ControllerHolder holder)
     {
       this.controllerHolder = holder;
+      this.resultIterator = new ResultIterator(controllerHolder.getController().getQueryContext().getTimeoutDuration());
       submitController();
     }
 
@@ -408,6 +408,15 @@ public class DartQueryMaker implements QueryMaker
               plannerContext.getSqlQueryId(),
               controller.queryId()
           );
+        }
+        catch (Throwable e) {
+          log.error(
+              e,
+              "Controller failed for sqlQueryId[%s], controllerHost[%s]",
+              plannerContext.getSqlQueryId(),
+              controller.queryId()
+          );
+          throw e;
         }
         finally {
           controllerRegistry.deregister(controllerHolder);
@@ -459,6 +468,14 @@ public class DartQueryMaker implements QueryMaker
 
     private volatile boolean complete;
 
+    @Nullable
+    private final Duration timeout;
+
+    public ResultIterator(@Nullable Duration timeout)
+    {
+      this.timeout = timeout;
+    }
+
     @Override
     public boolean hasNext()
     {
@@ -477,7 +494,14 @@ public class DartQueryMaker implements QueryMaker
     {
       if (current == null) {
         try {
-          current = rowBuffer.take();
+          if (timeout != null) {
+            current = rowBuffer.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            if (current == null) {
+              throw DruidException.defensive("Result reader timed out [%s]", timeout);
+            }
+          } else {
+            current = rowBuffer.take();
+          }
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();

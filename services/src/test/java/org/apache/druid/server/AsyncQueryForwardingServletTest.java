@@ -683,7 +683,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     catch (NullPointerException ignored) {
     }
-    Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    // Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }

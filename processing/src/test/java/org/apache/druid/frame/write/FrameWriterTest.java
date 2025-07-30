@@ -26,6 +26,7 @@ import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.field.TransformUtilsTest;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
@@ -129,7 +130,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       for (final FrameType outputFrameType : FrameType.values()) {
         for (final KeyOrder sortedness : KeyOrder.values()) {
           // Only do sortedness tests for row-based frames. (Columnar frames cannot be sorted.)
-          if (sortedness == KeyOrder.NONE || outputFrameType == FrameType.ROW_BASED) {
+          if (sortedness == KeyOrder.NONE || outputFrameType.isRowBased()) {
             constructors.add(new Object[]{inputFrameType, outputFrameType, sortedness});
           }
         }
@@ -181,9 +182,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // When columnar frames are in multiValue = false mode, and when they see a dataset that is all single strings and
     // empty arrays, they write a single-valued column, replacing the empty arrays with nulls.
     final FrameWriterTestData.Dataset<?> expectedReadDataset =
-        outputFrameType == FrameType.COLUMNAR
-        ? FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE
-        : FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY;
+        outputFrameType.isRowBased()
+        ? FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY
+        : FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE;
 
     testWithDataset(
         FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY,
@@ -210,7 +211,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
-    if (outputFrameType == FrameType.COLUMNAR) {
+    if (outputFrameType.isColumnar()) {
       final IllegalStateException e = Assert.assertThrows(
           IllegalStateException.class,
           () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
@@ -265,13 +266,29 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_float()
   {
-    testWithDataset(FrameWriterTestData.TEST_FLOATS);
+    if (outputFrameType == FrameType.ROW_BASED_V1) {
+      // Bug-compatible re-sorting of the floats.
+      testWithDataset(
+          FrameWriterTestData.TEST_FLOATS
+              .sortedCopy(
+                  Comparator.nullsFirst((x, y) -> TransformUtilsTest.expectedComparison(outputFrameType, x, y))));
+    } else {
+      testWithDataset(FrameWriterTestData.TEST_FLOATS);
+    }
   }
 
   @Test
   public void test_double()
   {
-    testWithDataset(FrameWriterTestData.TEST_DOUBLES);
+    if (outputFrameType == FrameType.ROW_BASED_V1) {
+      // Bug-compatible re-sorting of the doubles.
+      testWithDataset(
+          FrameWriterTestData.TEST_DOUBLES
+              .sortedCopy(
+                  Comparator.nullsFirst((x, y) -> TransformUtilsTest.expectedComparison(outputFrameType, x, y))));
+    } else {
+      testWithDataset(FrameWriterTestData.TEST_DOUBLES);
+    }
   }
 
   @Test
@@ -324,8 +341,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_insufficientWriteCapacity()
   {
-    // Test every possible capacity, up to the amount required to write all items from every list.
-    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+    // Test every possible capacity for the latest row-based frame format, up to the amount required to write all
+    // items from every list.
+    Assume.assumeTrue(inputFrameType == null && outputFrameType == FrameType.latestRowBased());
     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
     final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);
     final int totalRows = rowSequence.toList().size();
@@ -395,7 +413,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Sort according to the current {@link #sortedness} parameter.
+   * Sort output rows according to the current {@link #sortedness} and {@link #outputFrameType} parameters.
    */
   private Sequence<List<Object>> sortIfNeeded(
       final Sequence<List<Object>> rows,
@@ -415,7 +433,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     return Sequences.sort(
         rows,
         Comparator.comparing(
-            row -> KeyTestUtils.createKey(keySignature, row.toArray()),
+            row -> KeyTestUtils.createKey(keySignature, outputFrameType, row.toArray()),
             keyComparator
         )
     );
@@ -525,21 +543,13 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final Cursor cursor = cursorHolder.asCursor();
 
       int numRows = 0;
-      final FrameWriterFactory frameWriterFactory;
-      if (FrameType.ROW_BASED.equals(outputFrameType)) {
-        frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
-            new SingleMemoryAllocatorFactory(allocator),
-            signature,
-            keyColumns,
-            false
-        );
-      } else {
-        frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-            new SingleMemoryAllocatorFactory(allocator),
-            signature,
-            keyColumns
-        );
-      }
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+          outputFrameType,
+          new SingleMemoryAllocatorFactory(allocator),
+          signature,
+          keyColumns,
+          false
+      );
 
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

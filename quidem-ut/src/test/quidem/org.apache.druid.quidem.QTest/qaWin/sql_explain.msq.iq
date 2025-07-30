@@ -439,6 +439,7 @@ WHERE client_ip IN ('107.13.54.103',
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1098,6 +1099,7 @@ WHERE client_ip IN ('107.13.54.103',
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -1733,6 +1735,7 @@ GROUP BY server_ip,
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -2369,6 +2372,7 @@ GROUP BY server_ip,
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__

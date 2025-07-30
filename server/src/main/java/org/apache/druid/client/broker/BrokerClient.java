@@ -20,6 +20,7 @@
 package org.apache.druid.client.broker;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -39,12 +40,17 @@ import java.util.List;
 public interface BrokerClient
 {
   /**
-   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint.
+   * Submits the given query to the {@code /druid/v2} endpoint of a Broker.
+   */
+  ListenableFuture<String> submitNativeQuery(Query<?> query);
+
+  /**
+   * Submit the given {@code sqlQuery} to the Broker's SQL query endpoint, {@code /druid/v2/sql/}.
    */
   ListenableFuture<String> submitSqlQuery(ClientSqlQuery sqlQuery);
 
   /**
-   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
+   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint, {@code /druid/v2/sql/task/}.
    */
   ListenableFuture<SqlTaskStatus> submitSqlTask(ClientSqlQuery sqlQuery);
 

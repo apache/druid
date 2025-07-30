@@ -285,20 +285,19 @@ public class SqlResourceTest extends CalciteTestBase
         stubServiceEmitter,
         testRequestLogger,
         scheduler,
-        defaultQueryConfig,
         lifecycleManager
     );
     sqlStatementFactory = new SqlStatementFactory(null)
     {
       @Override
       public HttpStatement httpStatement(
-          final SqlQuery sqlQuery,
+          final SqlQueryPlus sqlQueryPlus,
           final HttpServletRequest req
       )
       {
         TestHttpStatement stmt = new TestHttpStatement(
             sqlToolbox.withEngine(engine),
-            sqlQuery,
+            sqlQueryPlus,
             req,
             validateAndAuthorizeLatchSupplier,
             planLatchSupplier,
@@ -331,6 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
   }
@@ -571,6 +571,46 @@ public class SqlResourceTest extends CalciteTestBase
             false,
             false,
             ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
+            null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", "1999-12-31T16:00:00.000-08:00", "t2", "1999-12-31T00:00:00.000-08:00")
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponseLosAngelesTimeZone_setViaDefaultQueryConfig() throws Exception
+  {
+    // Create a new SqlResource with a DefaultQueryConfig that sets sqlTimeZone
+    final DefaultQueryConfig queryConfigWithTimezone = new DefaultQueryConfig(
+        ImmutableMap.of("sqlTimeZone", "America/Los_Angeles")
+    );
+
+    // We need to create a new SqlResource instance with our custom DefaultQueryConfig
+    resource = new SqlResource(
+        JSON_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        new ServerConfig(),
+        lifecycleManager,
+        new SqlEngineRegistry(Set.of(engine)),
+        TEST_RESPONSE_CONTEXT_CONFIG,
+        queryConfigWithTimezone,
+        DUMMY_DRUID_NODE
+    );
+
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
+            ResultFormat.OBJECT,
+            false,
+            false,
+            false,
+            null,
             null
         )
     ).rhs;
@@ -1481,7 +1521,7 @@ public class SqlResourceTest extends CalciteTestBase
         errorResponse,
         "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
-    checkSqlRequestLog(false);
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1590,15 +1630,10 @@ public class SqlResourceTest extends CalciteTestBase
             ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "id"),
             null
         ),
-        501
+        DruidException.Category.INVALID_INPUT.getExpectedStatus()
     );
 
-    validateLegacyQueryExceptionErrorResponse(
-        exception,
-        QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
-        QueryUnsupportedException.class.getName(),
-        ""
-    );
+    validateInvalidSqlError(exception, "Incorrect syntax near the keyword 'TO'");
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1623,32 +1658,31 @@ public class SqlResourceTest extends CalciteTestBase
 
     // This is checked in the common method that returns the response, but checking it again just protects
     // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    assertStatusAndCommonHeaders(response, DruidException.Category.INVALID_INPUT.getExpectedStatus());
     Assert.assertEquals(queryId, getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER));
     Assert.assertEquals(queryId, getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext()
+  public void testErrorResponseReturnNoQueryIdWhenNotSetInContext()
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = postForSyncResponse(
-        new SqlQuery(
-            "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
-            false,
-            false,
-            false,
-            ImmutableMap.of(),
-            null
-        ),
-        req
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT ANSWER TO LIFE",
+        ResultFormat.OBJECT,
+        false,
+        false,
+        false,
+        ImmutableMap.of(),
+        null
     );
 
-    // This is checked in the common method that returns the response, but checking it again just protects
-    // from changes there breaking the checks, so doesn't hurt.
-    assertStatusAndCommonHeaders(response, 501);
+    final Response response = resource.doPost(sqlQuery, req);
+
+    // Query ID won't be set, but we can look for other aspects of the response that we expect.
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT.getExpectedStatus(), response.getStatus());
+    Assert.assertEquals("application/json", getContentType(response));
   }
 
   @Test
@@ -1674,6 +1708,7 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
         TEST_RESPONSE_CONTEXT_CONFIG,
+        DefaultQueryConfig.NIL,
         DUMMY_DRUID_NODE
     );
 
@@ -1681,7 +1716,7 @@ public class SqlResourceTest extends CalciteTestBase
     failOnExecute(errorMessage);
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
-            "SELECT ANSWER TO LIFE",
+            "SELECT 1",
             ResultFormat.OBJECT,
             false,
             false,
@@ -2297,7 +2332,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     private TestHttpStatement(
         final SqlToolbox lifecycleContext,
-        final SqlQuery sqlQuery,
+        final SqlQueryPlus sqlQueryPlus,
         final HttpServletRequest req,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier,
         SettableSupplier<NonnullPair<CountDownLatch, Boolean>> planLatchSupplier,
@@ -2307,7 +2342,7 @@ public class SqlResourceTest extends CalciteTestBase
         final Consumer<DirectStatement> onAuthorize
     )
     {
-      super(lifecycleContext, sqlQuery, req);
+      super(lifecycleContext, sqlQueryPlus, req);
       this.validateAndAuthorizeLatchSupplier = validateAndAuthorizeLatchSupplier;
       this.planLatchSupplier = planLatchSupplier;
       this.executeLatchSupplier = executeLatchSupplier;

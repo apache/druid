@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -46,6 +45,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -143,9 +143,10 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     );
 
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
-    root.addFilter(GuiceFilter.class, "/status/*", null);
-    root.addFilter(GuiceFilter.class, "/druid/router/*", null);
-    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+    final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
+    root.addFilter(guiceFilterHolder, "/status/*", null);
+    root.addFilter(guiceFilterHolder, "/druid/router/*", null);
+    root.addFilter(guiceFilterHolder, "/druid-ext/*", null);
 
     RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
     JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);

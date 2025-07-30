@@ -52,7 +52,7 @@ public class SegmentsMetadataManagerConfig
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
     this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.NEVER);
-    this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null));
+    this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null));
     if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
       throw DruidException
           .forPersona(DruidException.Persona.OPERATOR)

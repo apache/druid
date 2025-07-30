@@ -1,0 +1,923 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A11_B3
+#-------------------------------------------------------------------------
+SELECT a_str c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A11_B5
+#-------------------------------------------------------------------------
+SELECT a_str c
+FROM test_array
+ORDER BY c ASC;
++----------------+
+| c              |
++----------------+
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [S1, S2, null] |
+| [S1, S2, null] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A11_B6
+#-------------------------------------------------------------------------
+SELECT a_str c
+FROM test_array
+ORDER BY 1 DESC;
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A11_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_str c
+   FROM test_array
+   ORDER BY c ASC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A11_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_str c
+   FROM test_array
+   ORDER BY 1 DESC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[3]' RETURNING varchar array) ASC;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [null, S2, S1] |   2 |
+| [S1, S2, null] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++----------------+
+| c              |
++----------------+
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [S1, S2, null] |
+| [S1, S2, null] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B6
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+FROM test_array
+ORDER BY 1 DESC;
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY c ASC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A12_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[3]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY 1 DESC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[7][3]' RETURNING varchar array) ASC;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [null, S2, S1] |   2 |
+| [S1, S2, null] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----------------+-----+
+| c              | cnt |
++----------------+-----+
+| [S1, S2, null] |   2 |
+| [null, S2, S1] |   2 |
++----------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++----------------+
+| c              |
++----------------+
+| [null, S2, S1] |
+| [null, S2, S1] |
+| [S1, S2, null] |
+| [S1, S2, null] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B6
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+FROM test_array
+ORDER BY 1 DESC;
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY c ASC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A13_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][3]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY 1 DESC);
++----------------+
+| c              |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B1
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_null
+ORDER BY a_null ASC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B3
+#-------------------------------------------------------------------------
+SELECT a_null c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B5
+#-------------------------------------------------------------------------
+SELECT a_null c
+FROM test_array
+ORDER BY c ASC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B6
+#-------------------------------------------------------------------------
+SELECT a_null c
+FROM test_array
+ORDER BY 1 DESC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_null c
+   FROM test_array
+   ORDER BY c ASC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A14_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_null c
+   FROM test_array
+   ORDER BY 1 DESC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[4]' RETURNING varchar array) ASC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B6
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+FROM test_array
+ORDER BY 1 DESC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY c ASC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A15_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[4]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY 1 DESC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[7][4]' RETURNING varchar array) ASC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++--------------------+-----+
+| c                  | cnt |
++--------------------+-----+
+| [null, null, null] |   4 |
++--------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B6
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+FROM test_array
+ORDER BY 1 DESC;
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY c ASC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A16_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[7][4]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY 1 DESC);
++--------------------+
+| c                  |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B1
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY a_empty
+ORDER BY a_empty ASC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B3
+#-------------------------------------------------------------------------
+SELECT a_empty c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B5
+#-------------------------------------------------------------------------
+SELECT a_empty c
+FROM test_array
+ORDER BY c ASC;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B6
+#-------------------------------------------------------------------------
+SELECT a_empty c
+FROM test_array
+ORDER BY 1 DESC;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_empty c
+   FROM test_array
+   ORDER BY c ASC);
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A17_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT a_empty c
+   FROM test_array
+   ORDER BY 1 DESC);
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[5]' RETURNING varchar array) ASC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B6
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+FROM test_array
+ORDER BY 1 DESC;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY c ASC);
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A18_B9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT json_value(a_nested, '$[5]' RETURNING varchar array) c
+   FROM test_array
+   ORDER BY 1 DESC);
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A19_B1
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+ORDER BY json_value(a_nested, '$[7][5]' RETURNING varchar array) ASC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A19_B3
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c,
+       count(*) cnt
+FROM test_array
+GROUP BY 1
+ORDER BY 1 DESC;
++----+-----+
+| c  | cnt |
++----+-----+
+| [] |   4 |
++----+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_order_by TEST_ID: A19_B5
+#-------------------------------------------------------------------------
+SELECT json_value(a_nested, '$[7][5]' RETURNING varchar array) c
+FROM test_array
+ORDER BY c ASC;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+

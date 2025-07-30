@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics.serde;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -87,6 +88,14 @@ public class KeyCollectorSnapshotSerializerTest extends InitializedNullHandlingT
 
   private ClusterByStatisticsCollectorImpl makeCollector(final boolean aggregate)
   {
-    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(CLUSTER_BY_XYZ_BUCKET_BY_X, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
+    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
+        CLUSTER_BY_XYZ_BUCKET_BY_X,
+        SIGNATURE,
+        FrameType.latestRowBased(),
+        MAX_BYTES,
+        MAX_BUCKETS,
+        aggregate,
+        false
+    );
   }
 }

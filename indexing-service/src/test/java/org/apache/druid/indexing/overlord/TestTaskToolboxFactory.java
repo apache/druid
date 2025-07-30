@@ -67,6 +67,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.utils.RuntimeInfo;
 
 public class TestTaskToolboxFactory extends TaskToolboxFactory
 {
@@ -122,7 +123,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.shuffleClient,
         bob.taskLogPusher,
         bob.attemptId,
-        bob.centralizedDatasourceSchemaConfig
+        bob.centralizedDatasourceSchemaConfig,
+        bob.runtimeInfo
     );
   }
 
@@ -169,6 +171,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+    private RuntimeInfo runtimeInfo;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -413,6 +416,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+      return this;
+    }
+
+    public Builder setRuntimeInfo(RuntimeInfo runtimeInfo)
+    {
+      this.runtimeInfo = runtimeInfo;
       return this;
     }
   }

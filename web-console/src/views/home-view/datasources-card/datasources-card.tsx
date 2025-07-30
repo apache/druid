@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { getApiArray, pluralIfNeeded, queryDruidSql } from '../../../utils';
@@ -54,7 +54,7 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
     <HomeViewCard
       className="datasources-card"
       href="#datasources"
-      icon={IconNames.MULTI_SELECT}
+      icon={getConsoleViewIcon('datasources')}
       title="Datasources"
       loading={datasourceCountState.loading}
       error={datasourceCountState.error}

@@ -22,9 +22,9 @@ package org.apache.druid.java.util.emitter.service;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- *
+ * Immutable metric event emitted by a Druid {@link ServiceEmitter}.
  */
 @PublicApi
 public class ServiceMetricEvent implements Event
@@ -47,15 +47,18 @@ public class ServiceMetricEvent implements Event
 
   private final DateTime createdTime;
   private final ImmutableMap<String, String> serviceDims;
-  private final Map<String, Object> userDims;
+  private final ImmutableMap<String, Object> userDims;
   private final String feed;
   private final String metric;
   private final Number value;
 
+  /**
+   * Creates an immutable metric event.
+   */
   private ServiceMetricEvent(
       DateTime createdTime,
       ImmutableMap<String, String> serviceDims,
-      Map<String, Object> userDims,
+      ImmutableMap<String, Object> userDims,
       String feed,
       String metric,
       Number value
@@ -92,7 +95,7 @@ public class ServiceMetricEvent implements Event
 
   public Map<String, Object> getUserDims()
   {
-    return ImmutableMap.copyOf(userDims);
+    return userDims;
   }
 
   public String getMetric()
@@ -116,12 +119,7 @@ public class ServiceMetricEvent implements Event
         .putAll(serviceDims)
         .put("metric", metric)
         .put("value", value)
-        .putAll(
-            Maps.filterEntries(
-                userDims,
-                input -> input.getKey() != null
-            )
-        )
+        .putAll(userDims)
         .build();
   }
 
@@ -145,20 +143,38 @@ public class ServiceMetricEvent implements Event
 
     public Builder setDimension(String dim, String[] values)
     {
+      if (dim == null) {
+        throw new IAE("Dimension name cannot be null");
+      }
+
       userDims.put(dim, Arrays.asList(values));
       return this;
     }
 
+    /**
+     * Adds a dimension to be emitted with this metric event, only if the given
+     * value is not null.
+     *
+     * @throws IAE if the dimension name is null.
+     */
     public Builder setDimensionIfNotNull(String dim, Object value)
     {
-      if (value != null) {
-        userDims.put(dim, value);
-      }
-      return this;
+      return value == null ? this : setDimension(dim, value);
     }
 
+    /**
+     * Adds a dimension to be emitted with this metric event.
+     *
+     * @throws IAE if the dimension name or the given value is null.
+     */
     public Builder setDimension(String dim, Object value)
     {
+      if (dim == null) {
+        throw new IAE("Dimension name cannot be null");
+      } else if (value == null) {
+        throw new IAE("Value of dimension[%s] cannot be null", dim);
+      }
+
       userDims.put(dim, value);
       return this;
     }
@@ -197,7 +213,7 @@ public class ServiceMetricEvent implements Event
       return new ServiceMetricEvent(
           createdTime,
           serviceDimensions,
-          userDims,
+          ImmutableMap.copyOf(userDims),
           feed,
           metric,
           value

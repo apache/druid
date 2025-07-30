@@ -375,13 +375,13 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig
     )
     {
-      super(id, null, dataSchema, tuningConfig, ioConfig, null, null);
+      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null);
     }
 
     @Override
     public String getType()
     {
-      return null;
+      return "test";
     }
 
     @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.base.Function;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -39,7 +40,13 @@ import java.util.List;
 
 public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory<RowsAndColumns, WindowOperatorQuery>
 {
-  public static final WindowOperatorQueryQueryToolChest TOOLCHEST = new WindowOperatorQueryQueryToolChest();
+  public final WindowOperatorQueryQueryToolChest toolChest;
+
+  @Inject
+  public WindowOperatorQueryQueryRunnerFactory(WindowOperatorQueryQueryToolChest toolChest)
+  {
+    this.toolChest = toolChest;
+  }
 
   @Override
   public QueryRunner<RowsAndColumns> createRunner(Segment segment)
@@ -114,7 +121,7 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
   @Override
   public QueryToolChest<RowsAndColumns, WindowOperatorQuery> getToolchest()
   {
-    return TOOLCHEST;
+    return toolChest;
   }
 
 }

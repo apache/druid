@@ -24,6 +24,7 @@ import { useMemo } from 'react';
 
 import { Loader } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
+import { ColorAssigner } from '../../../../singletons';
 import {
   capitalizeFirst,
   FINE_GRANULARITY_OPTIONS,
@@ -41,12 +42,15 @@ import type {
   Range,
   RangeDatum,
 } from './continuous-chart-render';
-import { ContinuousChartRender, OTHER_VALUE } from './continuous-chart-render';
+import { ContinuousChartRender } from './continuous-chart-render';
 
 const TIME_NAME = 't';
 const MEASURE_NAME = 'm';
 const FACET_NAME = 'f';
 const MIN_SLICE_WIDTH = 8;
+
+const OTHER_VALUE = 'Other';
+const OTHER_COLOR = '#666666';
 
 function getRangeInExpression(
   expression: SqlExpression,
@@ -353,6 +357,11 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           <ContinuousChartRender
             data={sourceData.sourceData}
             facets={sourceData.effectiveFacets}
+            facetColorizer={v => {
+              if (!facetColumn) return '#000000';
+              if (v === OTHER_VALUE) return OTHER_COLOR;
+              return ColorAssigner.getColorForDimensionValue(facetColumn.name, v);
+            }}
             granularity={sourceData.granularity}
             markType={parameterValues.markType}
             curveType={parameterValues.curveType}

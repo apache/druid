@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -50,9 +51,9 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -95,6 +96,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -130,7 +132,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private File baseDir;
   private SupervisorManager supervisorManager;
   private TestDataSegmentKiller dataSegmentKiller;
@@ -187,7 +189,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         NoopServiceEmitter.instance(),
         objectMapper
     );
-    lockbox = new TaskLockbox(taskStorage, storageCoordinator);
+    lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
+    lockbox.syncFromStorage();
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
@@ -255,7 +258,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return segmentsMetadataManager;
   }
 
-  public TaskLockbox getLockbox()
+  public GlobalTaskLockbox getLockbox()
   {
     return lockbox;
   }
@@ -312,6 +315,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .taskLogPusher(null)
         .attemptId("1")
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+        .runtimeInfo(JvmUtils.getRuntimeInfo())
         .build();
   }
 
@@ -424,6 +428,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         SegmentTransactionalInsertAction insertAction = (SegmentTransactionalInsertAction) taskAction;
         publishedSegments.addAll(insertAction.getSegments());
         segmentSchemaMapping.merge(insertAction.getSegmentSchemaMapping());
+      } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+        SegmentTransactionalReplaceAction replaceAction = (SegmentTransactionalReplaceAction) taskAction;
+        publishedSegments.addAll(replaceAction.getSegments());
+        if (replaceAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
+        }
       }
       return result;
     }
@@ -524,6 +534,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .taskLogPusher(null)
             .attemptId("1")
             .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
+            .runtimeInfo(JvmUtils.getRuntimeInfo())
             .build();
 
 

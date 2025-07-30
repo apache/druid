@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -92,13 +93,14 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   public static ClusterByStatisticsCollector create(
       final ClusterBy clusterBy,
       final RowSignature signature,
+      final FrameType frameType,
       final long maxRetainedBytes,
       final int maxBuckets,
       final boolean aggregate,
       final boolean checkHasMultipleValues
   )
   {
-    final RowKeyReader keyReader = clusterBy.keyReader(signature);
+    final RowKeyReader keyReader = clusterBy.keyReader(signature, frameType);
     final KeyCollectorFactory<?, ?> keyCollectorFactory =
         KeyCollectors.makeStandardFactory(clusterBy, aggregate, signature);
 

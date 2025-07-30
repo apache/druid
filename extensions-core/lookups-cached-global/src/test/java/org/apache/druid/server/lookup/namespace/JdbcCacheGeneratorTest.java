@@ -29,6 +29,7 @@ import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.Before;
@@ -76,7 +77,7 @@ public class JdbcCacheGeneratorTest
   @Before
   public void setup()
   {
-    target = new JdbcCacheGenerator();
+    target = new JdbcCacheGenerator(JvmUtils.getRuntimeInfo());
   }
 
   @Test

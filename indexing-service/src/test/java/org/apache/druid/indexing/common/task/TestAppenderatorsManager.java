@@ -44,6 +44,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.TaskDirectory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
@@ -57,6 +58,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -106,6 +108,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,

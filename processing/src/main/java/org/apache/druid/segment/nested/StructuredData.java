@@ -21,6 +21,8 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.primitives.Longs;
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
@@ -38,15 +40,21 @@ public class StructuredData implements Comparable<StructuredData>
 {
   private static final XXHash64 HASH_FUNCTION = XXHashFactory.fastestInstance().hash64();
 
-  // seed from the example... but, it doesn't matter what it is as long as its the same every time
+  // seed from the example... but, it doesn't matter what it is as long as it's the same every time
   private static int SEED = 0x9747b28c;
 
   public static final Comparator<StructuredData> COMPARATOR = Comparators.naturalNullsFirst();
 
+  /** SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS is required so that hash computations for JSON objects that
+   *  have different key orders but are otherwise equivalent will be consistent. See
+   *  {@link StructuredDataTest#testCompareToWithDifferentJSONOrder()} for an example
+   */
+  private static final ObjectWriter WRITER = ColumnSerializerUtils.SMILE_MAPPER.writer(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+
   private static long computeHash(StructuredData data)
   {
     try {
-      final byte[] bytes = ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(data.value);
+      final byte[] bytes = WRITER.writeValueAsBytes(data.value);
       return HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
     }
     catch (JsonProcessingException e) {

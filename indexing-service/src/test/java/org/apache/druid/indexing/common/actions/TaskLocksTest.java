@@ -31,10 +31,10 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -58,17 +59,18 @@ import java.util.stream.IntStream;
 
 public class TaskLocksTest
 {
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private Task task;
 
   @Before
   public void setup()
   {
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    lockbox = new TaskLockbox(
+    lockbox = new GlobalTaskLockbox(
         taskStorage,
         new TestIndexerMetadataStorageCoordinator()
     );
+    lockbox.syncFromStorage();
     task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));
     lockbox.add(task);
@@ -76,28 +78,17 @@ public class TaskLocksTest
 
   private Set<DataSegment> createTimeChunkedSegments()
   {
+    final String version = DateTimes.nowUtc().toString();
     return ImmutableSet.of(
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(DateTimes.nowUtc().toString())
-            .shardSpec(new LinearShardSpec(2))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-02/2017-01-03"))
-            .version(DateTimes.nowUtc().toString())
-            .shardSpec(new LinearShardSpec(2))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-03/2017-01-04"))
-            .version(DateTimes.nowUtc().toString())
-            .shardSpec(new LinearShardSpec(2))
-            .size(0)
-            .build()
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new LinearShardSpec(2))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-02/2017-01-03"), version, null))
+                   .shardSpec(new LinearShardSpec(2))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-03/2017-01-04"), version, null))
+                   .shardSpec(new LinearShardSpec(2))
+                   .build()
     );
   }
 
@@ -105,41 +96,21 @@ public class TaskLocksTest
   {
     final String version = DateTimes.nowUtc().toString();
     return ImmutableSet.of(
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(version)
-            .shardSpec(new NumberedShardSpec(0, 0))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(version)
-            .shardSpec(new NumberedShardSpec(1, 0))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(version)
-            .shardSpec(new NumberedShardSpec(2, 0))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(version)
-            .shardSpec(new NumberedShardSpec(3, 0))
-            .size(0)
-            .build(),
-        new DataSegment.Builder()
-            .dataSource(task.getDataSource())
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(version)
-            .shardSpec(new NumberedShardSpec(4, 0))
-            .size(0)
-            .build()
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new NumberedShardSpec(1, 0))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new NumberedShardSpec(2, 0))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new NumberedShardSpec(3, 0))
+                   .build(),
+        DataSegment.builder(SegmentId.of(task.getDataSource(), Intervals.of("2017-01-01/2017-01-02"), version, null))
+                   .shardSpec(new NumberedShardSpec(4, 0))
+                   .build()
     );
   }
 

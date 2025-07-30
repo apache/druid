@@ -26,19 +26,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
-import org.apache.druid.msq.indexing.error.CancellationReason;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.server.security.ResourceAction;
@@ -52,18 +56,16 @@ import java.util.Set;
 public class MSQWorkerTask extends AbstractTask
 {
   public static final String TYPE = "query_worker";
-  private static final Logger log = new Logger(MSQWorkerTask.class);
 
   private final String controllerTaskId;
   private final int workerNumber;
   private final int retryCount;
+  private final WorkerRunRef workerRunRef = new WorkerRunRef();
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   // Not part of equals and hashcode implementation
   @JacksonInject
   private Injector injector;
-
-  private volatile Worker worker;
 
   @JsonCreator
   @VisibleForTesting
@@ -139,24 +141,35 @@ public class MSQWorkerTask extends AbstractTask
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
-    final WorkerContext context = IndexerWorkerContext.createProductionInstance(this, toolbox, injector);
-    worker = new WorkerImpl(this, context);
+    try (final IndexerWorkerContext context = IndexerWorkerContext.createProductionInstance(this, toolbox, injector)) {
+      // We'll run the worker in a separate thread, so we can interrupt the thread on shutdown or controller failure.
+      final ListeningExecutorService workerExec =
+          MoreExecutors.listeningDecorator(
+              Execs.singleThreaded("query-worker[" + StringUtils.encodeForFormat(getId()) + "]-%s"));
 
-    try {
-      worker.run();
-      return TaskStatus.success(context.workerId());
+      try {
+        final Worker worker = new WorkerImpl(this, context);
+        final ListenableFuture<?> future = workerRunRef.run(worker, workerExec);
+
+        try (final PeriodicControllerChecker ignored = openControllerChecker(context)) {
+          FutureUtils.getUnchecked(future, true);
+        }
+
+        return TaskStatus.success(getId());
+      }
+      finally {
+        workerExec.shutdown();
+      }
     }
     catch (MSQException e) {
-      return TaskStatus.failure(context.workerId(), MSQFaultUtils.generateMessageWithErrorCode(e.getFault()));
+      return TaskStatus.failure(getId(), MSQFaultUtils.generateMessageWithErrorCode(e.getFault()));
     }
   }
 
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
-    if (worker != null) {
-      worker.stop(CancellationReason.TASK_SHUTDOWN);
-    }
+    workerRunRef.cancel();
   }
 
   @Override
@@ -188,13 +201,22 @@ public class MSQWorkerTask extends AbstractTask
     MSQWorkerTask that = (MSQWorkerTask) o;
     return workerNumber == that.workerNumber
            && retryCount == that.retryCount
-           && Objects.equals(controllerTaskId, that.controllerTaskId)
-           && Objects.equals(worker, that.worker);
+           && Objects.equals(controllerTaskId, that.controllerTaskId);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), controllerTaskId, workerNumber, retryCount, worker);
+    return Objects.hash(super.hashCode(), controllerTaskId, workerNumber, retryCount);
+  }
+
+  private PeriodicControllerChecker openControllerChecker(final IndexerWorkerContext context)
+  {
+    return PeriodicControllerChecker.open(
+        getControllerTaskId(),
+        getId(),
+        context.controllerLocator(),
+        workerRunRef::cancel
+    );
   }
 }

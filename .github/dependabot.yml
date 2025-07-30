@@ -15,3 +15,17 @@ updates:
       # pin Testng dependencies to 7.3.0
       - dependency-name: "org.testng"
         versions: "[7.4.0,)"
+
+  # Don't run dependabot on website
+  - package-ecosystem: "npm"
+    directory: "/website/"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+
+  # Don't run dependabot on web-console
+  - package-ecosystem: "npm"
+    directory: "/web-console/"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]

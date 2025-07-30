@@ -40,6 +40,7 @@ import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
@@ -75,7 +76,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         objectMapper,
         indexingServiceClient,
         s -> localFileStorageConnector,
-        authorizerMapper
+        authorizerMapper,
+        DefaultQueryConfig.NIL
     );
   }
 
@@ -329,7 +331,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         objectMapper,
         indexingServiceClient,
         s -> NilStorageConnector.getInstance(),
-        authorizerMapper
+        authorizerMapper,
+        DefaultQueryConfig.NIL
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "

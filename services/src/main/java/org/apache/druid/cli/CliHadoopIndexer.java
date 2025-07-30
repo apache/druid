@@ -26,7 +26,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ExtensionsLoader;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexing.common.task.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -48,7 +48,7 @@ import java.util.List;
 )
 public class CliHadoopIndexer implements Runnable
 {
-  private static final List<String> DEFAULT_HADOOP_COORDINATES = TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
+  private static final List<String> DEFAULT_HADOOP_COORDINATES = HadoopTaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 

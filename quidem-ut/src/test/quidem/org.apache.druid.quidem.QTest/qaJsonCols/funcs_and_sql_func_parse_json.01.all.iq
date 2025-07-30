@@ -1,0 +1,614 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_json_cols;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A001
+#-------------------------------------------------------------------------
+SELECT parse_json('1234') c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| 1234 |
+| 1234 |
+| 1234 |
+| 1234 |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A002
+#-------------------------------------------------------------------------
+SELECT parse_json('"日本"') c
+FROM test_json_cols;
++------+
+| c    |
++------+
+| "日本" |
+| "日本" |
+| "日本" |
+| "日本" |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A003
+#-------------------------------------------------------------------------
+SELECT parse_json('"abc"') c
+FROM test_json_cols;
++-------+
+| c     |
++-------+
+| "abc" |
+| "abc" |
+| "abc" |
+| "abc" |
++-------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A004
+#-------------------------------------------------------------------------
+SELECT parse_json('"'||'a'||'b'||'c'||'"') c
+FROM test_json_cols;
++-------+
+| c     |
++-------+
+| "abc" |
+| "abc" |
+| "abc" |
+| "abc" |
++-------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A005
+#-------------------------------------------------------------------------
+SELECT parse_json('"This is My Key"') c
+FROM test_json_cols;
++------------------+
+| c                |
++------------------+
+| "This is My Key" |
+| "This is My Key" |
+| "This is My Key" |
+| "This is My Key" |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A006
+#-------------------------------------------------------------------------
+SELECT json_query(parse_json('"AbCd"'), '$') c
+FROM test_json_cols;
++--------+
+| c      |
++--------+
+| "AbCd" |
+| "AbCd" |
+| "AbCd" |
+| "AbCd" |
++--------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A007
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(s_str, '$')) c
+FROM test_json_cols;
+AvaticaSqlException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A008
+#-------------------------------------------------------------------------
+SELECT parse_json(1234) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<INTEGER>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A009
+#-------------------------------------------------------------------------
+SELECT parse_json(1+1) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<INTEGER>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A010
+#-------------------------------------------------------------------------
+SELECT json_query(parse_json(1234), '$') c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<INTEGER>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A011
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(s_num_int, '$' RETURNING bigint)) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<BIGINT>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A012
+#-------------------------------------------------------------------------
+SELECT parse_json(0.1234) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<DECIMAL(5, 4)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A013
+#-------------------------------------------------------------------------
+SELECT parse_json(0.1+0.1) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<DECIMAL(3, 1)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A014
+#-------------------------------------------------------------------------
+SELECT json_query(parse_json(0.1234), '$') c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<DECIMAL(5, 4)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A015
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(s_num_float, '$' RETURNING DOUBLE)) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<DOUBLE>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A016
+#-------------------------------------------------------------------------
+SELECT parse_json(TRUE) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<BOOLEAN>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A017
+#-------------------------------------------------------------------------
+SELECT parse_json((1=2)) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<BOOLEAN>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A018
+#-------------------------------------------------------------------------
+SELECT json_query(parse_json(TRUE), '$') c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<BOOLEAN>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A019
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(s_bool, '$' RETURNING boolean)) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<BOOLEAN>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A020
+#-------------------------------------------------------------------------
+SELECT parse_json(NULL) c
+FROM test_json_cols;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A021
+#-------------------------------------------------------------------------
+SELECT json_query(parse_json(NULL), '$') c
+FROM test_json_cols;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A022
+#-------------------------------------------------------------------------
+SELECT parse_json(json_value(s_null, '$')) c
+FROM test_json_cols;
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A023
+#-------------------------------------------------------------------------
+SELECT parse_json(__time) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<TIMESTAMP(3)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A024
+#-------------------------------------------------------------------------
+SELECT parse_json(CURRENT_TIMESTAMP) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<TIMESTAMP(3)>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A025
+#-------------------------------------------------------------------------
+SELECT parse_json('{}') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+| {} |
+| {} |
+| {} |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A026
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": "A", "b": {}}') c
+FROM test_json_cols;
++------------------+
+| c                |
++------------------+
+| {"a":"A","b":{}} |
+| {"a":"A","b":{}} |
+| {"a":"A","b":{}} |
+| {"a":"A","b":{}} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A027
+#-------------------------------------------------------------------------
+SELECT parse_json('[]') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+| [] |
+| [] |
+| [] |
++----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A028
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": "A", "b": []}') c
+FROM test_json_cols;
++------------------+
+| c                |
++------------------+
+| {"a":"A","b":[]} |
+| {"a":"A","b":[]} |
+| {"a":"A","b":[]} |
+| {"a":"A","b":[]} |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A029
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": "A", "b": 1, "c": 0.1, "d": true, "e": null}') c
+FROM test_json_cols;
++-------------------------------------------+
+| c                                         |
++-------------------------------------------+
+| {"a":"A","b":1,"c":0.1,"d":true,"e":null} |
+| {"a":"A","b":1,"c":0.1,"d":true,"e":null} |
+| {"a":"A","b":1,"c":0.1,"d":true,"e":null} |
+| {"a":"A","b":1,"c":0.1,"d":true,"e":null} |
++-------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A030
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": "A", "b": [{"c": 123}, {"d": null, "e": [1, 2, 3]}]}') c
+FROM test_json_cols;
++--------------------------------------------------+
+| c                                                |
++--------------------------------------------------+
+| {"a":"A","b":[{"c":123},{"d":null,"e":[1,2,3]}]} |
+| {"a":"A","b":[{"c":123},{"d":null,"e":[1,2,3]}]} |
+| {"a":"A","b":[{"c":123},{"d":null,"e":[1,2,3]}]} |
+| {"a":"A","b":[{"c":123},{"d":null,"e":[1,2,3]}]} |
++--------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A031
+#-------------------------------------------------------------------------
+SELECT parse_json(c1) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A032
+#-------------------------------------------------------------------------
+SELECT parse_json(json_query(c1, '$.a_array[0].a_obj')) c
+FROM test_json_cols;
+Cannot apply 'PARSE_JSON' to arguments of type 'PARSE_JSON(<COMPLEX<JSON>>)'
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A033
+#-------------------------------------------------------------------------
+SELECT parse_json('{'a': 123}') c
+FROM test_json_cols;
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A034
+#-------------------------------------------------------------------------
+SELECT parse_json('"a": 123') c
+FROM test_json_cols;
++-----+
+| c   |
++-----+
+| "a" |
+| "a" |
+| "a" |
+| "a" |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A035
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": 123; "b": 456}') c
+FROM test_json_cols;
+ExpressionProcessingException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A036
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": 123 456}') c
+FROM test_json_cols;
+ExpressionProcessingException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A037
+#-------------------------------------------------------------------------
+SELECT parse_json('{"a": "A", "b": ["c": {}, "d": {}]}') c
+FROM test_json_cols;
+ExpressionProcessingException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A038
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE parse_json(to_json_string(c1)) IS NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A039
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE parse_json(to_json_string(c1)) IS NOT NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A040
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT parse_json(to_json_string(c1))
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A041
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL parse_json(to_json_string(c1))
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A042
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT parse_json(to_json_string(c1)) mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A043
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT DISTINCT parse_json(to_json_string(c1)) c
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A044
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT parse_json(to_json_string(c1)) mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A045
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT c1,
+          parse_json(to_json_string(c1)) mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
+| 2 |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A046
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE parse_json(to_json_string(c1)) = parse_json(to_json_string(c1));
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A047
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON parse_json(to_json_string(t1.c1))=parse_json(to_json_string(t2.c1));
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A048
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON parse_json(to_json_string(t1.c1))=parse_json(to_json_string(t2.c1));
+Cannot join
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_parse_json TEST_ID: A049
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE parse_json(to_json_string(t1.c1))=parse_json(to_json_string(t2.c1));
+Cannot join
+!error
+
