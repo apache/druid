@@ -130,8 +130,18 @@ public enum DruidCommand
    */
   ROUTER(
       "router",
-      Map.of(),
+      Map.of("druid.router.managementProxy.enabled", "true"),
       8888
+  ),
+
+  /**
+   * Command to run a test-only Druid node which collects events emitted by
+   * other Druid services using {@code HttpPostEmitter}.
+   */
+  TEST_EVENT_COLLECTOR(
+      "eventCollector",
+      Map.of(),
+      9301
   );
 
   private final String name;

@@ -63,7 +63,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private final List<BeforeStart> beforeStartHooks = new ArrayList<>();
   private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();
 
-  EmbeddedDruidServer()
+  protected EmbeddedDruidServer()
   {
     this.name = StringUtils.format(
         "%s-%d",
@@ -199,7 +199,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
    * @see EmbeddedDruidCluster#addCommonProperty
    * @see EmbeddedDruidServer#addProperty
    */
-  abstract ServerRunnable createRunnable(
+  protected abstract ServerRunnable createRunnable(
       LifecycleInitHandler handler
   );
 
@@ -220,7 +220,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
    * All implementations of {@link EmbeddedDruidServer} must use this binding in
    * {@link ServerRunnable#getModules()}.
    */
-  final void bindReferenceHolder(Binder binder)
+  protected final void bindReferenceHolder(Binder binder)
   {
     binder.bind(ServerReferenceHolder.class).toInstance(referenceHolder);
   }
@@ -255,7 +255,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Handler used to register the lifecycle of an embedded server.
    */
-  interface LifecycleInitHandler
+  protected interface LifecycleInitHandler
   {
     /**
      * Registers the lifecycle of this server so that it can be stopped later.

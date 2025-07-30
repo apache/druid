@@ -24,7 +24,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Nested;
 
 /**
- * Runs some basic ingestion tests using {@link DruidContainers} to verify
+ * Runs some basic ingestion tests using {@code DruidContainers} to verify
  * backward compatibility with old Druid images.
  */
 public class IngestionBackwardCompatibilityDockerTest

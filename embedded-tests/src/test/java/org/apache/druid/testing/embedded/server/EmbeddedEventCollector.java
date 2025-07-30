@@ -17,41 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded;
+package org.apache.druid.testing.embedded.server;
 
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.cli.CliRouter;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.testing.cli.CliEventCollector;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
+import org.apache.http.client.utils.URIBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Embedded mode of {@link CliRouter} used in embedded tests.
- * Add this to your {@link EmbeddedDruidCluster} if you want to use the Druid
- * web-console for debugging or if you want to test the behaviour of the Router.
+ * Implementation of {@link EmbeddedDruidServer} provided by the extension {@code testing-tools}.
+ * This server collects events emitted using the {@code HttpPostEmitter}.
  */
-public class EmbeddedRouter extends EmbeddedDruidServer<EmbeddedRouter>
+public class EmbeddedEventCollector extends EmbeddedDruidServer<EmbeddedEventCollector>
 {
-  public EmbeddedRouter()
-  {
-    // This property ensures that web-console functions in full mode
-    addProperty("druid.router.managementProxy.enabled", "true");
-  }
-
   @Override
   protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
-    return new Router(handler);
+    return new EventCollector(handler);
   }
 
-  private class Router extends CliRouter
+  public String getMetricsUrl()
+  {
+    return new URIBuilder()
+        .setScheme("http")
+        .setHost(EmbeddedDruidCluster.getDefaultHost())
+        .setPort(CliEventCollector.PORT)
+        .setPath("/druid-ext/testing-tools/events")
+        .toString();
+  }
+
+  private class EventCollector extends CliEventCollector
   {
     private final LifecycleInitHandler handler;
 
-    private Router(LifecycleInitHandler handler)
+    private EventCollector(LifecycleInitHandler handler)
     {
       this.handler = handler;
     }
@@ -68,7 +74,7 @@ public class EmbeddedRouter extends EmbeddedDruidServer<EmbeddedRouter>
     protected List<? extends Module> getModules()
     {
       final List<Module> modules = new ArrayList<>(super.getModules());
-      modules.add(EmbeddedRouter.this::bindReferenceHolder);
+      modules.add(EmbeddedEventCollector.this::bindReferenceHolder);
       return modules;
     }
   }

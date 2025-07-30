@@ -26,6 +26,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
@@ -34,19 +37,23 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
+import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.derby.EmbeddedDerbyMetadataResource;
+import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
+import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.apache.druid.testing.embedded.server.EmbeddedEventCollector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
@@ -62,7 +69,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Runs some basic ingestion tests using {@link DruidContainers}.
+ * Runs some basic ingestion tests using {@code DruidContainers}.
  * <p>
  * This test verifies functionality of Druid Docker images using
  * {@link DruidContainerResource}. However, the underlying cluster also uses
@@ -72,39 +79,42 @@ import java.util.concurrent.ThreadLocalRandom;
 public class IngestionDockerTest extends EmbeddedClusterTestBase
 {
   // Druid Docker containers
-  protected final DruidContainerResource overlordLeader = DruidContainers.newOverlord().usingTestImage();
-  protected final DruidContainerResource coordinator = DruidContainers.newCoordinator().usingTestImage();
-  protected final DruidContainerResource historical = DruidContainers.newHistorical().usingTestImage();
-  protected final DruidContainerResource broker1 = DruidContainers.newBroker().usingTestImage();
-  protected final DruidContainerResource middleManager = DruidContainers
-      .newMiddleManager()
-      .usingTestImage()
-      .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+  protected final DruidContainerResource overlordLeader =
+      new DruidContainerResource(DruidCommand.OVERLORD).usingTestImage();
+  protected final DruidContainerResource coordinator =
+      new DruidContainerResource(DruidCommand.COORDINATOR).usingTestImage();
+  protected final DruidContainerResource historical =
+      new DruidContainerResource(DruidCommand.HISTORICAL).usingTestImage();
+  protected final DruidContainerResource broker =
+      new DruidContainerResource(DruidCommand.BROKER)
+          .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
+          .usingTestImage();
+  protected final DruidContainerResource router =
+      new DruidContainerResource(DruidCommand.ROUTER).usingTestImage();
+  protected final DruidContainerResource middleManager =
+      new DruidContainerResource(DruidCommand.MIDDLE_MANAGER)
+          .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+          .usingTestImage();
 
-  // Follower EmbeddedOverlord to watch segment publish events
-  private final EmbeddedOverlord overlordFollower = new EmbeddedOverlord()
-      .addProperty("druid.plaintextPort", "7090")
-      .addProperty("druid.manager.segments.useIncrementalCache", "always")
-      .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
+  // Follower EmbeddedOverlord to help serialize Task and Supervisor payloads
+  private final EmbeddedOverlord overlordFollower =
+      new EmbeddedOverlord().addProperty("druid.plaintextPort", "7090");
 
-  // Additional EmbeddedBroker to wait for segments to become queryable
-  private final EmbeddedBroker broker2 = new EmbeddedBroker()
-      .addProperty("druid.plaintextPort", "7082");
+  // Event collector to watch for metric events
+  private final EmbeddedEventCollector eventCollector = new EmbeddedEventCollector()
+      .addProperty("druid.emitter", "latching")
+      .addProperty("druid.server.http.numThreads", "20");
 
   private final KafkaResource kafkaServer = new KafkaResource();
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withZookeeper();
-
-    // Use DruidContainerResources in the cluster as they are the test target
-    // Use EmbeddedDruidServers to provide visiblility into the cluster state
-    return cluster
+    return EmbeddedDruidCluster
+        .withZookeeper()
         .useDruidContainers()
-        .useLatchableEmitter()
         // Needed for overlordFollower to recognize the KafkaSupervisor type
-        .addExtension(KafkaIndexTaskModule.class)
+        .addExtensions(KafkaIndexTaskModule.class, LatchableEmitterModule.class)
         .addResource(new EmbeddedDerbyMetadataResource())
         .addResource(new MinIOStorageResource())
         .addResource(kafkaServer)
@@ -112,14 +122,17 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"druid-multi-stage-query\"]"
         )
+        .addCommonProperty("druid.emitter", "http")
+        .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())
+        .addCommonProperty("druid.emitter.http.flushMillis", "500")
         .addResource(coordinator)
         .addResource(overlordLeader)
         .addResource(middleManager)
         .addResource(historical)
-        .addResource(broker1)
+        .addResource(broker)
+        .addResource(router)
         .addServer(overlordFollower)
-        .addServer(broker2)
-        .addServer(new EmbeddedRouter());
+        .addServer(eventCollector);
   }
 
   @BeforeEach
@@ -134,41 +147,94 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
   @Test
   public void test_runIndexTask_andKillData()
   {
-    // To be populated once TaskBuilder is merged in #18207
+    final int numSegments = 10;
+
+    // Run an 'index' task and verify the ingested data
+    final String taskId = IdUtils.getRandomId();
+    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(dataSource).withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
+
+    verifyUsedSegmentCount(numSegments);
+    waitForSegmentsToBeQueryable(numSegments);
+
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'", dataSource, "10");
+    cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, Resources.InlineData.CSV_10_DAYS);
+
+    // Mark all segments as unused and verify state
+    Assertions.assertEquals(
+        numSegments,
+        markSegmentsAsUnused(dataSource)
+    );
+    verifyUsedSegmentCount(0);
+    eventCollector.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/loadQueue/success")
+                      .hasDimension(DruidMetrics.DESCRIPTION, "DROP")
+                      .hasService("druid/coordinator"),
+        agg -> agg.hasSumAtLeast(numSegments)
+    );
+    cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
+
+    // Kill all unused segments
+    final String killTaskId = cluster.callApi().onLeaderOverlord(
+        o -> o.runKillTask(IdUtils.getRandomId(), dataSource, Intervals.ETERNITY, null, null, null)
+    );
+    cluster.callApi().waitForTaskToSucceed(killTaskId, eventCollector.latchableEmitter());
+
+    eventCollector.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/nuked/bytes")
+                      .hasService("druid/overlord"),
+        agg -> agg.hasCountAtLeast(numSegments)
+    );
   }
 
   @Test
   public void test_runIndexParallelTask_andCompactData()
   {
-    // To be populated once TaskBuilder is merged in #18207
+    final int numSegments = 10;
+
+    // Run an 'index_parallel' task and verify the ingested data
+    final String taskId = IdUtils.getRandomId();
+    final ParallelIndexSupervisorTask task = TaskBuilder
+        .ofTypeIndexParallel()
+        .timestampColumn("timestamp")
+        .jsonInputFormat()
+        .localInputSourceWithFiles(
+            Resources.DataFile.TINY_WIKI_1_JSON,
+            Resources.DataFile.TINY_WIKI_2_JSON,
+            Resources.DataFile.TINY_WIKI_3_JSON
+        )
+        .dimensions()
+        .tuningConfig(t -> t.withMaxNumConcurrentSubTasks(1))
+        .dataSource(dataSource)
+        .withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
   }
 
   @Test
   public void test_runMsqTask_andQueryData()
   {
-    // To be populated once TaskBuilder is merged in #18207
-  }
+    final String sql =
+        "INSERT INTO %s"
+        + " SELECT "
+        + "  TIME_PARSE(\"timestamp\") AS __time, *"
+        + " FROM TABLE("
+        + "  EXTERN("
+        + "    '{\"type\":\"http\",\"uris\":[\"https://druid.apache.org/data/wikipedia.json.gz\"]}',\n"
+        + "    '{\"type\":\"json\"}',\n"
+        + "    '[{\"name\":\"isRobot\",\"type\":\"string\"},{\"name\":\"channel\",\"type\":\"string\"},{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"flags\",\"type\":\"string\"},{\"name\":\"isUnpatrolled\",\"type\":\"string\"},{\"name\":\"page\",\"type\":\"string\"},{\"name\":\"diffUrl\",\"type\":\"string\"},{\"name\":\"added\",\"type\":\"long\"},{\"name\":\"comment\",\"type\":\"string\"},{\"name\":\"commentLength\",\"type\":\"long\"},{\"name\":\"isNew\",\"type\":\"string\"},{\"name\":\"isMinor\",\"type\":\"string\"},{\"name\":\"delta\",\"type\":\"long\"},{\"name\":\"isAnonymous\",\"type\":\"string\"},{\"name\":\"user\",\"type\":\"string\"},{\"name\":\"deltaBucket\",\"type\":\"long\"},{\"name\":\"deleted\",\"type\":\"long\"},{\"name\":\"namespace\",\"type\":\"string\"},{\"name\":\"cityName\",\"type\":\"string\"},{\"name\":\"countryName\",\"type\":\"string\"},{\"name\":\"regionIsoCode\",\"type\":\"string\"},{\"name\":\"metroCode\",\"type\":\"long\"},{\"name\":\"countryIsoCode\",\"type\":\"string\"},{\"name\":\"regionName\",\"type\":\"string\"}]'"
+        + "  )"
+        + ")"
+        + " PARTITIONED BY DAY"
+        + " CLUSTERED BY countryName";
 
-  @Test
-  public void test_runIndexTask()
-  {
-    final String taskId = IdUtils.getRandomId();
-    final Object task = createIndexTaskForInlineData(
-        taskId,
-        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
-    );
+    final EmbeddedMSQApis msqApis = new EmbeddedMSQApis(cluster, overlordFollower);
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql, dataSource);
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), eventCollector.latchableEmitter());
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    waitForCachedUsedSegmentCount(10);
-    verifyUsedSegmentCount(10);
-  }
-
-  private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
-  {
-    return EmbeddedClusterApis.createTaskFromPayload(
-        taskId,
-        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
-    );
+    waitForSegmentsToBeQueryable(1);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "24433");
   }
 
   @Test
@@ -190,10 +256,7 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
-    // Wait for the broker to discover the realtime segments
-    broker2.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
+    waitForSegmentsToBeQueryable(1);
 
     SupervisorStatus supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertFalse(supervisorStatus.isSuspended());
@@ -215,6 +278,13 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
     );
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
+  }
+
+  protected int markSegmentsAsUnused(String dataSource)
+  {
+    return cluster.callApi()
+                  .onLeaderOverlord(o -> o.markSegmentsAsUnused(dataSource))
+                  .getNumChangedSegments();
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
@@ -275,18 +345,13 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
     return records;
   }
 
-  /**
-   * Waits for the {@link #overlordFollower} to add the expected number of used
-   * segments to its cache. This is a proxy for waiting for the task to finish.
-   * Since the tasks are being managed by the {@link #overlordLeader} which is
-   * running in a container, we cannot watch the metrics emitted by it.
-   */
-  private void waitForCachedUsedSegmentCount(int expectedCount)
+  private void waitForSegmentsToBeQueryable(int numSegments)
   {
-    overlordFollower.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/metadataCache/used/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueAtLeast(expectedCount)
+    eventCollector.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+                      .hasService("druid/broker")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numSegments)
     );
   }
 

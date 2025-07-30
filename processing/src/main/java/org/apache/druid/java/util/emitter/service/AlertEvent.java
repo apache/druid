@@ -66,7 +66,7 @@ public class AlertEvent implements Event
       Map<String, Object> dataMap
   )
   {
-    this(createdTime, ImmutableMap.of("service", service, "host", host), severity, description, dataMap);
+    this(createdTime, ImmutableMap.of(SERVICE, service, HOST, host), severity, description, dataMap);
   }
 
   public AlertEvent(
@@ -116,7 +116,7 @@ public class AlertEvent implements Event
   @SuppressWarnings("unused")
   public String getService()
   {
-    return serviceDimensions.get("service");
+    return serviceDimensions.get(SERVICE);
   }
 
   /*
@@ -125,7 +125,7 @@ public class AlertEvent implements Event
   @SuppressWarnings("unused")
   public String getHost()
   {
-    return serviceDimensions.get("host");
+    return serviceDimensions.get(HOST);
   }
 
   public Severity getSeverity()
@@ -153,8 +153,8 @@ public class AlertEvent implements Event
   {
     return EventMap
         .builder()
-        .put("feed", getFeed())
-        .put("timestamp", createdTime.toString())
+        .put(FEED, getFeed())
+        .put(TIMESTAMP, createdTime.toString())
         .putAll(serviceDimensions)
         .put("severity", severity.toString())
         .put("description", description)

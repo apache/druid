@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * such as {@code druid-s3-extensions} or {@code postgresql-metadata-storage},
  * simply by adding them to {@code druid.extensions.loadList}.
  * <p>
- * {@link DruidContainers} should be used only for testing backward compatiblity
+ * {@code DruidContainers} should be used only for testing backward compatiblity
  * or a Docker-specific feature. For all other testing needs, use plain old
  * {@code EmbeddedDruidServer} as they are much faster, allow easy debugging and
  * do not require downloading any images.
@@ -65,8 +65,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
    * interfere with the functioning of DruidContainer-based services.
    */
   private static final Set<String> FORBIDDEN_PROPERTIES = Set.of(
-      "druid.extensions.modulesForEmbeddedTests",
-      "druid.emitter"
+      "druid.extensions.modulesForEmbeddedTests"
   );
 
   /**
@@ -88,7 +87,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   private MountedDir serviceLogsDirectory;
   private MountedDir segmentDeepStorageDirectory;
 
-  DruidContainerResource(DruidCommand command)
+  public DruidContainerResource(DruidCommand command)
   {
     this.name = StringUtils.format(
         "container_%s_%d",
@@ -113,7 +112,12 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   {
     String imageName = Objects.requireNonNull(
         System.getProperty(PROPERTY_TEST_IMAGE),
-        StringUtils.format("System property[%s] is not set", PROPERTY_TEST_IMAGE)
+        StringUtils.format(
+            "System property[%s] must be set while running Docker tests locally"
+            + " to specify which Druid image to use. Update your run configuration"
+            + " to include '-D%s=<your-test-image>'.",
+            PROPERTY_TEST_IMAGE, PROPERTY_TEST_IMAGE
+        )
     );
     return usingImage(DockerImageName.parse(imageName));
   }
@@ -159,13 +163,14 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         .withEnv(
             Map.of(
                 "DRUID_SET_HOST_IP", "0",
-                "DRUID_SET_HOST", "0"
+                "DRUID_SET_HOST", "0",
+                "JAVA_OPTS", "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/druid/heapdump.hprof"
             )
         );
 
     log.info(
-        "Starting Druid container[%s] with mounted directory[%s] and exposed ports[%s].",
-        name, containerDirectory, Arrays.toString(command.getExposedPorts())
+        "Starting Druid container[%s] with image[%s], exposed ports[%s] and mounted directory[%s].",
+        name, imageName, Arrays.toString(command.getExposedPorts()), containerDirectory
     );
 
     setCommonProperties(container);

@@ -151,7 +151,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void verifyNodeRoleHasServerCount(
+  public static void verifyNodeRoleHasServerCount(
       NodeRole role,
       int expectedCount,
       DruidNodeDiscoveryProvider discovery,
@@ -172,7 +172,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void verifySelfDiscoveredStatusReturnsOk(
+  private static void verifySelfDiscoveredStatusReturnsOk(
       DiscoveryDruidNode node,
       HttpClient httpClient
   ) throws Exception

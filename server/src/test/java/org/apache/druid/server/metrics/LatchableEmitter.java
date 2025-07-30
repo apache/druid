@@ -235,6 +235,8 @@ public class LatchableEmitter extends StubServiceEmitter
    */
   public static class EventMatcher implements Predicate<ServiceMetricEvent>
   {
+    private String host;
+    private String service;
     private String metricName;
     private Long metricValue;
     private final Map<String, Object> dimensions = new HashMap<>();
@@ -268,12 +270,34 @@ public class LatchableEmitter extends StubServiceEmitter
       return this;
     }
 
+    /**
+     * Matches an event only if it has the given service name.
+     */
+    public EventMatcher hasService(String service)
+    {
+      this.service = service;
+      return this;
+    }
+
+    /**
+     * Matches an event only if it has the given host.
+     */
+    public EventMatcher hasHost(String host)
+    {
+      this.host = host;
+      return this;
+    }
+
     @Override
     public boolean test(ServiceMetricEvent event)
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
       } else if (metricValue != null && event.getValue().longValue() < metricValue) {
+        return false;
+      } else if (service != null && !service.equals(event.getService())) {
+        return false;
+      } else if (host != null && !host.equals(event.getHost())) {
         return false;
       }
 
