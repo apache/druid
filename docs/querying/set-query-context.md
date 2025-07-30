@@ -186,7 +186,7 @@ You cannot use SET statements in JDBC connections.
 
 ## Native queries
 
-For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [Web Console](./set-query-context.md#web-console).
+For native queries, you can include query context parameters in a JSON object named `context` within your query structure or through [web console](./set-query-context.md#web-console).
 
 The following example shows a native query that sets the given query id through context parameters from dataset `wikipedia`:
 
@@ -220,11 +220,11 @@ For more information about native queries, see [Native queries](querying.md).
 
 When you set query context parameters in Druid, Druid determines which values to use based on the following order of precedence, from lowest to highest:
 
-1. **Built-in hard-coded defaults** — these are the system’s default values used if you don’t specify anything else.
-2. **Runtime properties** — if you configure parameters as `druid.query.default.context.{property_key}` in Druid’s configuration files, these override the built-in defaults and act as your system-wide defaults.  For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+1. **Built-in defaults**: these are the system’s default values used if you don’t specify anything else.
+2. **Runtime properties**: if you configure parameters as `druid.query.default.context.{property_key}` in Druid’s configuration files, these override the built-in defaults and act as your system-wide defaults.  For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
 
-3. **Context parameters you set in your query** — whether in the JSON `context` object or included directly in your queries, these override both the built-in defaults and the runtime properties.
-4. **SET statements** — when using SET, any parameters you set with `SET key = value;` commands take the highest precedence and override all other settings.
+3. **Context parameters you set in your query** : whether in the JSON `context` object or included directly in your queries, these override both the built-in defaults and the runtime properties.
+4. **SET statements** : when using SET, any parameters you set with `SET key = value;` commands take the highest precedence and override all other settings.
 
 This also means that higher precedence values overwrite lower ones. For example, if you set a parameter both in the runtime properties and in your query, Druid will use the value you set in the query.
 
