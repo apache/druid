@@ -54,10 +54,10 @@ import { ModuleRepository } from '../../module-repository/module-repository';
 import { adjustTransferValue, normalizeType } from '../../utils';
 import { ControlPane } from '../control-pane/control-pane';
 import { DroppableContainer } from '../droppable-container/droppable-container';
+import { ErrorBoundary } from '../error-boundary/error-boundary';
 import { FilterPane } from '../filter-pane/filter-pane';
 import { Issue } from '../issue/issue';
 import { ModulePicker } from '../module-picker/module-picker';
-import { ErrorBoundary } from '../error-boundary/error-boundary';
 
 import './module-pane.scss';
 

@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<
     const { error } = this.state;
     if (error) {
       return (
-        <div className="error-boundary-message">
+        <div className="error-boundary">
           <h3>Error rendering module</h3>
           <p>{error.message || 'An unexpected error occurred'}</p>
         </div>
