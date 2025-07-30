@@ -65,8 +65,7 @@ import java.util.Set;
 public class AggregateProjectionMetadata
 {
   private static final Interner<Schema> SCHEMA_INTERNER = Interners.newWeakInterner();
-
-
+  
   public static final Comparator<AggregateProjectionMetadata> COMPARATOR = (o1, o2) -> {
     int rowCompare = Integer.compare(o1.numRows, o2.numRows);
     if (rowCompare != 0) {
