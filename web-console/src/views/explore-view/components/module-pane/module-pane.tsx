@@ -57,6 +57,7 @@ import { DroppableContainer } from '../droppable-container/droppable-container';
 import { FilterPane } from '../filter-pane/filter-pane';
 import { Issue } from '../issue/issue';
 import { ModulePicker } from '../module-picker/module-picker';
+import { ErrorBoundary } from '../error-boundary/error-boundary';
 
 import './module-pane.scss';
 
@@ -338,7 +339,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
           onDropColumn={onShowColumn}
           onDropMeasure={onShowMeasure}
         >
-          {content}
+          <ErrorBoundary>{content}</ErrorBoundary>
         </DroppableContainer>
       </ResizeSensor>
     </div>
