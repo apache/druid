@@ -132,6 +132,8 @@ vectorization. These query types will ignore the `vectorize` parameter even if i
 
 ## Learn more
 
+For more information, see the following topics:
+
 - [Set query context](./set-query-context.md) to learn how to configure query context parameters.
 - [SQL query context](sql-query-context.md) for query context parameters specific to Druid SQL.
 - [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters) for context parameters used in SQL-based ingestion (MSQ).

@@ -154,4 +154,5 @@ Possible Druid error codes for the `error` field include:
 |`Unknown exception`|500|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
 
 ## Learn more
-[Set query context](./set-query-context.md) on how the different approaches for set query context.
+
+To learn how to use the query context parameters, see [Set query context](./set-query-context.md).
