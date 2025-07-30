@@ -36,7 +36,8 @@ public class ExternalTaskLogs implements TaskLogs
   private final ExternalLogStreamer logStreamer;
 
   @Inject
-  public ExternalTaskLogs(@Named("delegate") TaskLogs delegate, ExternalLogStreamer logStreamer) {
+  public ExternalTaskLogs(@Named("delegate") TaskLogs delegate, ExternalLogStreamer logStreamer)
+  {
     this.delegate = delegate;
     this.logStreamer = logStreamer;
   }

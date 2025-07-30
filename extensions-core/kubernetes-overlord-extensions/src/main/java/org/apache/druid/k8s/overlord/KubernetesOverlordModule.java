@@ -29,6 +29,7 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
@@ -45,6 +46,8 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.tasklogs.ExternalLogStreamer;
+import org.apache.druid.indexing.common.tasklogs.ExternalTaskLogs;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -290,13 +293,22 @@ public class KubernetesOverlordModule implements DruidModule
   private void configureTaskLogs(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(binder, "druid.indexer.logs.delegate.type", Key.get(TaskLogs.class, Names.named("delegate")), Key.get(FileTaskLogs.class));
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
     taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
     taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
+    taskLogBinder.addBinding("external").to(ExternalTaskLogs.class).in(LazySingleton.class);
+
+    final MapBinder<String, TaskLogs> delegateTaskLogBinder = PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("delegate")));
+    delegateTaskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
+    delegateTaskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
+
     binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
+    binder.bind(ExternalTaskLogs.class).in(LazySingleton.class);
+    binder.bind(ExternalLogStreamer.class).in(LazySingleton.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
