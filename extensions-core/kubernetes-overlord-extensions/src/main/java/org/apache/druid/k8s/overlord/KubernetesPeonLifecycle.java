@@ -92,7 +92,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
-  private final boolean taskLogEnabled;
+  private final boolean enableLogSave;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -106,7 +106,7 @@ public class KubernetesPeonLifecycle
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener,
-      boolean taskLogEnabled
+      boolean enableLogSave
   )
   {
     this.task = task;
@@ -115,7 +115,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
-    this.taskLogEnabled = taskLogEnabled;
+    this.enableLogSave = enableLogSave;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
   }
 
@@ -353,8 +353,8 @@ public class KubernetesPeonLifecycle
 
   protected void saveLogs()
   {
-    if (!taskLogEnabled) {
-      log.debug("Task log storage disabled for task [%s]", taskId.getOriginalTaskId());
+    if (!enableLogSave) {
+      log.debug("Log saving disabled for task [%s]", taskId.getOriginalTaskId());
       return;
     }
     

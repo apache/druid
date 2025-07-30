@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -46,7 +45,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
   private final TaskAdapter taskAdapter;
-  private final FileTaskLogsConfig fileTaskLogsConfig;
   private final Set<String> adapterTypeAllowingTasksInDifferentNamespaces = Set.of(PodTemplateTaskAdapter.TYPE);
 
   @Inject
@@ -57,8 +55,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskLogs taskLogs,
       DruidKubernetesClient druidKubernetesClient,
       ServiceEmitter emitter,
-      TaskAdapter taskAdapter,
-      FileTaskLogsConfig fileTaskLogsConfig
+      TaskAdapter taskAdapter
   )
   {
     this.smileMapper = smileMapper;
@@ -68,7 +65,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
     this.taskAdapter = taskAdapter;
-    this.fileTaskLogsConfig = fileTaskLogsConfig;
   }
 
   @Override
@@ -97,7 +93,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper, fileTaskLogsConfig),
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper, kubernetesTaskRunnerConfig.isEnableLogSave()),
         emitter
     );
     return runner;

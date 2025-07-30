@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
@@ -31,19 +30,19 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
   private final KubernetesPeonClient client;
   private final TaskLogs taskLogs;
   private final ObjectMapper mapper;
-  private final FileTaskLogsConfig fileTaskLogsConfig;
+  private final boolean enableLogSave;
 
   public KubernetesPeonLifecycleFactory(
       KubernetesPeonClient client,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      FileTaskLogsConfig fileTaskLogsConfig
+      boolean enableLogSave
   )
   {
     this.client = client;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
-    this.fileTaskLogsConfig = fileTaskLogsConfig;
+    this.enableLogSave = enableLogSave;
   }
 
   @Override
@@ -56,7 +55,7 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
         taskLogs,
         mapper,
         stateListener,
-        fileTaskLogsConfig.shouldStoreTaskLogs()
+        enableLogSave
     );
   }
 }

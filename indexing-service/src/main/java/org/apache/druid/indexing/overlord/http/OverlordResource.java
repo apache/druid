@@ -43,7 +43,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
-import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
@@ -123,7 +122,6 @@ public class OverlordResource
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private final AuthConfig authConfig;
-  private final FileTaskLogsConfig fileTaskLogsConfig;
 
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
@@ -140,8 +138,7 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      AuthConfig authConfig,
-      FileTaskLogsConfig fileTaskLogsConfig
+      AuthConfig authConfig
   )
   {
     this.overlord = overlord;
@@ -154,7 +151,6 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.authConfig = authConfig;
-    this.fileTaskLogsConfig = fileTaskLogsConfig;
   }
 
   /**
@@ -788,15 +784,6 @@ public class OverlordResource
       @QueryParam("offset") @DefaultValue("0") final long offset
   )
   {
-    if (!fileTaskLogsConfig.shouldStoreTaskLogs()) {
-      return Response.status(Response.Status.NOT_FOUND)
-                     .entity(
-                         "Task logging has been disabled. "
-                         + "Please check your druid.indexer.logs.taskLogEnabled configuration."
-                     )
-                     .build();
-    }
-
     try {
       final Optional<InputStream> stream = taskLogStreamer.streamTaskLog(taskid, offset);
       if (stream.isPresent()) {

@@ -39,7 +39,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
-import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -194,8 +193,7 @@ public class OverlordResourceTest
         auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter,
-        authConfig,
-        new FileTaskLogsConfig()
+        authConfig
     );
   }
 
@@ -1455,38 +1453,11 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testGetTaskLog_loggingDisabled()
-  {
-    replayAll();
-    
-    OverlordResource overlordResource = new OverlordResource(
-        overlord,
-        taskMaster,
-        taskQueryTool,
-        indexerMetadataStorageAdapter,
-        null, 
-        configManager,
-        auditManager,
-        new AuthorizerMapper(null),
-        workerTaskRunnerQueryAdapter,
-        authConfig,
-        new FileTaskLogsConfig(null, false)
-    );
-    
-    final Response response = overlordResource.doGetLog("someTaskId", 0);
-    Assert.assertEquals(404, response.getStatus());
-    Assert.assertEquals(
-        "Task logging has been disabled. Please check your druid.indexer.logs.taskLogEnabled configuration.",
-        response.getEntity()
-    );
-  }
-
-  @Test
   public void testGetTaskSegmentsReturns404()
   {
     replayAll();
     OverlordResource overlordResource =
-        new OverlordResource(null, null, null, null, null, null, null, null, null, null, null);
+        new OverlordResource(null, null, null, null, null, null, null, null, null, null);
     final Response response = overlordResource.getTaskSegments("taskId");
     Assert.assertEquals(404, response.getStatus());
     Assert.assertEquals(
