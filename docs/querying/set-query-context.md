@@ -192,7 +192,7 @@ You cannot use SET statements in JDBC connections.
 
 For native queries, you can include query context parameters in a JSON object named `context` within your query or through [web console](./set-query-context.md#web-console).
 
-The following example shows a native query that sets the `sqlTimeZone` to UTC and `queryId` to "only_query_id_test":
+The following example shows a native query that sets the `sqlTimeZone` to `UTC` and `queryId` to `only_query_id_test`:
 
 ```json
 {
