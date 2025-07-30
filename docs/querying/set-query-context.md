@@ -52,17 +52,11 @@ The following steps show you how to set the query context using the web console:
 
    ![Query view](../assets/set-query-context-query-view.png)
 
-1. Click the **Engine** selector next to the **Run** button to choose the appropriate query type. In most cases, you can leave the engine as `Auto` to let Druid choose the best engine for you.
-
-   ![Engine selection](../assets/set-query-context-select-engine.png)
-
 2. Enter the query you want to run. If you ingested the Wikipedia dataset from the [quickstart](../tutorials/index.md), you can use the following query: 
 
     ```sql
     SELECT * FROM wikipedia WHERE user='BlueMoon2662'
     ```
-
-   This is how it looks like in the web console:
 
    ![Adding query](../assets/set-query-context-insert-query.png)
 
@@ -70,17 +64,18 @@ The following steps show you how to set the query context using the web console:
 
    ![Opening context dialog](../assets/set-query-context-open-context-dialog.png)
 
-4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs and then click **Save**. For example, you can insert the following context parameters:
+4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs.
+
+   For example, you can set the `sqlTimeZone` parameter to ensure that the query results reflect the specified time zone. This may differ from your local time zone when viewing the data.
 
    ```json
    {
-     "sqlTimeZone" : "UTC"
+     "sqlTimeZone" : "America/Los_Angeles"
    }
    ```
 
-   In this example, the query context is configured using the `sqlTimeZone` parameter to ensure that the query results reflect the specified time zone, which may differ from your local time zone when viewing the data.
-
-   The web console validates the JSON object containing the query context parameters and highlights any syntax errors.
+5. The web console validates the JSON object containing the query context parameters and highlights any syntax errors.
+   Click **Save**.
 
    ![Setting the context parameters](../assets/set-query-context-set-context-parameters.png)
 
@@ -88,8 +83,10 @@ The following steps show you how to set the query context using the web console:
 
    ![Running the query](../assets/set-query-context-run-the-query.png)
 
+   Compare the results of the example query with and without the query context.
+   * Without the query context, the query returns the `__time` value of `2015-09-12T00:47:53.259Z`.
+   * When you set the `sqlTimeZone` parameter, the query returns `2015-09-11T17:47:53.259-07:00`.
 
-For more information about the Query view in the web console, see [Query](../operations/web-console.md#query).
 
 ## Druid SQL
 
@@ -105,7 +102,7 @@ The following example sets the `sqlTimeZone` parameter:
 {
   "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
   "context": {
-    "sqlTimeZone": "UTC"
+    "sqlTimeZone": "America/Los_Angeles"
   },
 }
 ```
@@ -118,7 +115,7 @@ You can set multiple context parameters in a single request:
 {
     "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
     "context": {
-    "sqlTimeZone": "UTC"
+    "sqlTimeZone": "America/Los_Angeles"
     },
     "header" : true,
     "typesHeader" : true,
@@ -138,9 +135,9 @@ For example, you can set query context parameters when creating your JDBC connec
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
 
-// Set any query context parameters you need here.
+// Set the time zone to America/Los_Angeles
 Properties connectionProperties = new Properties();
-connectionProperties.setProperty("sqlTimeZone", "UTC"); // set the time zone to UTC
+connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   // create and execute statements, process result sets, etc
@@ -155,7 +152,7 @@ You can use the SET command to specify SQL query context parameters that modify 
 In the web console, you can write your SET statements followed by your query directly. For example, 
 
 ```sql
-SET sqlTimeZone = 'UTC';
+SET sqlTimeZone = 'America/Los_Angeles';
 
 SELECT * FROM wikipedia WHERE user = 'BlueMoon2662';
 ```
@@ -166,7 +163,7 @@ You can also include your SET statements as part of the query string in your HTT
 curl -X POST 'http://localhost:8888/druid/v2/sql' \
   -H 'Content-Type: application/json' \
   -d '{
-  "query": "SET sqlTimeZone='UTC'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'"
+  "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'"
   }'
 ```
 
@@ -174,7 +171,7 @@ You can also combine SET statements with the `context` field. If you include bot
 
 ```json
 {
-  "query": "SET sqlTimeZone='UTC'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+  "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
   "context": {
     "sqlTimeZone": "America/Los_Angeles",  // This will be overridden by SET
   }
@@ -192,7 +189,7 @@ You cannot use SET statements in JDBC connections.
 
 For native queries, you can include query context parameters in a JSON object named `context` within your query or through [web console](./set-query-context.md#web-console).
 
-The following example shows a native query that sets the `sqlTimeZone` to `UTC` and `queryId` to `only_query_id_test`:
+The following example shows a native query that sets the `sqlTimeZone` to `America/Los_Angeles` and `queryId` to `only_query_id_test`:
 
 ```json
 {
@@ -212,7 +209,7 @@ The following example shows a native query that sets the `sqlTimeZone` to `UTC` 
   ],
   "intervals": ["2015-09-12T00:00:00.000/2015-09-13T00:00:00.000"],
   "context": {
-    "sqlTimeZone": "UTC",
+    "sqlTimeZone": "America/Los_Angeles",
     "queryId": "only_query_id_test",
   }
 }
