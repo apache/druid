@@ -30,6 +30,9 @@ public class FileTaskLogsConfig
   @NotNull
   private File directory = new File("log");
 
+  @JsonProperty
+  private boolean storeTaskLogs = true;
+
   public FileTaskLogsConfig()
   {
   }
@@ -39,8 +42,19 @@ public class FileTaskLogsConfig
     this.directory = directory;
   }
 
+  public FileTaskLogsConfig(File directory, boolean storeTaskLogs)
+  {
+    this.directory = directory;
+    this.storeTaskLogs = storeTaskLogs;
+  }
+
   public File getDirectory()
   {
     return directory;
+  }
+
+  public boolean shouldStoreTaskLogs()
+  {
+    return storeTaskLogs;
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
@@ -47,6 +48,7 @@ public class KubernetesTaskRunnerFactoryTest
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
   private TaskAdapter taskAdapter;
+  private FileTaskLogsConfig fileTaskLogsConfig;
 
   @Before
   public void setup()
@@ -59,6 +61,7 @@ public class KubernetesTaskRunnerFactoryTest
     druidKubernetesClient =
         new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
     taskAdapter = new TestTaskAdapter();
+    fileTaskLogsConfig = new FileTaskLogsConfig();
   }
 
   @Test
@@ -71,7 +74,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskLogs,
         druidKubernetesClient,
         emitter,
-        taskAdapter
+        taskAdapter,
+        fileTaskLogsConfig
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();

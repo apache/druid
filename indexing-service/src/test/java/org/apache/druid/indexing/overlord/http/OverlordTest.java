@@ -43,6 +43,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
@@ -298,7 +299,8 @@ public class OverlordTest
         auditManager,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         workerTaskRunnerQueryAdapter,
-        new AuthConfig()
+        new AuthConfig(),
+        new FileTaskLogsConfig()
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
