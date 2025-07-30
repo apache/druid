@@ -103,34 +103,31 @@ The following example sets the `sqlTimeZone` parameter:
   "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
   "context": {
     "sqlTimeZone": "America/Los_Angeles"
-  },
+  }
 }
 ```
-
-Druid executes your query using the specified context parameters and return the results.
 
 You can set multiple context parameters in a single request:
 
 ```json
 {
-    "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
-    "context": {
-    "sqlTimeZone": "America/Los_Angeles"
-    },
-    "header" : true,
-    "typesHeader" : true,
-    "sqlTypesHeader" : true
+  "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
+  "context": {
+    "sqlTimeZone": "America/Los_Angeles",
+    "sqlQueryId": "request01"
+  }
 }
 ```
 
 
 ### JDBC driver API
 
-You can connect to Druid over JDBC and issue Druid SQL queries using this [Druid SQL JDBC driver API](../api-reference/sql-jdbc.md).
+You can connect to Druid over JDBC and issue Druid SQL queries using the [Druid SQL JDBC driver API](../api-reference/sql-jdbc.md).
 This approach is useful when integrating Druid with BI tools or Java applications.
-When connecting to Druid through JDBC, you set query context parameters a JDBC connection properties object.
+When connecting to Druid through JDBC, you set query context parameters in a JDBC connection properties object.
+You supply the object when establishing the connection to Druid.
 
-For example, you can set query context parameters when creating your JDBC connection:
+The following code excerpt shows how you can configure the connection properties:
 
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
@@ -144,6 +141,45 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 }
 ```
 
+<details><summary>View full JDBC example</summary>
+
+```java
+import java.sql.*;
+import java.util.Properties;
+
+public class JdbcDruid {
+
+    public static void main(String args[]) {
+
+        // Connect to /druid/v2/sql/avatica/ on your Broker.
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
+
+        // The query you want to run.
+        String query = "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'";
+
+        // Set any connection context parameters you need here.
+        Properties connectionProperties = new Properties();
+        connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+
+        try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+            try (
+                final Statement statement = connection.createStatement();
+                final ResultSet rs = statement.executeQuery(query)
+            ) {
+                while (rs.next()) {
+                    // process result set
+                    Timestamp timeStamp = rs.getTimestamp("__time");
+                    System.out.println(timeStamp);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+    }
+}
+```
+
+</details>
 
 ### SET statements
 
@@ -173,7 +209,7 @@ You can also combine SET statements with the `context` field. If you include bot
 {
   "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
   "context": {
-    "sqlTimeZone": "America/Los_Angeles",  // This will be overridden by SET
+    "sqlTimeZone": "UTC",  // This will be overridden by SET
   }
 }
 ```
