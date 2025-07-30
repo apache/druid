@@ -134,9 +134,6 @@ public class KubernetesTaskRunnerConfig
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
-  @JsonProperty
-  private boolean enableLogSave = true;
-
   public KubernetesTaskRunnerConfig()
   {
   }
@@ -161,8 +158,7 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity,
-      Period taskJoinTimeout,
-      boolean enableLogSave
+      Period taskJoinTimeout
   )
   {
     this.namespace = namespace;
@@ -235,10 +231,6 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
-    );
-    this.enableLogSave = ObjectUtils.defaultIfNull(
-        enableLogSave,
-        this.enableLogSave
     );
   }
 
@@ -344,11 +336,6 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
-  public boolean isEnableLogSave()
-  {
-    return enableLogSave;
-  }
-
   public static Builder builder()
   {
     return new Builder();
@@ -376,7 +363,6 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
-    private boolean enableLogSave;
 
     public Builder()
     {
@@ -503,12 +489,6 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withEnableLogSave(boolean enableLogSave)
-    {
-      this.enableLogSave = enableLogSave;
-      return this;
-    }
-
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -531,8 +511,7 @@ public class KubernetesTaskRunnerConfig
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout,
-          this.enableLogSave
+          this.taskJoinTimeout
       );
     }
   }
