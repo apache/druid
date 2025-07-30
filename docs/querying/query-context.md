@@ -1,5 +1,5 @@
 ---
-id: set-query-context
+id: query-context
 title: "Set query context"
 sidebar_label: "Set query context"
 description: 
@@ -224,7 +224,7 @@ You cannot use SET statements in JDBC connections.
 
 ## Native queries
 
-For native queries, you can include query context parameters in a JSON object named `context` within your query or through the [web console](./set-query-context.md#web-console).
+For native queries, you can include query context parameters in a JSON object named `context` within your query or through the [web console](#web-console).
 
 The following example shows a native query that sets the `sqlTimeZone` to `America/Los_Angeles` and `queryId` to `only_query_id_test`:
 

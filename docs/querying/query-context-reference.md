@@ -31,7 +31,7 @@ This reference contains context parameters organized by their scope:
 - **Parameters by query type**: Applies to a specific type of query, such as TopN.
 - **Vectorization parameters**: Controls vectorized query execution for supported queries.
 
-To learn how to set query context, see [Set query context](./set-query-context.md).
+To learn how to set the query context, see [Set query context](./query-context.md).
 
 For reference on query context parameters specific to Druid SQL, visit [SQL query context](sql-query-context.md). 
 For context parameters related to SQL-based ingestion, see the [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters).
@@ -134,7 +134,7 @@ vectorization. These query types will ignore the `vectorize` parameter even if i
 
 For more information, see the following topics:
 
-- [Set query context](./set-query-context.md) to learn how to configure query context parameters.
+- [Set query context](./query-context.md) to learn how to configure query context parameters.
 - [SQL query context](sql-query-context.md) for query context parameters specific to Druid SQL.
 - [SQL-based ingestion reference](../multi-stage-query/reference/#context-parameters) for context parameters used in SQL-based ingestion (MSQ).
 

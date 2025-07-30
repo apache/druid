@@ -406,7 +406,7 @@ If you use the [JSON API](../api-reference/sql-api.md), you can also include que
 
 Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.
 
-For other approaches to set the query context, see [Set query context](./set-query-context.md).
+For other approaches to set the query context, see [Set query context](./query-context.md).
 
 ## Identifiers and literals
 

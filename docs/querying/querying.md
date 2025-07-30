@@ -155,4 +155,4 @@ Possible Druid error codes for the `error` field include:
 
 ## Learn more
 
-To learn how to use the query context parameters, see [Set query context](./set-query-context.md).
+To learn how to use the query context parameters, see [Set query context](./query-context.md).
