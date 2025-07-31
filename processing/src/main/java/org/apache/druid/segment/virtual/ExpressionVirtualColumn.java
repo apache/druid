@@ -110,7 +110,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @Nullable final ColumnType outputType
   )
   {
-    this(name, parsedExpression.toString(), outputType, () -> parsedExpression);
+    this(name, parsedExpression.stringify(), outputType, () -> parsedExpression);
   }
 
   /**
@@ -129,7 +129,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
         parsedExpression,
         outputType
     );
-    this.expressionAnalysis = Suppliers.memoize(parsedExpression.get()::analyzeInputs);
+    this.expressionAnalysis = Suppliers.memoize(() -> parsedExpression.get().analyzeInputs());
     this.cacheKey = makeCacheKeySupplier();
   }
 
