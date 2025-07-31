@@ -204,7 +204,8 @@
           "querying/multitenancy",
           "querying/caching",
           "querying/using-caching",
-          "querying/query-context"
+          "querying/query-context",
+          "querying/query-context-reference"
         ]
       },
       {
