@@ -271,54 +271,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       final String fieldFileName = NESTED_FIELD_PREFIX + ctr++;
       fieldsWriter.write(fieldName);
       fieldsInfoWriter.write(field.getValue());
-      final GlobalDictionaryEncodedFieldColumnWriter<?> writer;
-      final ColumnType type = field.getValue().getSingleType();
-      if (type != null) {
-        if (Types.is(type, ValueType.STRING)) {
-          writer = new ScalarStringFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.LONG)) {
-          writer = new ScalarLongFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.DOUBLE)) {
-          writer = new ScalarDoubleFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.ARRAY)) {
-          writer = new VariantArrayFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else {
-          throw DruidException.defensive("Invalid field type [%s], how did this happen?", type);
-        }
-      } else {
-        writer = new VariantFieldColumnWriter(
-            name,
-            fieldFileName,
-            segmentWriteOutMedium,
-            indexSpec,
-            globalDictionaryIdLookup
-        );
-      }
-      writer.open();
+      final GlobalDictionaryEncodedFieldColumnWriter<?> writer = openFieldWriter(field, fieldFileName);
       fieldWriters.put(fieldName, writer);
     }
   }
@@ -491,63 +444,73 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
   public void setFieldsAndOpenWriters(NestedDataColumnSerializer serializer) throws IOException
   {
-    // this is almost the same loop as serializeFields, but doesn't serialize the fields since we are re-using the
-    // base fields list from the parent column
     fields = serializer.fields;
     this.fieldWriters = Maps.newHashMapWithExpectedSize(fields.size());
     int ctr = 0;
     for (Map.Entry<String, FieldTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       final String fieldName = field.getKey();
       final String fieldFileName = NESTED_FIELD_PREFIX + ctr++;
-      final GlobalDictionaryEncodedFieldColumnWriter<?> writer;
-      final ColumnType type = field.getValue().getSingleType();
-      if (type != null) {
-        if (Types.is(type, ValueType.STRING)) {
-          writer = new ScalarStringFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.LONG)) {
-          writer = new ScalarLongFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.DOUBLE)) {
-          writer = new ScalarDoubleFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else if (Types.is(type, ValueType.ARRAY)) {
-          writer = new VariantArrayFieldColumnWriter(
-              name,
-              fieldFileName,
-              segmentWriteOutMedium,
-              indexSpec,
-              globalDictionaryIdLookup
-          );
-        } else {
-          throw DruidException.defensive("Invalid field type [%s], how did this happen?", type);
-        }
-      } else {
-        writer = new VariantFieldColumnWriter(
+      final GlobalDictionaryEncodedFieldColumnWriter<?> writer = openFieldWriter(
+          field,
+          fieldFileName
+      );
+      fieldWriters.put(fieldName, writer);
+    }
+  }
+
+  private GlobalDictionaryEncodedFieldColumnWriter<?> openFieldWriter(
+      Map.Entry<String, FieldTypeInfo.MutableTypeSet> field,
+      String fieldFileName
+  ) throws IOException
+  {
+    final GlobalDictionaryEncodedFieldColumnWriter<?> writer;
+    final ColumnType type = field.getValue().getSingleType();
+    if (type != null) {
+      if (Types.is(type, ValueType.STRING)) {
+        writer = new ScalarStringFieldColumnWriter(
             name,
             fieldFileName,
             segmentWriteOutMedium,
             indexSpec,
             globalDictionaryIdLookup
         );
+      } else if (Types.is(type, ValueType.LONG)) {
+        writer = new ScalarLongFieldColumnWriter(
+            name,
+            fieldFileName,
+            segmentWriteOutMedium,
+            indexSpec,
+            globalDictionaryIdLookup
+        );
+      } else if (Types.is(type, ValueType.DOUBLE)) {
+        writer = new ScalarDoubleFieldColumnWriter(
+            name,
+            fieldFileName,
+            segmentWriteOutMedium,
+            indexSpec,
+            globalDictionaryIdLookup
+        );
+      } else if (Types.is(type, ValueType.ARRAY)) {
+        writer = new VariantArrayFieldColumnWriter(
+            name,
+            fieldFileName,
+            segmentWriteOutMedium,
+            indexSpec,
+            globalDictionaryIdLookup
+        );
+      } else {
+        throw DruidException.defensive("Invalid field type [%s], how did this happen?", type);
       }
-      writer.open();
-      fieldWriters.put(fieldName, writer);
+    } else {
+      writer = new VariantFieldColumnWriter(
+          name,
+          fieldFileName,
+          segmentWriteOutMedium,
+          indexSpec,
+          globalDictionaryIdLookup
+      );
     }
+    writer.open();
+    return writer;
   }
 }
