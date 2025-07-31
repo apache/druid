@@ -44,7 +44,7 @@ Before you begin, identify which context parameters you need to configure in ord
 
 ## Web console
 
-You can configure query context parameters is via the [web console](../operations/web-console.md). In the web console, you can set up context parameters for both Druid SQL and native queries.
+You can configure query context parameters for both Druid SQL and native queries in the [web console](../operations/web-console.md).
 
 The following steps show you how to set the query context using the web console:
 
