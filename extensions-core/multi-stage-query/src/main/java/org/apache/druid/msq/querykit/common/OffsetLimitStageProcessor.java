@@ -135,7 +135,7 @@ public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
 
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(workerSupplier),
-        OutputChannels.wrapReadOnly(Collections.singletonList(outputChannel))
+        OutputChannels.wrap(Collections.singletonList(outputChannel))
     );
   }
 

@@ -40,6 +40,8 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.FallbackVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -56,7 +58,9 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "expression", value = ExpressionVirtualColumn.class),
     @JsonSubTypes.Type(name = "fallback", value = FallbackVirtualColumn.class),
-    @JsonSubTypes.Type(name = "mv-filtered", value = ListFilteredVirtualColumn.class)
+    @JsonSubTypes.Type(name = "mv-filtered", value = ListFilteredVirtualColumn.class),
+    @JsonSubTypes.Type(name = "mv-regex-filtered", value = RegexFilteredVirtualColumn.class),
+    @JsonSubTypes.Type(name = "mv-prefix-filtered", value = PrefixFilteredVirtualColumn.class)
 })
 public interface VirtualColumn extends Cacheable
 {

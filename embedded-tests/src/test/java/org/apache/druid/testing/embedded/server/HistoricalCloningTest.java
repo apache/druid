@@ -20,12 +20,11 @@
 package org.apache.druid.testing.embedded.server;
 
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -129,20 +128,21 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
   private void runIngestion()
   {
     final String taskId = IdUtils.getRandomId();
-    final Object task = createIndexTaskForInlineData(
-        taskId,
-        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
-    );
+    final Object task = createIndexTaskForInlineData(taskId);
 
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
 
-  private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
+  private Object createIndexTaskForInlineData(String taskId)
   {
-    return EmbeddedClusterApis.createTaskFromPayload(
-        taskId,
-        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
-    );
+    return TaskBuilder.ofTypeIndex()
+                      .dataSource(dataSource)
+                      .isoTimestampColumn("time")
+                      .csvInputFormatWithColumns("time", "item", "value")
+                      .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
+                      .segmentGranularity("DAY")
+                      .dimensions()
+                      .withId(taskId);
   }
 }

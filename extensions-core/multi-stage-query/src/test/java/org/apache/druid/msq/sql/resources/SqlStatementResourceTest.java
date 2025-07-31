@@ -62,6 +62,7 @@ import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
@@ -711,7 +712,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         objectMapper,
         overlordClient,
         tempDir -> localFileStorageConnector,
-        authorizerMapper
+        authorizerMapper,
+        DefaultQueryConfig.NIL
     );
   }
 

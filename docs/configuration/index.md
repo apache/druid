@@ -1924,16 +1924,11 @@ You can configure Druid services to emit [metrics](../operations/metrics.md) reg
 
 ### Metrics monitors for each service
 
-Metric monitoring is an essential part of Druid operations. Druid includes 
+Metric monitoring is an essential part of Druid operations.
+Monitors can be enabled by configuring the property `druid.monitoring.monitors` in the common configuration file, `common.runtime.properties`.
+If a monitor is not supported on a certain service, it will simply be ignored while starting up that service.
 
-:::caution
-
-The `runtime.properties` file for each service overrides the common configuration file (`common.runtime.properties`). They are not additive. This means that if you add any monitors to a specific service, that service only has the monitors specified in its `runtime.properties` file even if there are additional ones listed in the common file. 
-
-:::
-
-
-The following table lists the monitors that are available and the services you could configure the monitor for:
+The following table lists available monitors and the respective services where they are supported:
 
 |Name|Description|Service|
 |----|-----------|-------|
