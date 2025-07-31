@@ -49,6 +49,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
   private final AggregateFunction lagAggregate;
+  private final boolean useNearestFactorScaling;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -67,7 +68,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
           @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
-          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate
+          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate,
+          @Nullable @JsonProperty("useNearestFactorScaling") Boolean useNearestFactorScaling
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -100,6 +102,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
         != null ? minTriggerScaleActionFrequencyMillis : 600000;
+    this.useNearestFactorScaling = useNearestFactorScaling != null ? useNearestFactorScaling : false;
   }
 
   @JsonProperty
@@ -171,6 +174,12 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   public Integer getTaskCountStart()
   {
     return taskCountStart;
+  }
+
+  @JsonProperty
+  public Boolean getUseNearestFactorScaling()
+  {
+    return useNearestFactorScaling;
   }
 
   @Override
