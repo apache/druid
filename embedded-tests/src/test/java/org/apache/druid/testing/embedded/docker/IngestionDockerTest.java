@@ -198,7 +198,7 @@ public class IngestionDockerTest extends DockerTestBase
   @Test
   public void test_runIndexParallelTask_andCompactData()
   {
-    final int numSegments = 1;
+    final int numInitialSegments = 1;
 
     // Run an 'index_parallel' task and verify the ingested data
     final String taskId = IdUtils.getRandomId();
@@ -214,7 +214,7 @@ public class IngestionDockerTest extends DockerTestBase
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
 
-    waitForSegmentsToBeQueryable(numSegments);
+    waitForSegmentsToBeQueryable(numInitialSegments);
     cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "24433");
     cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'", dataSource, "1");
 
@@ -234,6 +234,16 @@ public class IngestionDockerTest extends DockerTestBase
         .withId(compactTaskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(compactTaskId, compactionTask));
     cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
+
+    // Verify the compacted data
+    final int numCompactedSegments = 5;
+    waitForSegmentsToBeQueryable(numInitialSegments + numCompactedSegments);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "24433");
+    cluster.callApi().verifySqlQuery(
+        "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_overshadowed=0",
+        dataSource,
+        "5"
+    );
   }
 
   @Test
@@ -273,7 +283,7 @@ public class IngestionDockerTest extends DockerTestBase
 
     // Submit and start a supervisor
     final String supervisorId = dataSource;
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(topic);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(kafkaSupervisorSpec)
@@ -311,7 +321,7 @@ public class IngestionDockerTest extends DockerTestBase
                   .getNumChangedSegments();
   }
 
-  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
+  private KafkaSupervisorSpec createKafkaSupervisor(String topic)
   {
     return new KafkaSupervisorSpec(
         null,

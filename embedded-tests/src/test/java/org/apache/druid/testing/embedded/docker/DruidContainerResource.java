@@ -45,32 +45,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Currently, only core extensions can be used out-of-the-box with these containers
  * such as {@code druid-s3-extensions} or {@code postgresql-metadata-storage},
  * simply by adding them to {@code druid.extensions.loadList}.
- * <p>
- * {@code DruidContainers} should be used only for testing backward compatiblity
- * or a Docker-specific feature. For all other testing needs, use plain old
- * {@code EmbeddedDruidServer} as they are much faster, allow easy debugging and
- * do not require downloading any images.
- * <p>
- * All Docker tests should be named {@code *DockerTest} and must be tagged with
- * {@link #DOCKER_TEST_TAG}.
  *
- * <pre>
- *   &#64;Tag(DruidContainerResource.DOCKER_TEST_TAG)
- *   &#64;EnableIfSystemProperty(named = DruidContainerResource.PROPERTY_TEST_IMAGE, matches = ".+")
- *   public class AbcDockerTest extends EmbeddedClusterTestBase
- *   {
- *     // @Test methods here
- *   }
- * </pre>
+ * @see DockerTestBase
  */
 public class DruidContainerResource extends TestcontainerResource<DruidContainer>
 {
-  /**
-   * All tests using DruidContainers should use this tag with {@code @Tag} so
-   * that they are skipped when running {@code mvn test}.
-   */
-  public static final String DOCKER_TEST_TAG = "docker-test";
-
   /**
    * Java system property to specify the name of the Docker test image.
    */
