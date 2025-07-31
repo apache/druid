@@ -83,10 +83,6 @@ public class DartDataSegmentProvider implements DataSegmentProvider
       }
 
       final DataSegment dataSegment = chunk.getObject();
-      // in the future we should call the other version of mapSegment, instead or returning a CompleteSegment we would
-      // return a SegmentMapAction so that the load can be interleaved with processing, but that requires shuffling
-      // some stuff around
-
       final Optional<Segment> maybeSegment = segmentManager.acquireSegment(dataSegment);
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
