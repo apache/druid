@@ -22,6 +22,9 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.NullOutputStream;
@@ -55,7 +58,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -103,7 +105,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  private final ExecutorService virtualStorageFabricLoadOnDemandExec;
+  private final ListeningExecutorService virtualStorageFabricLoadOnDemandExec;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
 
@@ -151,14 +153,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           config.getVirtualStorageFabricLoadThreadKeepaliveMillis()
       );
       virtualStorageFabricLoadOnDemandExec =
-          // probably replace this with virtual threads once minimum version is java 21
-          Execs.newBlockingCached(
-              "VirtualStorageFabricOnDemandLoadingThread-%s",
-              config.getMinVirtualStorageFabricLoadThreads(),
-              config.getMaxVirtualStorageFabricLoadThreads(),
-              config.getVirtualStorageFabricLoadThreadKeepaliveMillis(),
-              TimeUnit.MILLISECONDS,
-              null
+          MoreExecutors.listeningDecorator(
+              // probably replace this with virtual threads once minimum version is java 21
+              Execs.newBlockingCached(
+                  "VirtualStorageFabricOnDemandLoadingThread-%s",
+                  config.getMinVirtualStorageFabricLoadThreads(),
+                  config.getMaxVirtualStorageFabricLoadThreads(),
+                  config.getVirtualStorageFabricLoadThreadKeepaliveMillis(),
+                  TimeUnit.MILLISECONDS,
+                  null
+              )
           );
     } else {
       virtualStorageFabricLoadOnDemandExec = null;
@@ -529,7 +533,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<Future<Optional<Segment>>> makeOnDemandLoadSupplier(
+  private Supplier<ListenableFuture<Optional<Segment>>> makeOnDemandLoadSupplier(
       final DataSegment dataSegment,
       final SegmentCacheEntry entry,
       final StorageLocation location

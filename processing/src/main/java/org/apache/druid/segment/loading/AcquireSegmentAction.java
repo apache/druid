@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
@@ -115,12 +116,12 @@ public class AcquireSegmentAction implements Closeable
   }
 
   private final SegmentDescriptor segmentDescriptor;
-  private final Supplier<Future<Optional<Segment>>> segmentFutureSupplier;
+  private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
   private final Closeable loadCleanup;
 
   public AcquireSegmentAction(
       SegmentDescriptor segmentDescriptor,
-      Supplier<Future<Optional<Segment>>> segmentFutureSupplier,
+      Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
       Closeable loadCleanup
   )
   {
@@ -134,7 +135,7 @@ public class AcquireSegmentAction implements Closeable
     return segmentDescriptor;
   }
 
-  public Future<Optional<Segment>> getSegmentFuture()
+  public ListenableFuture<Optional<Segment>> getSegmentFuture()
   {
     return segmentFutureSupplier.get();
   }
