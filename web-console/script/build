@@ -18,11 +18,29 @@
 
 set -e
 
-echo "Adding SQL docs..."
+# If needed, build SQL docs
+# Building SQL docs is needed if an argument of `--force` is given to this script, or the file lib/sql-docs.ts does not exist, or if that file has an earlier last modified time than any of the source files used to build the SQL docs which are:
+#
+# ./script/create-sql-docs.mjs
+# script/sql-doc-files.txt
+# Any file listed in script/sql-doc-files.txt
+
+echo "Compiling SQL function docs for the web console..."
 ./script/create-sql-docs.mjs
 
-# add BUNDLE_ANALYZER_PLUGIN='TRUE' here to enable webpack-bundle-analyzer as a plugin
+# End if
+
+# If needed, build the console
+# Building the console is needed if an argument of `--force` is given to this script, or the file public/web-console-{{VERSION}}.js does not exist, or if that file has an earlier modified time than any of the files {src,lib}/**/*.{ts,tsx} where the VERSION is taken as the "version" in package.json or any of these files
+#
+# package.json
+# package-lock.json
+# webpack.config.mjs
+# tsconfig.json
+
 echo "Webpacking everything..."
 NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
 
-echo "Done! Have a good day."
+# End if
+
+echo "Web console building finished."
