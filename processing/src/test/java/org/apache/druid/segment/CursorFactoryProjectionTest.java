@@ -326,7 +326,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                      projection.getVirtualColumns(),
                      projection.getGroupingColumns()
                                .stream()
-                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                               .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                .collect(Collectors.toList()),
                      projection.getAggregators()
                  ))
@@ -339,7 +339,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                             projection.getVirtualColumns(),
                             projection.getGroupingColumns()
                                       .stream()
-                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                      .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                       .collect(Collectors.toList()),
                             projection.getAggregators()
                         ))
@@ -385,12 +385,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                 .collect(Collectors.toList());
 
     List<DimensionSchema> rollupAutoDims = rollupDimsOrdered.getDimensions()
                                                             .stream()
-                                                            .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                            .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                             .collect(Collectors.toList());
 
     for (boolean incremental : new boolean[]{true, false}) {
