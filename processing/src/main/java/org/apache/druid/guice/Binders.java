@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Names;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -58,5 +59,12 @@ public class Binders
   public static MapBinder<String, TaskLogs> taskLogsBinder(Binder binder)
   {
     return PolyBind.optionBinder(binder, Key.get(TaskLogs.class));
+  }
+
+  public static <T extends TaskLogs> void bindTaskLogs(Binder binder, String type, Class<T> clazz)
+  {
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(clazz).in(LazySingleton.class);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("delegate"))).addBinding(type).to(clazz).in(LazySingleton.class);
+    binder.bind(Key.get(TaskLogs.class, Names.named(type))).to(clazz).in(LazySingleton.class);
   }
 }

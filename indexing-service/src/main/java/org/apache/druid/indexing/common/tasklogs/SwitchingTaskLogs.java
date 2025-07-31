@@ -22,30 +22,34 @@ package org.apache.druid.indexing.common.tasklogs;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ExternalTaskLogs implements TaskLogs
+public class SwitchingTaskLogs implements TaskLogs
 {
-  private static final EmittingLogger log = new EmittingLogger(ExternalTaskLogs.class);
   private final TaskLogs delegate;
-  private final ExternalLogStreamer logStreamer;
+  private final TaskLogs streamer;
+  private final TaskLogs pusher;
 
   @Inject
-  public ExternalTaskLogs(@Named("delegate") TaskLogs delegate, ExternalLogStreamer logStreamer)
+  public SwitchingTaskLogs(
+      @Named("delegate") TaskLogs delegate, 
+      @Named("streamer") TaskLogs streamer,
+      @Named("pusher") TaskLogs pusher
+  )
   {
     this.delegate = delegate;
-    this.logStreamer = logStreamer;
+    this.streamer = streamer;
+    this.pusher = pusher;
   }
 
   @Override
   public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
   {
-    return logStreamer.streamTaskLog(taskid, offset);
+    return streamer.streamTaskLog(taskid, offset);
   }
 
   @Override
@@ -61,9 +65,9 @@ public class ExternalTaskLogs implements TaskLogs
   }
 
   @Override
-  public void pushTaskLog(String taskid, File logFile)
+  public void pushTaskLog(String taskid, File logFile) throws IOException
   {
-    log.debug("Skipping task log push for task[%s]", taskid);
+    pusher.pushTaskLog(taskid, logFile);
   }
 
   @Override

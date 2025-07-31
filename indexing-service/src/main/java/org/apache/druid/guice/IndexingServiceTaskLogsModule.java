@@ -22,12 +22,14 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
-import org.apache.druid.indexing.common.tasklogs.ExternalLogStreamer;
-import org.apache.druid.indexing.common.tasklogs.ExternalTaskLogs;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogs;
+import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogsFactory;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -42,25 +44,37 @@ public class IndexingServiceTaskLogsModule implements Module
   public void configure(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-    PolyBind.createChoice(binder, "druid.indexer.logs.delegate.type", Key.get(TaskLogs.class, Names.named("delegate")), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(binder, "druid.indexer.logs.switching.delegateType", Key.get(TaskLogs.class, Names.named("delegate")), Key.get(FileTaskLogs.class));
+
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
-    taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
-    taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
-    taskLogBinder.addBinding("external").to(ExternalTaskLogs.class).in(LazySingleton.class);
+    taskLogBinder.addBinding("switching").to(SwitchingTaskLogs.class).in(LazySingleton.class);
 
-    final MapBinder<String, TaskLogs> delegateTaskLogBinder = PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("delegate")));
-    delegateTaskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
-    delegateTaskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
+    Binders.bindTaskLogs(binder, "noop", NoopTaskLogs.class);
+    Binders.bindTaskLogs(binder, "file", FileTaskLogs.class);
 
     binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
-    binder.bind(ExternalTaskLogs.class).in(LazySingleton.class);
-    binder.bind(ExternalLogStreamer.class).in(LazySingleton.class);
+    binder.bind(SwitchingTaskLogs.class).in(LazySingleton.class);
+    binder.bind(SwitchingTaskLogsFactory.class).in(LazySingleton.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
     binder.bind(TaskPayloadManager.class).to(TaskLogs.class);
+  }
+
+  @Provides
+  @Named("streamer")
+  public TaskLogs provideStreamer(SwitchingTaskLogsFactory factory)
+  {
+    return factory.createStreamer();
+  }
+
+  @Provides
+  @Named("pusher")
+  public TaskLogs providePusher(SwitchingTaskLogsFactory factory)
+  {
+    return factory.createPusher();
   }
 }
