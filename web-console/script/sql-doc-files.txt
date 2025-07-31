@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# List of SQL documentation files to process
+# List of SQL documentation files to process relative to the web-console directory
 ../docs/querying/sql-data-types.md
 ../docs/querying/sql-scalar.md
 ../docs/querying/sql-aggregations.md
