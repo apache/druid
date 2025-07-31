@@ -21,8 +21,6 @@ package org.apache.druid.testing.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -77,15 +75,18 @@ public class CliEventCollector extends ServerRunnable
   @Override
   protected Set<NodeRole> getNodeRoles(Properties properties)
   {
-    return ImmutableSet.of(NODE_ROLE);
+    return Set.of(NODE_ROLE);
   }
 
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.of(
+    return List.of(
         binder -> {
-          LOG.info("starting up");
+          LOG.info(
+              "Starting Test Service [eventCollector]. This is a test only"
+                   + " Druid service which must never be used in production."
+          );
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(CliEventCollector.SERVICE_NAME);
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(CliEventCollector.PORT);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(CliEventCollector.TLS_PORT);
@@ -108,9 +109,7 @@ public class CliEventCollector extends ServerRunnable
   // ugly mimic of other jetty initializers
   private static class CustomJettyServiceInitializer implements JettyServerInitializer
   {
-    private static List<String> UNSECURED_PATHS = ImmutableList.of(
-        "/status/health"
-    );
+    private static final List<String> UNSECURED_PATHS = List.of("/status/health");
 
     private final ServerConfig serverConfig;
 

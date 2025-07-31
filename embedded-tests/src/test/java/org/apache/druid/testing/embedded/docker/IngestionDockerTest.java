@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
@@ -50,13 +51,13 @@ import org.apache.druid.testing.embedded.derby.EmbeddedDerbyMetadataResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.apache.druid.testing.embedded.server.EmbeddedEventCollector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +77,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * embedded servers either to provide visibility into the cluster state or to
  * test backwards compatibility of a given feature.
  */
-public class IngestionDockerTest extends EmbeddedClusterTestBase
+public class IngestionDockerTest extends DockerTestBase
 {
   // Druid Docker containers
   protected final DruidContainerResource overlordLeader =
@@ -97,7 +98,7 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
           .usingTestImage();
 
   // Follower EmbeddedOverlord to help serialize Task and Supervisor payloads
-  private final EmbeddedOverlord overlordFollower =
+  protected final EmbeddedOverlord overlordFollower =
       new EmbeddedOverlord().addProperty("druid.plaintextPort", "7090");
 
   // Event collector to watch for metric events
@@ -136,12 +137,18 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
   }
 
   @BeforeEach
-  @AfterEach
   public void verifyOverlordLeader()
   {
     Assertions.assertFalse(
         overlordFollower.bindings().overlordLeaderSelector().isLeader()
     );
+  }
+
+  @AfterEach
+  public void cleanUp()
+  {
+    markSegmentsAsUnused(dataSource);
+    verifyOverlordLeader();
   }
 
   @Test
@@ -191,7 +198,7 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
   @Test
   public void test_runIndexParallelTask_andCompactData()
   {
-    final int numSegments = 10;
+    final int numSegments = 1;
 
     // Run an 'index_parallel' task and verify the ingested data
     final String taskId = IdUtils.getRandomId();
@@ -199,16 +206,33 @@ public class IngestionDockerTest extends EmbeddedClusterTestBase
         .ofTypeIndexParallel()
         .timestampColumn("timestamp")
         .jsonInputFormat()
-        .localInputSourceWithFiles(
-            Resources.DataFile.TINY_WIKI_1_JSON,
-            Resources.DataFile.TINY_WIKI_2_JSON,
-            Resources.DataFile.TINY_WIKI_3_JSON
-        )
+        .inputSource(Resources.HttpData.wikipedia1Day())
         .dimensions()
         .tuningConfig(t -> t.withMaxNumConcurrentSubTasks(1))
         .dataSource(dataSource)
         .withId(taskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
+
+    waitForSegmentsToBeQueryable(numSegments);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "24433");
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'", dataSource, "1");
+
+    final String[] segmentIntervalParts = cluster.runSql(
+        "SELECT \"start\", \"end\" FROM sys.segments WHERE datasource='%s'",
+        dataSource
+    ).split(",");
+    final Interval segmentInterval = Intervals.of("%s/%s", segmentIntervalParts[0], segmentIntervalParts[1]);
+
+    // Run compaction for this interval
+    final String compactTaskId = IdUtils.getRandomId();
+    final CompactionTask compactionTask = TaskBuilder
+        .ofTypeCompact()
+        .dataSource(dataSource)
+        .interval(segmentInterval)
+        .dynamicPartitionWithMaxRows(5000)
+        .withId(compactTaskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(compactTaskId, compactionTask));
     cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
   }
 

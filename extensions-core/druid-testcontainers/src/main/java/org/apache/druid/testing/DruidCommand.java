@@ -32,6 +32,7 @@ public enum DruidCommand
    */
   COORDINATOR(
       "coordinator",
+      "-Xms128m -Xmx128m",
       Map.of(
           "druid.coordinator.startDelay", "PT0.1S",
           "druid.coordinator.period", "PT0.5S",
@@ -46,6 +47,7 @@ public enum DruidCommand
    */
   OVERLORD(
       "overlord",
+      "-Xms256m -Xmx256m",
       Map.of(
           "druid.indexer.storage.type", "metadata",
           "druid.indexer.queue.startDelay", "PT0S",
@@ -65,6 +67,7 @@ public enum DruidCommand
    */
   INDEXER(
       "indexer",
+      "-Xms128m -Xmx128m",
       Map.of(
           "druid.lookup.enableLookupSyncOnStartup", "false",
           "druid.worker.capacity", "2",
@@ -84,6 +87,7 @@ public enum DruidCommand
    */
   MIDDLE_MANAGER(
       "middleManager",
+      "-Xms128m -Xmx128m",
       Map.of(
           "druid.lookup.enableLookupSyncOnStartup", "false",
           "druid.worker.capacity", "2",
@@ -100,8 +104,9 @@ public enum DruidCommand
    */
   HISTORICAL(
       "historical",
+      "-Xms128m -Xmx128m",
       Map.of(
-          "druid.segmentCache.locations", "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"10M\"}]",
+          "druid.segmentCache.locations", "[{\"path\":\"/opt/druid/var/segment-cache\",\"maxSize\":\"50M\"}]",
           "druid.processing.buffer.sizeBytes", "10MiB",
           "druid.processing.numMergeBuffers", "2",
           "druid.processing.numThreads", "5"
@@ -115,6 +120,7 @@ public enum DruidCommand
    */
   BROKER(
       "broker",
+      "-Xms128m -Xmx128m",
       Map.of(
           "druid.lookup.enableLookupSyncOnStartup", "false",
           "druid.processing.buffer.sizeBytes", "50MiB",
@@ -130,6 +136,7 @@ public enum DruidCommand
    */
   ROUTER(
       "router",
+      "-Xms128m -Xmx128m",
       Map.of("druid.router.managementProxy.enabled", "true"),
       8888
   ),
@@ -137,20 +144,25 @@ public enum DruidCommand
   /**
    * Command to run a test-only Druid node which collects events emitted by
    * other Druid services using {@code HttpPostEmitter}.
+   *
+   * @since 35.0.0
    */
   TEST_EVENT_COLLECTOR(
       "eventCollector",
+      "-Xms128m -Xmx128m",
       Map.of(),
       9301
   );
 
   private final String name;
+  private final String javaOpts;
   private final Integer[] exposedPorts;
   private final Map<String, String> defaultProperties;
 
-  DruidCommand(String name, Map<String, String> defaultProperties, Integer... exposedPorts)
+  DruidCommand(String name, String javaOpts, Map<String, String> defaultProperties, Integer... exposedPorts)
   {
     this.name = name;
+    this.javaOpts = javaOpts;
     this.defaultProperties = defaultProperties;
     this.exposedPorts = exposedPorts;
   }
@@ -158,6 +170,11 @@ public enum DruidCommand
   public String getName()
   {
     return name;
+  }
+
+  public String getJavaOpts()
+  {
+    return javaOpts;
   }
 
   public Integer[] getExposedPorts()

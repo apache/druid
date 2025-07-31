@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.docker;
 
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,7 +36,6 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,9 +50,27 @@ import java.util.concurrent.atomic.AtomicInteger;
  * or a Docker-specific feature. For all other testing needs, use plain old
  * {@code EmbeddedDruidServer} as they are much faster, allow easy debugging and
  * do not require downloading any images.
+ * <p>
+ * All Docker tests should be named {@code *DockerTest} and must be tagged with
+ * {@link #DOCKER_TEST_TAG}.
+ *
+ * <pre>
+ *   &#64;Tag(DruidContainerResource.DOCKER_TEST_TAG)
+ *   &#64;EnableIfSystemProperty(named = DruidContainerResource.PROPERTY_TEST_IMAGE, matches = ".+")
+ *   public class AbcDockerTest extends EmbeddedClusterTestBase
+ *   {
+ *     // @Test methods here
+ *   }
+ * </pre>
  */
 public class DruidContainerResource extends TestcontainerResource<DruidContainer>
 {
+  /**
+   * All tests using DruidContainers should use this tag with {@code @Tag} so
+   * that they are skipped when running {@code mvn test}.
+   */
+  public static final String DOCKER_TEST_TAG = "docker-test";
+
   /**
    * Java system property to specify the name of the Docker test image.
    */
@@ -110,8 +128,9 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
    */
   public DruidContainerResource usingTestImage()
   {
-    String imageName = Objects.requireNonNull(
-        System.getProperty(PROPERTY_TEST_IMAGE),
+    final String imageName = System.getProperty(PROPERTY_TEST_IMAGE);
+    InvalidInput.conditionalException(
+        imageName != null,
         StringUtils.format(
             "System property[%s] must be set while running Docker tests locally"
             + " to specify which Druid image to use. Update your run configuration"
@@ -163,8 +182,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         .withEnv(
             Map.of(
                 "DRUID_SET_HOST_IP", "0",
-                "DRUID_SET_HOST", "0",
-                "JAVA_OPTS", "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/druid/heapdump.hprof"
+                "DRUID_SET_HOST", "0"
             )
         );
 

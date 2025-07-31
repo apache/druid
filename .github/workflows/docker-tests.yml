@@ -46,9 +46,9 @@ jobs:
           distribution: 'zulu'
           java-version: 17
           cache: 'maven'
-      - name: Run *DockerTest*
+      - name: Run Docker tests
         id: run-it
-        run: .github/scripts/run_unit-tests -Dtest=*DockerTest* -Ddruid.testing.docker.image=$DRUID_DIST_IMAGE_NAME
+        run: .github/scripts/run_docker-tests.sh
         timeout-minutes: 60
 
       - name: Collect docker logs on failure

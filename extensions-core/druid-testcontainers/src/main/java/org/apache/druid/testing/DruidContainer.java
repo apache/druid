@@ -92,6 +92,7 @@ public class DruidContainer extends GenericContainer<DruidContainer>
     setCommand(command.getName());
     withEnv("DRUID_CONFIG_COMMON", COMMON_PROPERTIES_PATH);
     withEnv("DRUID_CONFIG_" + command.getName(), SERVICE_PROPERTIES_PATH);
+    withEnv("JAVA_OPTS", command.getJavaOpts());
 
     final Integer[] exposedPorts = command.getExposedPorts();
     withExposedPorts(exposedPorts);

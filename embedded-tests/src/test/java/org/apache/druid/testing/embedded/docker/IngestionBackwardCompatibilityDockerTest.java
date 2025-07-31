@@ -19,8 +19,16 @@
 
 package org.apache.druid.testing.embedded.docker;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.coordinator.CoordinatorServiceClient;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.testing.DruidContainer;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Nested;
 
 /**
@@ -38,6 +46,31 @@ public class IngestionBackwardCompatibilityDockerTest
       coordinator.usingImage(DruidContainer.Image.APACHE_31);
       overlordLeader.usingImage(DruidContainer.Image.APACHE_31);
       return super.createCluster();
+    }
+
+    @Override
+    protected int markSegmentsAsUnused(String dataSource)
+    {
+      // For old Druid versions, use Coordinator to mark segments as unused
+      final CoordinatorServiceClient coordinatorClient =
+          overlordFollower.bindings().getInstance(CoordinatorServiceClient.class);
+
+      try {
+        RequestBuilder req = new RequestBuilder(
+            HttpMethod.DELETE,
+            StringUtils.format("/druid/coordinator/v1/datasources/%s", dataSource)
+        );
+        BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
+            req,
+            new BytesFullResponseHandler()
+        );
+
+        final ObjectMapper mapper = overlordFollower.bindings().jsonMapper();
+        return mapper.readValue(responseHolder.getContent(), SegmentUpdateResponse.class).getNumChangedSegments();
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 }

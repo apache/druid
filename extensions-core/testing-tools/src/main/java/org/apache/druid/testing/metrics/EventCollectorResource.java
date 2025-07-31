@@ -92,7 +92,7 @@ public class EventCollectorResource
       }
     }
 
-    log.info("Collected [%d] events from service[%s], host[%s].", collectedEvents, services, hosts);
+    log.debug("Collected [%d] events from service[%s], host[%s].", collectedEvents, services, hosts);
     return Response.ok("{}").build();
   }
 }

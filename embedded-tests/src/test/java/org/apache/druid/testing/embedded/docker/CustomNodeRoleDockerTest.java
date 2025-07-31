@@ -23,11 +23,10 @@ import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.cli.CliEventCollector;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.server.HighAvailabilityTest;
 import org.junit.jupiter.api.Test;
 
-public class CustomNodeRoleDockerTest extends EmbeddedClusterTestBase
+public class CustomNodeRoleDockerTest extends DockerTestBase
 {
   private final DruidContainerResource customNodeEventCollector =
       new DruidContainerResource(DruidCommand.TEST_EVENT_COLLECTOR).usingTestImage();
