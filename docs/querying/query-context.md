@@ -141,7 +141,8 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 }
 ```
 
-<details><summary>View full JDBC example</summary>
+<details>
+<summary>View full JDBC example</summary>
 
 ```java
 import java.sql.*;
