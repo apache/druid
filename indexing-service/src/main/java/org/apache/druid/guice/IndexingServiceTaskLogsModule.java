@@ -41,16 +41,25 @@ import org.apache.druid.tasklogs.TaskPayloadManager;
 import java.util.Properties;
 
 /**
+ *
  */
 public class IndexingServiceTaskLogsModule implements Module
 {
   private static final Logger log = new EmittingLogger(IndexingServiceTaskLogsModule.class);
+  private static final String PROPERTY_PREFIX_SWITCHING = "druid.indexer.logs.switching";
+  private static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX_SWITCHING + ".pushType";
+  private static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX_SWITCHING + ".streamType";
 
   @Override
   public void configure(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-    PolyBind.createChoice(binder, "druid.indexer.logs.switching.defaultType", Key.get(TaskLogs.class, Names.named("defaultType")), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(
+        binder,
+        PROPERTY_PREFIX_SWITCHING + ".defaultType",
+        Key.get(TaskLogs.class, Names.named("defaultType")),
+        Key.get(FileTaskLogs.class)
+    );
 
 
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
@@ -78,7 +87,7 @@ public class IndexingServiceTaskLogsModule implements Module
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String logStreamerType = properties.getProperty("druid.indexer.logs.switching.streamType");
+    String logStreamerType = properties.getProperty(PROPERTY_KEY_SWITCHING_STREAM_TYPE);
     if (logStreamerType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(logStreamerType)));
@@ -98,7 +107,7 @@ public class IndexingServiceTaskLogsModule implements Module
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String logPusherType = properties.getProperty("druid.indexer.logs.switching.pusherType");
+    String logPusherType = properties.getProperty(PROPERTY_KEY_SWITCHING_PUSH_TYPE);
     if (logPusherType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(logPusherType)));
@@ -118,7 +127,7 @@ public class IndexingServiceTaskLogsModule implements Module
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String reportsType = properties.getProperty("druid.indexer.logs.switching.reportsType");
+    String reportsType = properties.getProperty(PROPERTY_PREFIX_SWITCHING + ".reportsType");
     if (reportsType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(reportsType)));

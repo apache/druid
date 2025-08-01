@@ -341,7 +341,7 @@ public class KubernetesOverlordModule implements DruidModule
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String logPusherType = properties.getProperty("druid.indexer.logs.switching.pusherType");
+    String logPusherType = properties.getProperty("druid.indexer.logs.switching.pushType");
     if (logPusherType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(logPusherType)));
