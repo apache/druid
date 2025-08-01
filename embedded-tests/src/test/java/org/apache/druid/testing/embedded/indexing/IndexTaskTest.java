@@ -81,8 +81,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
         Resources.InlineData.CSV_10_DAYS
     );
 
-    cluster.callApi().submitTask(task, overlord);
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
