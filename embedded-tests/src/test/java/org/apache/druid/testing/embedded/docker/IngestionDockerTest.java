@@ -114,7 +114,6 @@ public class IngestionDockerTest extends DockerTestBase
   {
     return EmbeddedDruidCluster
         .withZookeeper()
-        .useDruidContainers()
         // Needed for overlordFollower to recognize the KafkaSupervisor type
         .addExtensions(KafkaIndexTaskModule.class, LatchableEmitterModule.class, PostgreSQLMetadataStorageModule.class)
         .addResource(new PostgreSQLMetadataResource())

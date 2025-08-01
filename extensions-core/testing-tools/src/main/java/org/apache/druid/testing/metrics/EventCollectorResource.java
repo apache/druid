@@ -22,7 +22,7 @@ package org.apache.druid.testing.metrics;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.testing.cli.CliEventCollector;
@@ -64,31 +64,33 @@ public class EventCollectorResource
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response postMetrics(
-      List<EmittedEvent> events
+  public Response postEvents(
+      List<EventMap> events
   )
   {
     final Set<String> services = new HashSet<>();
     final Set<String> hosts = new HashSet<>();
 
     int collectedEvents = 0;
-    for (EmittedEvent event : events) {
+
+    for (EventMap map : events) {
       try {
-        emitter.emit(event.toEvent());
+        final EventMapDeserializer deserializer = new EventMapDeserializer(map);
+        emitter.emit(deserializer.asEvent());
         ++collectedEvents;
 
-        final String service = event.getStringValue(Event.SERVICE);
+        final String service = deserializer.getService();
         if (service != null) {
           services.add(service);
         }
 
-        final String host = event.getStringValue(Event.HOST);
+        final String host = deserializer.getHost();
         if (host != null) {
           hosts.add(host);
         }
       }
       catch (Exception e) {
-        log.noStackTrace().error(e, "Could not collect event[%s]", event);
+        log.noStackTrace().error(e, "Could not collect event[%s]", map);
       }
     }
 

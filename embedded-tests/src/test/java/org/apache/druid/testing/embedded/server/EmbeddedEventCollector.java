@@ -24,8 +24,8 @@ import com.google.inject.Module;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.testing.cli.CliEventCollector;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedDruidServer;
+import org.apache.druid.testing.embedded.docker.DruidContainerResource;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.util.ArrayList;
@@ -45,9 +45,10 @@ public class EmbeddedEventCollector extends EmbeddedDruidServer<EmbeddedEventCol
 
   public String getMetricsUrl()
   {
+    // Use the container-friendly hostname
     return new URIBuilder()
         .setScheme("http")
-        .setHost(EmbeddedDruidCluster.getDefaultHost())
+        .setHost(DruidContainerResource.getDefaultHost())
         .setPort(CliEventCollector.PORT)
         .setPath("/druid-ext/testing-tools/events")
         .toString();

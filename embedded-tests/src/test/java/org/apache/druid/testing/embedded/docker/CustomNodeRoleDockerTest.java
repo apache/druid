@@ -38,7 +38,6 @@ public class CustomNodeRoleDockerTest extends DockerTestBase
   {
     return EmbeddedDruidCluster
         .withZookeeper()
-        .useDruidContainers()
         .addCommonProperty("druid.extensions.loadList", "[\"druid-testing-tools\"]")
         .addResource(customNodeEventCollector)
         .addServer(router);

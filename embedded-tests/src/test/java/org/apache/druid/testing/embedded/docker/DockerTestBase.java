@@ -24,17 +24,21 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * Base test for running {@link DruidContainerResource}. All embedded tests which
- * use Druid containers should extend this base class and should be named
- * {@code *DockerTest*}.
+ * Base class for running embedded tests which use {@link DruidContainerResource}.
+ * All test classes extending this class should be named {@code *DockerTest*}.
  * <p>
- * {@code DruidContainers} should be used only for testing backward compatiblity
- * or a Docker-specific feature. For all other testing needs, use plain old
- * {@code EmbeddedDruidServer} as they are much faster, allow easy debugging and
- * do not require downloading any images.
+ * DO NOT write a new Docker test unless absolutely necessary.
+ * For all testing needs, use regular EmbeddedDruidServer-based tests only.
+ * as they are much faster, easy to debug and do not require image downloads.
  */
 @Tag("docker-test")
 @EnabledIfSystemProperty(named = DruidContainerResource.PROPERTY_TEST_IMAGE, matches = ".+")
 public abstract class DockerTestBase extends EmbeddedClusterTestBase
 {
+  @Override
+  protected void setup() throws Exception
+  {
+    cluster = createCluster().setEmbeddedServiceHostname(DruidContainerResource.getDefaultHost());
+    cluster.start();
+  }
 }

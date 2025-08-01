@@ -36,9 +36,7 @@ import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
 import org.apache.http.client.utils.URIBuilder;
 
-import java.net.InetAddress;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -78,6 +76,7 @@ import java.util.stream.Collectors;
 public class EmbeddedDruidCluster implements ClusterReferencesProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
+  private static final String LOCALHOST = "localhost";
 
   private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
@@ -87,7 +86,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
-  private boolean hasDruidContainers = false;
+  private String embeddedHostname = "localhost";
   private boolean startedFirstDruidServer = false;
 
   private EmbeddedDruidCluster()
@@ -149,15 +148,6 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     addCommonProperty("druid.emitter", LatchableEmitter.TYPE);
     extensionModules.add(LatchableEmitterModule.class);
-    return this;
-  }
-
-  /**
-   * Configures this cluster to allow the use of {@code DruidContainer}-based services.
-   */
-  public EmbeddedDruidCluster useDruidContainers()
-  {
-    this.hasDruidContainers = true;
     return this;
   }
 
@@ -241,28 +231,26 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   }
 
   /**
-   * Hostname to be used for embedded services (both Druid or external).
-   * Using this hostname ensures that the underlying service is reachable by both
-   * EmbeddedDruidServers and DruidContainers.
+   * Sets the hostname to be used by embedded services (both Druid and external).
+   * This value needs to be changed only when using Druid containers to ensure
+   * that the underlying service is reachable by both DruidContainers and
+   * EmbeddedDruidServers.
+   * <p>
+   * The default value is {@code localhost}.
    */
-  public String getEmbeddedServiceHostname()
+  public EmbeddedDruidCluster setEmbeddedServiceHostname(String hostname)
   {
-    return hasDruidContainers ? getDefaultHost() : "localhost";
+    this.embeddedHostname = hostname;
+    return this;
   }
 
   /**
-   * Hostname for the host machine running the containers. Using this hostname
-   * instead of "localhost" allows all the Druid containers to talk to each
-   * other and also other EmbeddedDruidServers.
+   * Hostname to be used for embedded services (both Druid or external).
+   * The default value is {@code localhost}.
    */
-  public static String getDefaultHost()
+  public String getEmbeddedServiceHostname()
   {
-    try {
-      return InetAddress.getLocalHost().getHostAddress();
-    }
-    catch (UnknownHostException e) {
-      throw new ISE(e, "Unable to determine host name");
-    }
+    return embeddedHostname;
   }
 
   /**
@@ -276,13 +264,9 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public String getEmbeddedConnectUri(String connectUri)
   {
-    if (!hasDruidContainers) {
-      return connectUri;
-    }
-
     try {
       final URIBuilder uri = new URIBuilder(connectUri);
-      validateEmbeddedHost(uri.getHost(), connectUri);
+      validateLocalhost(uri.getHost(), connectUri);
       uri.setHost(getEmbeddedServiceHostname());
       return uri.build().toString();
     }
@@ -299,13 +283,8 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
    */
   public String getEmbeddedHostAndPort(String hostAndPort)
   {
-    if (!hasDruidContainers) {
-      return hostAndPort;
-    }
-
     final HostAndPort parsedHostAndPort = HostAndPort.fromString(hostAndPort);
-    validateEmbeddedHost(parsedHostAndPort.getHost(), hostAndPort);
-
+    validateLocalhost(parsedHostAndPort.getHost(), hostAndPort);
     return HostAndPort.fromParts(getEmbeddedServiceHostname(), parsedHostAndPort.getPort()).toString();
   }
 
@@ -420,7 +399,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return "[" + csv + "]";
   }
 
-  private static void validateEmbeddedHost(String host, String connectUri)
+  private static void validateLocalhost(String host, String connectUri)
   {
     if (!"localhost".equals(host) && !"127.0.0.1".equals(host)) {
       throw new IAE(

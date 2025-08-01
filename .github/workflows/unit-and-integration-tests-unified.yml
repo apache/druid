@@ -175,7 +175,7 @@ jobs:
       DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
   docker-tests:
-    needs: [build]
+    needs: [build, unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:

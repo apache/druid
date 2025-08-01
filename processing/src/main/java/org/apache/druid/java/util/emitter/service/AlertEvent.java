@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -164,37 +165,34 @@ public class AlertEvent implements Event
 
   public enum Severity
   {
-    ANOMALY {
-      @Override
-      public String toString()
-      {
-        return "anomaly";
-      }
-    },
-
-    COMPONENT_FAILURE {
-      @Override
-      public String toString()
-      {
-        return "component-failure";
-      }
-    },
-
-    SERVICE_FAILURE {
-      @Override
-      public String toString()
-      {
-        return "service-failure";
-      }
-    },
-    DEPRECATED {
-      @Override
-      public String toString()
-      {
-        return "deprecated";
-      }
-    };
+    ANOMALY("anomaly"),
+    COMPONENT_FAILURE("component-failure"),
+    SERVICE_FAILURE("service-failure"),
+    DEPRECATED("deprecated");
 
     public static final Severity DEFAULT = COMPONENT_FAILURE;
+
+    private final String name;
+
+    Severity(String name)
+    {
+      this.name = name;
+    }
+
+    public static Severity fromString(String value)
+    {
+      for (Severity severity : Severity.values()) {
+        if (severity.toString().equals(value)) {
+          return severity;
+        }
+      }
+      throw InvalidInput.exception("No such severity[%s]", value);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name;
+    }
   }
 }
