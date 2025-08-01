@@ -117,7 +117,7 @@ You can now use raw SQL in the HTTP body for `/druid/v2/sql` endpoints. You can 
 
  [#17937](https://github.com/apache/druid/pull/17937)
 
-### Cloning Historicals
+### Cloning Historicals (experimental)
 
 You can now configure clones for Historicals using the dynamic Coordinator configuration `cloneServers`. Cloned Historicals are useful for situations such as rolling updates where you want to launch a new Historical as a replacement for an existing one.
 
@@ -163,7 +163,7 @@ You can now configure the Broker service to prefer  Historicals on a specific ti
 
 [#18136](https://github.com/apache/druid/pull/18136)
 
-### Dart improvements NEED TO WRITE
+### Dart improvements 
 
 The Dart query engine now uses the `/druid/v2/sql` endpoint like other SQL query engines. The former Dart specific endpoint is no longer supported. To use Dart for a query, include the `engine` query context parameter and set it to `msq-dart`.
 
@@ -175,7 +175,7 @@ Enabling Dart remains the same, add the following line to your `broker/runtime.p
 druid.msq.dart.enabled = true
 ```
 
-Additionally, Dart can now query real-time tasks by setting the query context parameter `includeSegmentSource` to `realtime`, in a similar way to MSQ tasks. You can run synchronous or asynchronous queries. 
+Additionally, Dart now queries real-time tasks by default. You can control this behavior by setting the query context parameter `includeSegmentSource` to `REALTIME` (default) or `NONE`, in a similar way to MSQ tasks. You can also run synchronous or asynchronous queries. 
 
 [#18076](https://github.com/apache/druid/pull/18076) [#18241](https://github.com/apache/druid/pull/18241)
 
