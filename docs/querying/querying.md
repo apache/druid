@@ -152,3 +152,7 @@ Possible Druid error codes for the `error` field include:
 |`Query cancelled`|500|The query was cancelled through the query cancellation API.|
 |`Truncated response context`|500|An intermediate response context for the query exceeded the built-in limit of 7KiB.<br/><br/>The response context is an internal data structure that Druid servers use to share out-of-band information when sending query results to each other. It is serialized in an HTTP header with a maximum length of 7KiB. This error occurs when an intermediate response context sent from a data server (like a Historical) to the Broker exceeds this limit.<br/><br/>The response context is used for a variety of purposes, but the one most likely to generate a large context is sharing details about segments that move during a query. That means this error can potentially indicate that a very large number of segments moved in between the time a Broker issued a query and the time it was processed on Historicals. This should rarely, if ever, occur during normal operation.|
 |`Unknown exception`|500|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
+
+## Learn more
+
+To learn how to use the query context parameters, see [Set query context](./query-context.md).
