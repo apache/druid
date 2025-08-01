@@ -44,7 +44,7 @@ Use Dart as an alternative to the native query engine since it offers better par
 
 When processing these kinds of queries, Dart can parallelize through the entire query, leading to better performance.
 
-By default, Dart queries include results fron published segments and realtime tasks.
+By default, Dart queries include results from published segments and realtime tasks.
 
 ## Enable Dart
 
