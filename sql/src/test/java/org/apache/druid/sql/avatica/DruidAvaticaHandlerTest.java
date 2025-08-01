@@ -1095,6 +1095,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1155,6 +1156,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1709,6 +1711,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final CountDownLatch resultsLatch = new CountDownLatch(1);
     DruidMeta druidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,

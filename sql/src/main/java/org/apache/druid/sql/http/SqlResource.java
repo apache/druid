@@ -73,7 +73,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -192,8 +191,10 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
-      queryContext = new QueryContext(sqlQueryPlus.context()); // Redefine queryContext to include SET parameters
+      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
+
+      // Redefine queryContext to include SET parameters and default context.
+      queryContext = new QueryContext(sqlQueryPlus.context());
       final String engineName = queryContext.getEngine();
       final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
       stmt = engine.getSqlStatementFactory().httpStatement(sqlQueryPlus, req);
@@ -459,17 +460,10 @@ public class SqlResource
       final DefaultQueryConfig defaultQueryConfig
   )
   {
-    final Map<String, Object> queryContext;
-    if (!defaultQueryConfig.getContext().isEmpty()) {
-      queryContext = new HashMap<>(defaultQueryConfig.getContext());
-      queryContext.putAll(sqlQuery.getContext());
-    } else {
-      queryContext = sqlQuery.getContext();
-    }
-
     return SqlQueryPlus.builder()
                        .sql(sqlQuery.getQuery())
-                       .context(queryContext)
+                       .systemDefaultContext(defaultQueryConfig.getContext())
+                       .queryContext(sqlQuery.getContext())
                        .parameters(sqlQuery.getParameterList())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))
                        .build();

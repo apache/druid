@@ -806,7 +806,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         SqlQueryPlus.builder()
                     .sql(query)
-                    .context(context)
+                    .queryContext(context)
                     .parameters(parameters)
                     .auth(authenticationResult)
                     .build()

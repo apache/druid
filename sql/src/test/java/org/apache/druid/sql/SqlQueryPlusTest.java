@@ -26,6 +26,8 @@ import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class SqlQueryPlusTest
 {
   @Test
@@ -35,6 +37,7 @@ public class SqlQueryPlusTest
     final DruidException e = Assert.assertThrows(
         DruidException.class,
         () -> SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS")
+                          .systemDefaultContext(Map.of())
                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                           .build()
     );
@@ -53,6 +56,7 @@ public class SqlQueryPlusTest
     // SqlQueryPlus does not throw parse errors on buildJdbc(), because parsing is deferred
     final SqlQueryPlus sqlQueryPlus =
         SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS")
+                    .systemDefaultContext(Map.of())
                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                     .buildJdbc();
 

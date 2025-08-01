@@ -217,7 +217,8 @@ public class QueryTestRunner
     {
       final QueryTestBuilder builder = builder();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .context(builder.queryContext)
+                                                .systemDefaultContext(Map.of())
+                                                .queryContext(builder.queryContext)
                                                 .sqlParameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
@@ -275,7 +276,8 @@ public class QueryTestRunner
         final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                   .sqlParameters(builder.parameters)
                                                   .auth(builder.authenticationResult)
-                                                  .context(builder.queryContext)
+                                                  .systemDefaultContext(Map.of())
+                                                  .queryContext(builder.queryContext)
                                                   .build();
 
         final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
@@ -288,7 +290,7 @@ public class QueryTestRunner
 
         results.add(runQuery(
             sqlStatementFactory,
-            sqlQuery.withContext(theQueryContext),
+            sqlQuery.withContext(Map.of(), theQueryContext),
             vectorize
         ));
       }
@@ -667,9 +669,9 @@ public class QueryTestRunner
     if (iqTestInfo != null) {
       QTestCase qt = new QTestCase(iqTestInfo);
       Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
-          .putAll(builder.getQueryContext())
-          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
-          .build();
+                                                           .putAll(builder.getQueryContext())
+                                                           .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+                                                           .build();
       for (Entry<String, Object> entry : queryContext.entrySet()) {
         qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
       }
