@@ -41,18 +41,19 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.derby.EmbeddedDerbyMetadataResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.apache.druid.testing.embedded.psql.PostgreSQLMetadataResource;
 import org.apache.druid.testing.embedded.server.EmbeddedEventCollector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -115,13 +116,14 @@ public class IngestionDockerTest extends DockerTestBase
         .withZookeeper()
         .useDruidContainers()
         // Needed for overlordFollower to recognize the KafkaSupervisor type
-        .addExtensions(KafkaIndexTaskModule.class, LatchableEmitterModule.class)
-        .addResource(new EmbeddedDerbyMetadataResource())
+        .addExtensions(KafkaIndexTaskModule.class, LatchableEmitterModule.class, PostgreSQLMetadataStorageModule.class)
+        .addResource(new PostgreSQLMetadataResource())
         .addResource(new MinIOStorageResource())
         .addResource(kafkaServer)
         .addCommonProperty(
             "druid.extensions.loadList",
-            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\", \"druid-multi-stage-query\"]"
+            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
+            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
         )
         .addCommonProperty("druid.emitter", "http")
         .addCommonProperty("druid.emitter.http.recipientBaseUrl", eventCollector.getMetricsUrl())

@@ -144,7 +144,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     // Mount directories used by this container for easier debugging with service logs
     this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
 
-    final File logDirectory = new File(containerDirectory, "log");
+    final File logDirectory = new File("log", name);
     this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
 
     // Create the log directory upfront to avoid permission issues
@@ -216,7 +216,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   {
     try {
       FileUtils.mkdirp(dir);
-      Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
+      Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rw-rw-rw-"));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
