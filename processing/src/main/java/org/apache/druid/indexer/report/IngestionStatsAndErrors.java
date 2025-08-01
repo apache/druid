@@ -175,7 +175,7 @@ public class IngestionStatsAndErrors
            ", unparseableEvents=" + unparseableEvents +
            ", rowStats=" + rowStats +
            ", errorMsg='" + errorMsg + '\'' +
-           ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
+           ", segmentAvailabilityConfirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
            ", recordsProcessed=" + recordsProcessed +
            ", segmentsRead=" + segmentsRead +

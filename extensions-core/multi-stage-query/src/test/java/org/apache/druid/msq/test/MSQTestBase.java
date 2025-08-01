@@ -51,7 +51,6 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -364,7 +363,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return DruidModuleCollection.of(
           super.getCoreModule(),
           new HllSketchModule(),
-          new LocalMsqSqlModule()
+          new LocalMsqSqlModule(),
+          new ExpressionModule(),
+          binder -> binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
       );
     }
 
@@ -423,15 +424,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     groupByBuffers = TestGroupByBuffers.createDefault();
 
     SqlTestFramework qf = queryFramework();
-    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new ExpressionModule(),
-            (Module) binder ->
-                binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
-        )
-    );
 
-    ObjectMapper secondMapper = setupObjectMapper(secondInjector);
+    ObjectMapper secondMapper = setupObjectMapper(qf.injector());
     indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder("cacheManager"));
@@ -1377,13 +1371,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions
             List<Object> transformedRow = row.stream()
-                                             .map(r -> {
-                                               if (r instanceof HyperLogLogCollector) {
-                                                 return ((HyperLogLogCollector) r).estimateCardinalityRound();
-                                               } else {
-                                                 return r;
-                                               }
-                                             })
+                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
                                              .collect(Collectors.toList());
             segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
           }
@@ -1531,6 +1519,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
         );
       }
       verifyMetrics();
+    }
+  }
+
+  /**
+   * Maps certain fields on the segment to a different equivalent value, which is easier to assert against.
+   * For example, the HLL collector can't really be directly asserted as part of the test, so it is converted to its
+   * cardinality.
+   */
+  protected Object segmentToAssertionValueMapper(Object r)
+  {
+    if (r instanceof HyperLogLogCollector) {
+      return ((HyperLogLogCollector) r).estimateCardinalityRound();
+    } else {
+      return r;
     }
   }
 

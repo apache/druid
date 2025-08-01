@@ -83,7 +83,7 @@ running, we don't want any query to be starved out. Druid's internal processing 
 This allows for a second set of segments from another query to be scanned. By keeping segment computation time very small, we ensure
 that resources are constantly being yielded, and segments pertaining to different queries are all being processed.
 
-Druid queries can optionally set a `priority` flag in the [query context](../querying/query-context.md). Queries known to be
+Druid queries can optionally set a `priority` flag in the [query context reference](../querying/query-context-reference.md). Queries known to be
 slow (download or reporting style queries) can be de-prioritized and more interactive queries can have higher priority.
 
 Broker processes can also be dedicated to a given tier. For example, one set of Broker processes can be dedicated to fast interactive queries,

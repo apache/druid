@@ -61,7 +61,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
@@ -637,8 +636,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return null;
     }
     BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof CompressedNestedDataComplexColumn) {
-      final CompressedNestedDataComplexColumn<?> nestedColumn = (CompressedNestedDataComplexColumn<?>) theColumn;
+    if (theColumn instanceof NestedDataComplexColumn) {
+      final NestedDataComplexColumn nestedColumn = (NestedDataComplexColumn) theColumn;
       final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(fieldSpec.parts);
       if (nestedColumnPathIndexSupplier == null && fieldSpec.processFromRaw) {
         // if processing from raw, a non-exstent path from parts doesn't mean the path doesn't really exist
