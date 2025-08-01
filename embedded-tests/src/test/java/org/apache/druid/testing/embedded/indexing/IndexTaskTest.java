@@ -175,7 +175,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
               jan1.plusDays(index), "item " + index, index
           )
       );
-      cluster.callApi().submitTask(task, overlord);
+      cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     }
     for (String taskId : taskIds) {
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);

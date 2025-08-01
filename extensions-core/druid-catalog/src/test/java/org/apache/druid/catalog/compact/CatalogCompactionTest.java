@@ -114,7 +114,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
 
     final CompactionSupervisorSpec compactionSupervisor
         = new CompactionSupervisorSpec(compactionConfig, false, null);
-    cluster.callApi().postSupervisor(compactionSupervisor, overlord);
+    cluster.callApi().postSupervisor(compactionSupervisor);
 
     // Wait for compaction to finish
     overlord.latchableEmitter().waitForEvent(

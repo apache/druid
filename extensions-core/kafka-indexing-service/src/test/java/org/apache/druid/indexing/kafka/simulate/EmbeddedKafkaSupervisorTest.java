@@ -90,7 +90,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
 
-    Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec, overlord));
+    Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
@@ -116,7 +116,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     // Suspend the supervisor and verify the state
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec(), overlord);
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
   }

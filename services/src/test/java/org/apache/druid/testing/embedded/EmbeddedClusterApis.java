@@ -142,22 +142,17 @@ public class EmbeddedClusterApis
   public void runTask(Task task, EmbeddedOverlord leaderOverlord)
   {
     final String taskId = task.getId();
-    submitTask(task, leaderOverlord);
+    submitTask(task);
     waitForTaskToSucceed(taskId, leaderOverlord);
   }
 
   /**
-   * Submits a {@link Task} to this cluster but does not wait for it to finish.
-   * The given {@link EmbeddedOverlord} need not be the leader Overlord.
-   * This method must be used instead of {@code onLeaderOverlord(o -> o.runTask(...)}}
-   * to avoid serialization issues.
+   * Submits a {@link Task} to the leader Overlord but does not wait for it to finish.
+   * Shorthand for {@code onLeaderOverlord(o -> o.runTask(task.getId(), task))}.
    */
-  public void submitTask(Task task, EmbeddedOverlord overlord)
+  public void submitTask(Task task)
   {
-    // Use the bindings of the Overlord so that the task payload can be serialized properly
-    getResult(
-        overlord.bindings().leaderOverlord().runTask(task.getId(), task)
-    );
+    onLeaderOverlord(o -> o.runTask(task.getId(), task));
   }
 
   /**
@@ -304,19 +299,14 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Posts the given supervisor to this cluster. This method should be used
-   * instead of {@code onLeaderOverlord(o -> o.postSupervisor(...))} to avoid
-   * serialization issues. The given {@link EmbeddedOverlord} need not be the
-   * leader.
+   * Posts the given supervisor to the leader Overlord of this cluster.
+   * Shorhand for {@code onLeaderOverlord(o -> o.postSupervisor(supervisor)).get("id")}.
    *
    * @return ID of the submitted supervisor
    */
-  public String postSupervisor(SupervisorSpec supervisor, EmbeddedOverlord overlord)
+  public String postSupervisor(SupervisorSpec supervisor)
   {
-    // Use bindings of the Overlord so that the supervisor payload can be serialized correctly
-    return getResult(
-        overlord.bindings().leaderOverlord().postSupervisor(supervisor)
-    ).get("id");
+    return onLeaderOverlord(o -> o.postSupervisor(supervisor)).get("id");
   }
 
   /**
