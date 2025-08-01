@@ -792,7 +792,7 @@ public class OverlordResource
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
                            "No log was found for this task. "
-                           + "The task may not exist, or it may not have begun running yet."
+                           + "The task may not exist, it may not have begun running yet or the taskStream configuration may be faulty, kindly verify the same."
                        )
                        .build();
       }
