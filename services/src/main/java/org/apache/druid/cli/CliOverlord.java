@@ -67,6 +67,7 @@ import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
+import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogs;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
@@ -225,17 +226,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
             binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
 
-            binder.bind(TaskLogStreamer.class)
-                  .to(SwitchingTaskLogStreamer.class)
-                  .in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TaskLogStreamer>>() {})
-                  .toProvider(new ListProvider<TaskLogStreamer>().add(TaskLogs.class))
-                  .in(LazySingleton.class);
-
-            binder.bind(TaskLogStreamer.class)
-                  .annotatedWith(Names.named("taskstreamer"))
-                  .to(TaskRunnerTaskLogStreamer.class)
-                  .in(LazySingleton.class);
+            bindTaskLogStreamer(binder);
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
@@ -462,6 +453,38 @@ public class CliOverlord extends ServerRunnable
         new LookupSerdeModule(),
         new SamplerModule()
     );
+  }
+
+  private void bindTaskLogStreamer(Binder binder)
+  {
+    String logsType = properties.getProperty("druid.indexer.logs.type");
+    if ("switching".equals(logsType)) {
+      bindSwitchingTaskLogs(binder);
+    } else {
+      bindSwitchingTaskLogStreamer(binder);
+    }
+  }
+
+  private static void bindSwitchingTaskLogStreamer(Binder binder)
+  {
+    binder.bind(TaskLogStreamer.class)
+          .to(SwitchingTaskLogStreamer.class)
+          .in(LazySingleton.class);
+    binder.bind(new TypeLiteral<List<TaskLogStreamer>>() {})
+          .toProvider(new ListProvider<TaskLogStreamer>().add(TaskLogs.class))
+          .in(LazySingleton.class);
+
+    binder.bind(TaskLogStreamer.class)
+          .annotatedWith(Names.named("taskstreamer"))
+          .to(TaskRunnerTaskLogStreamer.class)
+          .in(LazySingleton.class);
+  }
+
+  private static void bindSwitchingTaskLogs(Binder binder)
+  {
+    binder.bind(TaskLogStreamer.class)
+          .to(SwitchingTaskLogs.class)
+          .in(LazySingleton.class);
   }
 
   /**
