@@ -29,7 +29,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQueryWithMM;
 import org.apache.druid.testsEx.config.DruidTestRunner;

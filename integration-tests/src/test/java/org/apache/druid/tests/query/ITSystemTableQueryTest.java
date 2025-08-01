@@ -20,7 +20,7 @@
 package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;

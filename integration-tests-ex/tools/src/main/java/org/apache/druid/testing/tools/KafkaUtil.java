@@ -17,9 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
-
-import org.apache.druid.testing.IntegrationTestingConfig;
+package org.apache.druid.testing.tools;
 
 import java.util.HashMap;
 import java.util.Map;

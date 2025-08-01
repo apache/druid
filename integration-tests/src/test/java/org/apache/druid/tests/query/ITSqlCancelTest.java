@@ -28,7 +28,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.DataLoaderHelper;

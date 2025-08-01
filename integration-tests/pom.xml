@@ -45,6 +45,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.apache.druid.integration-tests</groupId>
+            <artifactId>druid-it-tools</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>amazon-kinesis-producer</artifactId>
             <version>0.13.1</version>

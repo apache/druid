@@ -28,7 +28,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testsEx.categories.HighAvailability;

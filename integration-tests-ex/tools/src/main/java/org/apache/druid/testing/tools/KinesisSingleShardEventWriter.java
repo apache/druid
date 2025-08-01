@@ -17,19 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
-import org.joda.time.DateTime;
+import java.nio.ByteBuffer;
 
-public interface StreamGenerator
+/**
+ * Writes only to a single shard
+ */
+public class KinesisSingleShardEventWriter extends KinesisEventWriter
 {
-  /**
-   * Runs and returns the number of messages written.
-   */
-  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
 
-  /**
-   * Runs and returns the number of messages written.
-   */
-  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+  public KinesisSingleShardEventWriter(String endpoint, boolean aggregate) throws Exception
+  {
+    super(endpoint, aggregate);
+  }
+
+  @Override
+  public void write(String streamName, byte[] event)
+  {
+    getKinesisProducer().addUserRecord(
+        streamName,
+        "0",
+        ByteBuffer.wrap(event)
+    );
+  }
 }

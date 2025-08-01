@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.Query;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 
 import javax.annotation.Nullable;

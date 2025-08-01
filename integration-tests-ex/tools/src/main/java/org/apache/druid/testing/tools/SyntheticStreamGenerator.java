@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class SyntheticStreamGenerator implements StreamGenerator
@@ -46,6 +47,37 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   }
 
   abstract List<Pair<String, Object>> newEvent(int row, DateTime timestamp);
+
+  @Override
+  public List<byte[]> generate(int totalNumberOfSeconds)
+  {
+    return generate(totalNumberOfSeconds, null);
+  }
+
+  @Override
+  public List<byte[]> generate(int totalNumberOfSeconds, DateTime overrideFirstEventTime)
+  {
+    serializer.initialize(null);
+    DateTime nowCeilingToSecond = DateTimes.nowUtc().secondOfDay().roundCeilingCopy();
+    DateTime eventTimestamp = overrideFirstEventTime == null ? nowCeilingToSecond : overrideFirstEventTime;
+    int seconds = 0;
+    List<byte[]> events = new ArrayList<>();
+
+    try {
+      while (seconds < totalNumberOfSeconds) {
+        for (int i = 1; i <= eventsPerSecond; i++) {
+          events.add(serializer.serialize(newEvent(i, eventTimestamp)));
+        }
+        nowCeilingToSecond = nowCeilingToSecond.plusSeconds(1);
+        eventTimestamp = eventTimestamp.plusSeconds(1);
+        seconds++;
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Exception in event generation loop", e);
+    }
+
+    return events;
+  }
 
   @Override
   public long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)

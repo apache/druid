@@ -21,8 +21,8 @@ package org.apache.druid.testsEx.config;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.IntegrationTestingConfigProvider;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfigProvider;
 
 import javax.inject.Inject;
 import java.util.Map;
