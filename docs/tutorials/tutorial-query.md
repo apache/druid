@@ -32,7 +32,6 @@ by following one of them:
 
 * [Load a file](../tutorials/tutorial-batch.md)
 * [Load stream data from Kafka](../tutorials/tutorial-kafka.md)
-* [Load a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
 There are various ways to run Druid SQL queries: from the web console, using a command line utility
 and by posting the query by HTTP. We'll look at each of these. 

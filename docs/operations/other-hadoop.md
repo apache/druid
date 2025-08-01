@@ -23,6 +23,14 @@ title: "Working with different versions of Apache Hadoop"
   -->
 
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion deprecated. Use [SQL-based ingestion](../multi-stage-query/index.md) instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+
+:::
+
 Apache Druid can interact with Hadoop in two ways:
 
 1. [Use HDFS for deep storage](../development/extensions-core/hdfs.md) using the druid-hdfs-storage extension.

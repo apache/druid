@@ -27,11 +27,7 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 11 and Java 17. The project team recommends Java 17.
-
-:::info
-Note: Starting with Apache Druid 32.0.0, support for Java 8 has been removed.
-:::
+ The project team recommends Java 17. Although you can use Java 11, support for it is deprecated.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
@@ -74,7 +70,7 @@ Exception in thread "main" java.lang.ExceptionInInitializerError
 ```
 
 Druid's out-of-box configuration adds these parameters transparently when you use the bundled `bin/start-druid` or
-similar commands. In this case, there is nothing special you need to do to run successfully on Java 11 or 17. However,
+similar commands. In this case, there is nothing special you need to do to run successfully. However,
 if you have customized your Druid service launching system, you will need to ensure the required Java parameters are
 added. There are many ways of doing this. Choose the one that works best for you.
 
