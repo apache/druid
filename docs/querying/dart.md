@@ -44,7 +44,7 @@ Use Dart as an alternative to the native query engine since it offers better par
 
 When processing these kinds of queries, Dart can parallelize through the entire query, leading to better performance.
 
-By default, Dart queries include results form published segments and realtime tasks.
+By default, Dart queries include results fron published segments and realtime tasks.
 
 ## Enable Dart
 
@@ -63,14 +63,14 @@ For Brokers, you can set the following configs:
 | Property name | Description | Default |
 |---|---|---|
 | `druid.msq.dart.controller.concurrentQueries` | Maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Queries can get stuck waiting for each other if the total value on Brokers exceeds the setting on a single Historical (`druid.msq.dart.worker.concurrentQueries` ).| 1 |
-| `druid.msq.dart.query.context.targetPartitionsPerWorker` |Number of available threads on workers (`druid.processing.numThreads`) | 1 (Multithreading is turned off on Historicals) |
+| `druid.msq.dart.query.context.targetPartitionsPerWorker` |To parallelize queries as much as possible on each Historical, set this to the same value as `druid.processing.numThreads` on the Historicals. | 1 (Multithreading is turned off on Historicals) |
 
 
 For Historicals, you can set the following configs:
 
 | Property name | Description | Default Value |
 |---|---|---|
-| `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on that Historical. Set this to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. | Equal to the number of merge buffers |
+| `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on that Historical. We recommend leaving this config at the default value. If need to change this value, set it to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. Don't set it to a value higher than the number of merge buffers. | Equal to the number of merge buffers |
 | `druid.msq.dart.worker.heapFraction` | Maximum amount of heap available for use across all Dart queries as a decimal. | 0.35 (35% of heap) |
 
 
@@ -92,7 +92,9 @@ Dart uses the SQL endpoint `/druid/v2/sql`. To use Dart, include the query conte
 As part of your query using `SET engine = 'msq-dart'`:
 
 ```json
+{
 "query":"SET \"engine\"='msq-dart';\nSELECT\n  user,\n  commentLength,\n  COUNT(*) AS \"COUNT\"\nFROM \"wikipedia\"\nGROUP BY 1, 2\nORDER BY 2 DESC"
+}
 ```
 
 </TabItem>
@@ -116,7 +118,7 @@ As part of a `context` block:
 
 ## Query context parameters
 
-You can use query context parameters to control Dart's behavior. The following table lists the supported query context parameters:
+You can use any SQL query context parameters to control Dart's behavior unless otherwise stated. Additionally, the following table lists the supported MSQ engine query context parameters that Dart supports:
 
 | Parameter | Description | Default value |
 |---|---|---|
@@ -134,7 +136,9 @@ You can use query context parameters to control Dart's behavior. The following t
 - Dart doesn't do the following:
   - verify that `druid.msq.dart.controller.concurrentQueries` is set properly. If set too high, queries can get stuck on each other.
   - use the query cache.
-  - perform query prioritization or laning
+  - perform query prioritization or laning.
+  - TopN queries are always exact. Approximate TopN queries (`useApproximateTopN`) aren't supported.
 - Dart doesn't support JDBC connections. The `engine` context parameter gets ignored.
 - Realtime scans from the MSQ engine cannot reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
 - The `NilStageOutputReader` can sometimes lead to a `NoClassDefFoundError`. For more information, see [#18336](https://github.com/apache/druid/pull/18336).
+- Broadcast joins with realtime data isn't supported. If the left table of a join has realtime data and you're doing a broadcast join, you must set `sqlJoinAlgorithm` to `sortMerge`.
