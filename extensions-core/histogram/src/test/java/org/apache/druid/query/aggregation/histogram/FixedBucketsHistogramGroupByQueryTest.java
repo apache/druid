@@ -36,6 +36,7 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -143,12 +144,12 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setDataSource(TestIndex.DATA_SOURCE)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
             QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
+        .setInterval(TestIndex.FULL_ON_INTERVAL)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
@@ -210,7 +211,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
             QueryRunnerTestHelper.MARKET_DIMENSION,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
+        .setInterval(TestIndex.FULL_ON_INTERVAL)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
