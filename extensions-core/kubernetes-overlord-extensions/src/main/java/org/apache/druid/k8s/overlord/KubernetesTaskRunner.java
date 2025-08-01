@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -54,6 +55,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -221,8 +223,14 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
       return taskStatus;
     }
+    catch (KubernetesResourceNotFoundException e) {
+      log.error("Task[%s] failed because %s", task.getId(), e.getMessage());
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(e.getMessage());
+    }
     catch (Exception e) {
-      log.error(e, "Task [%s] execution caught an exception", task.getId());
+      log.error(e, "Task[%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
     }
   }
