@@ -121,6 +121,7 @@ public class MSQCompactionRunnerTest
   );
   private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
       "projection",
+      null,
       VirtualColumns.create(
           Granularities.toVirtualColumn(
               Granularities.HOUR,

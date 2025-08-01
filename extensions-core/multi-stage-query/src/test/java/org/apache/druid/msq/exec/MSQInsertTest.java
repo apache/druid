@@ -198,6 +198,7 @@ public class MSQInsertTest extends MSQTestBase
                             new DatasourceProjectionMetadata(
                                 new AggregateProjectionSpec(
                                     "channel_added_hourly",
+                                    null,
                                     VirtualColumns.create(
                                         Granularities.toVirtualColumn(
                                             Granularities.HOUR,
@@ -216,6 +217,7 @@ public class MSQInsertTest extends MSQTestBase
                             new DatasourceProjectionMetadata(
                                 new AggregateProjectionSpec(
                                     "channel_delta_daily",
+                                    null,
                                     VirtualColumns.create(
                                         Granularities.toVirtualColumn(
                                             Granularities.DAY,
@@ -553,6 +555,7 @@ public class MSQInsertTest extends MSQTestBase
         new AggregateProjectionMetadata.Schema(
             "channel_added_hourly",
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            null,
             VirtualColumns.create(
                 Granularities.toVirtualColumn(
                     Granularities.HOUR,
@@ -574,6 +577,7 @@ public class MSQInsertTest extends MSQTestBase
         new AggregateProjectionMetadata.Schema(
             "channel_delta_daily",
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+            null,
             VirtualColumns.create(
                 Granularities.toVirtualColumn(
                     Granularities.DAY,

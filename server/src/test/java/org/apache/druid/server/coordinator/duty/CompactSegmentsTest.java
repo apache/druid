@@ -945,6 +945,7 @@ public class CompactSegmentsTest
     final List<AggregateProjectionSpec> projections = ImmutableList.of(
         new AggregateProjectionSpec(
             dataSource + "_projection",
+            null,
             VirtualColumns.create(
                 Granularities.toVirtualColumn(
                     Granularities.HOUR,
@@ -1001,6 +1002,7 @@ public class CompactSegmentsTest
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
     final AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
         dataSource + "_projection",
+        null,
         VirtualColumns.create(
             Granularities.toVirtualColumn(
                 Granularities.HOUR,

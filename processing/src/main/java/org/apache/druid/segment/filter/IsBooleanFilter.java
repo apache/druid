@@ -62,6 +62,16 @@ public class IsBooleanFilter implements Filter
     this.isTrue = isTrue;
   }
 
+  public boolean isTrue()
+  {
+    return isTrue;
+  }
+
+  public Filter getBaseFilter()
+  {
+    return baseFilter;
+  }
+
   @Nullable
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)

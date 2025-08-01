@@ -184,6 +184,7 @@ public class QueryableIndexCursorHolderTest
                                                                  Collections.singletonList(
                                                                      new AggregateProjectionSpec(
                                                                          "ab_hourly_cd_sum_time_ordered",
+                                                                         null,
                                                                          VirtualColumns.create(
                                                                              Granularities.toVirtualColumn(
                                                                                  Granularities.HOUR,

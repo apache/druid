@@ -338,6 +338,7 @@ public class CompactionStatusTest
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
         "foo",
+        null,
         VirtualColumns.create(
             Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
         ),
@@ -385,6 +386,7 @@ public class CompactionStatusTest
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
         "1",
+        null,
         VirtualColumns.create(
             Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
         ),
@@ -398,6 +400,7 @@ public class CompactionStatusTest
     );
     final AggregateProjectionSpec projection2 = new AggregateProjectionSpec(
         "2",
+        null,
         VirtualColumns.EMPTY,
         Collections.emptyList(),
         new AggregatorFactory[]{

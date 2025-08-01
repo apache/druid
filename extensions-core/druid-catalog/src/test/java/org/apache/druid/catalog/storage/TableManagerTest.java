@@ -96,6 +96,7 @@ public class TableManagerTest
     final DatasourceProjectionMetadata projectionMetadata = new DatasourceProjectionMetadata(
         new AggregateProjectionSpec(
             "projection",
+            null,
             VirtualColumns.create(
                 Granularities.toVirtualColumn(
                     Granularities.HOUR,

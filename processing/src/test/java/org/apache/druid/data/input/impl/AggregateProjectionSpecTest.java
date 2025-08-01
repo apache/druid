@@ -27,8 +27,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   {
     AggregateProjectionSpec spec = new AggregateProjectionSpec(
         "some_projection",
+        new EqualityFilter("a", ColumnType.STRING, "a", null),
         VirtualColumns.create(
             Granularities.toVirtualColumn(Granularities.HOUR, "time")
         ),
@@ -69,6 +72,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   {
     AggregateProjectionSpec spec = new AggregateProjectionSpec(
         "some_projection",
+        null,
         VirtualColumns.EMPTY,
         List.of(),
         new AggregatorFactory[] {
@@ -86,6 +90,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionSpec(
             null,
+            null,
             VirtualColumns.EMPTY,
             List.of(new StringDimensionSchema("string")),
             null
@@ -98,6 +103,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionSpec(
             "",
+            null,
             VirtualColumns.EMPTY,
             List.of(new StringDimensionSchema("string")),
             null
@@ -115,6 +121,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             "other_projection",
             null,
             null,
+            null,
             null
         )
     );
@@ -124,6 +131,7 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionSpec(
             "other_projection",
+            null,
             null,
             Collections.emptyList(),
             null

@@ -32,7 +32,13 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.IsBooleanFilter;
+import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
@@ -54,6 +60,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "some_projection",
             "time",
+            new EqualityFilter("a", ColumnType.STRING, "a", null),
             VirtualColumns.create(
                 Granularities.toVirtualColumn(Granularities.HOUR, "time")
             ),
@@ -87,6 +94,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "good",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("theTime", "a", "b", "c"),
             new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
@@ -104,6 +112,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "betterLessGroupingColumns",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
             new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
@@ -120,6 +129,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "evenBetterMoreAggs",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
             new AggregatorFactory[]{
@@ -138,6 +148,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
             "best",
+            null,
             null,
             VirtualColumns.EMPTY,
             Arrays.asList("f", "g"),
@@ -168,6 +179,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
             ),
@@ -184,6 +196,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "",
+                null,
                 null,
                 null,
                 null,
@@ -211,6 +224,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             0
@@ -226,6 +240,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "other_projection",
+                null,
                 null,
                 null,
                 Collections.emptyList(),
@@ -252,6 +267,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 null
             ),
@@ -268,6 +284,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "",
+                null,
                 null,
                 null,
                 null,
@@ -293,18 +310,19 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   void testEqualsAndHashcodeSchema()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
-                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")
+                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "effectiveGranularity")
                   .usingGetClass()
                   .verify();
   }
 
   @Test
-  public void testSchemaMatchSimple()
+  void testSchemaMatchSimple()
   {
     // arrange
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
             "some_projection",
+            null,
             null,
             VirtualColumns.EMPTY,
             Arrays.asList("a", "b"),
@@ -332,5 +350,45 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         ImmutableMap.of("a", "a_projection")
     );
     Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  @Test
+  void testRewriteFilter()
+  {
+    Filter xeqfoo = new EqualityFilter("x", ColumnType.STRING, "foo", null);
+    Filter xeqfoo2 = new EqualityFilter("x", ColumnType.STRING, "foo", null);
+    Filter xeqbar = new EqualityFilter("x", ColumnType.STRING, "bar", null);
+    Filter yeqbar = new EqualityFilter("y", ColumnType.STRING, "bar", null);
+    Filter zeq123 = new EqualityFilter("z", ColumnType.LONG, 123L, null);
+
+    Filter queryFilter = xeqfoo2;
+    Assertions.assertInstanceOf(
+        AggregateProjectionMetadata.ProjectionFilterMatch.class,
+        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+    );
+
+    queryFilter = yeqbar;
+    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+
+    queryFilter = new AndFilter(List.of(xeqfoo, yeqbar));
+    Assertions.assertEquals(
+        yeqbar,
+        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+    );
+
+    queryFilter = new AndFilter(List.of(new OrFilter(List.of(xeqfoo, xeqbar)), yeqbar));
+    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+
+    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, true), yeqbar));
+    Assertions.assertEquals(yeqbar, AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+
+    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, false), yeqbar));
+    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+
+    queryFilter = new AndFilter(List.of(new AndFilter(List.of(xeqfoo, yeqbar)), zeq123));
+    Assertions.assertEquals(
+        new AndFilter(List.of(yeqbar, zeq123)),
+        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+    );
   }
 }

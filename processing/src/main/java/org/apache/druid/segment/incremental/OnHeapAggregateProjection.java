@@ -30,11 +30,14 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
@@ -43,6 +46,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -78,6 +82,8 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   private final long minTimestamp;
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
+  @Nullable
+  private final ValueMatcher valueMatcher;
 
   public OnHeapAggregateProjection(
       AggregateProjectionSpec projectionSpec,
@@ -121,6 +127,33 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     this.aggregatorsMap = new LinkedHashMap<>();
     this.aggregatorFactories = new AggregatorFactory[projectionSchema.getAggregators().length];
     initializeAndValidateAggregators(projectionSpec, getBaseTableDimensionDesc, getBaseTableAggregatorFactory);
+
+    if (projectionSpec.getFilter() != null) {
+      RowSignature.Builder bob = RowSignature.builder();
+      if (projectionSchema.getTimeColumnPosition() < 0) {
+        bob.addTimeColumn();
+      }
+      for (String groupingColumn : projectionSchema.getGroupingColumns()) {
+        if (projectionSchema.getTimeColumnName().equals(groupingColumn)) {
+          bob.addTimeColumn();
+        } else {
+          bob.add(groupingColumn, dimensionsMap.get(groupingColumn).getCapabilities().toColumnType());
+        }
+      }
+      valueMatcher = projectionSchema.getFilter()
+                                     .toFilter()
+                                     .makeMatcher(
+                                         RowBasedColumnSelectorFactory.create(
+                                             RowAdapters.standardRow(),
+                                             inputRowHolder::getRow,
+                                             bob.build(),
+                                             false,
+                                             false
+                                         )
+                                     );
+    } else {
+      valueMatcher = null;
+    }
   }
 
   /**
@@ -134,6 +167,9 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   )
   {
     inputRowHolder.set(inputRow);
+    if (valueMatcher != null && !valueMatcher.matches(false)) {
+      return;
+    }
     final Object[] projectionDims = new Object[dimensions.size()];
     for (int i = 0; i < projectionDims.length; i++) {
       int parentDimIndex = parentDimensionIndex[i];
@@ -153,7 +189,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     final long timestamp;
 
     if (projectionSchema.getTimeColumnName() != null) {
-      timestamp = projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis();
+      timestamp = projectionSchema.getEffectiveGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis();
       if (timestamp < minTimestamp) {
         throw DruidException.defensive(
             "Cannot add row[%s] to projection[%s] because projection effective timestamp[%s] is below the minTimestamp[%s]",

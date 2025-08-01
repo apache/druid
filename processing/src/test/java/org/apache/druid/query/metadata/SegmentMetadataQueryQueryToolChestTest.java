@@ -73,6 +73,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_HOURLY = new AggregateProjectionMetadata.Schema(
       "name1-does-not-matter",
       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      null,
       VirtualColumns.create(Granularities.toVirtualColumn(
           Granularities.HOUR,
           Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
@@ -89,6 +90,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   private static final AggregateProjectionMetadata.Schema PROJECTION_CHANNEL_ADDED_DAILY = new AggregateProjectionMetadata.Schema(
       "name2-does-not-matter",
       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      null,
       VirtualColumns.create(Granularities.toVirtualColumn(
           Granularities.DAY,
           Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME

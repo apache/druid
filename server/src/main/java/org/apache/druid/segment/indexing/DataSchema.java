@@ -464,7 +464,7 @@ public class DataSchema
         if (schema.getTimeColumnName() == null) {
           continue;
         }
-        final Granularity projectionGranularity = schema.getGranularity();
+        final Granularity projectionGranularity = schema.getEffectiveGranularity();
         if (segmentGranularity != null) {
           if (segmentGranularity.isFinerThan(projectionGranularity)) {
             throw InvalidInput.exception(

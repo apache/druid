@@ -576,6 +576,7 @@ public class CompactionTaskTest
     final List<AggregateProjectionSpec> projections = ImmutableList.of(
         new AggregateProjectionSpec(
             "test",
+            null,
             VirtualColumns.EMPTY,
             ImmutableList.of(
                 new StringDimensionSchema("dim1"),

@@ -1180,6 +1180,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
               schema.getName(),
               new AggregateProjectionSpec(
                   schema.getName(),
+                  schema.getFilter(),
                   schema.getVirtualColumns(),
                   columnSchemas,
                   schema.getAggregators()
