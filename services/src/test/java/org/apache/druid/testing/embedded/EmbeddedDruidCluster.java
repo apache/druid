@@ -21,11 +21,9 @@ package org.apache.druid.testing.embedded;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -34,9 +32,7 @@ import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.utils.RuntimeInfo;
-import org.apache.http.client.utils.URIBuilder;
 
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -76,7 +72,6 @@ import java.util.stream.Collectors;
 public class EmbeddedDruidCluster implements ClusterReferencesProvider, EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
-  private static final String LOCALHOST = "localhost";
 
   private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
@@ -86,7 +81,7 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
-  private String embeddedHostname = "localhost";
+  private EmbeddedHostname embeddedHostname = EmbeddedHostname.localhost();
   private boolean startedFirstDruidServer = false;
 
   private EmbeddedDruidCluster()
@@ -231,61 +226,21 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   }
 
   /**
-   * Sets the hostname to be used by embedded services (both Druid and external).
-   * This value needs to be changed only when using Druid containers to ensure
-   * that the underlying service is reachable by both DruidContainers and
-   * EmbeddedDruidServers.
-   * <p>
-   * The default value is {@code localhost}.
+   * Uses a container-friendly hostname for all embedded services, Druid as well
+   * as external.
    */
-  public EmbeddedDruidCluster setEmbeddedServiceHostname(String hostname)
+  public EmbeddedDruidCluster useContainerFriendlyHostname()
   {
-    this.embeddedHostname = hostname;
+    this.embeddedHostname = EmbeddedHostname.containerFriendly();
     return this;
   }
 
   /**
    * Hostname to be used for embedded services (both Druid or external).
-   * The default value is {@code localhost}.
    */
-  public String getEmbeddedServiceHostname()
+  public EmbeddedHostname getEmbeddedHostname()
   {
     return embeddedHostname;
-  }
-
-  /**
-   * Replaces {@code localhost} or {@code 127.0.0.1} in the given connectUri
-   * with {@link #getEmbeddedServiceHostname()}. Using the embedded URI ensures
-   * that the underlying service is reachable by both EmbeddedDruidServers and
-   * DruidContainers.
-   * <p>
-   * Similar to {@link #getEmbeddedHostAndPort(String)} but requires a syntactically
-   * valid connect URI, complete with a scheme, host and port.
-   */
-  public String getEmbeddedConnectUri(String connectUri)
-  {
-    try {
-      final URIBuilder uri = new URIBuilder(connectUri);
-      validateLocalhost(uri.getHost(), connectUri);
-      uri.setHost(getEmbeddedServiceHostname());
-      return uri.build().toString();
-    }
-    catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Replaces {@code localhost} or {@code 127.0.0.1} in the given hostAndPort
-   * with {@link #getEmbeddedServiceHostname()}. Using the embedded hostAndPort
-   * ensures that the underlying service is reachable by both EmbeddedDruidServers
-   * and DruidContainers.
-   */
-  public String getEmbeddedHostAndPort(String hostAndPort)
-  {
-    final HostAndPort parsedHostAndPort = HostAndPort.fromString(hostAndPort);
-    validateLocalhost(parsedHostAndPort.getHost(), hostAndPort);
-    return HostAndPort.fromParts(getEmbeddedServiceHostname(), parsedHostAndPort.getPort()).toString();
   }
 
   /**
@@ -397,15 +352,5 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     final String csv = items.stream().map(name -> "\"" + name + "\"").collect(Collectors.joining(","));
     return "[" + csv + "]";
-  }
-
-  private static void validateLocalhost(String host, String connectUri)
-  {
-    if (!"localhost".equals(host) && !"127.0.0.1".equals(host)) {
-      throw new IAE(
-          "Connect URI[%s] must contain 'localhost' or '127.0.0.1' to be reachable.",
-          connectUri
-      );
-    }
   }
 }

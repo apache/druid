@@ -46,7 +46,7 @@ public class EmbeddedZookeeper implements EmbeddedResource
   {
     cluster.addCommonProperty(
         "druid.zk.service.host",
-        cluster.getEmbeddedHostAndPort(zk.getConnectString())
+        cluster.getEmbeddedHostname().useInHostAndPort(zk.getConnectString())
     );
   }
 

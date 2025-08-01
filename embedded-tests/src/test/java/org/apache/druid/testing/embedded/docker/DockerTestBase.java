@@ -38,7 +38,7 @@ public abstract class DockerTestBase extends EmbeddedClusterTestBase
   @Override
   protected void setup() throws Exception
   {
-    cluster = createCluster().setEmbeddedServiceHostname(DruidContainerResource.getDefaultHost());
+    cluster = createCluster().useContainerFriendlyHostname();
     cluster.start();
   }
 }

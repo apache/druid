@@ -85,7 +85,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
           );
 
           self.addProperty("druid.extensions.loadList", "[]");
-          self.addProperty("druid.host", cluster.getEmbeddedServiceHostname());
+          self.addProperty("druid.host", cluster.getEmbeddedHostname().toString());
           self.addProperty("druid.indexer.task.baseDir", taskDirectory);
           self.addProperty("druid.indexer.logs.directory", logsDirectory);
           self.addProperty("druid.storage.storageDirectory", storageDirectory);

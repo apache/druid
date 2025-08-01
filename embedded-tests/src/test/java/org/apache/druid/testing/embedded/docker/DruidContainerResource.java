@@ -21,19 +21,17 @@ package org.apache.druid.testing.embedded.docker;
 
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.DruidContainer;
 import org.apache.druid.testing.MountedDir;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHostname;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
@@ -95,7 +93,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
         SERVER_ID.incrementAndGet()
     );
     this.command = command;
-    addProperty("druid.host", getDefaultHost());
+    addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
   }
 
   public DruidContainerResource usingImage(DockerImageName imageName)
@@ -223,21 +221,6 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * Hostname for the host machine running the containers. When a service uses
-   * this hostname instead of "localhost", it is reachable by Druid containers
-   * as well as EmbeddedDruidServers.
-   */
-  public static String getDefaultHost()
-  {
-    try {
-      return InetAddress.getLocalHost().getHostAddress();
-    }
-    catch (UnknownHostException e) {
-      throw new ISE(e, "Unable to determine host name");
     }
   }
 

@@ -82,7 +82,7 @@ public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQL
     ensureRunning();
     return StringUtils.format(
         "jdbc:postgresql://%s:%d/%s",
-        cluster.getEmbeddedServiceHostname(),
+        cluster.getEmbeddedHostname(),
         getContainer().getMappedPort(5432),
         DATABASE_NAME
     );

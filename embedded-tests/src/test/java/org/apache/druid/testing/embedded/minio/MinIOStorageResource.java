@@ -85,7 +85,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     cluster.addCommonProperty("druid.indexer.logs.s3Prefix", "druid/indexing-logs");
 
     // Configure S3 connection properties
-    cluster.addCommonProperty("druid.s3.endpoint.url", cluster.getEmbeddedConnectUri(getEndpointUrl()));
+    cluster.addCommonProperty("druid.s3.endpoint.url", cluster.getEmbeddedHostname().useInUri(getEndpointUrl()));
     cluster.addCommonProperty("druid.s3.accessKey", getAccessKey());
     cluster.addCommonProperty("druid.s3.secretKey", getSecretKey());
     cluster.addCommonProperty("druid.s3.enablePathStyleAccess", "true");
