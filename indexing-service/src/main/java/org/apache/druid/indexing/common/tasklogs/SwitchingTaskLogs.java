@@ -30,79 +30,79 @@ import java.io.InputStream;
 
 public class SwitchingTaskLogs implements TaskLogs
 {
-  private final TaskLogs delegate;
-  private final TaskLogs streamer;
-  private final TaskLogs pusher;
+  private final TaskLogs reportPusher;
+  private final TaskLogs logStreamer;
+  private final TaskLogs logPusher;
 
   @Inject
   public SwitchingTaskLogs(
-      @Named("delegate") TaskLogs delegate, 
-      @Named("streamer") TaskLogs streamer,
-      @Named("pusher") TaskLogs pusher
+      @Named("reports") TaskLogs reportPusher,
+      @Named("streamer") TaskLogs logStreamer,
+      @Named("pusher") TaskLogs logPusher
   )
   {
-    this.delegate = delegate;
-    this.streamer = streamer;
-    this.pusher = pusher;
+    this.reportPusher = reportPusher;
+    this.logStreamer = logStreamer;
+    this.logPusher = logPusher;
   }
 
   @Override
   public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
   {
-    return streamer.streamTaskLog(taskid, offset);
+    return logStreamer.streamTaskLog(taskid, offset);
   }
 
   @Override
   public Optional<InputStream> streamTaskReports(final String taskid) throws IOException
   {
-    return delegate.streamTaskReports(taskid);
+    return reportPusher.streamTaskReports(taskid);
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
   {
-    return delegate.streamTaskReports(taskid);
+    return reportPusher.streamTaskReports(taskid);
   }
 
   @Override
   public void pushTaskLog(String taskid, File logFile) throws IOException
   {
-    pusher.pushTaskLog(taskid, logFile);
+    logPusher.pushTaskLog(taskid, logFile);
   }
 
   @Override
   public void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException
   {
-    delegate.pushTaskPayload(taskid, taskPayloadFile);
+    reportPusher.pushTaskPayload(taskid, taskPayloadFile);
   }
 
   @Override
   public void killAll() throws IOException
   {
-    delegate.killAll();
+    reportPusher.killAll();
   }
 
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
-    delegate.killOlderThan(timestamp);
+    reportPusher.killOlderThan(timestamp);
   }
 
   @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
-    delegate.pushTaskReports(taskid, reportFile);
+    reportPusher.pushTaskReports(taskid, reportFile);
   }
 
   @Override
   public void pushTaskStatus(String taskid, File reportFile) throws IOException
   {
-    delegate.pushTaskStatus(taskid, reportFile);
+    reportPusher.pushTaskStatus(taskid, reportFile);
   }
 
   @Override
   public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
   {
-    return delegate.streamTaskPayload(taskid);
+    return reportPusher.streamTaskPayload(taskid);
   }
 }

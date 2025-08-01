@@ -63,8 +63,8 @@ public class Binders
 
   public static <T extends TaskLogs> void bindTaskLogs(Binder binder, String type, Class<T> clazz)
   {
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(clazz).in(LazySingleton.class);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("delegate"))).addBinding(type).to(clazz).in(LazySingleton.class);
-    binder.bind(Key.get(TaskLogs.class, Names.named(type))).to(clazz).in(LazySingleton.class);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("defaultType"))).addBinding(type).to(clazz);
+    binder.bind(Key.get(TaskLogs.class, Names.named(type))).to(clazz);
   }
 }
