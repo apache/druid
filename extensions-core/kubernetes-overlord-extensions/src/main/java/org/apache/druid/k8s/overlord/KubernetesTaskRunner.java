@@ -224,6 +224,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       return taskStatus;
     }
     catch (KubernetesResourceNotFoundException e) {
+      // The stack trace of this error is less informative than the message, in surfacing the root cause of the problem.
       log.error("Task[%s] failed because %s", task.getId(), e.getMessage());
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.NOT_FOUND)
