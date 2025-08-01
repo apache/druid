@@ -26,9 +26,13 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -130,23 +135,29 @@ public class EmbeddedClusterApis
   }
 
   /**
-   * Creates a Task using the given builder and runs it.
-   *
-   * @return ID of the task.
+   * Runs a {@link Task} on this cluster and waits until it has completed successfully.
+   * The given {@link EmbeddedOverlord} must be the leader with a {@code LatchableEmitter}
+   * bound so that the task completion metric can be waited upon.
    */
-  public String runTask(
-      TaskBuilder taskBuilder,
-      String dataSource,
-      EmbeddedOverlord overlord,
-      EmbeddedCoordinator coordinator
-  )
+  public void runTask(Task task, EmbeddedOverlord leaderOverlord)
   {
-    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.build(dataSource, taskId)));
-    waitForTaskToSucceed(taskId, overlord);
-    waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    final String taskId = task.getId();
+    submitTask(task, leaderOverlord);
+    waitForTaskToSucceed(taskId, leaderOverlord);
+  }
 
-    return taskId;
+  /**
+   * Submits a {@link Task} to this cluster but does not wait for it to finish.
+   * The given {@link EmbeddedOverlord} need not be the leader Overlord.
+   * This method must be used instead of {@code onLeaderOverlord(o -> o.runTask(...)}}
+   * to avoid serialization issues.
+   */
+  public void submitTask(Task task, EmbeddedOverlord overlord)
+  {
+    // Use the bindings of the Overlord so that the task payload can be serialized properly
+    getResult(
+        overlord.bindings().leaderOverlord().runTask(task.getId(), task)
+    );
   }
 
   /**
@@ -156,8 +167,10 @@ public class EmbeddedClusterApis
    */
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
-    waitForTaskToFinish(taskId, overlord);
-    verifyTaskHasStatus(taskId, TaskStatus.success(taskId));
+    Assertions.assertEquals(
+        TaskState.SUCCESS,
+        waitForTaskToFinish(taskId, overlord).getStatusCode()
+    );
   }
 
   /**
@@ -165,12 +178,13 @@ public class EmbeddedClusterApis
    * {@link EmbeddedOverlord} is not the leader, this method can only return by
    * throwing an exception upon timeout.
    */
-  public void waitForTaskToFinish(String taskId, EmbeddedOverlord overlord)
+  public TaskStatus waitForTaskToFinish(String taskId, EmbeddedOverlord overlord)
   {
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );
+    return getTaskStatus(taskId);
   }
 
   /**
@@ -273,6 +287,39 @@ public class EmbeddedClusterApis
   }
 
   /**
+   * Gets the current status of the given task.
+   */
+  public TaskStatus getTaskStatus(String taskId)
+  {
+    final TaskStatusPlus statusPlus = onLeaderOverlord(o -> o.taskStatus(taskId)).getStatus();
+    Assertions.assertNotNull(statusPlus);
+
+    return new TaskStatus(
+        statusPlus.getId(),
+        Objects.requireNonNull(statusPlus.getStatusCode()),
+        Objects.requireNonNull(statusPlus.getDuration()),
+        statusPlus.getErrorMsg(),
+        statusPlus.getLocation()
+    );
+  }
+
+  /**
+   * Posts the given supervisor to this cluster. This method should be used
+   * instead of {@code onLeaderOverlord(o -> o.postSupervisor(...))} to avoid
+   * serialization issues. The given {@link EmbeddedOverlord} need not be the
+   * leader.
+   *
+   * @return ID of the submitted supervisor
+   */
+  public String postSupervisor(SupervisorSpec supervisor, EmbeddedOverlord overlord)
+  {
+    // Use bindings of the Overlord so that the supervisor payload can be serialized correctly
+    return getResult(
+        overlord.bindings().leaderOverlord().postSupervisor(supervisor)
+    ).get("id");
+  }
+
+  /**
    * Fetches the current status of the given supervisor ID.
    */
   public SupervisorStatus getSupervisorStatus(String supervisorId)
@@ -315,7 +362,9 @@ public class EmbeddedClusterApis
   public static Map<String, Object> deserializeJsonToMap(String payload)
   {
     try {
-      return TestHelper.JSON_MAPPER.readValue(payload, new TypeReference<>() {});
+      return TestHelper.JSON_MAPPER.readValue(payload, new TypeReference<>()
+      {
+      });
     }
     catch (Exception e) {
       throw new ISE(e, "Could not deserialize payload[%s]", payload);

@@ -167,7 +167,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
   void setUpEach()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    submitSupervisor();
+    submitSupervisor(overlord);
     publishToKafka(TestIndex.getMMappedWikipediaIndex());
 
     // Wait for it to be loaded.
