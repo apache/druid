@@ -446,7 +446,8 @@ public class Lifecycle
           log.info("Starting lifecycle [%s#%s]", o.getClass().getSimpleName(), method.getName());
           try {
             method.invoke(o);
-          } catch (InvocationTargetException e) {
+          }
+          catch (InvocationTargetException e) {
             throw new RuntimeException(e.getCause());
           }
         }
