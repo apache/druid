@@ -70,10 +70,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   protected String runTask(TaskBuilder<?, ?, ?> taskBuilder)
   {
     final String taskId = IdUtils.getRandomId();
-    cluster.callApi().runTask(
-        taskBuilder.dataSource(dataSource).withId(IdUtils.getRandomId()),
-        overlord
-    );
+    cluster.callApi().runTask(taskBuilder.dataSource(dataSource).withId(taskId), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
     return taskId;
