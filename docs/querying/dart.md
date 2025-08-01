@@ -125,7 +125,7 @@ You can use query context parameters to control Dart's behavior. The following t
 | `removeNullBytes` |The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
 |`maxConcurrentStages`|Number of stages that can run concurrently for a query. A higher number can potentially improve pipelining but results in less memory available for each stage.|2|
 |`maxNonLeafWorkers`|Number of workers to use for stages beyond the leaf stage| 1 (Scatter-gather style)|
-| `sqlJoinAlgorithm` | Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
+| `sqlJoinAlgorithm` | Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](../multi-stage-query/reference.md#joins) for more details. | `broadcast` |
 |`targetPartitionsPerWorker`|Number of partitions Druid generates for each worker. This number controls how much parallelism can be maintained throughout a query.|1|
 
 
