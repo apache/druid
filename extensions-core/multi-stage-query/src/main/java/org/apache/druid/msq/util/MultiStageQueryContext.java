@@ -377,9 +377,17 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
   }
 
+  public static boolean isDartQuery(final QueryContext queryContext)
+  {
+    return queryContext.get(QueryContexts.CTX_DART_QUERY_ID) != null;
+  }
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
+    if (isDartQuery(queryContext)) {
+      // Dart does not support any other destination.
+      return MSQSelectDestination.TASKREPORT;
+    }
     return QueryContexts.getAsEnum(
         CTX_SELECT_DESTINATION,
         queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
