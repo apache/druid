@@ -61,7 +61,7 @@
     "@internationalized/date": "^3.5.6",
     "ace-builds": "~1.5.3",
     "axios": "^1.7.7",
-    "chronoshift": "^1.2.0",
+    "chronoshift": "^1.2.1",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.3",
     "d3-array": "^3.2.4",
