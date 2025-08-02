@@ -23,6 +23,13 @@ package org.apache.druid.java.util.emitter.core;
  */
 public interface Event
 {
+  String TIMESTAMP = "timestamp";
+  String FEED = "feed";
+  String SERVICE = "service";
+  String HOST = "host";
+  String METRIC = "metric";
+  String VALUE = "value";
+
   EventMap toMap();
 
   String getFeed();

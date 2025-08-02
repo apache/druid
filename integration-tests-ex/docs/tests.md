@@ -142,7 +142,6 @@ At present, the following test categories are fully or partly converted:
 
 | Category | Test NG Group | Description |
 | -------- | ------------- | ----------- |
-| HighAvailability | high-availability | Cluster failover tests |
 | BatchIndex | batch-index | Batch indexing tsets |
 | InputFormat | input-format | Input format tests |
 

@@ -41,14 +41,13 @@ public class EmbeddedZookeeper implements EmbeddedResource
     zk.tearDownServerAndCurator();
   }
 
-  /**
-   * Connection string for this embedded Zookeeper.
-   *
-   * @return A valid Zookeeper string only after {@link #start()} has been called.
-   */
-  public String getConnectString()
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
   {
-    return zk.getConnectString();
+    cluster.addCommonProperty(
+        "druid.zk.service.host",
+        cluster.getEmbeddedHostname().useInHostAndPort(zk.getConnectString())
+    );
   }
 
   @Override

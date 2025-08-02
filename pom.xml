@@ -227,6 +227,7 @@
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
+        <module>extensions-core/druid-testcontainers</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>

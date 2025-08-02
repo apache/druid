@@ -125,7 +125,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     coordinator1.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/metadataCache/used/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValue(10)
+                      .hasValueAtLeast(10)
     );
 
     // Run sys queries, switch leaders, repeat
@@ -150,7 +150,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void verifyNodeRoleHasServerCount(
+  public static void verifyNodeRoleHasServerCount(
       NodeRole role,
       int expectedCount,
       DruidNodeDiscoveryProvider discovery,
@@ -171,7 +171,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     }
   }
 
-  private void verifySelfDiscoveredStatusReturnsOk(
+  private static void verifySelfDiscoveredStatusReturnsOk(
       DiscoveryDruidNode node,
       HttpClient httpClient
   ) throws Exception

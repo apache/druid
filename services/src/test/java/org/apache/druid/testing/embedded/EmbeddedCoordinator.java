@@ -43,7 +43,7 @@ public class EmbeddedCoordinator extends EmbeddedDruidServer<EmbeddedCoordinator
   }
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Coordinator(handler);
   }

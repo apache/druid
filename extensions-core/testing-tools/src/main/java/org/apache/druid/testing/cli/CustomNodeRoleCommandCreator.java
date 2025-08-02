@@ -17,9 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.categories;
+package org.apache.druid.testing.cli;
 
-public class HighAvailability
+import com.github.rvesse.airline.builder.CliBuilder;
+import org.apache.druid.cli.CliCommandCreator;
+
+public class CustomNodeRoleCommandCreator implements CliCommandCreator
 {
-
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @Override
+  public void addCommands(CliBuilder builder)
+  {
+    builder.withGroup("server").withCommands(CliEventCollector.class);
+  }
 }

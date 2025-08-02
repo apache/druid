@@ -359,15 +359,6 @@
 
     <profiles>
         <profile>
-          <id>IT-HighAvailability</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-        <properties>
-          <it.category>HighAvailability</it.category>
-        </properties>
-        </profile>
-        <profile>
           <id>IT-BatchIndex</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

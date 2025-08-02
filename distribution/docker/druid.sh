@@ -129,6 +129,13 @@ SCONFIG=$(eval echo \$$(echo $SCONFIG))
 
 if [ -n "${SCONFIG}" ]
 then
+    # Create service conf directory as it may not exist for custom node roles
+    if [ ! -d "$SERVICE_CONF_DIR" ]
+    then
+      echo "Creating conf directory '$SERVICE_CONF_DIR'"
+      mkdir -p $SERVICE_CONF_DIR
+    fi
+
     cp -f "${SCONFIG}" $SERVICE_CONF_DIR/runtime.properties
 fi
 

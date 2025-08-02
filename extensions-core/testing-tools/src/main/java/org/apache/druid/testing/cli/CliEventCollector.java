@@ -17,18 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.cli.ServerRunnable;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
@@ -43,11 +40,13 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.testing.metrics.EventCollectorResource;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
@@ -56,19 +55,19 @@ import java.util.Properties;
 import java.util.Set;
 
 @Command(
-    name = CliCustomNodeRole.SERVICE_NAME,
-    description = "Some custom druid node role defined in an extension"
+    name = CliEventCollector.SERVICE_NAME,
+    description = "Custom Druid node role used to collect metrics over HTTP"
 )
-public class CliCustomNodeRole extends ServerRunnable
+public class CliEventCollector extends ServerRunnable
 {
-  private static final Logger LOG = new Logger(CliCustomNodeRole.class);
+  private static final Logger LOG = new Logger(CliEventCollector.class);
 
-  public static final String SERVICE_NAME = "custom-node-role";
+  public static final String SERVICE_NAME = "eventCollector";
   public static final int PORT = 9301;
   public static final int TLS_PORT = 9501;
-  public static final NodeRole NODE_ROLE = new NodeRole(CliCustomNodeRole.SERVICE_NAME);
+  public static final NodeRole NODE_ROLE = new NodeRole(CliEventCollector.SERVICE_NAME);
 
-  public CliCustomNodeRole()
+  public CliEventCollector()
   {
     super(LOG);
   }
@@ -76,21 +75,25 @@ public class CliCustomNodeRole extends ServerRunnable
   @Override
   protected Set<NodeRole> getNodeRoles(Properties properties)
   {
-    return ImmutableSet.of(NODE_ROLE);
+    return Set.of(NODE_ROLE);
   }
 
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.of(
+    return List.of(
         binder -> {
-          LOG.info("starting up custom node role");
-          binder.bindConstant().annotatedWith(Names.named("serviceName")).to(CliCustomNodeRole.SERVICE_NAME);
-          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(CliCustomNodeRole.PORT);
-          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(CliCustomNodeRole.TLS_PORT);
+          LOG.info(
+              "Starting Test Service [eventCollector]. This is a test only"
+                   + " Druid service which must never be used in production."
+          );
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to(CliEventCollector.SERVICE_NAME);
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(CliEventCollector.PORT);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(CliEventCollector.TLS_PORT);
 
           binder.bind(JettyServerInitializer.class).to(CustomJettyServiceInitializer.class).in(LazySingleton.class);
           LifecycleModule.register(binder, Server.class);
+          Jerseys.addResource(binder, EventCollectorResource.class);
 
           bindAnnouncer(
               binder,
@@ -98,16 +101,15 @@ public class CliCustomNodeRole extends ServerRunnable
           );
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
-      }
+
+        }
     );
   }
 
-  // ugly mimic of other Jetty initializers
+  // ugly mimic of other jetty initializers
   private static class CustomJettyServiceInitializer implements JettyServerInitializer
   {
-    private static List<String> UNSECURED_PATHS = ImmutableList.of(
-        "/status/health"
-    );
+    private static final List<String> UNSECURED_PATHS = List.of("/status/health");
 
     private final ServerConfig serverConfig;
 
@@ -145,7 +147,8 @@ public class CliCustomNodeRole extends ServerRunnable
           jsonMapper
       );
 
-      root.addFilter(GuiceFilter.class, "/*", null);
+      final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
+      root.addFilter(guiceFilterHolder, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
       // Do not change the order of the handlers that have already been added

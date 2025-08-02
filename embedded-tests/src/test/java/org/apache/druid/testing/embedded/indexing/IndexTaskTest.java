@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -143,14 +142,11 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
 
   private IndexTask createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
-    return TaskBuilder.ofTypeIndex()
-                      .dataSource(dataSource)
-                      .isoTimestampColumn("time")
-                      .csvInputFormatWithColumns("time", "item", "value")
-                      .inlineInputSourceWithData(inlineDataCsv)
-                      .segmentGranularity("DAY")
-                      .dimensions()
-                      .withId(taskId);
+    return MoreResources.Task.BASIC_INDEX
+        .get()
+        .inlineInputSourceWithData(inlineDataCsv)
+        .dataSource(dataSource)
+        .withId(taskId);
   }
 
   /**

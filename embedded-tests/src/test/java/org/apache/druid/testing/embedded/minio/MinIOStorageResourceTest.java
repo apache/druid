@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.minio;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHostname;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
@@ -38,6 +39,8 @@ public class MinIOStorageResourceTest
   {
     final MinIOStorageResource resource = new MinIOStorageResource("test-bucket", "test/base");
     final EmbeddedDruidCluster cluster = Mockito.mock(EmbeddedDruidCluster.class);
+    Mockito.when(cluster.getEmbeddedHostname()).thenReturn(EmbeddedHostname.localhost());
+    resource.beforeStart(cluster);
 
     resource.start();
     assertTrue(resource.isRunning());
