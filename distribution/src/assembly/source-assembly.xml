@@ -26,6 +26,45 @@
         <format>tar.gz</format>
     </formats>
     <fileSets>
+        <!-- examples/bin -->
+        <fileSet>
+            <directory>../examples/bin</directory>
+            <outputDirectory>examples/bin</outputDirectory>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+
+        <!-- web-console/script -->
+        <fileSet>
+            <directory>../web-console/script</directory>
+            <outputDirectory>web-console/script</outputDirectory>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+
+        <!-- distribution/bin -->
+        <fileSet>
+            <directory>bin</directory>
+            <outputDirectory>distribution/bin</outputDirectory>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/extensions</directory>
+            <includes>
+                <include>*/*</include>
+            </includes>
+            <outputDirectory>extensions</outputDirectory>
+        </fileSet>
         <fileSet>
             <directory>../</directory>
             <outputDirectory/>
