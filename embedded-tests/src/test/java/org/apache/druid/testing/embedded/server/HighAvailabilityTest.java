@@ -121,8 +121,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
         .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
         .dimensions()
         .withId(taskId);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord1);
+    cluster.callApi().runTask(task, overlord1);
     coordinator1.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/metadataCache/used/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)

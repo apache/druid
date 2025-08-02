@@ -26,6 +26,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
@@ -113,7 +114,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
 
     final CompactionSupervisorSpec compactionSupervisor
         = new CompactionSupervisorSpec(compactionConfig, false, null);
-    cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(compactionSupervisor));
+    cluster.callApi().postSupervisor(compactionSupervisor);
 
     // Wait for compaction to finish
     overlord.latchableEmitter().waitForEvent(
@@ -136,13 +137,12 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
   private void runIngestionAtDayGranularity()
   {
     final String taskId = IdUtils.getRandomId();
-    final Object task = createIndexTaskForInlineData(taskId);
+    final IndexTask task = createIndexTaskForInlineData(taskId);
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
   }
 
-  private Object createIndexTaskForInlineData(String taskId)
+  private IndexTask createIndexTaskForInlineData(String taskId)
   {
     final String inlineDataCsv =
         "2025-06-01T00:00:00.000Z,shirt,105"
