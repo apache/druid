@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.server;
 
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -128,13 +129,12 @@ public class HistoricalCloningTest extends EmbeddedClusterTestBase
   private void runIngestion()
   {
     final String taskId = IdUtils.getRandomId();
-    final Object task = createIndexTaskForInlineData(taskId);
+    final IndexTask task = createIndexTaskForInlineData(taskId);
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
   }
 
-  private Object createIndexTaskForInlineData(String taskId)
+  private IndexTask createIndexTaskForInlineData(String taskId)
   {
     return TaskBuilder.ofTypeIndex()
                       .dataSource(dataSource)

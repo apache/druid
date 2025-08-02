@@ -88,9 +88,10 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
   {
     // Submit a supervisor.
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor();
-    final Map<String, String> startSupervisorResult =
-        cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(kafkaSupervisorSpec));
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    Assertions.assertEquals(
+        dataSource,
+        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
+    );
   }
 
   /**

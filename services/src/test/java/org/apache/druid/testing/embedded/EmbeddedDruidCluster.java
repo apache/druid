@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.metrics.LatchableEmitter;
@@ -319,19 +320,37 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   @Override
   public CoordinatorClient leaderCoordinator()
   {
-    return servers.get(0).bindings().leaderCoordinator();
+    return findServerOfType(EmbeddedCoordinator.class).bindings().leaderCoordinator();
   }
 
   @Override
   public OverlordClient leaderOverlord()
   {
-    return servers.get(0).bindings().leaderOverlord();
+    return findServerOfType(EmbeddedOverlord.class).bindings().leaderOverlord();
   }
 
   @Override
   public BrokerClient anyBroker()
   {
-    return servers.get(0).bindings().anyBroker();
+    return findServerOfType(EmbeddedBroker.class).bindings().anyBroker();
+  }
+
+  private <S extends EmbeddedDruidServer<S>> EmbeddedDruidServer<S> findServerOfType(
+      Class<S> serverType
+  )
+  {
+    S foundServer = null;
+    for (EmbeddedDruidServer<?> server : servers) {
+      if (serverType.isInstance(server)) {
+        foundServer = serverType.cast(server);
+        break;
+      }
+    }
+
+    return Objects.requireNonNull(
+        foundServer,
+        StringUtils.format("Cluster has no %s", serverType.getSimpleName())
+    );
   }
 
   private void validateNotStarted()

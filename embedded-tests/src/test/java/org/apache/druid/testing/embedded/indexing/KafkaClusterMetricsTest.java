@@ -156,10 +156,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         maxRowsPerSegment
     );
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec)
+    Assertions.assertEquals(
+        supervisorId,
+        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
     );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
     // Wait for segments to be handed off
     indexer.latchableEmitter().waitForEventAggregate(
@@ -183,9 +183,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
 
     // Suspend the supervisor
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
-    );
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
   @Test
@@ -208,9 +206,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec)
-    );
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
     // Wait for a task to succeed
     overlord.latchableEmitter().waitForEventAggregate(
@@ -248,9 +244,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         false,
         null
     );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(compactionSupervisorSpec)
-    );
+    cluster.callApi().postSupervisor(compactionSupervisorSpec);
 
     // Wait until some compaction tasks have finished
     overlord.latchableEmitter().waitForEventAggregate(
@@ -309,12 +303,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     // Suspend the supervisors
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(compactionSupervisorSpec.createSuspendedSpec())
-    );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
-    );
+    cluster.callApi().postSupervisor(compactionSupervisorSpec.createSuspendedSpec());
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
   @Test
@@ -337,9 +327,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec)
-    );
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
     // Wait for some segments to be published
     overlord.latchableEmitter().waitForEvent(
@@ -371,9 +359,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         false,
         null
     );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(compactionSupervisorSpec)
-    );
+    cluster.callApi().postSupervisor(compactionSupervisorSpec);
 
     // Wait until some skipped metrics have been emitted
     overlord.latchableEmitter().waitForEventAggregate(
@@ -388,12 +374,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     // Suspend the supervisors
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(compactionSupervisorSpec.createSuspendedSpec())
-    );
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
-    );
+    cluster.callApi().postSupervisor(compactionSupervisorSpec.createSuspendedSpec());
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
   /**
