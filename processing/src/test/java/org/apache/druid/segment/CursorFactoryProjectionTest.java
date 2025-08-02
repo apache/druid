@@ -605,7 +605,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setVirtualColumns(
                         new ExpressionVirtualColumn(
                             "v0",
-                            "concat(b, 'foo')",
+                            "concat(\"b\", 'foo')",
                             ColumnType.STRING,
                             TestExprMacroTable.INSTANCE
                         )
