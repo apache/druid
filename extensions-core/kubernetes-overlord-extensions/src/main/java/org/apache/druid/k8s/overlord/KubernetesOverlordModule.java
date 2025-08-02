@@ -29,6 +29,7 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
@@ -46,6 +47,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -56,6 +58,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
@@ -72,6 +75,7 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 
 import java.util.Locale;
 import java.util.Properties;
@@ -81,7 +85,7 @@ import java.util.Properties;
 public class KubernetesOverlordModule implements DruidModule
 {
 
-  private static final Logger log = new Logger(KubernetesOverlordModule.class);
+  private static final Logger log = new EmittingLogger(KubernetesOverlordModule.class);
   private static final String K8SANDWORKER_PROPERTIES_PREFIX = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                                                + ".k8sAndWorker";
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
@@ -290,16 +294,83 @@ public class KubernetesOverlordModule implements DruidModule
   private void configureTaskLogs(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(binder, "druid.indexer.logs.switching.defaultType", Key.get(TaskLogs.class, Names.named("defaultType")), Key.get(FileTaskLogs.class));
+
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
     final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
-    taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
-    taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
+
+    taskLogBinder.addBinding("switching").to(SwitchingTaskLogs.class);
+    Binders.bindTaskLogs(binder, "noop", NoopTaskLogs.class);
+    Binders.bindTaskLogs(binder, "file", FileTaskLogs.class);
+
     binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
     binder.bind(FileTaskLogs.class).in(LazySingleton.class);
+    binder.bind(SwitchingTaskLogs.class).in(LazySingleton.class);
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
+    binder.bind(TaskPayloadManager.class).to(TaskLogs.class);
+  }
+
+  @Provides
+  @Named("streamer")
+  public TaskLogs provideStreamer(
+      Properties properties,
+      Injector injector,
+      @Named("defaultType") TaskLogs defaultTaskLogs
+  )
+  {
+    String logStreamerType = properties.getProperty("druid.indexer.logs.switching.streamType");
+    if (logStreamerType != null) {
+      try {
+        return injector.getInstance(Key.get(TaskLogs.class, Names.named(logStreamerType)));
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to get TaskLogs for type[%s], using default", logStreamerType);
+      }
+    }
+    return defaultTaskLogs;
+  }
+
+  @Provides
+  @Named("pusher")
+  public TaskLogs providePusher(
+      Properties properties,
+      Injector injector,
+      @Named("defaultType") TaskLogs defaultTaskLogs
+  )
+  {
+    String logPusherType = properties.getProperty("druid.indexer.logs.switching.pushType");
+    if (logPusherType != null) {
+      try {
+        return injector.getInstance(Key.get(TaskLogs.class, Names.named(logPusherType)));
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to get TaskLogs for type[%s], using default", logPusherType);
+      }
+    }
+    return defaultTaskLogs;
+  }
+
+  @Provides
+  @Named("reports")
+  public TaskLogs provideDelegate(
+      Properties properties,
+      Injector injector,
+      @Named("defaultType") TaskLogs defaultTaskLogs
+  )
+  {
+    String reportsType = properties.getProperty("druid.indexer.logs.switching.reportsType");
+    if (reportsType != null) {
+      try {
+        return injector.getInstance(Key.get(TaskLogs.class, Names.named(reportsType)));
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to get TaskLogs for type[%s], using default", reportsType);
+      }
+    }
+    return defaultTaskLogs;
   }
 
 }
