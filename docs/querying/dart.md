@@ -38,9 +38,9 @@ Dart is a profile of the MSQ engine that runs SELECT queries on Brokers and Hist
 
 Use Dart as an alternative to the native query engine since it offers better parallelism, excelling at queries that involve:
 
-- large joins, which Dart performs using parallel sort-merges
-- high-cardinality exact groupBys 
-- high-cardinality exact count distinct
+- Large joins, which Dart performs using parallel sort-merges.
+- High-cardinality exact groupBy operations.
+- High-cardinality exact count distinct.
 
 When processing these kinds of queries, Dart can parallelize through the entire query, leading to better performance.
 
@@ -62,7 +62,7 @@ For Brokers, you can set the following configs:
 
 | Property name | Description | Default |
 |---|---|---|
-| `druid.msq.dart.controller.concurrentQueries` | Maximum number of query controllers that can run concurrently on that Broker. Additional controllers are queued. Queries can get stuck waiting for each other if the total value on Brokers exceeds the setting on a single Historical (`druid.msq.dart.worker.concurrentQueries` ).| 1 |
+| `druid.msq.dart.controller.concurrentQueries` | Maximum number of query controllers that can run concurrently on that Broker. Druid queues additional controllers. Queries can get stuck waiting for each other if the total value on Brokers exceeds the setting on a single Historical (`druid.msq.dart.worker.concurrentQueries` ).| 1 |
 | `druid.msq.dart.query.context.targetPartitionsPerWorker` |To parallelize queries as much as possible on each Historical, set this to the same value as `druid.processing.numThreads` on the Historicals. | 1 (Multithreading is turned off on Historicals) |
 
 
@@ -70,7 +70,7 @@ For Historicals, you can set the following configs:
 
 | Property name | Description | Default Value |
 |---|---|---|
-| `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on that Historical. We recommend leaving this config at the default value. If need to change this value, set it to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. Don't set it to a value higher than the number of merge buffers. | Equal to the number of merge buffers |
+| `druid.msq.dart.worker.concurrentQueries` | Maximum number of query workers that can run concurrently on a Historical. We recommend leaving this config at the default value. If need to change this value, set it to a value equal to or larger than `druid.msq.dart.controller.concurrentQueries` on your Brokers. If you don't, queries can get stuck waiting for each other. Don't set it to a value higher than the number of merge buffers. | Equal to the number of merge buffers |
 | `druid.msq.dart.worker.heapFraction` | Maximum amount of heap available for use across all Dart queries as a decimal. | 0.35 (35% of heap) |
 
 
@@ -123,10 +123,10 @@ You can use any SQL query context parameters to control Dart's behavior unless o
 | Parameter | Description | Default value |
 |---|---|---|
 | `finalizeAggregations` | Determines the type of aggregation to return. If true, Druid finalizes the results of complex aggregations that directly appear in query results. If false, Druid returns the aggregation's intermediate type rather than finalized type. This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables. For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md). | `true` |
-| `includeSegmentSource` |  Controls the sources that are queried for results in addition to the segments present on deep storage. Can be `NONE` or `REALTIME`. If this value is `NONE`, only non-realtime (published and used) segments will be downloaded from deep storage. If this value is `REALTIME`, results will also be included from realtime tasks.|  `REALTIME` |
-| `removeNullBytes` |The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
+| `includeSegmentSource` |  Controls the sources Druid queries for results in addition to the segments present on deep storage. Can be `NONE` or `REALTIME`. If set to `NONE`, only non-realtime (published and used) segments are downloaded from deep storage. If set to `REALTIME`, results are also included from realtime tasks.|  `REALTIME` |
+| `removeNullBytes` |The MSQ engine can't process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, the MSQ engine removes the null bytes in string fields when reading the data. | `false` |
 |`maxConcurrentStages`|Number of stages that can run concurrently for a query. A higher number can potentially improve pipelining but results in less memory available for each stage.|2|
-|`maxNonLeafWorkers`|Number of workers to use for stages beyond the leaf stage| 1 (Scatter-gather style)|
+|`maxNonLeafWorkers`|Number of workers to use for stages beyond the leaf stage.| 1 (Scatter-gather style)|
 | `sqlJoinAlgorithm` | Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](../multi-stage-query/reference.md#joins) for more details. | `broadcast` |
 |`targetPartitionsPerWorker`|Number of partitions Druid generates for each worker. This number controls how much parallelism can be maintained throughout a query.|1|
 
@@ -134,11 +134,11 @@ You can use any SQL query context parameters to control Dart's behavior unless o
   ## Known issues and limitations
 
 - Dart doesn't do the following:
-  - verify that `druid.msq.dart.controller.concurrentQueries` is set properly. If set too high, queries can get stuck on each other.
-  - use the query cache.
-  - perform query prioritization or laning.
+  - Verify that `druid.msq.dart.controller.concurrentQueries` is set properly. If set too high, queries can get stuck on each other.
+  - Use the query cache.
+  - Perform query prioritization or laning.
   - TopN queries are always exact. Approximate TopN queries (`useApproximateTopN`) aren't supported.
-- Dart doesn't support JDBC connections. The `engine` context parameter gets ignored.
-- Realtime scans from the MSQ engine cannot reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
+- Dart doesn't support JDBC connections. Druid ignores the `engine` context parameter if Dart is enabled.
+- Realtime scans from the MSQ engine can't reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
 - The `NilStageOutputReader` can sometimes lead to a `NoClassDefFoundError`. For more information, see [#18336](https://github.com/apache/druid/pull/18336).
-- Broadcast joins with realtime data isn't supported. If the left table of a join has realtime data and you're doing a broadcast join, you must set `sqlJoinAlgorithm` to `sortMerge`.
+- Broadcast joins with realtime data aren't supported. If the left table of a join has realtime data and you're doing a broadcast join, you must set `sqlJoinAlgorithm` to `sortMerge`.
