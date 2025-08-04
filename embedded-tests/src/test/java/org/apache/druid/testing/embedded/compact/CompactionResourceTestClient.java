@@ -51,7 +51,7 @@ public class CompactionResourceTestClient
 
   CompactionResourceTestClient(EmbeddedDruidCluster cluster)
   {
-    this.clients = cluster.callApi().serviceClients();
+    this.clients = cluster.callApi().serviceClient();
   }
 
   private String getCoordinatorURL()

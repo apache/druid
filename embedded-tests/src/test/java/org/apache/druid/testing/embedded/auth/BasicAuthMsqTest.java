@@ -146,7 +146,7 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
     );
 
     // Use the default set of clients for calling security APIs
-    securityClient = new SecurityClient(cluster.callApi().serviceClients());
+    securityClient = new SecurityClient(cluster.callApi().serviceClient());
   }
 
   @BeforeEach

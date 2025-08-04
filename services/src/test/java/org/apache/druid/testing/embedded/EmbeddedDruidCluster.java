@@ -135,18 +135,6 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   }
 
   /**
-   * Adds the {@link #clusterApis} as the last entry in the {@link #resources} list.
-   * {@link EmbeddedClusterApis} must be started after all servers have started
-   * so that the injected mappers and clients can be used.
-   */
-  private void addEmbeddedClusterApis()
-  {
-    if (!startedFirstDruidServer) {
-      resources.add(clusterApis);
-    }
-  }
-
-  /**
    * Configures this cluster to use a {@link LatchableEmitter}. This method is a
    * shorthand for the following:
    * <pre>
@@ -257,7 +245,12 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   public void start() throws Exception
   {
     Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have at least one embedded Druid server");
-    addEmbeddedClusterApis();
+
+    // Add clusterApis as the last entry in the resources list, so that the
+    // EmbeddedServiceClient is initialized after mappers have been injected into the servers
+    if (!startedFirstDruidServer) {
+      resources.add(clusterApis);
+    }
 
     // Start the resources in order
     for (EmbeddedResource resource : resources) {

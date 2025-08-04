@@ -69,7 +69,7 @@ import java.util.function.Function;
 public class EmbeddedClusterApis implements EmbeddedResource
 {
   private final EmbeddedDruidCluster cluster;
-  private EmbeddedServiceClient clients;
+  private EmbeddedServiceClient client;
 
   EmbeddedClusterApis(EmbeddedDruidCluster cluster)
   {
@@ -79,44 +79,47 @@ public class EmbeddedClusterApis implements EmbeddedResource
   @Override
   public void start() throws Exception
   {
-    this.clients = EmbeddedServiceClient.create(cluster, null);
+    this.client = EmbeddedServiceClient.create(cluster, null);
   }
 
   @Override
   public void stop() throws Exception
   {
-    if (clients != null) {
-      clients.stop();
-      clients = null;
+    if (client != null) {
+      client.stop();
+      client = null;
     }
   }
 
-  public EmbeddedServiceClient serviceClients()
+  /**
+   * Client used for all the API calls made by this {@link EmbeddedClusterApis}.
+   */
+  public EmbeddedServiceClient serviceClient()
   {
     return Objects.requireNonNull(
-        clients,
+        client,
         "Service clients are not initialized. Ensure that the cluster has started properly."
     );
   }
 
   public <T> T onLeaderCoordinator(Function<CoordinatorClient, ListenableFuture<T>> coordinatorApi)
   {
-    return clients.onLeaderCoordinator(coordinatorApi);
+    return client.onLeaderCoordinator(coordinatorApi);
   }
 
   public <T> T onLeaderCoordinatorSync(Function<CoordinatorClient, T> coordinatorApi)
   {
-    return clients.onLeaderCoordinatorSync(coordinatorApi);
+    return client.onLeaderCoordinatorSync(coordinatorApi);
   }
 
   public <T> T onLeaderOverlord(Function<OverlordClient, ListenableFuture<T>> overlordApi)
   {
-    return clients.onLeaderOverlord(overlordApi);
+    return client.onLeaderOverlord(overlordApi);
   }
 
   public <T> T onAnyBroker(Function<BrokerClient, ListenableFuture<T>> brokerApi)
   {
-    return clients.onAnyBroker(brokerApi);
+    return client.onAnyBroker(brokerApi);
   }
 
   /**
