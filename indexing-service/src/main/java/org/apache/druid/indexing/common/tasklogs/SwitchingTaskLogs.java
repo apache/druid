@@ -61,7 +61,7 @@ public class SwitchingTaskLogs implements TaskLogs
   @Override
   public Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
   {
-    return reportPusher.streamTaskReports(taskid);
+    return reportPusher.streamTaskStatus(taskid);
   }
 
   @Override
