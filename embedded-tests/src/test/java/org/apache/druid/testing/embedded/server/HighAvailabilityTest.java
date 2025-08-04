@@ -80,13 +80,13 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
 
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .addServer(router)
                                .addServer(overlord1)
                                .addServer(overlord2)
                                .addServer(coordinator1)
                                .addServer(coordinator2)
                                .addServer(indexer)
-                               .addServer(broker)
-                               .addServer(router);
+                               .addServer(broker);
   }
 
   @Test

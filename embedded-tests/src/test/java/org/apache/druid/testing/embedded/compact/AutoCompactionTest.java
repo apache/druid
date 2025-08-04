@@ -1671,7 +1671,7 @@ public class AutoCompactionTest extends CompactionTestBase
     );
   }
 
-  private void updateClusterConfig(ClusterCompactionConfig clusterConfig) throws Exception
+  private void updateClusterConfig(ClusterCompactionConfig clusterConfig)
   {
     compactionResource.updateClusterConfig(clusterConfig);
     LOG.info("Updated cluster config to [%s]", clusterConfig);
@@ -1750,7 +1750,7 @@ public class AutoCompactionTest extends CompactionTestBase
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine
-  ) throws Exception
+  )
   {
     DataSourceCompactionConfig dataSourceCompactionConfig =
         InlineSchemaDataSourceCompactionConfig.builder()
@@ -1800,7 +1800,7 @@ public class AutoCompactionTest extends CompactionTestBase
     Assertions.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
   }
 
-  private void deleteCompactionConfig() throws Exception
+  private void deleteCompactionConfig()
   {
     compactionResource.deleteDataSourceCompactionConfig(fullDatasourceName);
 
@@ -1848,7 +1848,7 @@ public class AutoCompactionTest extends CompactionTestBase
     }
   }
 
-  private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
+  private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction)
   {
     compactionResource.forceTriggerAutoCompaction();
     waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
@@ -1924,7 +1924,7 @@ public class AutoCompactionTest extends CompactionTestBase
     }
   }
 
-  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots) throws Exception
+  private void updateCompactionTaskSlot(double compactionTaskSlotRatio, int maxCompactionTaskSlots)
   {
     final ClusterCompactionConfig oldConfig = compactionResource.getClusterConfig();
     compactionResource.updateClusterConfig(
@@ -1959,7 +1959,7 @@ public class AutoCompactionTest extends CompactionTestBase
       long intervalCountAwaitingCompaction,
       long intervalCountCompacted,
       long intervalCountSkipped
-  ) throws Exception
+  )
   {
     AutoCompactionSnapshot actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assertions.assertNotNull(actualStatus);
