@@ -82,6 +82,126 @@ public class IndexingServiceTaskLogsModuleTest
     Assert.assertTrue(streamer instanceof FileTaskLogs);
   }
 
+  @Test
+  public void test_providePusher_shouldReturnFileTaskLog()
+  {
+    Properties props = new Properties();
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    Assert.assertTrue(pusher instanceof FileTaskLogs);
+  }
+
+  @Test
+  public void test_providePusher_shouldReturnNoopTaskPusher()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+          Binders.bindTaskLogs(binder, "noop", NoopTaskLogs.class);
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    Assert.assertTrue(pusher instanceof NoopTaskLogs);
+  }
+
+  @Test
+  public void test_providePusher_shouldReturnConfiguredPushingTaskLog()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+    props.setProperty("druid.indexer.logs.switching.pushType", "file");
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    Assert.assertTrue(pusher instanceof FileTaskLogs);
+  }
+
+  @Test
+  public void test_provideDelegate_shouldReturnFileTaskLog()
+  {
+    Properties props = new Properties();
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs delegate = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+    Assert.assertTrue(delegate instanceof FileTaskLogs);
+  }
+
+  @Test
+  public void test_provideDelegate_shouldReturnNoopTaskDelegate()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+          Binders.bindTaskLogs(binder, "noop", NoopTaskLogs.class);
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs delegate = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+    Assert.assertTrue(delegate instanceof NoopTaskLogs);
+  }
+
+  @Test
+  public void test_provideDelegate_shouldReturnConfiguredReportsTaskLog()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+    props.setProperty("druid.indexer.logs.switching.reportsType", "file");
+
+    Injector injector = Guice.createInjector(
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(props);
+          binder.bind(Validator.class).toInstance(new MockValidator());
+        },
+        new IndexingServiceTaskLogsModule()
+    );
+
+    TaskLogs delegate = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+    Assert.assertTrue(delegate instanceof FileTaskLogs);
+  }
+
   private static class MockValidator implements Validator
   {
     @Override
