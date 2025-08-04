@@ -40,7 +40,8 @@ public interface TaskLogPusher
   {
   }
 
-  default boolean logPushEnabled() {
+  default boolean logPushEnabled()
+  {
     return true;
   }
 }

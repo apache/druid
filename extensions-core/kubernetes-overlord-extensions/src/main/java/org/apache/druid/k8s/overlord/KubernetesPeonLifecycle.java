@@ -203,7 +203,7 @@ public class KubernetesPeonLifecycle
     }
     finally {
       try {
-        if(taskLogs.logPushEnabled()) {
+        if (taskLogs.logPushEnabled()) {
           saveLogs();
         }
       }

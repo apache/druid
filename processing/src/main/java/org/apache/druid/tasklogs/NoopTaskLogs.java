@@ -78,7 +78,8 @@ public class NoopTaskLogs implements TaskLogs
   }
 
   @Override
-  public boolean logPushEnabled() {
+  public boolean logPushEnabled()
+  {
     return false;
   }
 }
