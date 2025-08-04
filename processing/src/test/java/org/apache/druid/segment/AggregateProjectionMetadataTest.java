@@ -339,8 +339,11 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                                                      )))
                                                      .build();
     // act & assert
-    Projections.ProjectionMatch projectionMatch = spec.getSchema()
-                                                      .matches(cursorBuildSpec, (projectionName, columnName) -> true);
+    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        (projectionName, columnName) -> true
+    );
     Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
         CursorBuildSpec.builder()
                        .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
@@ -363,32 +366,32 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 
     Filter queryFilter = xeqfoo2;
     Assertions.assertInstanceOf(
-        AggregateProjectionMetadata.ProjectionFilterMatch.class,
-        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+        Projections.ProjectionFilterMatch.class,
+        Projections.rewriteFilter(xeqfoo, queryFilter)
     );
 
     queryFilter = yeqbar;
-    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
 
     queryFilter = new AndFilter(List.of(xeqfoo, yeqbar));
     Assertions.assertEquals(
         yeqbar,
-        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+        Projections.rewriteFilter(xeqfoo, queryFilter)
     );
 
     queryFilter = new AndFilter(List.of(new OrFilter(List.of(xeqfoo, xeqbar)), yeqbar));
-    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
 
     queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, true), yeqbar));
-    Assertions.assertEquals(yeqbar, AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+    Assertions.assertEquals(yeqbar, Projections.rewriteFilter(xeqfoo, queryFilter));
 
     queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, false), yeqbar));
-    Assertions.assertNull(AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter));
+    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
 
     queryFilter = new AndFilter(List.of(new AndFilter(List.of(xeqfoo, yeqbar)), zeq123));
     Assertions.assertEquals(
         new AndFilter(List.of(yeqbar, zeq123)),
-        AggregateProjectionMetadata.rewriteFilter(xeqfoo, queryFilter)
+        Projections.rewriteFilter(xeqfoo, queryFilter)
     );
   }
 }
