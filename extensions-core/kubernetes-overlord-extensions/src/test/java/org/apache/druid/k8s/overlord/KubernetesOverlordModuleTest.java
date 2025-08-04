@@ -24,8 +24,10 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManagerConfig;
 import org.apache.druid.guice.ConfigModule;
@@ -33,6 +35,7 @@ import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
@@ -45,6 +48,8 @@ import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.tasklogs.NoopTaskLogs;
+import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
@@ -197,6 +202,70 @@ public class KubernetesOverlordModuleTest
 
     Assert.assertNotNull(adapter);
     Assert.assertTrue(adapter instanceof PodTemplateTaskAdapter);
+  }
+
+  @Test
+  public void test_getTaskLogs_allLogsHaveBaseCase()
+  {
+
+    Properties props = new Properties();
+    injector = makeInjectorWithProperties(props, false, true);
+
+    TaskLogs streamer = injector.getInstance(Key.get(TaskLogs.class, Names.named("streamer")));
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    TaskLogs reporter = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+
+    Assert.assertNotNull(streamer);
+    Assert.assertTrue(streamer instanceof FileTaskLogs);
+    Assert.assertNotNull(pusher);
+    Assert.assertTrue(pusher instanceof FileTaskLogs);
+    Assert.assertNotNull(reporter);
+    Assert.assertTrue(reporter instanceof FileTaskLogs);
+  }
+
+  @Test
+  public void test_getTaskLogs_allLogsHaveSameType()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+    injector = makeInjectorWithProperties(props, false, true);
+
+    TaskLogs streamer = injector.getInstance(Key.get(TaskLogs.class, Names.named("streamer")));
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    TaskLogs reporter = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+
+    Assert.assertNotNull(streamer);
+    Assert.assertTrue(streamer instanceof NoopTaskLogs);
+    Assert.assertNotNull(pusher);
+    Assert.assertTrue(pusher instanceof NoopTaskLogs);
+    Assert.assertNotNull(reporter);
+    Assert.assertTrue(reporter instanceof NoopTaskLogs);
+  }
+
+  @Test
+  public void test_getTaskLogs_allLogsHaveSpecificTypes()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.logs.type", "switching");
+    props.setProperty("druid.indexer.logs.switching.defaultType", "noop");
+    props.setProperty("druid.indexer.logs.switching.streamType", "file");
+    props.setProperty("druid.indexer.logs.switching.pushType", "noop");
+    props.setProperty("druid.indexer.logs.switching.reportsType", "file");
+    injector = makeInjectorWithProperties(props, false, true);
+
+    TaskLogs streamer = injector.getInstance(Key.get(TaskLogs.class, Names.named("streamer")));
+    TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("pusher")));
+    TaskLogs reporter = injector.getInstance(Key.get(TaskLogs.class, Names.named("reports")));
+
+    Assert.assertNotNull(streamer);
+    Assert.assertTrue(streamer instanceof FileTaskLogs);
+    Assert.assertNotNull(pusher);
+    Assert.assertTrue(pusher instanceof NoopTaskLogs);
+    Assert.assertNotNull(reporter);
+    Assert.assertTrue(reporter instanceof FileTaskLogs);
   }
 
   private Injector makeInjectorWithProperties(
