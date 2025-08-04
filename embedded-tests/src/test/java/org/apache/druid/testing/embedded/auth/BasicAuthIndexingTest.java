@@ -19,9 +19,16 @@
 
 package org.apache.druid.testing.embedded.auth;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicSecurityDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 public class BasicAuthIndexingTest extends IndexTaskTest
 {
@@ -41,6 +48,18 @@ public class BasicAuthIndexingTest extends IndexTaskTest
         .addCommonProperty("druid.escalator.type", "basic")
         .addCommonProperty("druid.escalator.internalClientPassword", "warlock")
         .addCommonProperty("druid.escalator.internalClientUsername", "druid_system")
-        .addCommonProperty("druid.escalator.authorizerName", "basic");
+        .addCommonProperty("druid.escalator.authorizerName", "basic")
+        .addCommonProperty("druid.indexer.autoscale.doAutoscale", "true");
+  }
+
+  @Test
+  public void test_getScalingStats_redirectFromCoordinatorToOverlord()
+  {
+    final List<Object> response = cluster.callApi().serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/scaling"),
+        new TypeReference<>() {}
+    );
+    Assertions.assertNotNull(response);
+    Assertions.assertTrue(response.isEmpty());
   }
 }
