@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.docker;
 
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 @EnabledIfSystemProperty(named = DruidContainerResource.PROPERTY_TEST_IMAGE, matches = ".+")
 public abstract class DockerTestBase extends EmbeddedClusterTestBase
 {
+  @BeforeAll
   @Override
   protected void setup() throws Exception
   {

@@ -42,10 +42,15 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.DruidCommand;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
@@ -82,25 +87,29 @@ public class IngestionDockerTest extends DockerTestBase
 {
   // Druid Docker containers
   protected final DruidContainerResource overlordLeader =
-      new DruidContainerResource(DruidCommand.OVERLORD).usingTestImage();
+      new DruidContainerResource(DruidCommand.Server.OVERLORD).usingTestImage();
   protected final DruidContainerResource coordinator =
-      new DruidContainerResource(DruidCommand.COORDINATOR).usingTestImage();
+      new DruidContainerResource(DruidCommand.Server.COORDINATOR).usingTestImage();
   protected final DruidContainerResource historical =
-      new DruidContainerResource(DruidCommand.HISTORICAL).usingTestImage();
+      new DruidContainerResource(DruidCommand.Server.HISTORICAL).usingTestImage();
   protected final DruidContainerResource broker =
-      new DruidContainerResource(DruidCommand.BROKER)
+      new DruidContainerResource(DruidCommand.Server.BROKER)
           .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
           .usingTestImage();
   protected final DruidContainerResource router =
-      new DruidContainerResource(DruidCommand.ROUTER).usingTestImage();
+      new DruidContainerResource(DruidCommand.Server.ROUTER).usingTestImage();
   protected final DruidContainerResource middleManager =
-      new DruidContainerResource(DruidCommand.MIDDLE_MANAGER)
+      new DruidContainerResource(DruidCommand.Server.MIDDLE_MANAGER)
           .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
           .usingTestImage();
 
   // Follower EmbeddedOverlord to help serialize Task and Supervisor payloads
   protected final EmbeddedOverlord overlordFollower =
       new EmbeddedOverlord().addProperty("druid.plaintextPort", "7090");
+
+  // EmbeddedBroker to get Broker-compatible HTTP client and mapper
+  protected final EmbeddedBroker embeddedBroker =
+      new EmbeddedBroker().addProperty("druid.plaintextPort", "7082");
 
   // Event collector to watch for metric events
   private final EmbeddedEventCollector eventCollector = new EmbeddedEventCollector()
@@ -115,7 +124,15 @@ public class IngestionDockerTest extends DockerTestBase
     return EmbeddedDruidCluster
         .withZookeeper()
         // Needed for overlordFollower to recognize the KafkaSupervisor type
-        .addExtensions(KafkaIndexTaskModule.class, LatchableEmitterModule.class, PostgreSQLMetadataStorageModule.class)
+        .addExtensions(
+            KafkaIndexTaskModule.class,
+            LatchableEmitterModule.class,
+            PostgreSQLMetadataStorageModule.class,
+            MSQSqlModule.class,
+            SqlTaskModule.class,
+            MSQIndexingModule.class,
+            MSQDurableStorageModule.class
+        )
         .addResource(new PostgreSQLMetadataResource())
         .addResource(new MinIOStorageResource())
         .addResource(kafkaServer)
@@ -134,6 +151,7 @@ public class IngestionDockerTest extends DockerTestBase
         .addResource(broker)
         .addResource(router)
         .addServer(overlordFollower)
+        .addServer(embeddedBroker)
         .addServer(eventCollector);
   }
 

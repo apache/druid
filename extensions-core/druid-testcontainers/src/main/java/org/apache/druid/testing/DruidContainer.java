@@ -67,20 +67,20 @@ public class DruidContainer extends GenericContainer<DruidContainer>
   /**
    * Creates a new {@link DruidContainer} which uses the given image name.
    *
-   * @param command   Druid command to run. e.g. "coordinator", "overlord".
+   * @param command   Druid command to run. e.g. {@code DruidCommand.Server.COORDINATOR}.
    * @param imageName Name of the Druid image to use
    * @see DruidCommand for standard Druid commands.
    * @see Image for standard Druid images
    */
-  public DruidContainer(String command, String imageName)
+  public DruidContainer(DruidCommand command, String imageName)
   {
-    this(DruidCommand.valueOf(command), DockerImageName.parse(imageName));
+    this(command, DockerImageName.parse(imageName));
   }
 
   /**
    * Creates a new {@link DruidContainer} which uses the given image name.
    *
-   * @param command   Druid command to run. e.g. "coordinator", "overlord".
+   * @param command   Druid command to run. e.g. {@code DruidCommand.Server.OVERLORD}.
    * @param imageName Name of the Druid image to use
    * @see DruidCommand for standard Druid commands.
    * @see Image for standard Druid images

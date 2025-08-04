@@ -26,10 +26,13 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.server.HighAvailabilityTest;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 public class CustomNodeRoleDockerTest extends DockerTestBase
 {
   private final DruidContainerResource customNodeEventCollector =
-      new DruidContainerResource(DruidCommand.TEST_EVENT_COLLECTOR).usingTestImage();
+      new DruidContainerResource(new EventCollectorCommand())
+          .usingTestImage();
 
   private final EmbeddedRouter router = new EmbeddedRouter();
 
@@ -52,5 +55,32 @@ public class CustomNodeRoleDockerTest extends DockerTestBase
         router.bindings().nodeDiscovery(),
         router.bindings().escalatedHttpClient()
     );
+  }
+
+  private static class EventCollectorCommand implements DruidCommand
+  {
+    @Override
+    public String getName()
+    {
+      return "eventCollector";
+    }
+
+    @Override
+    public String getJavaOpts()
+    {
+      return "-Xms128m -Xmx128m";
+    }
+
+    @Override
+    public Integer[] getExposedPorts()
+    {
+      return new Integer[]{9301};
+    }
+
+    @Override
+    public Map<String, String> getDefaultProperties()
+    {
+      return Map.of();
+    }
   }
 }
