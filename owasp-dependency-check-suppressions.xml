@@ -753,4 +753,11 @@
     ]]></notes>
     <vulnerabilityName>CVE-2024-45772</vulnerabilityName>
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: grpc-core-1.65.1.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2024-11407</vulnerabilityName> <!-- This CVE is a false positive for java. The CVE is related to their cpp library, not java -->
+  </suppress>
 </suppressions>
