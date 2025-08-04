@@ -267,10 +267,6 @@
             <artifactId>jdbi</artifactId>
             <scope>test</scope>
         </dependency>
-      <dependency>
-        <groupId>org.apache.calcite.avatica</groupId>
-        <artifactId>avatica-core</artifactId>
-      </dependency>
     </dependencies>
 
     <build>

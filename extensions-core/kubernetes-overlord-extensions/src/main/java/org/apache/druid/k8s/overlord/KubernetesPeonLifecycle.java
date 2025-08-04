@@ -203,7 +203,9 @@ public class KubernetesPeonLifecycle
     }
     finally {
       try {
-        saveLogs();
+        if(taskLogs.logPushEnabled()) {
+          saveLogs();
+        }
       }
       catch (Exception e) {
         log.warn(e, "Log processing failed for task [%s]", taskId);

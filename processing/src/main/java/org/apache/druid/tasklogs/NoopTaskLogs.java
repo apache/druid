@@ -76,4 +76,9 @@ public class NoopTaskLogs implements TaskLogs
   {
     return Optional.absent();
   }
+
+  @Override
+  public boolean logPushEnabled() {
+    return false;
+  }
 }

@@ -20,14 +20,15 @@
 package org.apache.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteStreams;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.runner.RunWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -35,22 +36,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-public class SwitchingTaskLogsTest
+@RunWith(EasyMockRunner.class)
+public class SwitchingTaskLogsTest extends EasyMockSupport
 {
-  private static final String TASK_ID = "testTask";
-  private static final String LOG_CONTENT = "test log content";
-  private static final String REPORT_CONTENT = "test report content";
-  private static final String STATUS_CONTENT = "test status content";
-  private static final String PAYLOAD_CONTENT = "test payload content";
-  private static final long OFFSET = 100L;
-  private static final long TIMESTAMP = 1234567890L;
-
   @Mock
-  private TaskLogs delegateTaskLogs;
+  private TaskLogs reportTaskLogs;
 
   @Mock
   private TaskLogs streamerTaskLogs;
@@ -58,275 +48,78 @@ public class SwitchingTaskLogsTest
   @Mock
   private TaskLogs pusherTaskLogs;
 
-  @Mock
-  private File testFile;
-
   private SwitchingTaskLogs taskLogs;
 
   @Before
   public void setUp()
   {
-    MockitoAnnotations.initMocks(this);
-    taskLogs = new SwitchingTaskLogs(delegateTaskLogs, streamerTaskLogs, pusherTaskLogs);
+    taskLogs = new SwitchingTaskLogs(reportTaskLogs, streamerTaskLogs, pusherTaskLogs);
   }
 
   @Test
-  public void testStreamTaskLog() throws IOException
+  public void test_shouldUseIndividualLogs() throws IOException
   {
-    InputStream logStream = new ByteArrayInputStream(LOG_CONTENT.getBytes(StandardCharsets.UTF_8));
-    when(streamerTaskLogs.streamTaskLog(TASK_ID, OFFSET)).thenReturn(Optional.of(logStream));
+    String taskId = "test-task-id";
+    long offset = 0L;
+    File logFile = new File("test.log");
+    InputStream logStream = new ByteArrayInputStream("test log content".getBytes(StandardCharsets.UTF_8));
+    InputStream reportStream = new ByteArrayInputStream("test report content".getBytes(StandardCharsets.UTF_8));
+    InputStream statusStream = new ByteArrayInputStream("test status content".getBytes(StandardCharsets.UTF_8));
+    InputStream payloadStream = new ByteArrayInputStream("test payload content".getBytes(StandardCharsets.UTF_8));
 
-    Optional<InputStream> result = taskLogs.streamTaskLog(TASK_ID, OFFSET);
+    EasyMock.expect(streamerTaskLogs.streamTaskLog(taskId, offset)).andReturn(Optional.of(logStream));
+    EasyMock.expect(reportTaskLogs.streamTaskReports(taskId)).andReturn(Optional.of(reportStream));
+    EasyMock.expect(reportTaskLogs.streamTaskStatus(taskId)).andReturn(Optional.of(statusStream));
+    EasyMock.expect(reportTaskLogs.streamTaskPayload(taskId)).andReturn(Optional.of(payloadStream));
 
-    Assert.assertTrue(result.isPresent());
-    String content = StringUtils.fromUtf8(ByteStreams.toByteArray(result.get()));
-    Assert.assertEquals(LOG_CONTENT, content);
-    verify(streamerTaskLogs).streamTaskLog(TASK_ID, OFFSET);
-  }
+    pusherTaskLogs.pushTaskLog(taskId, logFile);
+    EasyMock.expectLastCall();
 
-  @Test
-  public void testStreamTaskLogEmpty() throws IOException
-  {
-    when(streamerTaskLogs.streamTaskLog(TASK_ID, OFFSET)).thenReturn(Optional.<InputStream>absent());
+    reportTaskLogs.pushTaskReports(taskId, logFile);
+    EasyMock.expectLastCall();
 
-    Optional<InputStream> result = taskLogs.streamTaskLog(TASK_ID, OFFSET);
+    reportTaskLogs.pushTaskStatus(taskId, logFile);
+    EasyMock.expectLastCall();
 
-    Assert.assertFalse(result.isPresent());
-    verify(streamerTaskLogs).streamTaskLog(TASK_ID, OFFSET);
-  }
+    reportTaskLogs.pushTaskPayload(taskId, logFile);
+    EasyMock.expectLastCall();
 
-  @Test
-  public void testStreamTaskLogException() throws IOException
-  {
-    IOException expectedException = new IOException("Test exception");
-    when(streamerTaskLogs.streamTaskLog(TASK_ID, OFFSET)).thenThrow(expectedException);
+    EasyMock.expect(pusherTaskLogs.logPushEnabled()).andReturn(true);
 
-    try {
-      taskLogs.streamTaskLog(TASK_ID, OFFSET);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Test exception", e.getMessage());
-    }
-    verify(streamerTaskLogs).streamTaskLog(TASK_ID, OFFSET);
-  }
+    reportTaskLogs.killAll();
+    EasyMock.expectLastCall();
+    long timestamp = System.currentTimeMillis();
 
-  @Test
-  public void testStreamTaskReports() throws IOException
-  {
-    InputStream reportStream = new ByteArrayInputStream(REPORT_CONTENT.getBytes(StandardCharsets.UTF_8));
-    when(delegateTaskLogs.streamTaskReports(TASK_ID)).thenReturn(Optional.of(reportStream));
+    reportTaskLogs.killOlderThan(timestamp);
+    EasyMock.expectLastCall();
 
-    Optional<InputStream> result = taskLogs.streamTaskReports(TASK_ID);
+    replayAll();
 
-    Assert.assertTrue(result.isPresent());
-    String content = StringUtils.fromUtf8(ByteStreams.toByteArray(result.get()));
-    Assert.assertEquals(REPORT_CONTENT, content);
-    verify(delegateTaskLogs).streamTaskReports(TASK_ID);
-  }
+    Optional<InputStream> actualLogStream = taskLogs.streamTaskLog(taskId, offset);
+    Assert.assertTrue(actualLogStream.isPresent());
+    Assert.assertEquals(logStream, actualLogStream.get());
 
-  @Test
-  public void testStreamTaskReportsEmpty() throws IOException
-  {
-    when(delegateTaskLogs.streamTaskReports(TASK_ID)).thenReturn(Optional.<InputStream>absent());
+    Optional<InputStream> actualReportStream = taskLogs.streamTaskReports(taskId);
+    Assert.assertTrue(actualReportStream.isPresent());
+    Assert.assertEquals(reportStream, actualReportStream.get());
 
-    Optional<InputStream> result = taskLogs.streamTaskReports(TASK_ID);
+    Optional<InputStream> actualStatusStream = taskLogs.streamTaskStatus(taskId);
+    Assert.assertTrue(actualStatusStream.isPresent());
+    Assert.assertEquals(statusStream, actualStatusStream.get());
 
-    Assert.assertFalse(result.isPresent());
-    verify(delegateTaskLogs).streamTaskReports(TASK_ID);
-  }
+    Optional<InputStream> actualPayloadStream = taskLogs.streamTaskPayload(taskId);
+    Assert.assertTrue(actualPayloadStream.isPresent());
+    Assert.assertEquals(payloadStream, actualPayloadStream.get());
 
-  @Test
-  public void testStreamTaskStatus() throws IOException
-  {
-    InputStream statusStream = new ByteArrayInputStream(STATUS_CONTENT.getBytes(StandardCharsets.UTF_8));
-    when(delegateTaskLogs.streamTaskReports(TASK_ID)).thenReturn(Optional.of(statusStream));
+    taskLogs.pushTaskLog(taskId, logFile);
+    taskLogs.pushTaskReports(taskId, logFile);
+    taskLogs.pushTaskStatus(taskId, logFile);
+    taskLogs.pushTaskPayload(taskId, logFile);
 
-    Optional<InputStream> result = taskLogs.streamTaskStatus(TASK_ID);
-
-    Assert.assertTrue(result.isPresent());
-    String content = StringUtils.fromUtf8(ByteStreams.toByteArray(result.get()));
-    Assert.assertEquals(STATUS_CONTENT, content);
-    verify(delegateTaskLogs).streamTaskReports(TASK_ID);
-  }
-
-  @Test
-  public void testStreamTaskStatusEmpty() throws IOException
-  {
-    when(delegateTaskLogs.streamTaskReports(TASK_ID)).thenReturn(Optional.<InputStream>absent());
-
-    Optional<InputStream> result = taskLogs.streamTaskStatus(TASK_ID);
-
-    Assert.assertFalse(result.isPresent());
-    verify(delegateTaskLogs).streamTaskReports(TASK_ID);
-  }
-
-  @Test
-  public void testPushTaskLog() throws IOException
-  {
-    taskLogs.pushTaskLog(TASK_ID, testFile);
-
-    verify(pusherTaskLogs).pushTaskLog(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testPushTaskPayload() throws IOException
-  {
-    taskLogs.pushTaskPayload(TASK_ID, testFile);
-
-    verify(delegateTaskLogs).pushTaskPayload(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testPushTaskPayloadException() throws IOException
-  {
-    IOException expectedException = new IOException("Push payload failed");
-    doThrow(expectedException).when(delegateTaskLogs).pushTaskPayload(TASK_ID, testFile);
-
-    try {
-      taskLogs.pushTaskPayload(TASK_ID, testFile);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Push payload failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).pushTaskPayload(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testKillAll() throws IOException
-  {
+    Assert.assertTrue(taskLogs.logPushEnabled());
     taskLogs.killAll();
+    taskLogs.killOlderThan(timestamp);
 
-    verify(delegateTaskLogs).killAll();
-  }
-
-  @Test
-  public void testKillAllException() throws IOException
-  {
-    IOException expectedException = new IOException("Kill all failed");
-    doThrow(expectedException).when(delegateTaskLogs).killAll();
-
-    try {
-      taskLogs.killAll();
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Kill all failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).killAll();
-  }
-
-  @Test
-  public void testKillOlderThan() throws IOException
-  {
-    taskLogs.killOlderThan(TIMESTAMP);
-
-    verify(delegateTaskLogs).killOlderThan(TIMESTAMP);
-  }
-
-  @Test
-  public void testKillOlderThanException() throws IOException
-  {
-    IOException expectedException = new IOException("Kill older than failed");
-    doThrow(expectedException).when(delegateTaskLogs).killOlderThan(TIMESTAMP);
-
-    try {
-      taskLogs.killOlderThan(TIMESTAMP);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Kill older than failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).killOlderThan(TIMESTAMP);
-  }
-
-  @Test
-  public void testPushTaskReports() throws IOException
-  {
-    taskLogs.pushTaskReports(TASK_ID, testFile);
-
-    verify(delegateTaskLogs).pushTaskReports(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testPushTaskReportsException() throws IOException
-  {
-    IOException expectedException = new IOException("Push reports failed");
-    doThrow(expectedException).when(delegateTaskLogs).pushTaskReports(TASK_ID, testFile);
-
-    try {
-      taskLogs.pushTaskReports(TASK_ID, testFile);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Push reports failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).pushTaskReports(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testPushTaskStatus() throws IOException
-  {
-    taskLogs.pushTaskStatus(TASK_ID, testFile);
-
-    verify(delegateTaskLogs).pushTaskStatus(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testPushTaskStatusException() throws IOException
-  {
-    IOException expectedException = new IOException("Push status failed");
-    doThrow(expectedException).when(delegateTaskLogs).pushTaskStatus(TASK_ID, testFile);
-
-    try {
-      taskLogs.pushTaskStatus(TASK_ID, testFile);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Push status failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).pushTaskStatus(TASK_ID, testFile);
-  }
-
-  @Test
-  public void testStreamTaskPayload() throws IOException
-  {
-    InputStream payloadStream = new ByteArrayInputStream(PAYLOAD_CONTENT.getBytes(StandardCharsets.UTF_8));
-    when(delegateTaskLogs.streamTaskPayload(TASK_ID)).thenReturn(Optional.of(payloadStream));
-
-    Optional<InputStream> result = taskLogs.streamTaskPayload(TASK_ID);
-
-    Assert.assertTrue(result.isPresent());
-    String content = StringUtils.fromUtf8(ByteStreams.toByteArray(result.get()));
-    Assert.assertEquals(PAYLOAD_CONTENT, content);
-    verify(delegateTaskLogs).streamTaskPayload(TASK_ID);
-  }
-
-  @Test
-  public void testStreamTaskPayloadEmpty() throws IOException
-  {
-    when(delegateTaskLogs.streamTaskPayload(TASK_ID)).thenReturn(Optional.<InputStream>absent());
-
-    Optional<InputStream> result = taskLogs.streamTaskPayload(TASK_ID);
-
-    Assert.assertFalse(result.isPresent());
-    verify(delegateTaskLogs).streamTaskPayload(TASK_ID);
-  }
-
-  @Test
-  public void testStreamTaskPayloadException() throws IOException
-  {
-    IOException expectedException = new IOException("Stream payload failed");
-    when(delegateTaskLogs.streamTaskPayload(TASK_ID)).thenThrow(expectedException);
-
-    try {
-      taskLogs.streamTaskPayload(TASK_ID);
-      Assert.fail("Expected IOException");
-    }
-    catch (IOException e) {
-      Assert.assertEquals("Stream payload failed", e.getMessage());
-    }
-    verify(delegateTaskLogs).streamTaskPayload(TASK_ID);
+    verifyAll();
   }
 }

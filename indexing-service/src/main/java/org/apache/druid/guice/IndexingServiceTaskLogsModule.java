@@ -49,6 +49,7 @@ public class IndexingServiceTaskLogsModule implements Module
   private static final String PROPERTY_PREFIX_SWITCHING = "druid.indexer.logs.switching";
   private static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX_SWITCHING + ".pushType";
   private static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX_SWITCHING + ".streamType";
+  private static final String PROPERTY_KEY_SWITCHING_REPORTS_TYPE = PROPERTY_PREFIX_SWITCHING + ".reportsType";
 
   @Override
   public void configure(Binder binder)
@@ -127,7 +128,7 @@ public class IndexingServiceTaskLogsModule implements Module
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String reportsType = properties.getProperty(PROPERTY_PREFIX_SWITCHING + ".reportsType");
+    String reportsType = properties.getProperty(PROPERTY_KEY_SWITCHING_REPORTS_TYPE);
     if (reportsType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(reportsType)));

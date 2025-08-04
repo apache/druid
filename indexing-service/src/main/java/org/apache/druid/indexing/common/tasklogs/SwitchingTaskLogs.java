@@ -30,18 +30,18 @@ import java.io.InputStream;
 
 public class SwitchingTaskLogs implements TaskLogs
 {
-  private final TaskLogs reportPusher;
+  private final TaskLogs reportTaskLogs;
   private final TaskLogs logStreamer;
   private final TaskLogs logPusher;
 
   @Inject
   public SwitchingTaskLogs(
-      @Named("reports") TaskLogs reportPusher,
+      @Named("reports") TaskLogs reportTaskLogs,
       @Named("streamer") TaskLogs logStreamer,
       @Named("pusher") TaskLogs logPusher
   )
   {
-    this.reportPusher = reportPusher;
+    this.reportTaskLogs = reportTaskLogs;
     this.logStreamer = logStreamer;
     this.logPusher = logPusher;
   }
@@ -55,13 +55,13 @@ public class SwitchingTaskLogs implements TaskLogs
   @Override
   public Optional<InputStream> streamTaskReports(final String taskid) throws IOException
   {
-    return reportPusher.streamTaskReports(taskid);
+    return reportTaskLogs.streamTaskReports(taskid);
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
   {
-    return reportPusher.streamTaskStatus(taskid);
+    return reportTaskLogs.streamTaskStatus(taskid);
   }
 
   @Override
@@ -73,36 +73,42 @@ public class SwitchingTaskLogs implements TaskLogs
   @Override
   public void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException
   {
-    reportPusher.pushTaskPayload(taskid, taskPayloadFile);
+    reportTaskLogs.pushTaskPayload(taskid, taskPayloadFile);
   }
 
   @Override
   public void killAll() throws IOException
   {
-    reportPusher.killAll();
+    reportTaskLogs.killAll();
   }
 
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
-    reportPusher.killOlderThan(timestamp);
+    reportTaskLogs.killOlderThan(timestamp);
   }
 
   @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
-    reportPusher.pushTaskReports(taskid, reportFile);
+    reportTaskLogs.pushTaskReports(taskid, reportFile);
   }
 
   @Override
   public void pushTaskStatus(String taskid, File reportFile) throws IOException
   {
-    reportPusher.pushTaskStatus(taskid, reportFile);
+    reportTaskLogs.pushTaskStatus(taskid, reportFile);
   }
 
   @Override
   public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
   {
-    return reportPusher.streamTaskPayload(taskid);
+    return reportTaskLogs.streamTaskPayload(taskid);
+  }
+
+  @Override
+  public boolean logPushEnabled()
+  {
+    return logPusher.logPushEnabled();
   }
 }

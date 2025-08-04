@@ -91,6 +91,10 @@ public class KubernetesOverlordModule implements DruidModule
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
                                                                         + ".runnerStrategy.%s";
   private static final String HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String PROPERTY_PREFIX_SWITCHING = "druid.indexer.logs.switching";
+  private static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX_SWITCHING + ".pushType";
+  private static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX_SWITCHING + ".streamType";
+  private static final String PROPERTY_KEY_SWITCHING_REPORTS_TYPE = PROPERTY_PREFIX_SWITCHING + ".reportsType";
 
   @Override
   public void configure(Binder binder)
@@ -294,7 +298,7 @@ public class KubernetesOverlordModule implements DruidModule
   private void configureTaskLogs(Binder binder)
   {
     PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-    PolyBind.createChoice(binder, "druid.indexer.logs.switching.defaultType", Key.get(TaskLogs.class, Names.named("defaultType")), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(binder, PROPERTY_PREFIX_SWITCHING + ".defaultType", Key.get(TaskLogs.class, Names.named("defaultType")), Key.get(FileTaskLogs.class));
 
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
 
@@ -321,7 +325,7 @@ public class KubernetesOverlordModule implements DruidModule
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String logStreamerType = properties.getProperty("druid.indexer.logs.switching.streamType");
+    String logStreamerType = properties.getProperty(PROPERTY_KEY_SWITCHING_STREAM_TYPE);
     if (logStreamerType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(logStreamerType)));
@@ -341,7 +345,7 @@ public class KubernetesOverlordModule implements DruidModule
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String logPusherType = properties.getProperty("druid.indexer.logs.switching.pushType");
+    String logPusherType = properties.getProperty(PROPERTY_KEY_SWITCHING_PUSH_TYPE);
     if (logPusherType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(logPusherType)));
@@ -361,7 +365,7 @@ public class KubernetesOverlordModule implements DruidModule
       @Named("defaultType") TaskLogs defaultTaskLogs
   )
   {
-    String reportsType = properties.getProperty("druid.indexer.logs.switching.reportsType");
+    String reportsType = properties.getProperty(PROPERTY_KEY_SWITCHING_REPORTS_TYPE);
     if (reportsType != null) {
       try {
         return injector.getInstance(Key.get(TaskLogs.class, Names.named(reportsType)));
