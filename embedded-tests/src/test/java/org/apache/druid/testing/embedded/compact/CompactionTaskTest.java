@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
@@ -321,10 +320,7 @@ public class CompactionTaskTest extends CompactionTestBase
         .intervals("2013-08-31/2013-09-02")
         .build();
 
-    final String resultAsJson = FutureUtils.getUnchecked(
-        cluster.anyBroker().submitNativeQuery(query),
-        true
-    );
+    final String resultAsJson = cluster.callApi().onAnyBroker(b -> b.submitNativeQuery(query));
 
     // Trim the result so that it contains only the `queryGranularity` fields
     final List<Map<String, Object>> resultList = JacksonUtils.readValue(

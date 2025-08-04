@@ -91,6 +91,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -213,10 +214,15 @@ public class AutoCompactionTest extends CompactionTestBase
                                .addServer(new EmbeddedRouter());
   }
 
-  protected final CompactionResourceTestClient compactionResource =
-      new CompactionResourceTestClient(coordinator, overlord);
+  protected CompactionResourceTestClient compactionResource;
 
   private String fullDatasourceName;
+
+  @BeforeAll
+  public void setupClient()
+  {
+    this.compactionResource = new CompactionResourceTestClient(cluster);
+  }
 
   @BeforeEach
   public void resetCompactionTaskSlots() throws Exception

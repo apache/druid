@@ -32,6 +32,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
+import java.lang.annotation.Annotation;
+
 /**
  * Provides a handle to the various objects used by an {@link EmbeddedDruidServer}
  * during an embedded cluster test. The returned references should be used for
@@ -96,6 +98,11 @@ public interface ServerReferencesProvider
   HttpClient escalatedHttpClient();
 
   /**
+   * Non-escalated {@link HttpClient} used by this server to communicate with other Druid servers.
+   */
+  HttpClient globalHttpClient();
+
+  /**
    * {@link ObjectMapper} annotated with {@link Json}.
    */
   ObjectMapper jsonMapper();
@@ -105,4 +112,6 @@ public interface ServerReferencesProvider
    * The returned object must be used for read-only purposes.
    */
   <T> T getInstance(Class<T> clazz);
+
+  <T, A extends Annotation> T getInstance(Class<T> clazz, Class<A> annotation);
 }

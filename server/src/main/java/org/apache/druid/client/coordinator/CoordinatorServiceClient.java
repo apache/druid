@@ -19,11 +19,7 @@
 
 package org.apache.druid.client.coordinator;
 
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.ServiceLocator;
-import org.apache.druid.rpc.StandardRetryPolicy;
 
 /**
  * Wrapper over {@link ServiceClient} used to send requests to the Coordinator.
@@ -36,16 +32,10 @@ public class CoordinatorServiceClient
   private final ServiceClient serviceClient;
 
   public CoordinatorServiceClient(
-      ServiceClientFactory clientFactory,
-      ServiceLocator coordinatorServiceLocator,
-      int maxRetryAttempts
+      ServiceClient serviceClient
   )
   {
-    this.serviceClient = clientFactory.makeClient(
-        NodeRole.COORDINATOR.getJsonName(),
-        coordinatorServiceLocator,
-        StandardRetryPolicy.builder().maxAttempts(maxRetryAttempts).build()
-    );
+    this.serviceClient = serviceClient;
   }
 
   public ServiceClient getServiceClient()

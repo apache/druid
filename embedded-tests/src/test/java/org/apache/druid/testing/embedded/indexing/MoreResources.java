@@ -44,9 +44,9 @@ public class MoreResources
             .ofTypeIndex()
             .jsonInputFormat()
             .localInputSourceWithFiles(
-                Resources.DataFile.TINY_WIKI_1_JSON,
-                Resources.DataFile.TINY_WIKI_2_JSON,
-                Resources.DataFile.TINY_WIKI_3_JSON
+                Resources.DataFile.tinyWiki1Json(),
+                Resources.DataFile.tinyWiki2Json(),
+                Resources.DataFile.tinyWiki3Json()
             )
             .timestampColumn("timestamp")
             .dimensions(

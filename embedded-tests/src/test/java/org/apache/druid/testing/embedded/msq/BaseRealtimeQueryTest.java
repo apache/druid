@@ -134,9 +134,10 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), terminateSupervisorResult);
 
     // Cancel all running tasks, so we don't need to wait for them to hand off their segments.
-    try (final CloseableIterator<TaskStatusPlus> it = cluster.leaderOverlord().taskStatuses(null, null, null).get()) {
+    try (final CloseableIterator<TaskStatusPlus> it
+             = cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, null, null))) {
       while (it.hasNext()) {
-        cluster.leaderOverlord().cancelTask(it.next().getId());
+        cluster.callApi().onLeaderOverlord(o -> o.cancelTask(it.next().getId()));
       }
     }
 

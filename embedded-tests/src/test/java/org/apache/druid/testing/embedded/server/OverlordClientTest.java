@@ -21,10 +21,7 @@ package org.apache.druid.testing.embedded.server;
 
 import com.amazonaws.util.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.utils.IdUtils;
@@ -58,8 +55,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -114,7 +110,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_cancelTask_fails_forUnknownTaskId()
   {
     verifyApiFailsWith(
-        cluster.leaderOverlord().cancelTask(UNKNOWN_TASK_ID),
+        o -> o.cancelTask(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
   }
@@ -182,7 +178,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_taskStatuses_byIds_returnsEmpty_forUnknownTaskIds()
   {
     Map<String, TaskStatus> result = cluster.callApi().onLeaderOverlord(
-        o -> o.taskStatuses(Set.of(UNKNOWN_TASK_ID))
+        overlord -> overlord.taskStatuses(Set.of(UNKNOWN_TASK_ID))
     );
     Assertions.assertTrue(result.isEmpty());
   }
@@ -191,7 +187,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_taskStatus_fails_forUnknownTaskId()
   {
     verifyApiFailsWith(
-        cluster.leaderOverlord().taskStatus(UNKNOWN_TASK_ID),
+        overlord -> overlord.taskStatus(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
   }
@@ -200,7 +196,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_taskPayload_fails_forUnknownTaskId()
   {
     verifyApiFailsWith(
-        cluster.leaderOverlord().taskPayload(UNKNOWN_TASK_ID),
+        overlord -> overlord.taskPayload(UNKNOWN_TASK_ID),
         UNKNOWN_TASK_ERROR
     );
   }
@@ -256,7 +252,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   public void test_findLockedIntervals_fails_whenNoFilter()
   {
     verifyApiFailsWith(
-        cluster.leaderOverlord().findLockedIntervals(List.of()),
+        o -> o.findLockedIntervals(List.of()),
         "No filter provided"
     );
   }
@@ -354,38 +350,12 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
     Assertions.assertNotNull(result);
   }
 
-  private static <T> void verifyApiFailsWith(ListenableFuture<T> future, String message)
+  private <T> void verifyApiFailsWith(Function<OverlordClient, ListenableFuture<T>> overlordApi, String message)
   {
-    final CountDownLatch isFutureDone = new CountDownLatch(1);
-    final AtomicReference<Throwable> capturedError = new AtomicReference<>();
-    Futures.addCallback(
-        future,
-        new FutureCallback<>()
-        {
-          @Override
-          public void onSuccess(T result)
-          {
-            isFutureDone.countDown();
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            capturedError.set(t);
-            isFutureDone.countDown();
-          }
-        },
-        MoreExecutors.directExecutor()
+    Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> cluster.callApi().onLeaderOverlord(overlordApi)
     );
-
-    try {
-      isFutureDone.await();
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    Assertions.assertNotNull(capturedError.get());
-    Assertions.assertTrue(capturedError.get().getMessage().contains(message));
+    Assertions.assertTrue(exception.getMessage().contains(message));
   }
 }
