@@ -137,8 +137,8 @@ You can use any SQL query context parameters to control Dart's behavior unless o
   - Verify that `druid.msq.dart.controller.concurrentQueries` is set properly. If set too high, queries can get stuck on each other.
   - Use the query cache.
   - Perform query prioritization or laning.
-  - TopN queries are always exact. Approximate TopN queries (`useApproximateTopN`) aren't supported.
-- Dart doesn't support JDBC connections. Druid ignores the `engine` context parameter if Dart is enabled.
+- TopN queries are always exact. Approximate TopN queries (`useApproximateTopN`) aren't supported.
+- Dart doesn't support JDBC connections. Druid ignores the `engine` context parameter when its passed through a JDBC connection.
 - Realtime scans from the MSQ engine can't reliably read complex types. This can happen in situations such as if your data includes HLL Sketches for realtime data. Dart returns a `NullPointerException`. For more information, see [#18340](https://github.com/apache/druid/issues/18340).
 - The `NilStageOutputReader` can sometimes lead to a `NoClassDefFoundError`. For more information, see [#18336](https://github.com/apache/druid/pull/18336).
 - Broadcast joins with realtime data aren't supported. If the left table of a join has realtime data and you're doing a broadcast join, you must set `sqlJoinAlgorithm` to `sortMerge`.
