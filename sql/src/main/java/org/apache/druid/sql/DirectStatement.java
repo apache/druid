@@ -34,7 +34,6 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -154,22 +153,21 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   private volatile State state = State.START;
 
   public DirectStatement(
-    final SqlToolbox lifecycleToolbox,
-    final SqlQueryPlus queryPlus,
-    final String remoteAddress
+      final SqlToolbox lifecycleToolbox,
+      final SqlQueryPlus queryPlus,
+      final String remoteAddress
   )
   {
     super(lifecycleToolbox, queryPlus, remoteAddress);
   }
 
   public DirectStatement(
-    final SqlToolbox lifecycleToolbox,
-    final SqlQueryPlus sqlRequest
+      final SqlToolbox lifecycleToolbox,
+      final SqlQueryPlus sqlRequest
   )
   {
     super(lifecycleToolbox, sqlRequest, null);
   }
-
 
   /**
    * Convenience method to perform Direct execution of a query. Does both
@@ -244,6 +242,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
         sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.sqlNode(),
+        queryPlus.userProvidedContext(),
         queryContext,
         hook
     );

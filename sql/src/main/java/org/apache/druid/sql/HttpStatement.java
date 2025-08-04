@@ -25,7 +25,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -64,6 +63,7 @@ public class HttpStatement extends DirectStatement
         sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.sqlNode(),
+        queryPlus.userProvidedContext(),
         queryContext,
         hook
     );

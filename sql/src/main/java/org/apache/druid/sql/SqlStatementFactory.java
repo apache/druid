@@ -20,7 +20,6 @@
 package org.apache.druid.sql;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
 
 /**
  * A class for the creation of Statements, which happen to be used for Sql.

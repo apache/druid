@@ -37,7 +37,6 @@ public class SqlQueryPlusTest
     final DruidException e = Assert.assertThrows(
         DruidException.class,
         () -> SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS")
-                          .systemDefaultContext(Map.of())
                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                           .build()
     );
@@ -56,7 +55,6 @@ public class SqlQueryPlusTest
     // SqlQueryPlus does not throw parse errors on buildJdbc(), because parsing is deferred
     final SqlQueryPlus sqlQueryPlus =
         SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS")
-                    .systemDefaultContext(Map.of())
                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                     .buildJdbc();
 
@@ -71,6 +69,40 @@ public class SqlQueryPlusTest
         DruidExceptionMatcher
             .invalidSqlInput()
             .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
+    );
+  }
+
+  @Test
+  public void testUserProvidedContextOverridesSystemDefault()
+  {
+    Map<String, Object> systemDefaultContext = Map.of("key", "system-default", "key2", "system-default2");
+    Map<String, Object> userProvidedContext = Map.of("key", "user-provided-value");
+    final SqlQueryPlus.Builder sqlQueryPlusBuilder =
+        SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS foo")
+                    .systemDefaultContext(systemDefaultContext)
+                    .queryContext(userProvidedContext)
+                    .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
+
+    Assert.assertEquals(
+        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        sqlQueryPlusBuilder.build().context()
+    );
+    Assert.assertEquals(
+        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        sqlQueryPlusBuilder.buildJdbc().context()
+    );
+
+    Assert.assertEquals(
+        Map.of("key", "user-provided-value", "key2", "system-default2"),
+        sqlQueryPlusBuilder.build().withContext(systemDefaultContext, userProvidedContext).context()
+    );
+    Assert.assertEquals(
+        Map.of("key", "system-default", "key2", "system-default2"),
+        sqlQueryPlusBuilder.build().withContext(systemDefaultContext, Map.of()).context()
+    );
+    Assert.assertEquals(
+        Map.of("key", "user-provided-value"),
+        sqlQueryPlusBuilder.build().withContext(Map.of(), userProvidedContext).context()
     );
   }
 }

@@ -84,6 +84,7 @@ public class ExternalTableScanRuleTest
         DruidSqlParser.parse("SELECT 1", false).getMainStatement(),
         engine,
         Collections.emptyMap(),
+        Collections.emptyMap(),
         null
     );
     plannerContext.setQueryMaker(

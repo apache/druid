@@ -109,6 +109,7 @@ public class PlannerFactory extends PlannerToolbox
       final SqlEngine engine,
       final String sql,
       final SqlNode sqlNode,
+      final Map<String, Object> userProvidedContext,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -118,6 +119,7 @@ public class PlannerFactory extends PlannerToolbox
         sql,
         sqlNode,
         engine,
+        userProvidedContext,
         queryContext,
         hook
     );
@@ -142,6 +144,7 @@ public class PlannerFactory extends PlannerToolbox
         engine,
         sql,
         statementAndSetContext.getMainStatement(),
+        queryContext,
         statementAndSetContext.getSetContext().isEmpty()
         ? queryContext
         : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),

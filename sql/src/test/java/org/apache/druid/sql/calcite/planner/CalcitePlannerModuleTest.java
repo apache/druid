@@ -192,6 +192,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         DruidSqlParser.parse(sql, false).getMainStatement(),
         new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
         Collections.emptyMap(),
+        Collections.emptyMap(),
         null
     );
 
@@ -214,6 +215,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
+            Collections.emptyMap(),
             null
     );
 
@@ -222,6 +224,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            Collections.emptyMap(),
             Collections.emptyMap(),
             null
     );

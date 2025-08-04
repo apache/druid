@@ -131,6 +131,7 @@ public class PlannerContext
   private final String sql;
   private final SqlNode sqlNode;
   private final SqlEngine engine;
+  private final Map<String, Object> userProvidedQueryContext;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
@@ -167,6 +168,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final Map<String, Object> userProvidedQueryContext,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -176,6 +178,7 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
+    this.userProvidedQueryContext = userProvidedQueryContext;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
     initializeContextFieldsAndPlannerConfig();
@@ -186,6 +189,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final Map<String, Object> userProvidedQueryContext,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -195,6 +199,7 @@ public class PlannerContext
         sql,
         sqlNode,
         engine,
+        userProvidedQueryContext,
         queryContext,
         hook
     );
@@ -315,6 +320,14 @@ public class PlannerContext
   public Map<String, Object> queryContextMap()
   {
     return queryContext;
+  }
+
+  /**
+   * Return the user-provided query context, including SET parameters. This map is immutable, and originates from {@link org.apache.druid.sql.SqlQueryPlus#userProvidedContext}
+   */
+  public Map<String, Object> userProvidedQueryContextMap()
+  {
+    return userProvidedQueryContext;
   }
 
   /**

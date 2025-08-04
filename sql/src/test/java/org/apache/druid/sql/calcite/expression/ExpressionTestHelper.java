@@ -109,6 +109,7 @@ public class ExpressionTestHelper
       null, /* Don't need SQL node */
       null, /* Don't need engine */
       Collections.emptyMap(),
+      Collections.emptyMap(),
       null
   );
 

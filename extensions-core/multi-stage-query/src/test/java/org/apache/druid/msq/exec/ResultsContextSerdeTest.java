@@ -94,6 +94,7 @@ public class ResultsContextSerdeTest
         DruidSqlParser.parse(sql, false).getMainStatement(),
         engine,
         Collections.emptyMap(),
+        Collections.emptyMap(),
         null
     );
     this.resultsContext = new ResultsContext(

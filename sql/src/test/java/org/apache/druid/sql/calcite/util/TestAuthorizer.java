@@ -86,6 +86,7 @@ public class TestAuthorizer
     this.authenticationResult = authenticationResult;
     this.resource = resource;
     this.action = action;
+    this.access = Optional.empty();
   }
 
   TestAuthorizer allowIfSuperuser()
