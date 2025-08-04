@@ -72,7 +72,7 @@ public class EmbeddedDruidCluster implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
 
-  private final EmbeddedClusterApis clusterApis = new EmbeddedClusterApis(this);
+  private final EmbeddedClusterApis clusterApis;
   private final TestFolder testFolder = new TestFolder();
 
   private final List<EmbeddedDruidServer<?>> servers = new ArrayList<>();
@@ -86,6 +86,7 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   private EmbeddedDruidCluster()
   {
     resources.add(testFolder);
+    clusterApis = new EmbeddedClusterApis(this);
     addExtension(RuntimeInfoModule.class);
   }
 

@@ -50,8 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 /**
- * Contains {@link ServiceClient} objects to connect to various services in an
- * embedded test cluster.
+ * Client to make requests to various services in an embedded test cluster.
  *
  * @see #onLeaderOverlord(Function)
  * @see #onLeaderCoordinator(Function)
@@ -77,15 +76,16 @@ public class EmbeddedServiceClient
     this.clientConnectExec = ScheduledExecutors.fixed(4, "ServiceClientFactory-%d");
     this.responseHandler = StatusResponseHandler.getInstance();
 
+    // If this server is stopped, the client becomes invalid
     final EmbeddedDruidServer<?> anyServer = cluster.anyServer();
 
-    final HttpClient escalatedClient =
+    final HttpClient escalatedHttpClient =
         escalator == null
         ? anyServer.bindings().escalatedHttpClient()
         : escalator.createEscalatedClient(anyServer.bindings().globalHttpClient());
 
     // Create service clients
-    final ServiceClientFactory factory = new ServiceClientFactoryImpl(escalatedClient, clientConnectExec);
+    final ServiceClientFactory factory = new ServiceClientFactoryImpl(escalatedHttpClient, clientConnectExec);
     this.overlordServiceClient = module.makeServiceClientForOverlord(
         factory,
         anyServer.bindings().getInstance(ServiceLocator.class, IndexingService.class)
