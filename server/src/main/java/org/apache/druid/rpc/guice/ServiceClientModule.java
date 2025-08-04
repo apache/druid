@@ -28,7 +28,6 @@ import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
-import org.apache.druid.client.coordinator.CoordinatorServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -131,20 +130,6 @@ public class ServiceClientModule implements DruidModule
   )
   {
     return new CoordinatorClientImpl(serviceClient, jsonMapper);
-  }
-
-  /**
-   * Creates a {@link CoordinatorServiceClient} used by extensions to send
-   * requests to the Coordinator. For core Coordinator APIs,
-   * {@link CoordinatorClient} should be used instead.
-   */
-  @Provides
-  @LazySingleton
-  public static CoordinatorServiceClient createCoordinatorServiceClient(
-      @Coordinator final ServiceClient serviceClient
-  )
-  {
-    return new CoordinatorServiceClient(serviceClient);
   }
 
   @Provides

@@ -30,15 +30,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * Client to call various basic auth APIs on the Coordinator. 
+ */
 public class SecurityClient
 {
-  private final String coordinator;
+  private static final String AUTHENTICATOR_URL = "/druid-ext/basic-security/authentication/db/basic";
+  private static final String AUTHORIZER_URL = "/druid-ext/basic-security/authorization/db/basic";
+
   private final EmbeddedServiceClient clients;
 
   SecurityClient(EmbeddedServiceClient clients)
   {
     this.clients = clients;
-    this.coordinator = "/druid/coordinator/v1";
   }
 
   public void createAuthenticationUser(String username)
@@ -47,7 +51,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/users/%s",
-            getAuthenticatorURL(),
+            AUTHENTICATOR_URL,
             StringUtils.urlEncode(username)
         )
     );
@@ -60,7 +64,7 @@ public class SecurityClient
         HttpMethod.DELETE,
         StringUtils.format(
             "%s/users/%s",
-            getAuthenticatorURL(),
+            AUTHENTICATOR_URL,
             StringUtils.urlEncode(username)
         )
     );
@@ -73,7 +77,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/users/%s/credentials",
-            getAuthenticatorURL(),
+            AUTHENTICATOR_URL,
             StringUtils.urlEncode(username)
         )
     );
@@ -87,7 +91,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/users/%s",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(username)
         )
     );
@@ -100,7 +104,7 @@ public class SecurityClient
         HttpMethod.DELETE,
         StringUtils.format(
             "%s/users/%s",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(username)
         )
     );
@@ -113,7 +117,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/roles/%s",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(role)
         )
     );
@@ -126,7 +130,7 @@ public class SecurityClient
         HttpMethod.DELETE,
         StringUtils.format(
             "%s/roles/%s",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(role)
         )
     );
@@ -139,7 +143,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/users/%s/roles/%s",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(user),
             StringUtils.urlEncode(role)
         )
@@ -153,7 +157,7 @@ public class SecurityClient
         HttpMethod.POST,
         StringUtils.format(
             "%s/roles/%s/permissions/",
-            getAuthorizerURL(),
+            AUTHORIZER_URL,
             StringUtils.urlEncode(role)
         )
     );
@@ -163,15 +167,5 @@ public class SecurityClient
   private void sendRequest(Function<ObjectMapper, RequestBuilder> request)
   {
     clients.onLeaderCoordinator(request, null);
-  }
-
-  private String getAuthenticatorURL()
-  {
-    return "/druid-ext/basic-security/authentication/db/basic";
-  }
-
-  private String getAuthorizerURL()
-  {
-    return "/druid-ext/basic-security/authorization/db/basic";
   }
 }

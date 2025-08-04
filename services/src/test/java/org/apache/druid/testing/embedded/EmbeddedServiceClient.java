@@ -52,6 +52,10 @@ import java.util.function.Function;
 /**
  * Contains {@link ServiceClient} objects to connect to various services in an
  * embedded test cluster.
+ *
+ * @see #onLeaderOverlord(Function)
+ * @see #onLeaderCoordinator(Function)
+ * @see #onAnyBroker(Function)
  */
 public class EmbeddedServiceClient
 {
@@ -114,6 +118,9 @@ public class EmbeddedServiceClient
     return new EmbeddedServiceClient(cluster, escalator);
   }
 
+  /**
+   * Stops the executor service used by this client.
+   */
   public void stop() throws InterruptedException
   {
     clientConnectExec.shutdownNow();

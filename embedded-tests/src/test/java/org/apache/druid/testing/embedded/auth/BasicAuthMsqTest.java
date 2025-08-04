@@ -58,10 +58,8 @@ import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
@@ -79,8 +77,6 @@ import java.util.Map;
 
 public class BasicAuthMsqTest extends EmbeddedClusterTestBase
 {
-  private SecurityClient securityClient;
-
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
@@ -89,15 +85,13 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
   // underlying test cluster enough time to sync permissions and be ready when test execution starts.
   private static final int SYNC_SLEEP = 500;
 
-  protected final EmbeddedBroker broker = new EmbeddedBroker();
-  protected final EmbeddedIndexer indexer = new EmbeddedIndexer()
+  private SecurityClient securityClient;
+  private EmbeddedServiceClient userClient;
+
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(400_000_000)
       .addProperty("druid.worker.capacity", "2");
-  protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  protected final EmbeddedHistorical historical = new EmbeddedHistorical();
-  protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-
-  private EmbeddedServiceClient userClient;
   private final MsqExportDirectory exportDirectory = new MsqExportDirectory();
 
   @Override
@@ -107,12 +101,10 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
         .addResource(exportDirectory)
-        .addServer(coordinator)
+        .addServer(new EmbeddedCoordinator())
         .addServer(overlord)
         .addServer(indexer)
-        .addServer(historical)
-        .addServer(broker)
-        .addServer(new EmbeddedRouter())
+        .addServer(new EmbeddedBroker())
         .addExtensions(
             BasicSecurityDruidModule.class,
             MSQSqlModule.class,
