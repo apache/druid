@@ -47,11 +47,11 @@ public class CompactionResourceTestClient
 {
   private static final Logger log = new Logger(CompactionResourceTestClient.class);
 
-  private final EmbeddedServiceClient clients;
+  private final EmbeddedServiceClient client;
 
   CompactionResourceTestClient(EmbeddedDruidCluster cluster)
   {
-    this.clients = cluster.callApi().serviceClient();
+    this.client = cluster.callApi().serviceClient();
   }
 
   private String getCoordinatorURL()
@@ -71,7 +71,7 @@ public class CompactionResourceTestClient
         "%s/compaction/config/datasources/%s",
         getOverlordURL(), StringUtils.urlEncode(dataSource)
     );
-    clients.onLeaderOverlord(
+    client.onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(
             mapper,
             dataSourceCompactionConfig
@@ -87,13 +87,13 @@ public class CompactionResourceTestClient
         "%s/compaction/config/datasources/%s",
         getOverlordURL(), StringUtils.urlEncode(dataSource)
     );
-    clients.onLeaderOverlord(mapper -> new RequestBuilder(HttpMethod.DELETE, url), null);
+    client.onLeaderOverlord(mapper -> new RequestBuilder(HttpMethod.DELETE, url), null);
   }
 
   public List<DataSourceCompactionConfig> getAllCompactionConfigs()
   {
     String url = StringUtils.format("%s/compaction/config/datasources", getOverlordURL());
-    final CompactionConfigsResponse payload = clients.onLeaderOverlord(
+    final CompactionConfigsResponse payload = client.onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, url),
         new TypeReference<>() {}
     );
@@ -106,7 +106,7 @@ public class CompactionResourceTestClient
         "%s/compaction/config/datasources/%s",
         getOverlordURL(), StringUtils.urlEncode(dataSource)
     );
-    return clients.onLeaderOverlord(
+    return client.onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, url),
         new TypeReference<>() {}
     );
@@ -131,17 +131,17 @@ public class CompactionResourceTestClient
     );
 
     String url = StringUtils.format("%s/compaction/compact", getCoordinatorURL());
-    clients.onLeaderCoordinator(mapper -> new RequestBuilder(HttpMethod.POST, url), null);
+    client.onLeaderCoordinator(mapper -> new RequestBuilder(HttpMethod.POST, url), null);
   }
 
   public void updateClusterConfig(ClusterCompactionConfig config)
   {
-    clients.onLeaderOverlord(o -> o.updateClusterCompactionConfig(config));
+    client.onLeaderOverlord(o -> o.updateClusterCompactionConfig(config));
   }
 
   public ClusterCompactionConfig getClusterConfig()
   {
-    return clients.onLeaderOverlord(OverlordClient::getClusterCompactionConfig);
+    return client.onLeaderOverlord(OverlordClient::getClusterCompactionConfig);
   }
 
   /**
@@ -157,7 +157,7 @@ public class CompactionResourceTestClient
         StringUtils.urlEncode(compactionTaskSlotRatio.toString()),
         StringUtils.urlEncode(maxCompactionTaskSlots.toString())
     );
-    clients.onLeaderCoordinator(mapper -> new RequestBuilder(HttpMethod.POST, url), null);
+    client.onLeaderCoordinator(mapper -> new RequestBuilder(HttpMethod.POST, url), null);
   }
 
   public Map<String, String> getCompactionProgress(String dataSource)
@@ -167,7 +167,7 @@ public class CompactionResourceTestClient
         getCoordinatorURL(),
         StringUtils.urlEncode(dataSource)
     );
-    return clients.onLeaderCoordinator(
+    return client.onLeaderCoordinator(
         mapper -> new RequestBuilder(HttpMethod.GET, url),
         new TypeReference<>() {}
     );
@@ -182,7 +182,7 @@ public class CompactionResourceTestClient
     );
 
     try {
-      final CompactionStatusResponse latestSnapshots = clients.onLeaderCoordinator(
+      final CompactionStatusResponse latestSnapshots = client.onLeaderCoordinator(
           mapper -> new RequestBuilder(HttpMethod.GET, url),
           new TypeReference<>() {}
       );
@@ -198,7 +198,7 @@ public class CompactionResourceTestClient
     final ClusterCompactionConfig clusterConfig = getClusterConfig();
 
     final String url = StringUtils.format("%s/compaction/simulate", getCoordinatorURL());
-    return clients.onLeaderCoordinator(
+    return client.onLeaderCoordinator(
         mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, clusterConfig),
         new TypeReference<>() {}
     );
