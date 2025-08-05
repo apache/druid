@@ -48,13 +48,13 @@ druid.auth.authenticator.<authenticatorName>.<authenticatorProperty>
 The configuration examples in the rest of this document will use "kerberos" as the name of the authenticator being configured.
 
 ### Properties
-|Property|Possible Values|Description|Default|required|
-|--------|---------------|-----------|-------|--------|
-|`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNEGO service principal used by druid processes|empty|Yes|
-|`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid processes|empty|Yes|
-|`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
-|`druid.auth.authenticator.kerberos.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies. It is advisable to explicitly set it, if you have multiple druid nodes running on same machine with different ports as the Cookie Specification does not guarantee isolation by port.|Random value|No|
-|`druid.auth.authenticator.kerberos.authorizerName`|Depends on available authorizers|Authorizer that requests should be directed to|Empty|Yes|
+|Property|Possible Values|Description| Default | required |
+|--------|---------------|-----------|---------|----------|
+|`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNEGO service principal used by druid processes| Empty   | Yes      |
+|`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid processes| Empty   | Yes      |
+|`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.| DEFAULT | No       |
+|`druid.auth.authenticator.kerberos.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies| Empty   | Yes      |
+|`druid.auth.authenticator.kerberos.authorizerName`|Depends on available authorizers|Authorizer that requests should be directed to| Empty   | Yes      |
 
 As a note, it is required that the SPNego principal in use by the druid processes must start with HTTP (This specified by [RFC-4559](https://tools.ietf.org/html/rfc4559)) and must be of the form "HTTP/_HOST@REALM".
 The special string _HOST will be replaced automatically with the value of config `druid.host`

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -75,7 +76,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 
@@ -84,6 +84,7 @@ public class KerberosAuthenticator implements Authenticator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
   public static final String SIGNED_TOKEN_ATTRIBUTE = "signedToken";
+  private static final String COOKIE_SIGNATURE_SECRET_KEY = "cookieSignatureSecret";
 
   private final String serverPrincipal;
   private final String serverKeytab;
@@ -98,7 +99,7 @@ public class KerberosAuthenticator implements Authenticator
       @JsonProperty("serverPrincipal") String serverPrincipal,
       @JsonProperty("serverKeytab") String serverKeytab,
       @JsonProperty("authToLocal") String authToLocal,
-      @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
+      @JsonProperty(COOKIE_SIGNATURE_SECRET_KEY) String cookieSignatureSecret,
       @JsonProperty("authorizerName") String authorizerName,
       @JsonProperty("name") String name,
       @JacksonInject @Self DruidNode node
@@ -106,6 +107,12 @@ public class KerberosAuthenticator implements Authenticator
   {
     this.serverKeytab = serverKeytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
+    if (cookieSignatureSecret == null || cookieSignatureSecret.isEmpty()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("[%s] is not set for Kerberos authenticator", COOKIE_SIGNATURE_SECRET_KEY);
+    }
+
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
     this.name = Preconditions.checkNotNull(name);
@@ -140,8 +147,10 @@ public class KerberosAuthenticator implements Authenticator
           Properties config = getConfiguration(configPrefix, filterConfig);
           String signatureSecret = config.getProperty(configPrefix + SIGNATURE_SECRET);
           if (signatureSecret == null) {
-            signatureSecret = Long.toString(ThreadLocalRandom.current().nextLong());
-            log.warn("'signature.secret' configuration not set, using a random value as secret");
+            throw DruidException.defensive(
+                "Config property[%s] is not set for Kerberos authenticator",
+                SIGNATURE_SECRET
+            );
           }
           final byte[] secretBytes = StringUtils.toUtf8(signatureSecret);
           SignerSecretProvider signerSecretProvider = new SignerSecretProvider()
@@ -381,9 +390,7 @@ public class KerberosAuthenticator implements Authenticator
     params.put("kerberos.keytab", serverKeytab);
     params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
     params.put("kerberos.name.rules", authToLocal);
-    if (cookieSignatureSecret != null) {
-      params.put("signature.secret", cookieSignatureSecret);
-    }
+    params.put(AuthenticationFilter.SIGNATURE_SECRET, cookieSignatureSecret);
     return params;
   }
 
