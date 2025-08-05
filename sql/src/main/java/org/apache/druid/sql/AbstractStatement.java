@@ -88,11 +88,10 @@ public abstract class AbstractStatement implements Closeable
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
     this.userProvidedContext = queryPlus.userProvidedContext();
-    sqlToolbox.engine.initContextMap(queryPlus.context());
+    this.queryContext = new HashMap<>(queryPlus.context());
+    sqlToolbox.engine.initContextMap(this.queryContext);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
-
-    this.queryContext = new HashMap<>(queryPlus.context());
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
