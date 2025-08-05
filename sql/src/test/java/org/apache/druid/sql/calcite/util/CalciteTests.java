@@ -150,15 +150,6 @@ public class CalciteTests
     }
   };
 
-  public static final AuthorizerMapper TEST_EXTERNAL_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
-  {
-    @Override
-    public Authorizer getAuthorizer(String name)
-    {
-      return TestAuthorizer.simple2();
-    }
-  };
-
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
 
   static {

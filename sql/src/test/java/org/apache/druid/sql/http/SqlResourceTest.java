@@ -260,7 +260,7 @@ public class SqlResourceTest extends CalciteTestBase
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig(),
+        AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build(),
         NoopPolicyEnforcer.instance(),
         new DruidHookDispatcher()
     );
@@ -277,7 +277,6 @@ public class SqlResourceTest extends CalciteTestBase
       }
     };
     stubServiceEmitter = new StubServiceEmitter("test", "test");
-    final AuthConfig authConfig = new AuthConfig();
     final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(ImmutableMap.of());
     final SqlToolbox sqlToolbox = new SqlToolbox(
         null,

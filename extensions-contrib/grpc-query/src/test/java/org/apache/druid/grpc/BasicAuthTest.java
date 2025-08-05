@@ -71,7 +71,7 @@ public class BasicAuthTest extends BaseCalciteQueryTest
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
-        Map.of("system-default-key", "system-default-value"),
+        Map.of("forbiddenKey", "system-default-value"), // systen default forbidden key, only superuser can change it
         sqlTestFramework.queryLifecycleFactory()
     );
 

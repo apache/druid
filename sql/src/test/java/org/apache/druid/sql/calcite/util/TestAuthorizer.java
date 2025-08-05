@@ -21,51 +21,35 @@ package org.apache.druid.sql.calcite.util;
 
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.RowFilterPolicy;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 
 import java.util.Optional;
 import java.util.Set;
 
 public class TestAuthorizer
 {
-  public static final String TEST_SUPERUSER_NAME = "testSuperuser";
-  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.equality(
-      "m1",
-      6,
-      ColumnType.LONG
-  ));
-
-  public static Authorizer simple()
+  /**
+   * Creates a simple authorizer that allows access based on the following rules:
+   * <li>resources of type DATASOURCE with names containing "restricted" for read include a policy restriction</li>
+   * <li>superuser has full access</li>
+   * <li>resources with names containing "forbidden" are denied</li>
+   * <li>external resources are denied for read actions</li>
+   * <li>resources of type DATASOURCE, VIEW, QUERY_CONTEXT, and EXTERNAL are allowed</li>
+   * <li>if none of the roles above matches, deny access</li>
+   */
+  public static Authorizer simple(String superuserName, Policy defaultPolicy)
   {
     return (authenticationResult, resource, action) ->
         new TestAuthorizer(authenticationResult, resource, action)
-            .allowIfSuperuser()
+            .defaultPolicyOnReadTable(defaultPolicy)
+            .allowIfSuperuser(superuserName)
             .denyIfResourceNameHasKeyword("forbidden")
             .denyExternalRead()
-            .allowIfResourceTypeIs(Set.of(
-                ResourceType.DATASOURCE,
-                ResourceType.VIEW,
-                ResourceType.QUERY_CONTEXT,
-                ResourceType.EXTERNAL
-            ))
-            .access()
-            .orElse(Access.DENIED);
-  }
-
-  public static Authorizer simple2()
-  {
-    return (authenticationResult, resource, action) ->
-        new TestAuthorizer(authenticationResult, resource, action)
-            .allowIfSuperuser()
-            .denyIfResourceNameHasKeyword("forbidden")
             .allowIfResourceTypeIs(Set.of(
                 ResourceType.DATASOURCE,
                 ResourceType.VIEW,
@@ -81,7 +65,10 @@ public class TestAuthorizer
   Action action;
   Optional<Access> access;
 
-  TestAuthorizer(AuthenticationResult authenticationResult, Resource resource, Action action)
+  String superuserName;
+  Policy defaultPolicyRestriction;
+
+  public TestAuthorizer(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
     this.authenticationResult = authenticationResult;
     this.resource = resource;
@@ -89,19 +76,25 @@ public class TestAuthorizer
     this.access = Optional.empty();
   }
 
-  TestAuthorizer allowIfSuperuser()
+  public TestAuthorizer defaultPolicyOnReadTable(Policy defaultPolicy)
   {
+    this.defaultPolicyRestriction = defaultPolicy;
+    return this;
+  }
+
+  public TestAuthorizer allowIfSuperuser(String superuserName)
+  {
+    this.superuserName = superuserName;
     if (access.isPresent()) {
       return this;
     }
-    if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
+    if (superuserName.equals(authenticationResult.getIdentity())) {
       access = Optional.of(allow(resource, action, authenticationResult.getIdentity()));
     }
     return this;
   }
 
-
-  TestAuthorizer denyIfResourceNameHasKeyword(String keyword)
+  public TestAuthorizer denyIfResourceNameHasKeyword(String keyword)
   {
     if (access.isPresent()) {
       return this;
@@ -112,7 +105,7 @@ public class TestAuthorizer
     return this;
   }
 
-  TestAuthorizer denyExternalRead()
+  public TestAuthorizer denyExternalRead()
   {
     if (access.isPresent()) {
       return this;
@@ -123,7 +116,7 @@ public class TestAuthorizer
     return this;
   }
 
-  TestAuthorizer allowIfResourceTypeIs(Set<String> resourceTypes)
+  public TestAuthorizer allowIfResourceTypeIs(Set<String> resourceTypes)
   {
     if (access.isPresent()) {
       return this;
@@ -134,15 +127,32 @@ public class TestAuthorizer
     return this;
   }
 
-  Optional<Access> access()
+  public TestAuthorizer allowResourceAccessForUsers(String resourceType, Action resourceAction, Set<String> users)
+  {
+    if (access.isPresent()) {
+      return this;
+    }
+    if (resource.getType().equals(resourceType)
+        && action.equals(resourceAction)
+        && users.contains(authenticationResult.getIdentity())) {
+      access = Optional.of(allow(resource, action, authenticationResult.getIdentity()));
+    }
+    return this;
+  }
+
+  public Optional<Access> access()
   {
     return access;
   }
 
 
-  private static Access allow(Resource resource, Action action, String user)
+  private Access allow(Resource resource, Action action, String user)
   {
-    Policy policy = TEST_SUPERUSER_NAME.equals(user) ? NoRestrictionPolicy.instance() : POLICY_RESTRICTION;
+    if (defaultPolicyRestriction == null) {
+      return Access.OK;
+    }
+
+    Policy policy = user.equals(superuserName) ? NoRestrictionPolicy.instance() : defaultPolicyRestriction;
     boolean readRestrictedTable = resource.getType().equals(ResourceType.DATASOURCE)
                                   && resource.getName().contains("restricted")
                                   && action.equals(Action.READ);
