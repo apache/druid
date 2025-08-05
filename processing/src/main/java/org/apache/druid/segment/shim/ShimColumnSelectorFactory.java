@@ -29,6 +29,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -57,28 +58,49 @@ public class ShimColumnSelectorFactory implements ColumnSelectorFactory
     return dimensionSelectors.computeIfAbsent(
         dimensionSpec,
         spec -> {
-          if (spec.mustDecorate()) {
+          if (spec.mustDecorate() || spec.getExtractionFn() != null) {
             throw DruidException.defensive("Only non-decorated dimensions can be vectorized.");
           }
-          final ColumnCapabilities capabilities = cursor.vectorColumnSelectorFactory
-              .getColumnCapabilities(dimensionSpec.getDimension());
+
+          final String columnName = dimensionSpec.getDimension();
+          final ColumnCapabilities capabilities = cursor.vectorColumnSelectorFactory.getColumnCapabilities(columnName);
+
           if (capabilities == null) {
             return DimensionSelector.nilSelector();
-          } else if (ColumnProcessors.useDictionaryEncodedSelector(capabilities)) {
-            if (capabilities.hasMultipleValues().isMaybeTrue()) {
-              final MultiValueDimensionVectorSelector vectorSelector =
-                  cursor.vectorColumnSelectorFactory.makeMultiValueDimensionSelector(spec);
-              return new ShimMultiValueDimensionSelector(cursor, vectorSelector);
+          } else if (capabilities.is(ValueType.STRING)) {
+            if (ColumnProcessors.useDictionaryEncodedSelector(capabilities)) {
+              // Dictionary-encoded string column.
+              if (capabilities.hasMultipleValues().isMaybeTrue()) {
+                final MultiValueDimensionVectorSelector vectorSelector =
+                    cursor.vectorColumnSelectorFactory.makeMultiValueDimensionSelector(spec);
+                return new ShimMultiValueDimensionSelector(cursor, vectorSelector);
+              } else {
+                final SingleValueDimensionVectorSelector vectorSelector =
+                    cursor.vectorColumnSelectorFactory.makeSingleValueDimensionSelector(spec);
+                return new ShimSingleValueDimensionSelector(cursor, vectorSelector);
+              }
             } else {
-              final SingleValueDimensionVectorSelector vectorSelector =
-                  cursor.vectorColumnSelectorFactory.makeSingleValueDimensionSelector(spec);
-              return new ShimSingleValueDimensionSelector(cursor, vectorSelector);
+              // Non-dictionary encoded string column. Possibly an expression virtual column.
+              final VectorObjectSelector vectorObjectSelector =
+                  cursor.vectorColumnSelectorFactory.makeObjectSelector(spec.getDimension());
+              return new ShimVectorObjectDimSelector(
+                  cursor,
+                  vectorObjectSelector,
+                  capabilities.hasMultipleValues().isMaybeTrue()
+              );
             }
+          } else if (capabilities.isNumeric()) {
+            // Caller requested a dimension selector on top of a numeric column.
+            return ValueTypes.makeNumericWrappingDimensionSelector(
+                capabilities.getType(),
+                makeColumnValueSelector(columnName),
+                null /* No extractionFn; we checked above that extractionFn is not present. */
+            );
           } else {
-            // Non-dictionary encoded column, like virtual columns.
-            VectorObjectSelector vectorObjectSelector =
-                cursor.vectorColumnSelectorFactory.makeObjectSelector(spec.getDimension());
-            return new ShimVectorObjectDimSelector(cursor, vectorObjectSelector, capabilities.hasMultipleValues().isMaybeTrue());
+            // Array or complex. Callers should be calling makeColumnValueSelector instead for these types. If they do
+            // call makeDimensionSelector for some reason, give them a column full of nulls, since that's what
+            // QueryableIndexColumnSelectorFactory would do.
+            return DimensionSelector.nilSelector();
           }
         }
     );
