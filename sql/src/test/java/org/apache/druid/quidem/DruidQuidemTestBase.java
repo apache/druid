@@ -40,11 +40,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.MultiComponentSupplier;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -323,11 +323,10 @@ public abstract class DruidQuidemTestBase
       druidQuidemRunner.run(inFile, outFile, testConfig.componentSupplierName);
     }
     catch (Error e) {
-      // This catch is needed to workaround the way Quidem currently handles AssumptionViolatedException
+      // This catch is needed to work around the way Quidem currently handles TestAbortedException
       Throwable cause = e.getCause();
-      if (cause != null && cause instanceof AssumptionViolatedException) {
-        AssumptionViolatedException assumptionViolatedException = (AssumptionViolatedException) cause;
-        throw assumptionViolatedException;
+      if (cause != null && cause instanceof TestAbortedException) {
+        throw (TestAbortedException) cause;
       }
       throw e;
     }
