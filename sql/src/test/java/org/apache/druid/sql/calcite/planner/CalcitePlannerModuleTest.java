@@ -214,8 +214,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
-            Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             Collections.emptyMap(),
+            Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
     );
 

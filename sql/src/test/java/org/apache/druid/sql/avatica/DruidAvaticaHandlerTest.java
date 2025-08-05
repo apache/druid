@@ -278,6 +278,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
               binder.install(new PolicyModule());
+              binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
