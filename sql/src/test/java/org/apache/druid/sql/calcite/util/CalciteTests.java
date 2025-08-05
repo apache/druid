@@ -146,7 +146,7 @@ public class CalciteTests
     @Override
     public Authorizer getAuthorizer(String name)
     {
-      return TestAuthorizer.simple();
+      return TestAuthorizer.simple(TEST_SUPERUSER_NAME, POLICY_RESTRICTION);
     }
   };
 
