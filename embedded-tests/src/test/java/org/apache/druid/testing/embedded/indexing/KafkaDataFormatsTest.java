@@ -360,7 +360,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             null,
             inputFormat,
             null, null,
-            Period.seconds(10),
+            Period.seconds(1),
             kafkaServer.consumerProperties(),
             null, null, null, null, null,
             true,
