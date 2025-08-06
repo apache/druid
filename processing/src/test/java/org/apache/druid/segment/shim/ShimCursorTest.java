@@ -19,15 +19,19 @@
 
 package org.apache.druid.segment.shim;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -40,19 +44,20 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,6 +65,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Compares the results between using a {@link ShimCursor} and {@link Cursor}
@@ -71,7 +82,7 @@ public class ShimCursorTest
   }
 
   @Parameterized.Parameters
-  public static Collection<Object> data()
+  public static Collection<Object> vectorSizes()
   {
     return List.of(1, 2, 4, 7, 512);
   }
@@ -93,24 +104,37 @@ public class ShimCursorTest
   /**
    * Tests long and double columns.
    */
-  @ParameterizedTest(name = "Number columns with vector size {0}")
-  @MethodSource("data")
+  @ParameterizedTest(name = "vectorSize = {0}")
+  @MethodSource("vectorSizes")
   public void testNumberColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
-        .setMaxRowCount(100)
-        .setIndexSchema(
-            IncrementalIndexSchema.builder()
-                                  .withDimensionsSpec(
-                                      DimensionsSpec.builder()
-                                                    .useSchemaDiscovery(true)
-                                                    .setIncludeAllDimensions(true)
-                                                    .build()
-                                  )
-                                  .withRollup(false)
-                                  .build()
-        )
-        .build());
+    IncrementalIndex incrementalIndex = closer.register(
+        new OnheapIncrementalIndex.Builder()
+            .setMaxRowCount(100)
+            .setIndexSchema(
+                IncrementalIndexSchema
+                    .builder()
+                    .withDimensionsSpec(
+                        DimensionsSpec.builder()
+                                      .useSchemaDiscovery(true)
+                                      .setIncludeAllDimensions(true)
+                                      .setDimensions(
+                                          List.of(
+                                              new AutoTypeColumnSchema("A", null),
+                                              // set B to DOUBLE to avoid mixed types, which causes the base nonvector
+                                              // and vector selectors to return different objects
+                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE),
+                                              new AutoTypeColumnSchema("C", null)
+
+                                          )
+                                      )
+                                      .build()
+                    )
+                    .withRollup(false)
+                    .build()
+            )
+            .build()
+    );
 
     final List<String> signature = List.of("A", "B", "C");
 
@@ -124,7 +148,8 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, Long.MAX_VALUE, -824.0f, Long.MIN_VALUE));
     incrementalIndex.add(autoRow(signature, -1, -2.0d, 112));
 
-    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
+    final SimpleQueryableIndex index =
+        closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -135,7 +160,7 @@ public class ShimCursorTest
                                                      )
                                                      .build();
     CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
-    Assertions.assertTrue(cursorHolder.canVectorize());
+    assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
     Cursor cursor = cursorHolder.asCursor();
@@ -147,24 +172,39 @@ public class ShimCursorTest
   /**
    * Tests a few dictionary encoded columns, with a few number columns thrown in.
    */
-  @ParameterizedTest(name = "Number columns with vector size {0}")
-  @MethodSource("data")
+  @ParameterizedTest(name = "vectorSize = {0}")
+  @MethodSource("vectorSizes")
   public void testDictionaryColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
-        .setMaxRowCount(100)
-        .setIndexSchema(
-            IncrementalIndexSchema.builder()
-                                  .withDimensionsSpec(
-                                      DimensionsSpec.builder()
-                                                    .useSchemaDiscovery(true)
-                                                    .setIncludeAllDimensions(true)
-                                                    .build()
-                                  )
-                                  .withRollup(false)
-                                  .build()
-        )
-        .build());
+    IncrementalIndex incrementalIndex = closer.register(
+        new OnheapIncrementalIndex.Builder()
+            .setMaxRowCount(100)
+            .setIndexSchema(
+                IncrementalIndexSchema
+                    .builder()
+                    .withDimensionsSpec(
+                        DimensionsSpec.builder()
+                                      .useSchemaDiscovery(false)
+                                      .setIncludeAllDimensions(true)
+                                      .setDimensions(
+                                          List.of(
+                                              new AutoTypeColumnSchema("A", null),
+                                              // set B to DOUBLE to avoid mixed types, which causes the base nonvector
+                                              // and vector selectors to return different objects
+                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE),
+                                              new AutoTypeColumnSchema("C", null),
+                                              new AutoTypeColumnSchema("D", null),
+                                              new AutoTypeColumnSchema("E", null),
+                                              new AutoTypeColumnSchema("F", null)
+                                          )
+                                      )
+                                      .build()
+                    )
+                    .withRollup(false)
+                    .build()
+            )
+            .build()
+    );
 
     final List<String> signature = List.of("A", "B", "C", "D", "E", "F");
 
@@ -176,7 +216,8 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, -1, "Cat", arr(), obj("Bat", "Knife"), null));
     incrementalIndex.add(autoRow(signature, 7, -2.0, "Drew", arr("Machine", "Rabbit"), obj("bat", "knife"), null));
 
-    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
+    final SimpleQueryableIndex index =
+        closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -187,7 +228,7 @@ public class ShimCursorTest
                                                      )
                                                      .build();
     CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
-    Assertions.assertTrue(cursorHolder.canVectorize());
+    assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
     Cursor cursor = cursorHolder.asCursor();
@@ -196,24 +237,26 @@ public class ShimCursorTest
     compareCursors(signature, cursor, shimCursor);
   }
 
-  @ParameterizedTest(name = "Non dict-encoded string columns with vector size {0}")
-  @MethodSource("data")
+  @ParameterizedTest(name = "vectorSize = {0}")
+  @MethodSource("vectorSizes")
   public void testMultiDimColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
-        .setMaxRowCount(100)
-        .setIndexSchema(
-            IncrementalIndexSchema.builder()
-                                  .withDimensionsSpec(
-                                      DimensionsSpec.builder()
-                                                    .useSchemaDiscovery(false)
-                                                    .setIncludeAllDimensions(true)
-                                                    .build()
-                                  )
-                                  .withRollup(false)
-                                  .build()
-        )
-        .build());
+    IncrementalIndex incrementalIndex = closer.register(
+        new OnheapIncrementalIndex.Builder()
+            .setMaxRowCount(100)
+            .setIndexSchema(
+                IncrementalIndexSchema.builder()
+                                      .withDimensionsSpec(
+                                          DimensionsSpec.builder()
+                                                        .useSchemaDiscovery(false)
+                                                        .setIncludeAllDimensions(true)
+                                                        .build()
+                                      )
+                                      .withRollup(false)
+                                      .build()
+            )
+            .build()
+    );
 
     final List<String> signature = List.of("A", "B");
 
@@ -225,7 +268,8 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, arr()));
     incrementalIndex.add(autoRow(signature, 7, arr("Machine", "Rabbit")));
 
-    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
+    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(
+        incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
@@ -236,7 +280,7 @@ public class ShimCursorTest
                                                      )
                                                      .build();
     CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
-    Assertions.assertTrue(cursorHolder.canVectorize());
+    assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
     Cursor cursor = cursorHolder.asCursor();
@@ -246,32 +290,35 @@ public class ShimCursorTest
   }
 
   @ParameterizedTest(name = "Non dict-encoded string columns with vector size {0}")
-  @MethodSource("data")
+  @MethodSource("vectorSizes")
   public void testNonDictStringColumns(int vectorSize)
   {
-    IncrementalIndex incrementalIndex = closer.register(new OnheapIncrementalIndex.Builder()
-        .setMaxRowCount(100)
-        .setIndexSchema(
-            IncrementalIndexSchema.builder()
-                                  .withDimensionsSpec(
-                                      DimensionsSpec.builder()
-                                                    .useSchemaDiscovery(false)
-                                                    .setIncludeAllDimensions(true)
-                                                    .build()
-                                  )
-                                  .withVirtualColumns(
-                                      VirtualColumns.create(
-                                          new ExpressionVirtualColumn(
-                                              "v0",
-                                              "concat(\"A\", \"B\")",
-                                              ColumnType.STRING,
-                                              TestExprMacroTable.INSTANCE)
+    IncrementalIndex incrementalIndex = closer.register(
+        new OnheapIncrementalIndex.Builder()
+            .setMaxRowCount(100)
+            .setIndexSchema(
+                IncrementalIndexSchema.builder()
+                                      .withDimensionsSpec(
+                                          DimensionsSpec.builder()
+                                                        .useSchemaDiscovery(false)
+                                                        .setIncludeAllDimensions(true)
+                                                        .build()
                                       )
-                                  )
-                                  .withRollup(false)
-                                  .build()
-        )
-        .build());
+                                      .withVirtualColumns(
+                                          VirtualColumns.create(
+                                              new ExpressionVirtualColumn(
+                                                  "v0",
+                                                  "concat(\"A\", \"B\")",
+                                                  ColumnType.STRING,
+                                                  TestExprMacroTable.INSTANCE
+                                              )
+                                          )
+                                      )
+                                      .withRollup(false)
+                                      .build()
+            )
+            .build()
+    );
 
     final List<String> signature = List.of("A", "B");
 
@@ -283,32 +330,86 @@ public class ShimCursorTest
     incrementalIndex.add(autoRow(signature, 6, "Cat"));
     incrementalIndex.add(autoRow(signature, 7, "Drew"));
 
-    final SimpleQueryableIndex index = closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
+    final SimpleQueryableIndex index =
+        closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
     final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
 
-    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
-                                                     .setQueryContext(
-                                                         QueryContext.of(
-                                                             Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
-                                                         )
-                                                     )
-                                                     .setVirtualColumns(VirtualColumns.create(
-                                                                            new ExpressionVirtualColumn(
-                                                                                "v0",
-                                                                                "concat(\"A\", \"B\")",
-                                                                                ColumnType.STRING,
-                                                                                TestExprMacroTable.INSTANCE)
-                                                                        )
-                                                     )
-                                                     .build();
+    CursorBuildSpec cursorBuildSpec =
+        CursorBuildSpec.builder()
+                       .setQueryContext(
+                           QueryContext.of(
+                               Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
+                           )
+                       )
+                       .setVirtualColumns(VirtualColumns.create(
+                                              new ExpressionVirtualColumn(
+                                                  "v0",
+                                                  "concat(\"A\", \"B\")",
+                                                  ColumnType.STRING,
+                                                  TestExprMacroTable.INSTANCE
+                                              )
+                                          )
+                       )
+                       .build();
     CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
-    Assertions.assertTrue(cursorHolder.canVectorize());
+    assertTrue(cursorHolder.canVectorize());
     VectorCursor vectorCursor = cursorHolder.asVectorCursor();
 
     Cursor cursor = cursorHolder.asCursor();
     ShimCursor shimCursor = new ShimCursor(vectorCursor);
 
     compareCursors(List.of("A", "B", "v0"), cursor, shimCursor);
+  }
+
+  @ParameterizedTest(name = "vectorSize = {0}")
+  @MethodSource("vectorSizes")
+  public void testArrayColumns(int vectorSize)
+  {
+    IncrementalIndex incrementalIndex = closer.register(
+        new OnheapIncrementalIndex.Builder()
+            .setMaxRowCount(100)
+            .setIndexSchema(
+                IncrementalIndexSchema
+                    .builder()
+                    .withDimensionsSpec(
+                        DimensionsSpec.builder()
+                                      .useSchemaDiscovery(false)
+                                      .setIncludeAllDimensions(false)
+                                      .setDimensions(
+                                          List.of(
+                                              new AutoTypeColumnSchema("longArr", ColumnType.LONG_ARRAY),
+                                              new AutoTypeColumnSchema("doubleArr", ColumnType.DOUBLE_ARRAY),
+                                              new AutoTypeColumnSchema("stringArr", ColumnType.STRING_ARRAY)
+                                          )
+                                      )
+                                      .build()
+                    )
+                    .withRollup(false)
+                    .build()
+            )
+            .build());
+
+    final List<String> signature = List.of("longArr", "doubleArr", "stringArr");
+
+    incrementalIndex.add(autoRow(signature, arr(2L, 3L), arr(2.2, 3.2), arr("a", "b")));
+    incrementalIndex.add(autoRow(signature, null, null, null));
+    incrementalIndex.add(autoRow(signature, arr(4L), arr(4.2), arr("c")));
+
+    final SimpleQueryableIndex index =
+        closer.register((SimpleQueryableIndex) TestIndex.persistAndMemoryMap(incrementalIndex));
+    final QueryableIndexCursorFactory queryableIndexCursorFactory = new QueryableIndexCursorFactory(index);
+    final CursorBuildSpec cursorBuildSpec =
+        CursorBuildSpec.builder()
+                       .setQueryContext(QueryContext.of(Map.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)))
+                       .build();
+    final CursorHolder cursorHolder = closer.register(queryableIndexCursorFactory.makeCursorHolder(cursorBuildSpec));
+    assertTrue(cursorHolder.canVectorize());
+
+    final VectorCursor vectorCursor = cursorHolder.asVectorCursor();
+    final Cursor cursor = cursorHolder.asCursor();
+    final ShimCursor shimCursor = new ShimCursor(vectorCursor);
+
+    compareCursors(signature, cursor, shimCursor);
   }
 
   private static List<Object> arr(Object... vals)
@@ -332,76 +433,217 @@ public class ShimCursorTest
   /**
    * Compares an expected {@link Cursor} to a {@link ShimCursor} and asserts that they perform in a similar way.
    */
-  private static void compareCursors(List<String> signature, Cursor expected, ShimCursor actual)
+  private static void compareCursors(List<String> signature, Cursor expectedCursor, ShimCursor actualCursor)
   {
-    final ColumnSelectorFactory expectedFactory = expected.getColumnSelectorFactory();
-    final ColumnSelectorFactory actualFactory = actual.getColumnSelectorFactory();
-    while (!expected.isDone()) {
-      Assertions.assertFalse(actual.isDone());
-      for (String columnName : signature) {
-        compareColumnValueSelector(columnName, expectedFactory, actualFactory);
-        compareDimSelectorIfSupported(columnName, expectedFactory, actualFactory);
-      }
+    final Map<String, ColumnCapabilities> capabilitiesMap = new HashMap<>();
+    final ColumnSelectorFactory expectedFactory = expectedCursor.getColumnSelectorFactory();
+    final ColumnSelectorFactory actualFactory = actualCursor.getColumnSelectorFactory();
 
-      expected.advance();
-      actual.advance();
+    for (String columnName : signature) {
+      // Check that capabilities match.
+      final ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
+      final ColumnCapabilities actualCapabilities = actualFactory.getColumnCapabilities(columnName);
+      compareCapabilities(columnName, expectedCapabilities, actualCapabilities);
+      capabilitiesMap.put(columnName, expectedCapabilities);
     }
 
-    Assertions.assertTrue(actual.isDone());
+    final Map<String, DimensionSelector> expectedDimensionSelectors = new HashMap<>();
+    final Map<String, DimensionSelector> actualDimensionSelectors = new HashMap<>();
+
+    final Map<String, ColumnValueSelector<?>> expectedValueSelectors = new HashMap<>();
+    final Map<String, ColumnValueSelector<?>> actualValueSelectors = new HashMap<>();
+
+    for (String columnName : signature) {
+      if (shouldTestDimensionSelector(capabilitiesMap.get(columnName))) {
+        expectedDimensionSelectors.put(
+            columnName,
+            expectedFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+        );
+
+        actualDimensionSelectors.put(
+            columnName,
+            actualFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+        );
+      }
+
+      expectedValueSelectors.put(columnName, expectedFactory.makeColumnValueSelector(columnName));
+      actualValueSelectors.put(columnName, actualFactory.makeColumnValueSelector(columnName));
+    }
+
+    while (!expectedCursor.isDone()) {
+      assertFalse(actualCursor.isDone());
+
+      for (String columnName : signature) {
+        final ColumnCapabilities capabilities = capabilitiesMap.get(columnName);
+
+        compareColumnValueSelector(
+            columnName,
+            capabilities,
+            expectedValueSelectors.get(columnName),
+            actualValueSelectors.get(columnName)
+        );
+
+        if (shouldTestDimensionSelector(capabilities)) {
+          compareDimensionSelector(
+              columnName,
+              expectedDimensionSelectors.get(columnName),
+              actualDimensionSelectors.get(columnName)
+          );
+        }
+      }
+
+      expectedCursor.advance();
+      actualCursor.advance();
+    }
+
+    assertTrue(actualCursor.isDone());
   }
 
-  private static void compareColumnValueSelector(
+  private static boolean shouldTestDimensionSelector(final ColumnCapabilities capabilities)
+  {
+    // makeDimensionSelector for array columns throws an exception on creation, don't test it
+    return capabilities == null || !capabilities.is(ValueType.ARRAY);
+  }
+
+  private static void compareCapabilities(
       String columnName,
-      ColumnSelectorFactory expectedFactory,
-      ColumnSelectorFactory actualFactory
+      @Nullable ColumnCapabilities expectedCapabilities,
+      @Nullable ColumnCapabilities actualCapabilities
   )
   {
-    final ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
-    final ColumnCapabilities actualCapabilities = actualFactory.getColumnCapabilities(columnName);
-
-    final ColumnValueSelector<?> expectedSelector = expectedFactory.makeColumnValueSelector(columnName);
-    final ColumnValueSelector<?> actualSelector = actualFactory.makeColumnValueSelector(columnName);
+    assertEquals(
+        expectedCapabilities != null,
+        actualCapabilities != null,
+        "presence of capabilities for " + columnName
+    );
 
     if (expectedCapabilities == null) {
-      Assertions.assertNull(actualCapabilities);
-      Assertions.assertTrue(actualSelector.isNull());
       return;
     }
 
-    if (expectedCapabilities.isNumeric()) {
-      Assertions.assertTrue(actualCapabilities.isNumeric());
-      Assertions.assertEquals(expectedSelector.getDouble(), actualSelector.getDouble());
-      Assertions.assertEquals(expectedSelector.getLong(), actualSelector.getLong());
-      Assertions.assertEquals(expectedSelector.getFloat(), actualSelector.getFloat());
-    } else if (expectedCapabilities.isArray()) {
-      Assertions.assertTrue(actualCapabilities.isArray());
-      Assertions.assertArrayEquals((Object[]) expectedSelector.getObject(), (Object[]) actualSelector.getObject());
+    assertEquals(
+        expectedCapabilities.getType(),
+        actualCapabilities.getType(),
+        "type of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.getElementType(),
+        actualCapabilities.getElementType(),
+        "elementType of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.getComplexTypeName(),
+        actualCapabilities.getComplexTypeName(),
+        "complexTypeName of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.isDictionaryEncoded(),
+        actualCapabilities.isDictionaryEncoded(),
+        "dictionaryEncoded of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.areDictionaryValuesUnique(),
+        actualCapabilities.areDictionaryValuesUnique(),
+        "areDictionaryValuesUnique of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.areDictionaryValuesSorted(),
+        actualCapabilities.areDictionaryValuesSorted(),
+        "areDictionaryValuesSorted of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.hasNulls(),
+        actualCapabilities.hasNulls(),
+        "hasNulls of " + columnName
+    );
+
+    assertEquals(
+        expectedCapabilities.hasMultipleValues(),
+        actualCapabilities.hasMultipleValues(),
+        "hasMultipleValues of " + columnName
+    );
+  }
+
+  /**
+   * Verify that the "actualFactory" capabilities and current value match
+   */
+  private static void compareColumnValueSelector(
+      String columnName,
+      ColumnCapabilities capabilities,
+      ColumnValueSelector<?> expectedSelector,
+      ColumnValueSelector<?> actualSelector
+  )
+  {
+    if (capabilities != null && capabilities.isNumeric()) {
+      assertEquals(expectedSelector.getLong(), actualSelector.getLong(), "getLong for " + columnName);
+      assertEquals(expectedSelector.getDouble(), actualSelector.getDouble(), "getDouble for " + columnName);
+      assertEquals(expectedSelector.getFloat(), actualSelector.getFloat(), "getFloat for " + columnName);
+      assertEquals(expectedSelector.isNull(), actualSelector.isNull(), "isNull for " + columnName);
+    }
+
+    final Object expectedObject = expectedSelector.getObject();
+    final Object actualObject = actualSelector.getObject();
+
+    if (expectedObject instanceof Object[]) {
+      assertThat("type of getObject for " + columnName, actualObject, CoreMatchers.instanceOf(Object[].class));
+      assertArrayEquals((Object[]) expectedObject, (Object[]) actualObject, "getObject for " + columnName);
     } else {
-      Assertions.assertEquals(expectedSelector.getObject(), actualSelector.getObject());
+      assertEquals(expectedObject, actualObject, "getObject for " + columnName);
     }
   }
 
-  private static void compareDimSelectorIfSupported(
+  private static void compareDimensionSelector(
       String columnName,
-      ColumnSelectorFactory expectedFactory,
-      ColumnSelectorFactory actualFactory
+      DimensionSelector expectedSelector,
+      DimensionSelector actualSelector
   )
   {
-    final ColumnCapabilities expectedCapabilities = expectedFactory.getColumnCapabilities(columnName);
+    assertEquals(
+        expectedSelector.nameLookupPossibleInAdvance(),
+        actualSelector.nameLookupPossibleInAdvance(),
+        "nameLookupPossibleInAdvance for " + columnName
+    );
+    assertEquals(
+        expectedSelector.supportsLookupNameUtf8(),
+        actualSelector.supportsLookupNameUtf8(),
+        "supportsLookupNameUtf8 for " + columnName
+    );
+    assertEquals(
+        expectedSelector.idLookup() != null,
+        actualSelector.idLookup() != null,
+        "presence of idLookup for " + columnName
+    );
 
-    if (expectedCapabilities != null && expectedCapabilities.toColumnType().equals(ColumnType.STRING)) {
-      final DimensionSelector expectedDimSelector = expectedFactory.makeDimensionSelector(DefaultDimensionSpec.of(
-          columnName));
-      final DimensionSelector actualDimSelector = actualFactory.makeDimensionSelector(DefaultDimensionSpec.of(
-          columnName));
+    // getObject checks
+    assertEquals(expectedSelector.getObject(), actualSelector.getObject(), "getObject for " + columnName);
 
-      Assertions.assertEquals(expectedDimSelector.getObject(), actualDimSelector.getObject());
-      IndexedInts expectedInts = expectedDimSelector.getRow();
-      IndexedInts actualInts = actualDimSelector.getRow();
-      int numValues = expectedInts.size();
-      Assertions.assertEquals(numValues, actualInts.size());
-      for (int i = 0; i < numValues; i++) {
-        Assertions.assertEquals(expectedInts.get(i), actualInts.get(i));
+    // getRow and lookupName/lookupNameUtf8 checks
+    final IntList expectedRow = new IntArrayList();
+    final IntList actualRow = new IntArrayList();
+    expectedSelector.getRow().forEach(expectedRow::add);
+    actualSelector.getRow().forEach(actualRow::add);
+
+    assertEquals(expectedRow, actualRow, "getRow for " + columnName);
+
+    for (int i = 0; i < expectedRow.size(); i++) {
+      assertEquals(
+          expectedSelector.lookupName(expectedRow.getInt(i)),
+          actualSelector.lookupName(actualRow.getInt(i)),
+          "lookupName for " + columnName + " id#" + expectedRow.getInt(i)
+      );
+
+      if (expectedSelector.supportsLookupNameUtf8()) {
+        assertEquals(
+            StringUtils.fromUtf8Nullable(expectedSelector.lookupNameUtf8(expectedRow.getInt(i))),
+            StringUtils.fromUtf8Nullable(actualSelector.lookupNameUtf8(actualRow.getInt(i))),
+            "lookupNameUtf8 for " + columnName + " id#" + expectedRow.getInt(i)
+        );
       }
     }
   }
