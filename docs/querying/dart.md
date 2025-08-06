@@ -1,8 +1,8 @@
 ---
 id: dart
-title: "SQL queries using the Dart query profile"
-sidebar_label: "Dart query profile"
-description: The Dart query profile for the MSQ engine is an alternative to the native query engine that offers better parallelism and better performance for certain types of queries.
+title: "SQL queries using the Dart engine"
+sidebar_label: "Dart engine"
+description: The Dart engine, a profile of MSQ, is an alternative to the native query engine that offers better parallelism and better performance for certain types of queries.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -34,7 +34,8 @@ Dart is experimental. Use it in situations where it fits your use case better th
 :::
 
 
-Dart is a profile of the MSQ engine that runs SELECT queries on Brokers and Historicals instead of on tasks. The Brokers act as controllers and the Historicals act as workers.
+Dart is a query engine that runs SELECT queries on Brokers and Historicals instead of on tasks.
+It is a profile of MSQ in which Brokers act as controllers and the Historicals act as workers.
 
 Use Dart as an alternative to the native query engine since it offers better parallelism, excelling at queries that involve:
 
