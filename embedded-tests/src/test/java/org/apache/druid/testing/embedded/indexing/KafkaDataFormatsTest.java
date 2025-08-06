@@ -53,12 +53,15 @@ import org.apache.druid.testing.tools.EventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -136,8 +139,13 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
            .addExtension(ProtobufExtensionsModule.class)
            .addExtension(AvroExtensionsModule.class)
            .useLatchableEmitter()
+           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
+           .addCommonProperty(
+               "druid.monitoring.monitors",
+               "[\"org.apache.druid.java.util.metrics.JvmMonitor\","
+               + "\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]"
+           )
            .addResource(kafkaServer)
-           .addResource(schemaRegistry)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
@@ -164,10 +172,17 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
+
 
     // Verify the count of rows ingested into the datasource so far
     Assertions.assertEquals(StringUtils.format("%d", recordCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
@@ -193,6 +208,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -217,6 +238,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -249,6 +276,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -278,6 +311,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -321,7 +360,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             null,
             inputFormat,
             null, null,
-            null,
+            Period.seconds(10),
             kafkaServer.consumerProperties(),
             null, null, null, null, null,
             true,

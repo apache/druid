@@ -50,11 +50,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
   @Override
   protected KafkaContainer createContainer()
   {
-    return new KafkaContainer(KAFKA_IMAGE)
-        .withNetwork(Network.SHARED)
-        .withNetworkAliases("kafkatc")
-        .withEnv("KAFKA_ADVERTISED_LISTENERS", "PLAINTEXT://kafkatc:9092,CONTROLLER://kafkatc:9094,BROKER://kafkatc:9093")
-        .withListener("0.0.0.0:9192", () -> "kafkatc:9092");
+    return new KafkaContainer(KAFKA_IMAGE);
   }
 
   public String getBootstrapServerUrl()
