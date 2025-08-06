@@ -131,7 +131,7 @@ public class PlannerContext
   private final String sql;
   private final SqlNode sqlNode;
   private final SqlEngine engine;
-  private final Map<String, Object> userProvidedContext;
+  private final Set<String> authContextKeys;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
@@ -168,7 +168,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
-      final Map<String, Object> userProvidedContext,
+      final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -178,8 +178,8 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
-    // userProvidedContext is used for security checks
-    this.userProvidedContext = userProvidedContext;
+    // authContextKeys is used for security checks
+    this.authContextKeys = authContextKeys;
     // queryContext is used for query planning and execution
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -191,7 +191,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
-      final Map<String, Object> userProvidedContext,
+      final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -201,7 +201,7 @@ public class PlannerContext
         sql,
         sqlNode,
         engine,
-        userProvidedContext,
+        authContextKeys,
         queryContext,
         hook
     );
@@ -325,11 +325,11 @@ public class PlannerContext
   }
 
   /**
-   * Return the user-provided query context, including SET parameters. This map is immutable, and originates from {@link org.apache.druid.sql.SqlQueryPlus#userProvidedContext}
+   * Return an immutable set of context keys need to be authorization checked, this usually comes from user-provided query context, including SET parameters.
    */
-  public Map<String, Object> userProvidedContextMap()
+  public Set<String> authContextKeys()
   {
-    return userProvidedContext;
+    return authContextKeys;
   }
 
   /**

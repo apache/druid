@@ -63,7 +63,7 @@ public class HttpStatement extends DirectStatement
         sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.sqlNode(),
-        queryPlus.userProvidedContext(),
+        queryPlus.authContextKeys(),
         queryContext,
         hook
     );

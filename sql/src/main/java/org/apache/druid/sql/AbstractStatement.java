@@ -63,9 +63,9 @@ public abstract class AbstractStatement implements Closeable
   protected final SqlExecutionReporter reporter;
 
   /**
-   * Immutable copy of query context provided by the user, including SET parameters.
+   * Immutable set of query context keys needs to be authorization checked.
    */
-  protected final Map<String, Object> userProvidedContext;
+  protected final Set<String> authContextKeys;
 
   /**
    * Mutable copy of the query context provided by the user, can be modified during
@@ -87,7 +87,7 @@ public abstract class AbstractStatement implements Closeable
     this.sqlToolbox = sqlToolbox;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
-    this.userProvidedContext = queryPlus.userProvidedContext();
+    this.authContextKeys = queryPlus.authContextKeys();
     this.queryContext = new HashMap<>(queryPlus.context());
     sqlToolbox.engine.initContextMap(this.queryContext);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
@@ -144,7 +144,7 @@ public abstract class AbstractStatement implements Closeable
   )
   {
     Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
-        .contextKeysToAuthorize(plannerContext.userProvidedContextMap().keySet());
+        .contextKeysToAuthorize(plannerContext.authContextKeys());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)

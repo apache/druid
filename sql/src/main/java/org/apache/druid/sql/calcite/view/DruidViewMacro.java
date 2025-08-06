@@ -63,7 +63,7 @@ public class DruidViewMacro implements TableMacro
                  ViewSqlEngine.INSTANCE,
                  viewSql,
                  DruidSqlParser.parse(viewSql, false).getMainStatement(), // views cannot embed SET
-                 Collections.emptyMap(),
+                 Collections.emptySet(),
                  Collections.emptyMap(),
                  null
              )

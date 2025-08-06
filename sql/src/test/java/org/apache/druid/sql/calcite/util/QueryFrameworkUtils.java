@@ -368,7 +368,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
-              queryPlus.userProvidedContext(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );
@@ -388,7 +388,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
-              queryPlus.userProvidedContext(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );

@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Captures the inputs to a SQL execution request: the statement (as a string),
@@ -66,7 +67,7 @@ public class SqlQueryPlus
   private final SqlNode sqlNode;
   private boolean allowSetStatements;
   private final Map<String, Object> stmtContext;
-  private final Map<String, Object> userProvidedContext;
+  private final Set<String> authContextKeys;
   private final List<TypedValue> parameters;
   private final AuthenticationResult authResult;
 
@@ -75,7 +76,7 @@ public class SqlQueryPlus
       SqlNode sqlNode,
       boolean allowSetStatements,
       Map<String, Object> stmtContext,
-      Map<String, Object> userProvidedContext,
+      Set<String> authContextKeys,
       List<TypedValue> parameters,
       AuthenticationResult authResult
   )
@@ -87,10 +88,10 @@ public class SqlQueryPlus
     this.stmtContext = stmtContext == null
                        ? Collections.emptyMap()
                        : Collections.unmodifiableMap(new HashMap<>(stmtContext));
-    // userProvidedContext is used for security checks
-    this.userProvidedContext = userProvidedContext == null
-                               ? Collections.emptyMap()
-                               : Collections.unmodifiableMap(new HashMap<>(userProvidedContext));
+    // authContextKeys is used for security checks
+    this.authContextKeys = authContextKeys == null
+                           ? Collections.emptySet()
+                           : Collections.unmodifiableSet(authContextKeys);
     this.parameters = parameters == null
                       ? Collections.emptyList()
                       : parameters;
@@ -126,9 +127,9 @@ public class SqlQueryPlus
     return stmtContext;
   }
 
-  public Map<String, Object> userProvidedContext()
+  public Set<String> authContextKeys()
   {
-    return userProvidedContext;
+    return authContextKeys;
   }
 
   public List<TypedValue> parameters()
@@ -148,7 +149,7 @@ public class SqlQueryPlus
         sqlNode,
         allowSetStatements,
         QueryContexts.override(defaultContext, userProvidedContext),
-        userProvidedContext,
+        userProvidedContext.keySet(),
         parameters,
         authResult
     );
@@ -161,7 +162,7 @@ public class SqlQueryPlus
         sqlNode,
         allowSetStatements,
         stmtContext,
-        userProvidedContext,
+        authContextKeys,
         parameters,
         authResult
     );
@@ -178,7 +179,7 @@ public class SqlQueryPlus
         DruidSqlParser.parse(sql, allowSetStatements).getMainStatement(),
         allowSetStatements,
         stmtContext,
-        userProvidedContext,
+        authContextKeys,
         parameters,
         authResult
     );
@@ -192,7 +193,7 @@ public class SqlQueryPlus
            ", sqlNode=" + sqlNode +
            ", allowSetStatements=" + allowSetStatements +
            ", stmtContext=" + stmtContext +
-           ", userProvidedContext=" + userProvidedContext +
+           ", authContextKeys=" + authContextKeys +
            ", parameters=" + parameters +
            ", authResult=" + authResult +
            '}';
@@ -272,7 +273,7 @@ public class SqlQueryPlus
           statementAndSetContext.getMainStatement(),
           true,
           stmtContext,
-          userProvidedContext,
+          userProvidedContext.keySet(),
           parameters,
           authResult
       );
@@ -292,7 +293,7 @@ public class SqlQueryPlus
           null,
           false,
           QueryContexts.override(systemDefaultContext, queryContext),
-          queryContext,
+          queryContext.keySet(),
           parameters,
           authResult
       );
