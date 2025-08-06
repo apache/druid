@@ -273,7 +273,7 @@ public class SqlQueryPlus
           statementAndSetContext.getMainStatement(),
           true,
           stmtContext,
-          userProvidedContext.keySet(),
+          userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
           parameters,
           authResult
       );
