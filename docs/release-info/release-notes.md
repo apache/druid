@@ -233,6 +233,7 @@ You can use a segment metadata query to find the list of projections attached to
 
 `json_merge()` is now SQL-compliant when arguments are null. The function now returns null if any argument is null. For example, queries like SELECT JSON_MERGE(null, null) and SELECT JSON_MERGE(null, '{}') will return null instead of throwing an error.
 
+[#17983](https://github.com/apache/druid/pull/17983)
 #### Other querying improvements
 
 - You can now perform big decimal aggregations using the MSQ task engine [#18164](https://github.com/apache/druid/pull/18164)
