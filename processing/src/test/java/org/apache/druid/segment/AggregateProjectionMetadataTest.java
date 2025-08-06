@@ -21,9 +21,6 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -33,13 +30,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.IsBooleanFilter;
-import org.apache.druid.segment.filter.OrFilter;
-import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -313,85 +305,5 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                   .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "effectiveGranularity")
                   .usingGetClass()
                   .verify();
-  }
-
-  @Test
-  void testSchemaMatchSimple()
-  {
-    // arrange
-    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "some_projection",
-            null,
-            null,
-            VirtualColumns.EMPTY,
-            Arrays.asList("a", "b"),
-            new AggregatorFactory[]{new LongSumAggregatorFactory("a_projection", "a")},
-            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("b"))
-        ),
-        12345
-    );
-    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(ImmutableList.of())
-                                                     .setAggregators(ImmutableList.of(new LongSumAggregatorFactory(
-                                                         "a",
-                                                         "a"
-                                                     )))
-                                                     .build();
-    // act & assert
-    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
-        spec.getSchema(),
-        cursorBuildSpec,
-        (projectionName, columnName) -> true
-    );
-    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
-        CursorBuildSpec.builder()
-                       .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
-                       .setPhysicalColumns(ImmutableSet.of("a_projection"))
-                       .setPreferredOrdering(ImmutableList.of())
-                       .build(),
-        ImmutableMap.of("a", "a_projection")
-    );
-    Assertions.assertEquals(expected, projectionMatch);
-  }
-
-  @Test
-  void testRewriteFilter()
-  {
-    Filter xeqfoo = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqfoo2 = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqbar = new EqualityFilter("x", ColumnType.STRING, "bar", null);
-    Filter yeqbar = new EqualityFilter("y", ColumnType.STRING, "bar", null);
-    Filter zeq123 = new EqualityFilter("z", ColumnType.LONG, 123L, null);
-
-    Filter queryFilter = xeqfoo2;
-    Assertions.assertInstanceOf(
-        Projections.ProjectionFilterMatch.class,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
-
-    queryFilter = yeqbar;
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(xeqfoo, yeqbar));
-    Assertions.assertEquals(
-        yeqbar,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
-
-    queryFilter = new AndFilter(List.of(new OrFilter(List.of(xeqfoo, xeqbar)), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, true), yeqbar));
-    Assertions.assertEquals(yeqbar, Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, false), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new AndFilter(List.of(xeqfoo, yeqbar)), zeq123));
-    Assertions.assertEquals(
-        new AndFilter(List.of(yeqbar, zeq123)),
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
   }
 }
