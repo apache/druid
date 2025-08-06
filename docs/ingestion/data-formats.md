@@ -964,14 +964,14 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion deprecated. Use [SQL-based ingestion](../multi-stage-query/index.md) instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
+Hadoop-based ingestion is deprecated. Use [SQL-based ingestion](../multi-stage-query/index.md) instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
 
-You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+You must now explicitly opt in to using the deprecated `index_hadoop` task type. To opt in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239).
 
 :::
 
 :::info
- You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+You need to include [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
 
  See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 :::

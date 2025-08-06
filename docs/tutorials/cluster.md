@@ -133,7 +133,7 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 We recommend running your favorite Linux distribution. You will also need 
 
-* [17](../operations/java.md)
+* [Java 17](../operations/java.md)
 * Python 3
 
 :::info
