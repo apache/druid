@@ -384,15 +384,23 @@ public class MultiStageQueryContext
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
-    if (isDartQuery(queryContext)) {
-      // Dart does not support any other destination.
-      return MSQSelectDestination.TASKREPORT;
-    }
-    return QueryContexts.getAsEnum(
+    MSQSelectDestination destination = QueryContexts.getAsEnum(
         CTX_SELECT_DESTINATION,
         queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
         MSQSelectDestination.class
     );
+
+    if (isDartQuery(queryContext)) {
+      if (!MSQSelectDestination.TASKREPORT.equals(destination)) {
+        log.warn(
+            "Dart does not support [%s]. Using [%s] instead.",
+            destination,
+            MSQSelectDestination.TASKREPORT
+        );
+      }
+      return MSQSelectDestination.TASKREPORT;
+    }
+    return destination;
   }
 
   public static int getRowsInMemory(final QueryContext queryContext)
