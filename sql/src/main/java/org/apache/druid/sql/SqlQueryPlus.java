@@ -149,7 +149,7 @@ public class SqlQueryPlus
         sqlNode,
         allowSetStatements,
         QueryContexts.override(defaultContext, userProvidedContext),
-        userProvidedContext == null ? Set.of() :userProvidedContext.keySet(),
+        userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
         parameters,
         authResult
     );
