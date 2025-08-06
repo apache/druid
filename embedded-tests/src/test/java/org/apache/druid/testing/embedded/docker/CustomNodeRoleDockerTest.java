@@ -28,6 +28,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+/**
+ * Docker test to verify running a Druid service with a custom node role provided
+ * by an extension. This test uses Docker containers so that we can verify
+ * starting the custom node from the command line.
+ * <p>
+ * See {@code HttpEmitterEventCollector} for running the custom node as an
+ * embedded server.
+ */
 public class CustomNodeRoleDockerTest extends DockerTestBase
 {
   private final DruidContainerResource customNodeEventCollector =

@@ -253,7 +253,8 @@ public class LatchableEmitter extends StubServiceEmitter
     }
 
     /**
-     * Matches an event only if it has the given metric value.
+     * Matches an event only if it has a metric value equal to or greater than
+     * the given value.
      */
     public EventMatcher hasValueAtLeast(long metricValue)
     {

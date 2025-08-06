@@ -24,7 +24,7 @@ import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link IndexTaskTest}, but using a MariaDB metadata store instead of Derby.
+ * Same as {@link IndexTaskTest}, but using a PostgreSQL metadata store instead of Derby.
  */
 public class PostgreSQLMetadataStoreTest extends IndexTaskTest
 {

@@ -26,7 +26,7 @@ import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Resource that creates a MariaDB metadata store.
+ * Resource that creates a PostgreSQL metadata store.
  */
 public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQLContainer<?>>
 {
