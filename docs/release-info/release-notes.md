@@ -391,6 +391,7 @@ of such queries since `groupBy` is vectorized while `topN` is not.
 
 You can restore the previous behavior by setting the query context parameter `useLexicographicTopN` to `true`. Behavior for `useApproximateTopN` is unchanged, and the default remains `true`.
 
+[#18074](https://github.com/apache/druid/pull/18074)
 #### `IS_INCREMENTAL_HANDOFF_SUPPORTED` config removed
 
 Removed the `IS_INCREMENTAL_HANDOFF_SUPPORTED` context reference from supervisors, as incremental publishing has been the default behavior since version 0.16.0. This context was originally introduced to support rollback to `LegacyKafkaIndexTaskRunner` in versions earlier than 0.16.0, which has since been removed.
