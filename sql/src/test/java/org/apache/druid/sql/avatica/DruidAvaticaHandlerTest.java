@@ -365,12 +365,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final Properties propertiesSetForbiddenKey = new Properties();
     propertiesSetForbiddenKey.setProperty("user", "regularUserLA");
     propertiesSetForbiddenKey.setProperty("forbidden-key", "val");
-    Connection conn = DriverManager.getConnection(server.url, propertiesSetForbiddenKey);
-    Statement stmt = conn.createStatement();
-    AvaticaSqlException e = Assert.assertThrows(AvaticaSqlException.class, () -> {
-      stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-    });
-    Assert.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
+    try (Statement stmt = DriverManager.getConnection(server.url, propertiesSetForbiddenKey).createStatement()) {
+      AvaticaSqlException e = Assert.assertThrows(AvaticaSqlException.class, () -> {
+        stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      });
+      Assert.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
+    }
   }
 
   @Test

@@ -108,7 +108,7 @@ public class ExpressionTestHelper
       "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need SQL node */
       null, /* Don't need engine */
-      Collections.emptyMap(),
+      Collections.emptySet(),
       Collections.emptyMap(),
       null
   );
