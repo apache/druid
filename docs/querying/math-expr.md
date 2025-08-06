@@ -300,7 +300,7 @@ For the IPv6 address function, the `address` argument accepts a semicolon separa
 
 
 ## Vectorization support
-A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
+A number of expressions support ['vectorized' query engines](../querying/query-context-reference.md#vectorization-parameters)
 
 Supported features:
 * constants and identifiers are supported for any column type

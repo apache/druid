@@ -192,8 +192,7 @@ public class CoordinatorClientTest extends EmbeddedClusterTestBase
                                  .dimensions()
                                  .withId(taskId);
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
   }
 }

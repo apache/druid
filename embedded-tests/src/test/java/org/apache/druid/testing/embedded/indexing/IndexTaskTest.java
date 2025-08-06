@@ -63,8 +63,8 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addServer(overlord)
                                .addServer(coordinator)
+                               .addServer(overlord)
                                .addServer(indexer)
                                .addServer(historical)
                                .addServer(broker)
@@ -76,13 +76,12 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
   public void test_runIndexTask_forInlineDatasource()
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    final Object task = createIndexTaskForInlineData(
+    final IndexTask task = createIndexTaskForInlineData(
         taskId,
         Resources.InlineData.CSV_10_DAYS
     );
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
 
     // Verify that the task created 10 DAY-granularity segments
     final List<DataSegment> segments = new ArrayList<>(
@@ -142,7 +141,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
     runTasksConcurrently(100);
   }
 
-  private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
+  private IndexTask createIndexTaskForInlineData(String taskId, String inlineDataCsv)
   {
     return TaskBuilder.ofTypeIndex()
                       .dataSource(dataSource)
@@ -169,16 +168,14 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
     int index = 0;
     for (String taskId : taskIds) {
       index++;
-      final Object task = createIndexTaskForInlineData(
+      final IndexTask task = createIndexTaskForInlineData(
           taskId,
           StringUtils.format(
               "%s,%s,%d",
               jan1.plusDays(index), "item " + index, index
           )
       );
-      cluster.callApi().onLeaderOverlord(
-          o -> o.runTask(taskId, task)
-      );
+      cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     }
     for (String taskId : taskIds) {
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);

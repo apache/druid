@@ -412,6 +412,7 @@ public class PullDependencies implements Runnable
       } else {
         log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
       }
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
       log.error(e, "I/O error while processing artifact [%s].", versionedArtifact);

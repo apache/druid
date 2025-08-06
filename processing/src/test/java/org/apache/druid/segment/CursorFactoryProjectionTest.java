@@ -74,6 +74,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -92,6 +93,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -107,6 +109,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                         .add("c", ColumnType.LONG)
                                                         .add("d", ColumnType.DOUBLE)
                                                         .add("e", ColumnType.FLOAT)
+                                                        .add("f", ColumnType.NESTED_DATA)
                                                         .build();
 
   public static List<InputRow> makeRows(List<String> dimensions)
@@ -116,49 +119,49 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             ROW_SIGNATURE,
             TIMESTAMP,
             dimensions,
-            Arrays.asList("a", "aa", 1L, 1.0)
+            Arrays.asList("a", "aa", 1L, 1.0, null, Map.of("x", "a", "y", 1L, "z", 1.0))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(2),
             dimensions,
-            Arrays.asList("a", "bb", 1L, 1.1, 1.1f)
+            Arrays.asList("a", "bb", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(4),
             dimensions,
-            Arrays.asList("a", "cc", 2L, 2.2, 2.2f)
+            Arrays.asList("a", "cc", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(6),
             dimensions,
-            Arrays.asList("b", "aa", 3L, 3.3, 3.3f)
+            Arrays.asList("b", "aa", 3L, 3.3, 3.3f, Map.of("x", "b", "y", 3L, "z", 3.3))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(8),
             dimensions,
-            Arrays.asList("b", "aa", 4L, 4.4, 4.4f)
+            Arrays.asList("b", "aa", 4L, 4.4, 4.4f, Map.of("x", "b", "y", 4L, "z", 4.4))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusMinutes(10),
             dimensions,
-            Arrays.asList("b", "bb", 5L, 5.5, 5.5f)
+            Arrays.asList("b", "bb", 5L, 5.5, 5.5f, Map.of("x", "b", "y", 5L, "z", 5.5))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusHours(1),
             dimensions,
-            Arrays.asList("a", "aa", 1L, 1.1, 1.1f)
+            Arrays.asList("a", "aa", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
             TIMESTAMP.plusHours(1).plusMinutes(1),
             dimensions,
-            Arrays.asList("a", "dd", 2L, 2.2, 2.2f)
+            Arrays.asList("a", "dd", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         )
     );
   }
@@ -294,6 +297,15 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           }
       ),
       new AggregateProjectionSpec(
+          "json",
+          null,
+          VirtualColumns.EMPTY,
+          List.of(new AutoTypeColumnSchema("f", null)),
+          new AggregatorFactory[]{
+              new LongSumAggregatorFactory("_c_sum", "c")
+          }
+      ),
+      new AggregateProjectionSpec(
           "ab_filter_baaonly_hourly_cd_sum",
           new EqualityFilter("b", ColumnType.STRING, "aa", null),
           VirtualColumns.create(
@@ -388,6 +400,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                               new LongDimensionSchema("c"),
                               new DoubleDimensionSchema("d"),
                               new FloatDimensionSchema("e"),
+                              new AutoTypeColumnSchema("f", null),
                               new StringDimensionSchema("missing")
                           )
                       );
@@ -623,7 +636,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setVirtualColumns(
                         new ExpressionVirtualColumn(
                             "v0",
-                            "concat(b, 'foo')",
+                            "concat(\"b\", 'foo')",
                             ColumnType.STRING,
                             TestExprMacroTable.INSTANCE
                         )
@@ -1714,6 +1727,77 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           results.get(1).getArray()
       );
     }
+  }
+
+  @Test
+  public void testProjectionJson()
+  {
+    // test can use the single dimension projection
+    final GroupByQuery.Builder bob =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setVirtualColumns(
+                        new NestedFieldVirtualColumn(
+                            "f",
+                            "$.x",
+                            "v0",
+                            ColumnType.STRING
+
+                        )
+                    )
+                    .addDimension("v0")
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
+
+    final GroupByQuery query = bob.build();
+    final GroupByQuery queryNoProjection = bob.setContext(Map.of(QueryContexts.NO_PROJECTIONS, true)).build();
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(6, rowCount);
+    }
+
+    final CursorBuildSpec buildSpecNoProjection = GroupingEngine.makeCursorBuildSpec(queryNoProjection, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpecNoProjection)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(8, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", 7L}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L}, results.get(1).getArray());
+
+    final Sequence<ResultRow> resultRowsNoProjection = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> resultsNoProjection = resultRowsNoProjection.toList();
+    Assert.assertEquals(2, resultsNoProjection.size());
+    Assert.assertArrayEquals(new Object[]{"a", 7L}, resultsNoProjection.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L}, resultsNoProjection.get(1).getArray());
   }
 
 

@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
@@ -84,13 +85,14 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
   /**
    * Submits a supervisor spec to the Overlord.
    */
-  protected void submitSupervisor()
+  protected void submitSupervisor(EmbeddedOverlord overlord)
   {
     // Submit a supervisor.
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor();
-    final Map<String, String> startSupervisorResult =
-        cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(kafkaSupervisorSpec));
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    Assertions.assertEquals(
+        dataSource,
+        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
+    );
   }
 
   /**

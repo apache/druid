@@ -18,11 +18,98 @@
 
 set -e
 
-echo "Adding SQL docs..."
-./script/create-sql-docs.mjs
+# Check if --force flag is provided
+FORCE_BUILD=false
+if [[ "$@" == *"--force"* ]]; then
+  FORCE_BUILD=true
+fi
 
-# add BUNDLE_ANALYZER_PLUGIN='TRUE' here to enable webpack-bundle-analyzer as a plugin
-echo "Webpacking everything..."
-NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
+# Function to check if a file is newer than another
+is_newer_than() {
+  # Returns 0 (true) if $1 is newer than $2, 1 (false) otherwise
+  if [ ! -f "$2" ]; then
+    return 0  # If target doesn't exist, we need to build
+  fi
+  if [ ! -f "$1" ]; then
+    return 1  # If source doesn't exist, we can't build (will error later)
+  fi
+  [ "$1" -nt "$2" ]
+}
 
-echo "Done! Have a good day."
+# Check if SQL docs need to be built
+SQL_DOCS_OUTPUT="lib/sql-docs.ts"
+SQL_DOCS_SCRIPT="script/create-sql-docs.mjs"
+SQL_DOCS_FILELIST="script/sql-doc-files.txt"
+
+BUILD_SQL_DOCS=false
+
+if [ "$FORCE_BUILD" = true ] || [ ! -f "$SQL_DOCS_OUTPUT" ]; then
+  BUILD_SQL_DOCS=true
+else
+  # Check if create-sql-docs.mjs is newer than output
+  if is_newer_than "$SQL_DOCS_SCRIPT" "$SQL_DOCS_OUTPUT"; then
+    BUILD_SQL_DOCS=true
+  fi
+
+  # Check if sql-doc-files.txt is newer than output
+  if is_newer_than "$SQL_DOCS_FILELIST" "$SQL_DOCS_OUTPUT"; then
+    BUILD_SQL_DOCS=true
+  fi
+
+  # Check if any file listed in sql-doc-files.txt is newer than output
+  if [ -f "$SQL_DOCS_FILELIST" ] && [ "$BUILD_SQL_DOCS" = false ]; then
+    while read -r file; do
+      # Skip empty lines and comments
+      if [[ -z "$file" ]] || [[ "$file" =~ ^[[:space:]]*# ]]; then
+        continue
+      fi
+      if [ -n "$file" ] && is_newer_than "$file" "$SQL_DOCS_OUTPUT"; then
+        BUILD_SQL_DOCS=true
+        break
+      fi
+    done < "$SQL_DOCS_FILELIST"
+  fi
+fi
+
+if [ "$BUILD_SQL_DOCS" = true ]; then
+  echo "Compiling SQL function docs for the web console..."
+  ./script/create-sql-docs.mjs
+else
+  echo "SQL docs are up to date, skipping..."
+fi
+
+# Get version from package.json
+VERSION=$(node -e "console.log(require('./package.json').version)")
+CONSOLE_OUTPUT="public/web-console-$VERSION.js"
+
+BUILD_CONSOLE=false
+
+if [ "$FORCE_BUILD" = true ] || [ ! -f "$CONSOLE_OUTPUT" ]; then
+  BUILD_CONSOLE=true
+else
+  # Check if any config file is newer than output
+  CONFIG_FILES=("package.json" "package-lock.json" "webpack.config.mjs" "tsconfig.json")
+  for config_file in "${CONFIG_FILES[@]}"; do
+    if is_newer_than "$config_file" "$CONSOLE_OUTPUT"; then
+      BUILD_CONSOLE=true
+      break
+    fi
+  done
+
+  # Check if any source file is newer than output
+  if [ "$BUILD_CONSOLE" = false ]; then
+    # Find the newest source file
+    NEWEST_SOURCE=$(find src lib -name "*.ts" -o -name "*.tsx" | xargs ls -t 2>/dev/null | head -1)
+    if [ -n "$NEWEST_SOURCE" ] && is_newer_than "$NEWEST_SOURCE" "$CONSOLE_OUTPUT"; then
+      BUILD_CONSOLE=true
+    fi
+  fi
+fi
+
+if [ "$BUILD_CONSOLE" = true ]; then
+  echo "Webpacking everything..."
+  NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
+  echo "Web console build finished."
+else
+  echo "Web console is up to date, skipping webpack..."
+fi

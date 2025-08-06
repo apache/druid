@@ -214,9 +214,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   private String runTask(TaskBuilder.IndexParallel taskBuilder, String dataSource)
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-
+    cluster.callApi().runTask(taskBuilder.withId(taskId), overlord);
     return taskId;
   }
 

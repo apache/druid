@@ -113,7 +113,7 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
 
     QueryableIndex index = TestIndex.getMMappedTestIndex();
 
-    submitSupervisor();
+    submitSupervisor(overlord);
     publishToKafka(index);
 
     final int totalRows = index.getNumRows();
