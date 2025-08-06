@@ -98,12 +98,13 @@ public class PlannerFactory extends PlannerToolbox
    * SET statements, for example 'SET x = 'y'; SET foo = 123; SELECT ...', where these values will be added to the
    * {@link org.apache.druid.query.QueryContext} of the final statement.
    *
-   * @param engine       current SQL engine
-   * @param sql          sql query string
-   * @param sqlNode      parsed sql query, from {@link DruidSqlParser#parse(String, boolean)}. This is the main
-   *                     statement from {@link StatementAndSetContext#getMainStatement()}.
-   * @param queryContext query context including {@link StatementAndSetContext#getSetContext()}
-   * @param hook         calcite planner hook
+   * @param engine              current SQL engine
+   * @param sql                 sql query string
+   * @param sqlNode             parsed sql query, from {@link DruidSqlParser#parse(String, boolean)}. This is the main
+   *                            statement from {@link StatementAndSetContext#getMainStatement()}.
+   * @param userProvidedContext user provided context, immutable and is used for authorization checks.
+   * @param queryContext        query context including {@link StatementAndSetContext#getSetContext()}
+   * @param hook                calcite planner hook
    */
   public DruidPlanner createPlanner(
       final SqlEngine engine,

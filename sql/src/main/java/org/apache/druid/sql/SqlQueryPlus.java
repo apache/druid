@@ -212,12 +212,18 @@ public class SqlQueryPlus
       return this;
     }
 
+    /**
+     * Sets the system-wide default contexts. This context is used to fill in missing values and doesn't go thorough authorization check.
+     */
     public Builder systemDefaultContext(Map<String, Object> systemDefaultContext)
     {
       this.systemDefaultContext = systemDefaultContext;
       return this;
     }
 
+    /**
+     * Sets the user-provided query context. This context is used for authorization checks.
+     */
     public Builder queryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
