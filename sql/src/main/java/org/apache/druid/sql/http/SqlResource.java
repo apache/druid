@@ -191,7 +191,7 @@ public class SqlResource
     final QueryContext queryContext;
 
     try {
-      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
+      SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig.getContext());
 
       // Redefine queryContext to include SET parameters and default context.
       queryContext = new QueryContext(sqlQueryPlus.context());
@@ -457,12 +457,12 @@ public class SqlResource
   public static SqlQueryPlus makeSqlQueryPlus(
       final SqlQuery sqlQuery,
       final HttpServletRequest req,
-      final DefaultQueryConfig defaultQueryConfig
+      final Map<String, Object> defaultQueryConfig
   )
   {
     return SqlQueryPlus.builder()
                        .sql(sqlQuery.getQuery())
-                       .systemDefaultContext(defaultQueryConfig.getContext())
+                       .systemDefaultContext(defaultQueryConfig)
                        .queryContext(sqlQuery.getContext())
                        .parameters(sqlQuery.getParameterList())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))

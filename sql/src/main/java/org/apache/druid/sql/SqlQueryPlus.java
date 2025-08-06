@@ -83,9 +83,11 @@ public class SqlQueryPlus
     this.sql = Preconditions.checkNotNull(sql);
     this.sqlNode = sqlNode;
     this.allowSetStatements = allowSetStatements;
+    // stmtContext is used for query planning and execution
     this.stmtContext = stmtContext == null
                        ? Collections.emptyMap()
                        : Collections.unmodifiableMap(new HashMap<>(stmtContext));
+    // userProvidedContext is used for security checks
     this.userProvidedContext = userProvidedContext == null
                                ? Collections.emptyMap()
                                : Collections.unmodifiableMap(new HashMap<>(userProvidedContext));

@@ -182,18 +182,20 @@ public class SqlStatementResource
       final HttpServletRequest req
   )
   {
-    SqlQueryPlus sqlQueryPlus;
+    final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
 
     try {
       if (sqlQuery.getContext().containsKey(RESULT_FORMAT)) {
         throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
       }
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, DefaultQueryConfig.NIL);
-      // Attach system default query config and result format to the context.
-      sqlQueryPlus = sqlQueryPlus.withContext(
-          ImmutableMap.<String, Object>builder().putAll(defaultQueryConfig.getContext()).put(RESULT_FORMAT, sqlQuery.getResultFormat()).build(),
-          sqlQueryPlus.context()
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(
+          sqlQuery,
+          req,
+          ImmutableMap.<String, Object>builder()
+                      .putAll(defaultQueryConfig.getContext())
+                      .put(RESULT_FORMAT, sqlQuery.getResultFormat())
+                      .build()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }

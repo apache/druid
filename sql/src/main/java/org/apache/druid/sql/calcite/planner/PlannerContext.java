@@ -131,7 +131,7 @@ public class PlannerContext
   private final String sql;
   private final SqlNode sqlNode;
   private final SqlEngine engine;
-  private final Map<String, Object> userProvidedQueryContext;
+  private final Map<String, Object> userProvidedContext;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
@@ -168,7 +168,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
-      final Map<String, Object> userProvidedQueryContext,
+      final Map<String, Object> userProvidedContext,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -178,7 +178,9 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
-    this.userProvidedQueryContext = userProvidedQueryContext;
+    // userProvidedContext is used for security checks
+    this.userProvidedContext = userProvidedContext;
+    // queryContext is used for query planning and execution
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
     initializeContextFieldsAndPlannerConfig();
@@ -189,7 +191,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
-      final Map<String, Object> userProvidedQueryContext,
+      final Map<String, Object> userProvidedContext,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -199,7 +201,7 @@ public class PlannerContext
         sql,
         sqlNode,
         engine,
-        userProvidedQueryContext,
+        userProvidedContext,
         queryContext,
         hook
     );
@@ -325,9 +327,9 @@ public class PlannerContext
   /**
    * Return the user-provided query context, including SET parameters. This map is immutable, and originates from {@link org.apache.druid.sql.SqlQueryPlus#userProvidedContext}
    */
-  public Map<String, Object> userProvidedQueryContextMap()
+  public Map<String, Object> userProvidedContextMap()
   {
-    return userProvidedQueryContext;
+    return userProvidedContext;
   }
 
   /**
