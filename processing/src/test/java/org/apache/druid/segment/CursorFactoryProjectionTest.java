@@ -265,6 +265,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  new LongSumAggregatorFactory("_c_sum", "c"),
                                  new DoubleSumAggregatorFactory("d", "d")
                              )
+                             .build(),
+      AggregateProjectionSpec.builder("a_concat_b_d_plus_f_sum_c")
+                             .virtualColumns(
+                                 new ExpressionVirtualColumn("__vc2", "d + e", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+                                 new ExpressionVirtualColumn("__vc3", "concat(a, b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                             )
+                             .groupingColumns(new DoubleDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
                              .build()
   );
 
@@ -1775,6 +1783,58 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertEquals(2, results.size());
     Assert.assertArrayEquals(new Object[]{"a", 2L, 2.1}, results.get(0).getArray());
     Assert.assertArrayEquals(new Object[]{"b", 7L, 7.7}, results.get(1).getArray());
+  }
+
+  @Test
+  public void testProjectionSelectionTwoVirtual()
+  {
+    // this query can use the projection with 2 dims, which has 7 rows instead of the total of 8
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("v0")
+                    .addDimension("v1")
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "concat(a, \"b\")",
+                            ColumnType.STRING,
+                            TestExprMacroTable.INSTANCE
+                        ),
+                        new ExpressionVirtualColumn(
+                            "v1",
+                            "d + e",
+                            ColumnType.DOUBLE,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .setContext(ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_concat_b_d_plus_f_sum_c"))
+                    .build();
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(8, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(8, results.size());
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)
